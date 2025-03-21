@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { AlertTriangle, CreditCard, Mail, Lock, User } from 'lucide-react';
+import { AlertTriangle, CreditCard, Mail, Lock, User, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -244,7 +244,15 @@ const Login = () => {
                       className="w-full bg-green-600 hover:bg-green-700 flex gap-2"
                     >
                       <User className="h-5 w-5" />
-                      Log In Test User
+                      Log In Test User (Free)
+                    </Button>
+                    
+                    <Button
+                      onClick={() => setTestUserState(true, true)}
+                      className="w-full bg-violet-600 hover:bg-violet-700 flex gap-2"
+                    >
+                      <Crown className="h-5 w-5" />
+                      Log In Test User (Premium)
                     </Button>
                     
                     <Button

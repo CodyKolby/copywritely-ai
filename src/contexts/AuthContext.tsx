@@ -231,7 +231,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         id: testUser.id,
         email: testUser.email,
         full_name: 'Test User',
-        is_premium: premium
+        is_premium: premium,
+        subscription_id: premium ? 'test-subscription-id' : undefined,
+        subscription_status: premium ? 'active' : undefined,
+        subscription_expiry: premium ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() : undefined
       });
       toast.success(`Test user logged in (${premium ? 'Premium' : 'Free'} account)`);
     } else {
