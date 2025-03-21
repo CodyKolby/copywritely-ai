@@ -112,25 +112,61 @@ const sampleBriefs: Record<string, Brief> = {
   }
 };
 
+// Ad objectives for Digital Advertisement
+const adObjectives = [
+  {
+    id: 'website_visits',
+    title: 'Zwiększenie liczby odwiedzin na stronie internetowej'
+  },
+  {
+    id: 'digital_product',
+    title: 'Sprzedaż produktu cyfrowego'
+  },
+  {
+    id: 'sales_call',
+    title: 'Umówienie rozmowy sprzedażowej'
+  },
+  {
+    id: 'event_signup',
+    title: 'Zapisanie się na wydarzenie lub listę mailingową'
+  }
+];
+
 const formSchema = z.object({
   generationType: z.enum(['ai', 'guided']),
   guidanceText: z.string().optional(),
 });
 
+const adObjectiveSchema = z.object({
+  objective: z.string()
+});
+
 type FormValues = z.infer<typeof formSchema>;
+type AdObjectiveFormValues = z.infer<typeof adObjectiveSchema>;
 
 const BriefGenerator = () => {
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [generatedBrief, setGeneratedBrief] = useState<Brief | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [adObjectiveDialogOpen, setAdObjectiveDialogOpen] = useState(false);
   const [currentTemplateId, setCurrentTemplateId] = useState<string>('');
+  const [selectedGenerationType, setSelectedGenerationType] = useState<'ai' | 'guided'>('ai');
+  const [guidanceText, setGuidanceText] = useState<string>('');
+  const [selectedAdObjective, setSelectedAdObjective] = useState<string>('');
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       generationType: 'ai',
       guidanceText: '',
+    },
+  });
+
+  const adObjectiveForm = useForm<AdObjectiveFormValues>({
+    resolver: zodResolver(adObjectiveSchema),
+    defaultValues: {
+      objective: '',
     },
   });
 
@@ -144,26 +180,67 @@ const BriefGenerator = () => {
     setDialogOpen(true);
   };
 
+  const handleAdObjectiveSubmit = (values: AdObjectiveFormValues) => {
+    setSelectedAdObjective(values.objective);
+    setAdObjectiveDialogOpen(false);
+    
+    // Now generate the brief with the objective included
+    generateBriefWithObjective(currentTemplateId, selectedGenerationType, guidanceText, values.objective);
+  };
+
   const generateBrief = (templateId: string, values: FormValues) => {
-    // In a real application, this would call an API to generate the brief
+    setSelectedGenerationType(values.generationType);
+    setGuidanceText(values.guidanceText || '');
+    setDialogOpen(false);
+    
+    // If it's a Digital Advertisement, open the objectives dialog
+    if (templateId === 'ad') {
+      setAdObjectiveDialogOpen(true);
+    } else {
+      // For other templates, proceed as normal
+      setIsLoading(true);
+      setSelectedTemplate(templateId);
+      setGeneratedBrief(null);
+      
+      // Log the generation type and guidance for demonstration
+      console.log('Generation type:', values.generationType);
+      if (values.generationType === 'guided' && values.guidanceText) {
+        console.log('User guidance:', values.guidanceText);
+      }
+      
+      // Simulate API call with timeout
+      setTimeout(() => {
+        setGeneratedBrief(sampleBriefs[templateId]);
+        setIsLoading(false);
+        toast.success('Brief generated successfully!');
+      }, 1500);
+    }
+  };
+
+  const generateBriefWithObjective = (templateId: string, generationType: 'ai' | 'guided', guidance: string, objective: string) => {
     setIsLoading(true);
     setSelectedTemplate(templateId);
     setGeneratedBrief(null);
-    setDialogOpen(false);
     
-    // Log the generation type and guidance for demonstration
-    console.log('Generation type:', values.generationType);
-    if (values.generationType === 'guided' && values.guidanceText) {
-      console.log('User guidance:', values.guidanceText);
+    // Log the values for demonstration
+    console.log('Generation type:', generationType);
+    console.log('Ad objective:', objective);
+    if (generationType === 'guided' && guidance) {
+      console.log('User guidance:', guidance);
     }
     
     // Simulate API call with timeout
     setTimeout(() => {
-      // For demo, we're just using the sample briefs
-      // In a real app, we would pass the values.guidanceText to the API if generationType is 'guided'
+      // Find the objective title
+      const objectiveTitle = adObjectives.find(obj => obj.id === objective)?.title || objective;
       
-      // For the demo we'll just use the same sample briefs
-      setGeneratedBrief(sampleBriefs[templateId]);
+      // Create a modified brief with the selected objective
+      const modifiedBrief = {
+        ...sampleBriefs[templateId],
+        objective: `Cel reklamy: ${objectiveTitle}`,
+      };
+      
+      setGeneratedBrief(modifiedBrief);
       setIsLoading(false);
       toast.success('Brief generated successfully!');
     }, 1500);
@@ -172,6 +249,7 @@ const BriefGenerator = () => {
   const resetBrief = () => {
     setSelectedTemplate(null);
     setGeneratedBrief(null);
+    setSelectedAdObjective('');
   };
 
   const onSubmit = (values: FormValues) => {
@@ -369,6 +447,56 @@ const BriefGenerator = () => {
                   </Button>
                   <Button type="submit" className="bg-copywrite-teal hover:bg-copywrite-teal-dark transition-colors">
                     Generate Brief
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Ad Objective Dialog */}
+        <Dialog open={adObjectiveDialogOpen} onOpenChange={setAdObjectiveDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Jaki cel reklama ma mieć?</DialogTitle>
+              <DialogDescription>
+                Wybierz cel kampanii reklamowej.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <Form {...adObjectiveForm}>
+              <form onSubmit={adObjectiveForm.handleSubmit(handleAdObjectiveSubmit)} className="space-y-6">
+                <FormField
+                  control={adObjectiveForm.control}
+                  name="objective"
+                  render={({ field }) => (
+                    <FormItem className="space-y-4">
+                      <RadioGroup
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        className="gap-3"
+                      >
+                        {adObjectives.map((objective) => (
+                          <div key={objective.id} className="flex items-center space-x-2">
+                            <RadioGroupItem value={objective.id} id={objective.id} />
+                            <Label htmlFor={objective.id} className="font-medium">{objective.title}</Label>
+                          </div>
+                        ))}
+                      </RadioGroup>
+                    </FormItem>
+                  )}
+                />
+                
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setAdObjectiveDialogOpen(false)}
+                  >
+                    Anuluj
+                  </Button>
+                  <Button type="submit" className="bg-copywrite-teal hover:bg-copywrite-teal-dark transition-colors">
+                    Dalej
                   </Button>
                 </DialogFooter>
               </form>
