@@ -5,6 +5,28 @@ import { toast } from 'sonner';
 import TextEditor from '@/components/TextEditor';
 import AnalysisResult, { AnalysisScore } from '@/components/AnalysisResult';
 import { Skeleton } from '@/components/ui/skeleton';
+import BriefCard from '@/components/BriefCard';
+import { CheckCheck, AlertCircle, FileText, Brain, MessageSquare, PenTool } from 'lucide-react';
+
+// Sample brief for demo purposes
+const sampleBrief = {
+  title: "Eco-Friendly Water Bottle Campaign",
+  objective: "Create compelling ad copy for a new line of sustainable water bottles that highlights their eco-friendly features and appeals to environmentally conscious consumers.",
+  audience: "Environmentally conscious individuals, ages 18-35, who are interested in reducing plastic waste and making sustainable purchasing decisions.",
+  keyMessages: [
+    "Made from sustainable materials that reduce environmental impact",
+    "Sleek and modern design that fits with active lifestyles",
+    "Portion of proceeds donated to ocean cleanup initiatives",
+    "Limited time 20% discount with promo code ECO20"
+  ],
+  callToAction: "Visit our website to purchase with promo code ECO20 for 20% off your first order.",
+  additionalInfo: [
+    "Word count should be approximately 150-200 words",
+    "Tone should be inspiring and positive, but not preachy",
+    "Include the promo code in a natural way",
+    "Emphasize both environmental benefits and product quality"
+  ]
+};
 
 // Sample analysis for demo purposes
 const sampleAnalysis = {
@@ -39,6 +61,16 @@ const sampleAnalysis = {
   feedback: 'Overall, your copy effectively addresses the brief requirements and communicates the key selling points of the eco-friendly water bottle. The tone is engaging and appropriate for the target audience. To improve, focus on being more concise while maintaining the key messaging, and add more specific details about the sustainable materials used in the product. The call to action is clear but could be strengthened with additional benefits.'
 };
 
+// Analysis steps for animation
+const analysisSteps = [
+  { icon: FileText, text: "Analyzing text structure and clarity..." },
+  { icon: MessageSquare, text: "Evaluating messaging and key points..." },
+  { icon: PenTool, text: "Checking tone and style..." },
+  { icon: Brain, text: "Assessing persuasiveness and impact..." },
+  { icon: AlertCircle, text: "Reviewing alignment with brief..." },
+  { icon: CheckCheck, text: "Finalizing analysis..." }
+];
+
 const CopyEditor = () => {
   const [submittedCopy, setSubmittedCopy] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<{
@@ -47,28 +79,52 @@ const CopyEditor = () => {
     feedback: string;
   } | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
 
   // Scroll to top on page load
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
+  // Effect to handle the analysis steps animation
+  useEffect(() => {
+    let interval: number;
+    
+    if (isAnalyzing && currentStep < analysisSteps.length - 1) {
+      interval = window.setInterval(() => {
+        setCurrentStep(prev => prev + 1);
+      }, 1200);
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isAnalyzing, currentStep]);
+
   const handleSubmit = (text: string) => {
     setSubmittedCopy(text);
     setAnalysis(null);
     setIsAnalyzing(true);
+    setCurrentStep(0);
+    
+    // Scroll to analysis section
+    setTimeout(() => {
+      document.getElementById('analysis-section')?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
     
     // Simulate API call with timeout
     setTimeout(() => {
       setAnalysis(sampleAnalysis);
       setIsAnalyzing(false);
       toast.success('Analysis complete!');
-    }, 2000);
+    }, 7500); // Longer timeout to allow for step animations
   };
 
   const resetEditor = () => {
     setSubmittedCopy(null);
     setAnalysis(null);
+    setIsAnalyzing(false);
+    setCurrentStep(0);
   };
 
   return (
@@ -93,7 +149,7 @@ const CopyEditor = () => {
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Write Your Copy</h2>
             <TextEditor 
               onSubmit={handleSubmit} 
-              placeholder="Write your advertising copy here based on a brief..."
+              placeholder="Write your advertising copy here based on the brief..."
               maxLength={500}
             />
             
@@ -109,42 +165,48 @@ const CopyEditor = () => {
             )}
           </div>
           
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Analysis Results</h2>
+          <div id="analysis-section">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              {!submittedCopy ? "Brief Information" : "Analysis Results"}
+            </h2>
             
             {!submittedCopy && !isAnalyzing && (
-              <div className="bg-gray-50 rounded-xl p-6 h-full flex items-center justify-center">
-                <p className="text-gray-500 text-center">
-                  Submit your copy to receive AI analysis and feedback.
-                </p>
-              </div>
+              <BriefCard brief={sampleBrief} className="h-full" />
             )}
             
             {isAnalyzing && (
-              <div className="bg-white rounded-xl p-6 shadow-soft border border-gray-100">
-                <Skeleton className="h-8 w-3/4 mb-6" />
-                <Skeleton className="h-4 w-full mb-2" />
-                <Skeleton className="h-4 w-11/12 mb-2" />
-                <Skeleton className="h-4 w-10/12 mb-6" />
+              <div className="bg-white rounded-xl p-6 shadow-soft border border-gray-100 h-full">
+                <h3 className="text-lg font-semibold text-gray-900 mb-6">Analyzing Your Copy...</h3>
                 
-                <Skeleton className="h-6 w-1/3 mb-4" />
-                
-                <div className="space-y-4">
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <div key={i} className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex justify-between items-center mb-2">
-                        <Skeleton className="h-5 w-1/3" />
-                        <Skeleton className="h-5 w-16" />
-                      </div>
-                      {i === 1 && (
-                        <>
-                          <Skeleton className="h-3 w-full mb-1" />
-                          <Skeleton className="h-3 w-11/12 mb-1" />
-                          <Skeleton className="h-3 w-10/12" />
-                        </>
-                      )}
-                    </div>
-                  ))}
+                <div className="space-y-5">
+                  {analysisSteps.map((step, index) => {
+                    const StepIcon = step.icon;
+                    const isActive = index <= currentStep;
+                    const isCompleted = index < currentStep;
+                    
+                    return (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ 
+                          opacity: isActive ? 1 : 0.4, 
+                          y: 0 
+                        }}
+                        transition={{ duration: 0.5 }}
+                        className={`flex items-center ${isActive ? '' : 'opacity-40'}`}
+                      >
+                        <div className={`flex items-center justify-center w-10 h-10 rounded-full mr-4 ${
+                          isCompleted ? 'bg-green-100 text-green-600' : 'bg-copywrite-teal-light text-copywrite-teal'
+                        }`}>
+                          <StepIcon size={20} />
+                        </div>
+                        <span className="text-gray-700">{step.text}</span>
+                        {isCompleted && (
+                          <CheckCheck className="ml-auto text-green-600" size={18} />
+                        )}
+                      </motion.div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -167,7 +229,7 @@ const CopyEditor = () => {
         >
           <h2 className="text-xl font-semibold text-gray-900 mb-4">How to use this tool</h2>
           <ol className="list-decimal pl-5 space-y-2 text-gray-700">
-            <li>First, generate a brief in the Brief Generator section to understand what to write about.</li>
+            <li>Review the brief details provided on the right side of the screen.</li>
             <li>Write your copy in the editor based on the brief requirements.</li>
             <li>Submit your copy to receive AI analysis on various aspects like clarity, persuasiveness, and audience targeting.</li>
             <li>Review your feedback and scores to identify areas for improvement.</li>
