@@ -17,8 +17,8 @@ export const getStripe = () => {
 
 // Rzeczywiste ID cenników produktów ze Stripe
 export const PRICE_IDS = {
-  PRO_MONTHLY: 'price_1P3ASkG0KQWtMCjDnTvlSb27',
-  PRO_ANNUAL: 'price_1P3AT7G0KQWtMCjD7bkvKKSt',
+  PRO_MONTHLY: 'price_1P3ASkG0KQWtMCjDnTvlSb27', // To będzie zastąpione prawdziwym ID cennika dla produktu prod_Rz7Lpm5vk4zmRY
+  PRO_ANNUAL: 'price_1P3AT7G0KQWtMCjD7bkvKKSt', // To będzie zastąpione prawdziwym ID cennika dla produktu prod_Rz7MpFmtOEfxIb
 };
 
 // Funkcja do tworzenia sesji Checkout
@@ -57,16 +57,20 @@ export const createCheckoutSession = async (priceId: string) => {
   }
 };
 
-// Funkcja do sprawdzania statusu subskrypcji (do zaimplementowania z backendem)
+// Funkcja do sprawdzania statusu subskrypcji
 export const checkSubscriptionStatus = async (userId: string): Promise<boolean> => {
-  // W rzeczywistej implementacji, to powinno wywołać endpoint API,
-  // który sprawdza status subskrypcji w bazie danych
-  
-  // Tymczasowa implementacja dla testów
   try {
-    // Sprawdź czy użytkownik ma aktywną subskrypcję
-    // W prawdziwej implementacji, sprawdź w Supabase lub przez API
-    return false;
+    // Wywołaj funkcję edge do sprawdzenia statusu subskrypcji
+    const { data, error } = await supabase.functions.invoke('check-subscription-status', {
+      body: { userId }
+    });
+    
+    if (error) {
+      console.error('Error checking subscription status:', error);
+      return false;
+    }
+    
+    return data?.isPremium || false;
   } catch (error) {
     console.error('Error checking subscription status:', error);
     return false;
