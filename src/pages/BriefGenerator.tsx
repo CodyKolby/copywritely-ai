@@ -20,7 +20,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 
-// Sample data for demo purposes
 const sampleBriefTemplates = [
   { 
     id: 'email',
@@ -44,7 +43,6 @@ const sampleBriefTemplates = [
   }
 ];
 
-// Sample briefs for demo purposes
 const sampleBriefs: Record<string, Brief> = {
   email: {
     title: 'Marketing Email Brief',
@@ -112,7 +110,6 @@ const sampleBriefs: Record<string, Brief> = {
   }
 };
 
-// Ad objectives for Digital Advertisement
 const adObjectives = [
   {
     id: 'website_visits',
@@ -170,7 +167,6 @@ const BriefGenerator = () => {
     },
   });
 
-  // Scroll to top on page load
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
@@ -184,7 +180,6 @@ const BriefGenerator = () => {
     setSelectedAdObjective(values.objective);
     setAdObjectiveDialogOpen(false);
     
-    // Now generate the brief with the objective included
     generateBriefWithObjective(currentTemplateId, selectedGenerationType, guidanceText, values.objective);
   };
 
@@ -193,22 +188,18 @@ const BriefGenerator = () => {
     setGuidanceText(values.guidanceText || '');
     setDialogOpen(false);
     
-    // If it's a Digital Advertisement, open the objectives dialog
     if (templateId === 'ad') {
       setAdObjectiveDialogOpen(true);
     } else {
-      // For other templates, proceed as normal
       setIsLoading(true);
       setSelectedTemplate(templateId);
       setGeneratedBrief(null);
       
-      // Log the generation type and guidance for demonstration
       console.log('Generation type:', values.generationType);
       if (values.generationType === 'guided' && values.guidanceText) {
         console.log('User guidance:', values.guidanceText);
       }
       
-      // Simulate API call with timeout
       setTimeout(() => {
         setGeneratedBrief(sampleBriefs[templateId]);
         setIsLoading(false);
@@ -222,22 +213,18 @@ const BriefGenerator = () => {
     setSelectedTemplate(templateId);
     setGeneratedBrief(null);
     
-    // Log the values for demonstration
     console.log('Generation type:', generationType);
     console.log('Ad objective:', objective);
     if (generationType === 'guided' && guidance) {
       console.log('User guidance:', guidance);
     }
     
-    // Simulate API call with timeout
     setTimeout(() => {
-      // Find the objective title
       const objectiveTitle = adObjectives.find(obj => obj.id === objective)?.title || objective;
       
-      // Create a modified brief with the selected objective
       const modifiedBrief = {
         ...sampleBriefs[templateId],
-        objective: `Cel reklamy: ${objectiveTitle}`,
+        objective: objectiveTitle,
       };
       
       setGeneratedBrief(modifiedBrief);
@@ -372,7 +359,6 @@ const BriefGenerator = () => {
           </Button>
         </motion.div>
 
-        {/* Generation Method Dialog */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
@@ -454,7 +440,6 @@ const BriefGenerator = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Ad Objective Dialog */}
         <Dialog open={adObjectiveDialogOpen} onOpenChange={setAdObjectiveDialogOpen}>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
