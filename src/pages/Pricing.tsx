@@ -39,6 +39,7 @@ const Pricing = () => {
 
   // Pobierz ID cennika na podstawie wybranego planu
   const getPriceId = () => {
+    // Make sure we're using the test mode price IDs
     return billingCycle === 'annual' 
       ? PRICE_IDS.PRO_ANNUAL
       : PRICE_IDS.PRO_MONTHLY;
@@ -60,7 +61,11 @@ const Pricing = () => {
     setIsLoading(true);
     
     try {
-      await createCheckoutSession(getPriceId());
+      // Log the price ID we're using for debugging
+      const priceId = getPriceId();
+      console.log('Using price ID for checkout:', priceId);
+      
+      await createCheckoutSession(priceId);
       // Jeśli dotarliśmy tutaj, to przekierowanie nie nastąpiło
       toast.error('Nie udało się przekierować do płatności', {
         description: 'Spróbuj ponownie później'

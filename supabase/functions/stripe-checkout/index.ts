@@ -17,6 +17,7 @@ serve(async (req) => {
     // Log stripe key availability for debugging
     const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
     console.log(`Stripe key available: ${!!stripeSecretKey}`);
+    console.log(`Stripe key prefix: ${stripeSecretKey?.substring(0, 7)}...`);
     
     if (!stripeSecretKey) {
       console.error('STRIPE_SECRET_KEY is not set in environment variables');
@@ -40,10 +41,16 @@ serve(async (req) => {
       throw new Error('Brak identyfikatora cennika (priceId)');
     }
 
-    // Debug info about the Stripe mode
-    const isTestMode = stripeSecretKey.startsWith('sk_test');
+    // Log more details about the price ID and environment
+    console.log(`Received priceId: ${priceId}`);
+    const isTestMode = stripeSecretKey.startsWith('sk_test_');
     console.log(`Using Stripe in ${isTestMode ? 'TEST' : 'PRODUCTION'} mode`);
-    console.log(`PriceId: ${priceId}`);
+    console.log(`Price ID should be from ${isTestMode ? 'test' : 'live'} mode`);
+    
+    if (isTestMode && !priceId.startsWith('price_')) {
+      console.warn('Price ID format warning: Test mode price IDs typically start with "price_"');
+    }
+
     console.log(`Customer email: ${customerEmail || 'not provided'}`);
 
     // Create checkout session parameters
@@ -96,7 +103,14 @@ serve(async (req) => {
       
       // Special handling for test/live mode mismatch
       if (sessionData.error?.message?.includes('test mode') && sessionData.error?.message?.includes('live mode')) {
+        console.error('TEST/LIVE MODE MISMATCH DETECTED IN STRIPE API RESPONSE');
         throw new Error('Test/Live mode mismatch: You are using a test mode price ID with a live mode API key or vice versa.');
+      }
+      
+      // Check if error is about invalid price ID
+      if (sessionData.error?.message?.includes('price') || sessionData.error?.message?.includes('Price')) {
+        console.error('PRICE ID ERROR DETECTED');
+        throw new Error(`Błąd identyfikatora cennika: ${sessionData.error?.message}`);
       }
       
       throw new Error(sessionData.error?.message || 'Error creating Stripe checkout session');
@@ -124,6 +138,7 @@ serve(async (req) => {
   } catch (error) {
     // Enhanced error logging
     console.error('Error in stripe-checkout function:', error);
+    console.error('Error details:', error.message);
     console.error('Error stack:', error.stack);
     
     // Return error response
