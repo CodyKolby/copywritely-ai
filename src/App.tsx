@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import BriefGenerator from "./pages/BriefGenerator";
 import CopyEditor from "./pages/CopyEditor";
 import About from "./pages/About";
+import Pricing from "./pages/Pricing";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import Navbar from "./components/Navbar";
@@ -32,6 +33,7 @@ const App = () => (
                 <Route path="/brief-generator" element={<BriefGenerator />} />
                 <Route path="/copy-editor" element={<CopyEditor />} />
                 <Route path="/about" element={<About />} />
+                <Route path="/pricing" element={<Pricing />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

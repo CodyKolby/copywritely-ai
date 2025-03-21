@@ -32,6 +32,7 @@ const Navbar = () => {
     { path: '/', label: 'Home' },
     { path: '/brief-generator', label: 'Brief Generator' },
     { path: '/copy-editor', label: 'Copy Editor' },
+    { path: '/pricing', label: 'Pricing' },
     { path: '/about', label: 'About' },
   ];
 
