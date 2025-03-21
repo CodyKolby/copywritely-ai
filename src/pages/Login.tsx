@@ -2,23 +2,16 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
-import { LogIn, User, KeyRound, CreditCard, Mail, AlertTriangle } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { AlertTriangle, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 
 const Login = () => {
-  const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [configError, setConfigError] = useState(false);
-  const { user, signInWithGoogle, signInWithEmail, signUpWithEmail } = useAuth();
+  const { user, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -46,23 +39,6 @@ const Login = () => {
       navigate('/');
     }
   }, [user, navigate]);
-
-  const handleEmailSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    
-    try {
-      if (isLogin) {
-        await signInWithEmail(email, password);
-      } else {
-        await signUpWithEmail(email, password);
-      }
-    } catch (error) {
-      console.error('Authentication error:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
@@ -107,12 +83,10 @@ const Login = () => {
           className="text-center mb-8"
         >
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            {isLogin ? 'Welcome Back' : 'Create Account'}
+            Welcome to Copywrite
           </h1>
           <p className="text-gray-600">
-            {isLogin 
-              ? 'Log in to access your credits and tools' 
-              : 'Sign up to start creating better copy'}
+            Sign in with Google to access your credits and tools
           </p>
         </motion.div>
 
@@ -143,86 +117,6 @@ const Login = () => {
               </>
             )}
           </Button>
-          
-          <div className="relative my-6">
-            <Separator />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="bg-white px-2 text-sm text-gray-500">or</span>
-            </div>
-          </div>
-
-          <form onSubmit={handleEmailSignIn} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="your@email.com"
-                  className="pl-10"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <KeyRound className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  className="pl-10"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-
-            {isLogin && (
-              <div className="text-right">
-                <button type="button" className="text-sm text-copywrite-teal hover:underline">
-                  Forgot password?
-                </button>
-              </div>
-            )}
-
-            <Button 
-              type="submit" 
-              className="w-full bg-copywrite-teal hover:bg-copywrite-teal-dark"
-              disabled={loading}
-            >
-              {loading ? (
-                <div className="flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  <span className="ml-2">{isLogin ? 'Logging in...' : 'Creating account...'}</span>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center">
-                  <LogIn className="mr-2" size={18} />
-                  {isLogin ? 'Log in' : 'Create account'}
-                </div>
-              )}
-            </Button>
-          </form>
-
-          <div className="mt-6 pt-4 border-t border-gray-100 text-center">
-            <p className="text-gray-600 text-sm">
-              {isLogin ? "Don't have an account?" : "Already have an account?"}
-              <button
-                type="button"
-                onClick={() => setIsLogin(!isLogin)}
-                className="ml-1.5 text-copywrite-teal hover:underline"
-              >
-                {isLogin ? 'Sign up' : 'Log in'}
-              </button>
-            </p>
-          </div>
         </motion.div>
 
         <motion.div
