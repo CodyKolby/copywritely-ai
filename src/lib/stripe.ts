@@ -10,7 +10,8 @@ const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '';
 let stripePromise: Promise<any> | null = null;
 
 export const getStripe = () => {
-  if (!stripePromise) {
+  if (!stripePromise && stripePublicKey) {
+    console.log('Initializing Stripe with public key:', stripePublicKey ? 'Available' : 'Missing');
     stripePromise = loadStripe(stripePublicKey);
   }
   return stripePromise;
@@ -26,7 +27,13 @@ export const PRICE_IDS = {
 export const createCheckoutSession = async (priceId: string) => {
   try {
     if (!priceId) {
+      console.error('Missing priceId');
       throw new Error('Nieprawidłowy identyfikator cennika');
+    }
+
+    if (!stripePublicKey) {
+      console.error('Missing Stripe public key');
+      throw new Error('Brak klucza Stripe');
     }
 
     // Pobierz zapisany email użytkownika
@@ -39,7 +46,8 @@ export const createCheckoutSession = async (priceId: string) => {
     // Pokazujemy toast informujący o rozpoczęciu procesu
     toast.info('Przygotowujemy proces płatności...');
 
-    console.log('Wysyłanie zapytania do stripe-checkout z parametrami:', {
+    // Log request parameters
+    console.log('Sending checkout request with parameters:', {
       priceId,
       customerEmail: userEmail || undefined,
       successUrl,
@@ -56,6 +64,7 @@ export const createCheckoutSession = async (priceId: string) => {
       }
     });
 
+    // Log response for debugging
     console.log('Response from stripe-checkout:', { data, error });
 
     if (error) {
@@ -71,13 +80,13 @@ export const createCheckoutSession = async (priceId: string) => {
 
     // Jeśli funkcja zwróciła URL, przekieruj użytkownika
     if (data?.url) {
-      console.log('Przekierowuję do Stripe Checkout URL:', data.url);
+      console.log('Redirecting to Stripe Checkout URL:', data.url);
       window.location.href = data.url;
     } else {
       throw new Error('Nie otrzymano poprawnej odpowiedzi z serwera');
     }
   } catch (error) {
-    console.error('Wystąpił błąd podczas przekierowania do Stripe Checkout:', error);
+    console.error('Error during Stripe checkout redirection:', error);
     toast.error('Wystąpił błąd', {
       description: error instanceof Error ? error.message : 'Nie można uruchomić procesu płatności'
     });

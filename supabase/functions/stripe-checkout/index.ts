@@ -1,130 +1,114 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-// Pobieramy klucze Stripe z zmiennych środowiskowych
-const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
-
-// Definiujemy nagłówki CORS
+// Define CORS headers for cross-origin requests
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
 serve(async (req) => {
-  // Obsługa zapytań CORS preflight
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Pobieramy dane z żądania
-    const { priceId, customerEmail, successUrl, cancelUrl } = await req.json();
-
-    // Walidacja danych wejściowych
-    if (!priceId) {
-      console.error('Brak priceId w zapytaniu');
-      throw new Error('Brak identyfikatora cennika (priceId)');
-    }
-
+    // Log stripe key availability for debugging
+    const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
+    console.log(`Stripe key available: ${!!stripeSecretKey}`);
+    
     if (!stripeSecretKey) {
-      console.error('Brak klucza Stripe w zmiennych środowiskowych');
+      console.error('STRIPE_SECRET_KEY is not set in environment variables');
       throw new Error('Błąd konfiguracji: brak klucza API Stripe');
     }
 
-    // Szczegółowe logowanie
-    console.log(`Rozpoczynam tworzenie sesji checkout - tryb ${stripeSecretKey.startsWith('sk_test') ? 'testowy' : 'produkcyjny'}`);
-    console.log(`Używam priceId: ${priceId}`);
-    console.log(`Email klienta: ${customerEmail || 'nie podano'}`);
-
-    // Tworzymy parametry dla sesji Checkout
-    const checkoutParams = {
-      mode: 'subscription',
-      success_url: successUrl || `${req.headers.get('origin') || ''}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: cancelUrl || `${req.headers.get('origin') || ''}/pricing`,
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
-        },
-      ],
-      subscription_data: {
-        trial_period_days: 3,
-      },
-    };
+    // Parse request body
+    const requestData = await req.json().catch(e => {
+      console.error('Failed to parse request JSON:', e);
+      throw new Error('Invalid request format');
+    });
     
-    // Dodajemy opcjonalny email klienta, jeśli został podany
-    if (customerEmail) {
-      checkoutParams.customer_email = customerEmail;
+    console.log('Request data received:', JSON.stringify(requestData, null, 2));
+    
+    // Extract parameters from request
+    const { priceId, customerEmail, successUrl, cancelUrl } = requestData;
+
+    // Validate required parameters
+    if (!priceId) {
+      console.error('Missing priceId in request');
+      throw new Error('Brak identyfikatora cennika (priceId)');
     }
 
-    console.log('Parametry sesji Stripe:', JSON.stringify(checkoutParams, null, 2));
+    // Debug info about the Stripe mode
+    const isTestMode = stripeSecretKey.startsWith('sk_test');
+    console.log(`Using Stripe in ${isTestMode ? 'TEST' : 'PRODUCTION'} mode`);
+    console.log(`PriceId: ${priceId}`);
+    console.log(`Customer email: ${customerEmail || 'not provided'}`);
 
-    // Konwertujemy parametry na format x-www-form-urlencoded
-    const formParams = new URLSearchParams();
+    // Create checkout session parameters
+    const params = new URLSearchParams();
+    params.append('mode', 'subscription');
+    params.append('success_url', successUrl || `${req.headers.get('origin') || ''}/success?session_id={CHECKOUT_SESSION_ID}`);
+    params.append('cancel_url', cancelUrl || `${req.headers.get('origin') || ''}/pricing`);
+    params.append('line_items[0][price]', priceId);
+    params.append('line_items[0][quantity]', '1');
+    params.append('subscription_data[trial_period_days]', '3');
     
-    // Dodajemy podstawowe parametry
-    formParams.append('mode', 'subscription');
-    formParams.append('success_url', successUrl || `${req.headers.get('origin') || ''}/success?session_id={CHECKOUT_SESSION_ID}`);
-    formParams.append('cancel_url', cancelUrl || `${req.headers.get('origin') || ''}/pricing`);
-    
-    // Dodajemy pozycje zamówienia
-    formParams.append('line_items[0][price]', priceId);
-    formParams.append('line_items[0][quantity]', '1');
-    
-    // Dodajemy okres próbny
-    formParams.append('subscription_data[trial_period_days]', '3');
-    
-    // Dodajemy email klienta, jeśli został podany
     if (customerEmail) {
-      formParams.append('customer_email', customerEmail);
+      params.append('customer_email', customerEmail);
     }
 
-    // Tworzymy sesję Stripe za pomocą Fetch API
+    console.log('Stripe API request parameters:', params.toString());
+
+    // Call Stripe API
     const response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${stripeSecretKey}`,
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: formParams,
+      body: params,
     });
 
-    // Pobieramy dane odpowiedzi
+    // Get response as text first for better error logging
     const responseText = await response.text();
+    console.log(`Stripe API response status: ${response.status} ${response.statusText}`);
+    console.log(`Stripe API response body (first 500 chars): ${responseText.substring(0, 500)}`);
+
+    // Try to parse the response as JSON
     let sessionData;
-    
     try {
       sessionData = JSON.parse(responseText);
     } catch (e) {
-      console.error('Nieprawidłowa odpowiedź JSON:', responseText);
-      throw new Error('Nieprawidłowa odpowiedź z API Stripe');
+      console.error('Failed to parse Stripe response as JSON:', e);
+      console.error('Raw response:', responseText);
+      throw new Error('Invalid response from Stripe API');
     }
 
-    // Szczegółowe logowanie odpowiedzi
+    // Check for Stripe API errors
     if (!response.ok) {
-      console.error('Błąd API Stripe:', {
+      console.error('Stripe API error:', {
         status: response.status,
         statusText: response.statusText,
         error: sessionData.error,
-        rawResponse: responseText.substring(0, 500) // Logujemy tylko część odpowiedzi
       });
       
-      // Obsługa błędu dotyczącego trybu testowego/produkcyjnego
-      if (sessionData.error && sessionData.error.message && 
-          sessionData.error.message.includes('test mode') && 
-          sessionData.error.message.includes('live mode')) {
-        throw new Error('Błąd zgodności: Test mode price ID używany z live mode API key. Proszę użyć zgodnych kluczy w tym samym trybie.');
+      // Special handling for test/live mode mismatch
+      if (sessionData.error?.message?.includes('test mode') && sessionData.error?.message?.includes('live mode')) {
+        throw new Error('Test/Live mode mismatch: You are using a test mode price ID with a live mode API key or vice versa.');
       }
       
-      throw new Error(sessionData.error?.message || 'Błąd podczas tworzenia sesji Stripe');
+      throw new Error(sessionData.error?.message || 'Error creating Stripe checkout session');
     }
 
-    console.log('Sesja Stripe utworzona pomyślnie:', {
+    // Log successful session creation
+    console.log('Stripe session created successfully:', {
       sessionId: sessionData.id,
       url: sessionData.url
     });
 
-    // Zwracamy URL do sesji Checkout
+    // Return successful response
     return new Response(
       JSON.stringify({ 
         sessionId: sessionData.id,
@@ -138,11 +122,14 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error('Błąd podczas tworzenia sesji Stripe Checkout:', error);
+    // Enhanced error logging
+    console.error('Error in stripe-checkout function:', error);
+    console.error('Error stack:', error.stack);
     
+    // Return error response
     return new Response(
       JSON.stringify({ 
-        error: error.message || 'Wystąpił błąd podczas tworzenia sesji płatności',
+        error: error.message || 'An error occurred during checkout session creation',
         details: error.stack
       }),
       { 
