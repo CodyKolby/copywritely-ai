@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Star, Check } from 'lucide-react';
+import { Star, Check, Clock } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -57,8 +57,8 @@ const Pricing = () => {
             Wybierz plan idealny dla siebie
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Niezależnie od tego, czy dopiero zaczynasz, czy jesteś profesjonalistą, 
-            mamy plan, który spełni Twoje potrzeby.
+            Profesjonalne narzędzie do copywritingu, które pomoże Ci tworzyć
+            skuteczne teksty reklamowe.
           </p>
         </motion.div>
 
@@ -81,61 +81,31 @@ const Pricing = () => {
           </Tabs>
         </div>
 
-        {/* Pricing cards */}
+        {/* Pricing card centered */}
         <motion.div 
-          className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto"
+          className="max-w-xl mx-auto"
           variants={containerVariants}
           initial="hidden"
           animate="visible"
         >
-          {/* Standard Plan */}
-          <motion.div variants={itemVariants}>
-            <Card className="h-full bg-gray-50 border-gray-200">
-              <CardHeader className="pb-8">
-                <h2 className="text-3xl font-bold">Standard</h2>
-                <p className="text-gray-600 mt-2">
-                  Idealne rozwiązanie na początek przygody z copywritingiem.
-                </p>
-                <div className="mt-6">
-                  <span className="text-5xl font-bold">0 PLN</span>
-                  <span className="text-gray-500 ml-2">/ {getPricingLabel()}</span>
-                </div>
-              </CardHeader>
-              <CardContent className="flex-grow">
-                <Button variant="outline" className="w-full mb-8">
-                  Aktualny Plan
-                </Button>
-                <ul className="space-y-4">
-                  <li className="flex items-start">
-                    <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                    <span>5 briefów i analiz miesięcznie</span>
-                  </li>
-                  <li className="flex items-start">
-                    <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                    <span>Gotowe briefy generowane przez AI</span>
-                  </li>
-                  <li className="flex items-start">
-                    <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                    <span>Podstawowy feedback od AI</span>
-                  </li>
-                  <li className="flex items-start">
-                    <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                    <span>Zapis projektów w aplikacji</span>
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
-          </motion.div>
-
           {/* Pro Plan */}
           <motion.div variants={itemVariants}>
-            <Card className="h-full relative border-copywrite-teal/30 shadow-md">
+            <Card className="relative border-copywrite-teal/30 shadow-lg">
               <div className="absolute -top-4 inset-x-0 flex justify-center">
                 <Badge className="bg-amber-100 text-amber-700 border-amber-200 flex items-center gap-1 px-3 py-1">
                   <Star className="h-4 w-4 fill-amber-500 text-amber-500" />
-                  <span className="font-medium">Most Popular</span>
+                  <span className="font-medium">Plan Pro</span>
                 </Badge>
               </div>
+              
+              {/* Free trial badge */}
+              <div className="absolute -top-4 right-4">
+                <Badge className="bg-green-100 text-green-700 border-green-200 flex items-center gap-1 px-3 py-1">
+                  <Clock className="h-4 w-4 text-green-600" />
+                  <span className="font-medium">3 dni za darmo</span>
+                </Badge>
+              </div>
+              
               <CardHeader className="pb-8 pt-8">
                 <div className="flex items-center justify-between">
                   <h2 className="text-3xl font-bold">Pro</h2>
@@ -146,7 +116,7 @@ const Pricing = () => {
                   )}
                 </div>
                 <p className="text-gray-600 mt-2">
-                  Zaawansowane funkcje dla profesjonalnego copywritingu.
+                  Pełen dostęp do zaawansowanych funkcji copywritingu.
                 </p>
                 <div className="mt-6 flex items-center">
                   <span className="text-5xl font-bold">{getProPrice()} PLN</span>
@@ -155,10 +125,19 @@ const Pricing = () => {
                     <span className="text-gray-400 ml-3 line-through">79.99 PLN</span>
                   )}
                 </div>
+                
+                {/* Free trial notice */}
+                <div className="mt-4 bg-green-50 p-3 rounded-lg border border-green-100">
+                  <p className="text-green-700 text-sm flex items-center">
+                    <Clock className="h-4 w-4 mr-2" />
+                    Rozpocznij od 3-dniowego darmowego okresu próbnego. Anuluj w dowolnym momencie.
+                  </p>
+                </div>
               </CardHeader>
+              
               <CardContent className="flex-grow">
                 <Button className="w-full mb-8 bg-copywrite-teal hover:bg-copywrite-teal-dark">
-                  Upgrade to Pro
+                  Rozpocznij darmowy okres próbny
                 </Button>
                 <ul className="space-y-4">
                   <li className="flex items-start">
