@@ -42,7 +42,7 @@ serve(async (req) => {
       'line_items[0][quantity]': '1',
     });
 
-    // Dodajemy 3-dniowy okres próbny
+    // Dodajemy 3-dniowy okres próbny - upewniamy się że jest liczbą
     params.append('subscription_data[trial_period_days]', '3');
 
     // Dodajemy opcjonalny email klienta, jeśli został podany
