@@ -3,21 +3,42 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { LogIn, User, KeyRound, CreditCard, Mail } from 'lucide-react';
+import { LogIn, User, KeyRound, CreditCard, Mail, AlertTriangle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 
 const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [configError, setConfigError] = useState(false);
   const { user, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check if Supabase is properly configured
+    const checkSupabaseConfig = async () => {
+      try {
+        // Try to make a simple request to verify connection
+        const { error } = await supabase.from('profiles').select('id').limit(1);
+        if (error && error.message.includes('Failed to fetch')) {
+          setConfigError(true);
+          console.error('Supabase connection error:', error);
+        }
+      } catch (err) {
+        setConfigError(true);
+        console.error('Error checking Supabase configuration:', err);
+      }
+    };
+    
+    checkSupabaseConfig();
+  }, []);
 
   useEffect(() => {
     // If user is already logged in, redirect to home
@@ -43,6 +64,33 @@ const Login = () => {
     await signInWithGoogle();
     setLoading(false);
   };
+
+  if (configError) {
+    return (
+      <div className="min-h-screen pt-24 pb-16 px-6">
+        <div className="max-w-md mx-auto">
+          <Alert variant="destructive" className="mb-6">
+            <AlertTriangle className="h-5 w-5" />
+            <AlertDescription>
+              <h3 className="font-bold mb-2">Supabase Configuration Error</h3>
+              <p>The application could not connect to Supabase. Please make sure your environment variables are set correctly:</p>
+              <ul className="list-disc pl-5 mt-2 space-y-1">
+                <li>VITE_SUPABASE_URL</li>
+                <li>VITE_SUPABASE_ANON_KEY</li>
+              </ul>
+              <p className="mt-2">Check the browser console for more details.</p>
+            </AlertDescription>
+          </Alert>
+          <Button 
+            onClick={() => window.location.reload()} 
+            className="w-full"
+          >
+            Retry Connection
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen pt-24 pb-16 px-6">
