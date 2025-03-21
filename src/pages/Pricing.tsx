@@ -175,7 +175,7 @@ const Pricing = () => {
                 <ul className="space-y-4">
                   <li className="flex items-start">
                     <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                    <span className="font-medium">Nielimitowana liczba briefów i analiz</span>
+                    <span>Nielimitowana liczba briefów i analiz</span>
                   </li>
                   <li className="flex items-start">
                     <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
@@ -184,7 +184,7 @@ const Pricing = () => {
                   <li className="flex items-start">
                     <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
                     <div>
-                      <span className="font-medium">Custom Brief Builder™ – Tworzenie własnych spersonalizowanych wytycznych reklamy:</span>
+                      <span>Custom Brief Builder™ – Tworzenie własnych spersonalizowanych wytycznych reklamy:</span>
                       <ul className="ml-7 mt-2 list-disc text-gray-600">
                         <li>Własna grupa docelowa</li>
                         <li>Branża, produkt, styl komunikacji</li>
@@ -205,7 +205,7 @@ const Pricing = () => {
                   </li>
                   <li className="flex items-start">
                     <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                    <span className="font-medium">Szczegółowy feedback od AI (nagłówki, CTA, dopasowanie)</span>
+                    <span>Szczegółowy feedback od AI (nagłówki, CTA, dopasowanie)</span>
                   </li>
                   <li className="flex items-start">
                     <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
