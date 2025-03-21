@@ -1,10 +1,24 @@
-
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import BriefCard, { Brief } from '@/components/BriefCard';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogHeader, 
+  DialogTitle,
+  DialogFooter
+} from '@/components/ui/dialog';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Form, FormField, FormItem, FormControl, FormDescription } from '@/components/ui/form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import * as z from 'zod';
 
 // Sample data for demo purposes
 const sampleBriefTemplates = [
@@ -98,24 +112,57 @@ const sampleBriefs: Record<string, Brief> = {
   }
 };
 
+const formSchema = z.object({
+  generationType: z.enum(['ai', 'guided']),
+  guidanceText: z.string().optional(),
+});
+
+type FormValues = z.infer<typeof formSchema>;
+
 const BriefGenerator = () => {
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [generatedBrief, setGeneratedBrief] = useState<Brief | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [currentTemplateId, setCurrentTemplateId] = useState<string>('');
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      generationType: 'ai',
+      guidanceText: '',
+    },
+  });
 
   // Scroll to top on page load
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
-  const generateBrief = (templateId: string) => {
+  const openGenerationDialog = (templateId: string) => {
+    setCurrentTemplateId(templateId);
+    setDialogOpen(true);
+  };
+
+  const generateBrief = (templateId: string, values: FormValues) => {
     // In a real application, this would call an API to generate the brief
     setIsLoading(true);
     setSelectedTemplate(templateId);
     setGeneratedBrief(null);
+    setDialogOpen(false);
+    
+    // Log the generation type and guidance for demonstration
+    console.log('Generation type:', values.generationType);
+    if (values.generationType === 'guided' && values.guidanceText) {
+      console.log('User guidance:', values.guidanceText);
+    }
     
     // Simulate API call with timeout
     setTimeout(() => {
+      // For demo, we're just using the sample briefs
+      // In a real app, we would pass the values.guidanceText to the API if generationType is 'guided'
+      
+      // For the demo we'll just use the same sample briefs
       setGeneratedBrief(sampleBriefs[templateId]);
       setIsLoading(false);
       toast.success('Brief generated successfully!');
@@ -126,6 +173,12 @@ const BriefGenerator = () => {
     setSelectedTemplate(null);
     setGeneratedBrief(null);
   };
+
+  const onSubmit = (values: FormValues) => {
+    generateBrief(currentTemplateId, values);
+  };
+
+  const watchGenerationType = form.watch('generationType');
 
   return (
     <div className="min-h-screen pt-24 pb-16 px-6">
@@ -157,7 +210,7 @@ const BriefGenerator = () => {
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">{template.title}</h3>
                 <p className="text-gray-600 mb-6 flex-grow">{template.description}</p>
                 <Button 
-                  onClick={() => generateBrief(template.id)}
+                  onClick={() => openGenerationDialog(template.id)}
                   className="w-full bg-copywrite-teal hover:bg-copywrite-teal-dark transition-colors"
                 >
                   Generate Brief
@@ -240,6 +293,88 @@ const BriefGenerator = () => {
             Go to Copy Editor
           </Button>
         </motion.div>
+
+        {/* Generation Method Dialog */}
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>How would you like to generate your brief?</DialogTitle>
+              <DialogDescription>
+                Choose between a fully AI-generated brief or provide guidance on what you'd like to include.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name="generationType"
+                  render={({ field }) => (
+                    <FormItem className="space-y-1">
+                      <RadioGroup
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        className="gap-6"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="ai" id="ai" />
+                          <Label htmlFor="ai" className="font-medium">Fully AI-generated</Label>
+                        </div>
+                        <FormDescription className="ml-6">
+                          AI will generate a complete brief based on the selected template.
+                        </FormDescription>
+                        
+                        <div className="flex items-center space-x-2 mt-4">
+                          <RadioGroupItem value="guided" id="guided" />
+                          <Label htmlFor="guided" className="font-medium">User-guided generation</Label>
+                        </div>
+                        <FormDescription className="ml-6">
+                          Provide specific details about your target audience, product, or campaign goals.
+                        </FormDescription>
+                      </RadioGroup>
+                    </FormItem>
+                  )}
+                />
+                
+                {watchGenerationType === 'guided' && (
+                  <FormField
+                    control={form.control}
+                    name="guidanceText"
+                    render={({ field }) => (
+                      <FormItem>
+                        <Label htmlFor="guidanceText">Describe what you need</Label>
+                        <FormControl>
+                          <Textarea
+                            id="guidanceText"
+                            placeholder="Example: I need a brief for a fitness business targeting women over 30..."
+                            className="min-h-[100px]"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Be specific about your audience, product details, or any particular messages you want to include.
+                        </FormDescription>
+                      </FormItem>
+                    )}
+                  />
+                )}
+                
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" className="bg-copywrite-teal hover:bg-copywrite-teal-dark transition-colors">
+                    Generate Brief
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
