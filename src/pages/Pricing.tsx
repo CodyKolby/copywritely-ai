@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Star, Check } from 'lucide-react';
@@ -115,18 +116,6 @@ const Pricing = () => {
                   </li>
                   <li className="flex items-start">
                     <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <span>Możliwość napisania:</span>
-                      <ul className="ml-7 mt-2 list-disc text-gray-600">
-                        <li>E-mail marketingowy</li>
-                        <li>Reklama digitalowa</li>
-                        <li>Post na social media</li>
-                        <li>Landing page</li>
-                      </ul>
-                    </div>
-                  </li>
-                  <li className="flex items-start">
-                    <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
                     <span>Podstawowy feedback od AI</span>
                   </li>
                   <li className="flex items-start">
@@ -182,25 +171,7 @@ const Pricing = () => {
                   </li>
                   <li className="flex items-start">
                     <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <span>Custom Brief Builder™ – Tworzenie własnych spersonalizowanych briefów</span>
-                      <ul className="ml-7 mt-2 list-disc text-gray-600">
-                        <li>Własna grupa docelowa</li>
-                        <li>Branża, produkt, styl komunikacji</li>
-                      </ul>
-                    </div>
-                  </li>
-                  <li className="flex items-start">
-                    <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <span>Możliwość napisania:</span>
-                      <ul className="ml-7 mt-2 list-disc text-gray-600">
-                        <li>E-mail marketingowy</li>
-                        <li>Reklama digitalowa</li>
-                        <li>Post na social media</li>
-                        <li>Landing page</li>
-                      </ul>
-                    </div>
+                    <span>Tworzenie spersonalizowanych briefów pod swoją grupę docelową</span>
                   </li>
                   <li className="flex items-start">
                     <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
