@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Star, Check } from 'lucide-react';
@@ -17,7 +16,7 @@ const Pricing = () => {
 
   // Calculate pro price based on billing cycle (50% off for annual)
   const getProPrice = () => {
-    return billingCycle === 'annual' ? '19.99' : '39.99';
+    return billingCycle === 'annual' ? '39.99' : '79.99';
   };
   
   const getPricingLabel = () => {
@@ -164,7 +163,7 @@ const Pricing = () => {
                   <span className="text-5xl font-bold">{getProPrice()} PLN</span>
                   <span className="text-gray-500 ml-2">/ {getPricingLabel()}</span>
                   {billingCycle === 'annual' && (
-                    <span className="text-gray-400 ml-3 line-through">39.99 PLN</span>
+                    <span className="text-gray-400 ml-3 line-through">79.99 PLN</span>
                   )}
                 </div>
               </CardHeader>
