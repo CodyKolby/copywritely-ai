@@ -1,7 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-// Pobieramy klucz Secret Key Stripe z zmiennych środowiskowych
+// Pobieramy klucze Stripe z zmiennych środowiskowych
 const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
 
 // Definiujemy nagłówki CORS
@@ -20,13 +20,18 @@ serve(async (req) => {
     // Pobieramy dane z żądania
     const { priceId, customerEmail, successUrl, cancelUrl } = await req.json();
 
+    // Walidacja danych wejściowych
     if (!priceId) {
-      throw new Error('Brak priceId');
+      console.error('Brak priceId w zapytaniu');
+      throw new Error('Brak identyfikatora cennika (priceId)');
     }
 
     if (!stripeSecretKey) {
-      throw new Error('Brak klucza Stripe');
+      console.error('Brak klucza Stripe w zmiennych środowiskowych');
+      throw new Error('Błąd konfiguracji: brak klucza API Stripe');
     }
+
+    console.log(`Tworzenie sesji Stripe Checkout dla priceId: ${priceId}`);
 
     // Tworzymy parametry dla sesji Checkout
     const params = new URLSearchParams({
@@ -45,7 +50,7 @@ serve(async (req) => {
       params.append('customer_email', customerEmail);
     }
 
-    console.log('Sending request to Stripe with params:', Object.fromEntries(params));
+    console.log('Parametry sesji Stripe:', Object.fromEntries(params));
 
     // Tworzymy sesję Stripe za pomocą Fetch API
     const response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
@@ -60,12 +65,28 @@ serve(async (req) => {
     // Przetwarzamy odpowiedź
     const sessionData = await response.json();
 
-    if (sessionData.error) {
-      console.error('Stripe API error:', sessionData.error);
-      throw new Error(sessionData.error.message);
+    // Szczegółowe logowanie odpowiedzi
+    if (!response.ok) {
+      console.error('Błąd API Stripe:', {
+        statusCode: response.status,
+        statusText: response.statusText,
+        error: sessionData.error
+      });
+      
+      // Obsługa błędu dotyczącego trybu testowego/produkcyjnego
+      if (sessionData.error && sessionData.error.message && 
+          sessionData.error.message.includes('test mode') && 
+          sessionData.error.message.includes('live mode')) {
+        throw new Error('Błąd zgodności: Test mode price ID używany z live mode API key. Proszę użyć zgodnych kluczy w tym samym trybie.');
+      }
+      
+      throw new Error(sessionData.error?.message || 'Błąd podczas tworzenia sesji Stripe');
     }
 
-    console.log('Successfully created Stripe session:', sessionData.id);
+    console.log('Sesja Stripe utworzona pomyślnie:', {
+      sessionId: sessionData.id,
+      url: sessionData.url
+    });
 
     // Zwracamy URL do sesji Checkout
     return new Response(
