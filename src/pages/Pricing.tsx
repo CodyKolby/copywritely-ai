@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Star, Check, Clock } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -45,25 +45,25 @@ const Pricing = () => {
   };
 
   return (
-    <div className="min-h-screen pt-32 pb-20 px-6">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen pt-24 pb-20 px-4">
+      <div className="max-w-4xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="text-center mb-12"
+          className="text-center mb-10"
         >
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
             Wybierz plan idealny dla siebie
           </h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             Profesjonalne narzędzie do copywritingu, które pomoże Ci tworzyć
             skuteczne teksty reklamowe.
           </p>
         </motion.div>
 
         {/* Billing toggle */}
-        <div className="flex justify-center mb-10">
+        <div className="flex justify-center mb-8">
           <Tabs
             defaultValue="annual"
             value={billingCycle}
@@ -81,17 +81,18 @@ const Pricing = () => {
           </Tabs>
         </div>
 
-        {/* Pricing card centered */}
+        {/* Pricing card centered with max width */}
         <motion.div 
-          className="max-w-xl mx-auto"
+          className="max-w-md mx-auto"
           variants={containerVariants}
           initial="hidden"
           animate="visible"
         >
           {/* Pro Plan */}
           <motion.div variants={itemVariants}>
-            <Card className="relative border-copywrite-teal/30 shadow-lg">
-              <div className="absolute -top-4 inset-x-0 flex justify-center">
+            <Card className="relative border-copywrite-teal/30 shadow-lg overflow-hidden">
+              {/* Popular badge */}
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2">
                 <Badge className="bg-amber-100 text-amber-700 border-amber-200 flex items-center gap-1 px-3 py-1">
                   <Star className="h-4 w-4 fill-amber-500 text-amber-500" />
                   <span className="font-medium">Plan Pro</span>
@@ -99,47 +100,54 @@ const Pricing = () => {
               </div>
               
               {/* Free trial badge */}
-              <div className="absolute -top-4 right-4">
+              <div className="absolute top-4 right-4">
                 <Badge className="bg-green-100 text-green-700 border-green-200 flex items-center gap-1 px-3 py-1">
                   <Clock className="h-4 w-4 text-green-600" />
                   <span className="font-medium">3 dni za darmo</span>
                 </Badge>
               </div>
               
-              <CardHeader className="pb-8 pt-8">
-                <div className="flex items-center justify-between">
+              <div className="p-6 pt-10">
+                <div className="flex items-center justify-between mb-2">
                   <h2 className="text-3xl font-bold">Pro</h2>
                   {billingCycle === 'annual' && (
-                    <Badge className="bg-green-100 text-green-700 border-green-200 ml-2">
+                    <Badge className="bg-green-100 text-green-700 border-green-200">
                       Save 50%
                     </Badge>
                   )}
                 </div>
-                <p className="text-gray-600 mt-2">
+                <p className="text-gray-600 mb-6">
                   Pełen dostęp do zaawansowanych funkcji copywritingu.
                 </p>
-                <div className="mt-6 flex items-center">
-                  <span className="text-5xl font-bold">{getProPrice()} PLN</span>
+                <div className="flex items-baseline mb-2">
+                  <span className="text-5xl font-bold">{getProPrice()}</span>
+                  <span className="text-xl ml-1">PLN</span>
                   <span className="text-gray-500 ml-2">/ {getPricingLabel()}</span>
-                  {billingCycle === 'annual' && (
-                    <span className="text-gray-400 ml-3 line-through">79.99 PLN</span>
-                  )}
                 </div>
                 
+                {billingCycle === 'annual' && (
+                  <div className="mb-4">
+                    <span className="text-gray-400 line-through">79.99 PLN</span>
+                  </div>
+                )}
+                
                 {/* Free trial notice */}
-                <div className="mt-4 bg-green-50 p-3 rounded-lg border border-green-100">
+                <div className="mb-6 bg-green-50 p-3 rounded-lg border border-green-100">
                   <p className="text-green-700 text-sm flex items-center">
-                    <Clock className="h-4 w-4 mr-2" />
+                    <Clock className="h-4 w-4 mr-2 flex-shrink-0" />
                     Rozpocznij od 3-dniowego darmowego okresu próbnego. Anuluj w dowolnym momencie.
                   </p>
                 </div>
-              </CardHeader>
-              
-              <CardContent className="flex-grow">
-                <Button className="w-full mb-8 bg-copywrite-teal hover:bg-copywrite-teal-dark">
+                
+                <Button 
+                  className="w-full mb-6 bg-copywrite-teal hover:bg-copywrite-teal-dark h-12 text-base"
+                >
                   Rozpocznij darmowy okres próbny
                 </Button>
-                <ul className="space-y-4">
+              </div>
+              
+              <CardContent className="border-t border-gray-100 bg-gray-50 p-6">
+                <ul className="space-y-3">
                   <li className="flex items-start">
                     <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
                     <span>Nielimitowana liczba briefów i analiz</span>
@@ -171,9 +179,9 @@ const Pricing = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
-          className="mt-24 text-center"
+          className="mt-20 text-center"
         >
-          <h2 className="text-3xl font-bold mb-12">Masz pytania?</h2>
+          <h2 className="text-3xl font-bold mb-8">Masz pytania?</h2>
           <div className="flex justify-center">
             <Button variant="outline" className="border-copywrite-teal text-copywrite-teal">
               Skontaktuj się z nami
