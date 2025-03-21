@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { LogIn, LogOut, User, Menu } from 'lucide-react';
+import { LogIn, LogOut, User, Menu, FolderOpen } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
   DropdownMenu, 
@@ -82,6 +82,12 @@ const Navbar = () => {
                 <DropdownMenuItem className="gap-2">
                   <User size={16} /> 
                   <span>Profile</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild className="gap-2">
+                  <Link to="/projekty">
+                    <FolderOpen size={16} /> 
+                    <span>Projekty</span>
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={signOut} className="gap-2 text-red-500">
                   <LogOut size={16} /> 

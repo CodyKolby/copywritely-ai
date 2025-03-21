@@ -13,6 +13,7 @@ import About from "./pages/About";
 import Pricing from "./pages/Pricing";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
+import Projekty from "./pages/Projekty";
 import Navbar from "./components/Navbar";
 import AnimatedTransition from "./components/AnimatedTransition";
 
@@ -35,6 +36,7 @@ const App = () => (
                 <Route path="/about" element={<About />} />
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="/login" element={<Login />} />
+                <Route path="/projekty" element={<Projekty />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </AnimatedTransition>
