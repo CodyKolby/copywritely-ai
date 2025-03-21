@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -155,6 +156,22 @@ const BriefGenerator = () => {
   const [selectedGenerationType, setSelectedGenerationType] = useState<'ai' | 'guided'>('ai');
   const [guidanceText, setGuidanceText] = useState<string>('');
   const [selectedAdObjective, setSelectedAdObjective] = useState<string>('');
+  
+  // Add the missing form hook instances
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      generationType: 'ai',
+      guidanceText: '',
+    },
+  });
+  
+  const adObjectiveForm = useForm<AdObjectiveFormValues>({
+    resolver: zodResolver(adObjectiveSchema),
+    defaultValues: {
+      objective: '',
+    },
+  });
 
   useEffect(() => {
     window.scrollTo(0, 0);
