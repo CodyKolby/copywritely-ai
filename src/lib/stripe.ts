@@ -1,3 +1,4 @@
+
 import { loadStripe } from '@stripe/stripe-js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -52,6 +53,57 @@ export const createCheckoutSession = async (priceId: string) => {
     }
   } catch (error) {
     console.error('Wystąpił błąd podczas przekierowania do Stripe Checkout:', error);
+    throw error;
+  }
+};
+
+// Interfejs dla danych subskrypcji
+export interface SubscriptionDetails {
+  subscriptionId: string;
+  status: string;
+  currentPeriodEnd: string;
+  daysUntilRenewal: number;
+  cancelAtPeriodEnd: boolean;
+  portalUrl: string;
+  hasSubscription: boolean;
+  plan: string;
+  trialEnd: string | null;
+}
+
+// Funkcja do pobierania szczegółów subskrypcji
+export const getSubscriptionDetails = async (userId: string): Promise<SubscriptionDetails | null> => {
+  try {
+    const { data, error } = await supabase.functions.invoke('subscription-details', {
+      body: { userId }
+    });
+    
+    if (error) {
+      console.error('Error fetching subscription details:', error);
+      return null;
+    }
+    
+    return data as SubscriptionDetails;
+  } catch (error) {
+    console.error('Error fetching subscription details:', error);
+    return null;
+  }
+};
+
+// Funkcja do anulowania subskrypcji
+export const cancelSubscription = async (userId: string, subscriptionId: string): Promise<any> => {
+  try {
+    const { data, error } = await supabase.functions.invoke('cancel-subscription', {
+      body: { userId, subscriptionId }
+    });
+    
+    if (error) {
+      console.error('Error canceling subscription:', error);
+      throw new Error(error.message);
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Error canceling subscription:', error);
     throw error;
   }
 };

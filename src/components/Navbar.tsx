@@ -3,21 +3,25 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { LogIn, LogOut, User, Menu, FolderOpen } from 'lucide-react';
+import { LogIn, LogOut, User, Menu, FolderOpen, CreditCard, Shield } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
   DropdownMenuItem, 
-  DropdownMenuTrigger 
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from '@/components/ui/button';
+import SubscriptionModal from './subscription/SubscriptionModal';
 
 const Navbar = () => {
   const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
-  const { user, signOut } = useAuth();
+  const { user, signOut, isPremium } = useAuth();
+  const [subscriptionModalOpen, setSubscriptionModalOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -67,39 +71,64 @@ const Navbar = () => {
 
         <div className="flex items-center gap-4">
           {user ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                  <Avatar>
-                    <AvatarImage src={user.user_metadata?.avatar_url} alt="Profile" />
-                    <AvatarFallback className="bg-copywrite-teal text-white">
-                      {getInitials()}
-                    </AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem className="gap-2">
-                  <User size={16} /> 
-                  <span>Profile</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild className="gap-2">
-                  <Link to="/projekty">
-                    <FolderOpen size={16} /> 
-                    <span>Projekty</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={signOut} className="gap-2 text-red-500">
-                  <LogOut size={16} /> 
-                  <span>Log out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                    <Avatar>
+                      <AvatarImage src={user.user_metadata?.avatar_url} alt="Profile" />
+                      <AvatarFallback className="bg-copywrite-teal text-white">
+                        {getInitials()}
+                      </AvatarFallback>
+                    </Avatar>
+                    {isPremium && (
+                      <div className="absolute -top-1 -right-1 bg-amber-400 text-white rounded-full p-0.5">
+                        <Shield className="h-3 w-3" />
+                      </div>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">{user.email}</p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {isPremium ? 'Konto Premium' : 'Konto Free'}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="gap-2">
+                    <User size={16} /> 
+                    <span>Profil</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="gap-2">
+                    <Link to="/projekty">
+                      <FolderOpen size={16} /> 
+                      <span>Projekty</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSubscriptionModalOpen(true)} className="gap-2">
+                    <CreditCard size={16} /> 
+                    <span>Subskrypcja</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={signOut} className="gap-2 text-red-500">
+                    <LogOut size={16} /> 
+                    <span>Wyloguj</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <SubscriptionModal 
+                open={subscriptionModalOpen}
+                onOpenChange={setSubscriptionModalOpen}
+              />
+            </>
           ) : (
             <Link to="/login">
               <Button variant="default" className="bg-copywrite-teal hover:bg-copywrite-teal-dark flex items-center gap-2">
                 <LogIn size={18} />
-                <span className="hidden sm:inline">Log in</span>
+                <span className="hidden sm:inline">Zaloguj</span>
               </Button>
             </Link>
           )}
