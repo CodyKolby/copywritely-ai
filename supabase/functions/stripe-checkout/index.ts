@@ -24,6 +24,10 @@ serve(async (req) => {
       throw new Error('Brak priceId');
     }
 
+    if (!stripeSecretKey) {
+      throw new Error('Brak klucza Stripe');
+    }
+
     // Tworzymy parametry dla sesji Checkout
     const params = new URLSearchParams({
       'success_url': successUrl || `${req.headers.get('origin') || ''}/success?session_id={CHECKOUT_SESSION_ID}`,
@@ -31,13 +35,17 @@ serve(async (req) => {
       'mode': 'subscription',
       'line_items[0][price]': priceId,
       'line_items[0][quantity]': '1',
-      'subscription_data[trial_period_days]': '3', // Dodajemy 3-dniowy okres próbny
     });
+
+    // Dodajemy 3-dniowy okres próbny
+    params.append('subscription_data[trial_period_days]', '3');
 
     // Dodajemy opcjonalny email klienta, jeśli został podany
     if (customerEmail) {
       params.append('customer_email', customerEmail);
     }
+
+    console.log('Sending request to Stripe with params:', Object.fromEntries(params));
 
     // Tworzymy sesję Stripe za pomocą Fetch API
     const response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
@@ -53,8 +61,11 @@ serve(async (req) => {
     const sessionData = await response.json();
 
     if (sessionData.error) {
+      console.error('Stripe API error:', sessionData.error);
       throw new Error(sessionData.error.message);
     }
+
+    console.log('Successfully created Stripe session:', sessionData.id);
 
     // Zwracamy URL do sesji Checkout
     return new Response(

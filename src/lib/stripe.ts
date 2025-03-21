@@ -1,5 +1,6 @@
 import { loadStripe } from '@stripe/stripe-js';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 // Pobieramy publiczny klucz ze zmiennych środowiskowych
 const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '';
@@ -23,12 +24,19 @@ export const PRICE_IDS = {
 // Funkcja do tworzenia sesji Checkout
 export const createCheckoutSession = async (priceId: string) => {
   try {
+    if (!priceId) {
+      throw new Error('Nieprawidłowy identyfikator cennika');
+    }
+
     // Pobierz zapisany email użytkownika
     const userEmail = localStorage.getItem('userEmail');
     
     // Wygeneruj URL powrotu
     const successUrl = `${window.location.origin}/success?session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${window.location.origin}/pricing`;
+
+    // Pokazujemy toast informujący o rozpoczęciu procesu
+    toast.info('Przygotowujemy proces płatności...');
 
     // Wywołaj funkcję edge w Supabase
     const { data, error } = await supabase.functions.invoke('stripe-checkout', {
@@ -40,8 +48,17 @@ export const createCheckoutSession = async (priceId: string) => {
       }
     });
 
+    console.log('Response from stripe-checkout:', { data, error });
+
     if (error) {
-      throw new Error(error.message);
+      console.error('Supabase function error:', error);
+      throw new Error(error.message || 'Błąd przy wywoływaniu funkcji Stripe');
+    }
+
+    // Jeśli funkcja zwróciła błąd w danych
+    if (data?.error) {
+      console.error('Stripe error:', data.error);
+      throw new Error(data.error);
     }
 
     // Jeśli funkcja zwróciła URL, przekieruj użytkownika
@@ -52,6 +69,9 @@ export const createCheckoutSession = async (priceId: string) => {
     }
   } catch (error) {
     console.error('Wystąpił błąd podczas przekierowania do Stripe Checkout:', error);
+    toast.error('Wystąpił błąd', {
+      description: error instanceof Error ? error.message : 'Nie można uruchomić procesu płatności'
+    });
     throw error;
   }
 };
