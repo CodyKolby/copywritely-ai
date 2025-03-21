@@ -6,9 +6,13 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
+import { createCheckoutSession } from '@/lib/stripe';
 
 const Pricing = () => {
   const [billingCycle, setBillingCycle] = useState<'annual' | 'monthly'>('annual');
+  const { user } = useAuth();
   
   // Scroll to top on page load
   useEffect(() => {
@@ -23,6 +27,38 @@ const Pricing = () => {
   // Return the label for pricing display
   const getPricingLabel = () => {
     return 'miesięcznie';
+  };
+
+  // Przykładowe ID produktów Stripe (w rzeczywistej implementacji powinny pochodzić z backendu)
+  const getPriceId = () => {
+    return billingCycle === 'annual' 
+      ? 'price_annual_123456' // Przykładowe ID dla rocznego planu
+      : 'price_monthly_123456'; // Przykładowe ID dla miesięcznego planu
+  };
+
+  // Obsługa kliknięcia przycisku zakupu
+  const handleSubscribe = async () => {
+    if (!user) {
+      toast.error('Musisz się zalogować', {
+        description: 'Zaloguj się, aby kontynuować zakup subskrypcji',
+        action: {
+          label: 'Zaloguj',
+          onClick: () => window.location.href = '/login'
+        }
+      });
+      return;
+    }
+
+    try {
+      // W rzeczywistej implementacji, to powinno wywołać endpoint API,
+      // który tworzy sesję Checkout i zwraca ID sesji
+      await createCheckoutSession(getPriceId());
+    } catch (error) {
+      console.error('Error creating checkout session:', error);
+      toast.error('Wystąpił błąd', {
+        description: 'Nie udało się utworzyć sesji płatności'
+      });
+    }
   };
 
   // Animation variants
@@ -136,6 +172,7 @@ const Pricing = () => {
                 
                 <Button 
                   className="w-full mb-6 bg-copywrite-teal hover:bg-copywrite-teal-dark h-12 text-base"
+                  onClick={handleSubscribe}
                 >
                   Rozpocznij darmowy okres próbny
                 </Button>
