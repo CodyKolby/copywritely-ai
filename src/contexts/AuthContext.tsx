@@ -8,12 +8,13 @@ interface AuthContextType {
   user: User | null
   session: Session | null
   loading: boolean
+  isPremium: boolean
   signInWithGoogle: () => Promise<void>
   signInWithEmail: (email: string, password: string) => Promise<void>
   signUpWithEmail: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
   // For testing auth states
-  setTestUserState: (loggedIn: boolean) => void
+  setTestUserState: (loggedIn: boolean, premium?: boolean) => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -22,6 +23,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isPremium, setIsPremium] = useState(false)
 
   useEffect(() => {
     // Get initial session
@@ -29,6 +31,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session)
       setUser(session?.user ?? null)
       setLoading(false)
+      
+      // Check premium status if user is logged in
+      if (session?.user) {
+        checkPremiumStatus(session.user.id)
+      }
     })
 
     // Listen for auth changes
@@ -36,12 +43,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session)
       setUser(session?.user ?? null)
       setLoading(false)
+      
+      // Check premium status if user is logged in
+      if (session?.user) {
+        checkPremiumStatus(session.user.id)
+      } else {
+        setIsPremium(false) // Reset premium status when logged out
+      }
     })
 
     return () => {
       subscription.unsubscribe()
     }
   }, [])
+  
+  // Function to check premium status from Supabase
+  const checkPremiumStatus = async (userId: string) => {
+    try {
+      // In a real app, this would query a subscriptions or users table
+      // For now, we'll simulate this by checking if the user exists in the database
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', userId)
+        .limit(1)
+        .single()
+      
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error checking premium status:', error)
+        return
+      }
+      
+      // For now, just check if user exists in profiles table
+      // In a real implementation, you'd check a premium field or subscription status
+      setIsPremium(!!data)
+    } catch (error) {
+      console.error('Error checking premium status:', error)
+    }
+  }
 
   const signInWithGoogle = async () => {
     try {
@@ -120,7 +159,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   // Special function just for testing auth states locally
-  const setTestUserState = (loggedIn: boolean) => {
+  const setTestUserState = (loggedIn: boolean, premium: boolean = false) => {
     if (loggedIn) {
       // Create a fake user and session for testing
       // Must match the User type from @supabase/supabase-js
@@ -147,10 +186,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       setUser(testUser);
       setSession(testSession);
-      toast.success('Test user logged in');
+      setIsPremium(premium); // Set premium status based on parameter
+      toast.success(`Test user logged in (${premium ? 'Premium' : 'Free'} account)`);
     } else {
       setUser(null);
       setSession(null);
+      setIsPremium(false);
       toast.success('Test user logged out');
     }
   };
@@ -160,6 +201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user, 
       session, 
       loading, 
+      isPremium,
       signInWithGoogle,
       signInWithEmail,
       signUpWithEmail,
