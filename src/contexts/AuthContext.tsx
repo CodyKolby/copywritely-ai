@@ -1,13 +1,26 @@
+
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/integrations/supabase/client'
 import { toast } from 'sonner'
+
+interface Profile {
+  id: string
+  email?: string
+  full_name?: string
+  avatar_url?: string
+  is_premium: boolean
+  subscription_id?: string
+  subscription_status?: string
+  subscription_expiry?: string
+}
 
 interface AuthContextType {
   user: User | null
   session: Session | null
   loading: boolean
   isPremium: boolean
+  profile: Profile | null
   signInWithGoogle: () => Promise<void>
   signInWithEmail: (email: string, password: string) => Promise<void>
   signUpWithEmail: (email: string, password: string) => Promise<void>
@@ -24,6 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [isPremium, setIsPremium] = useState(false)
+  const [profile, setProfile] = useState<Profile | null>(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -32,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false)
       
       if (session?.user) {
+        fetchProfile(session.user.id)
         checkPremiumStatus(session.user.id)
       }
     })
@@ -42,9 +57,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false)
       
       if (session?.user) {
+        fetchProfile(session.user.id)
         checkPremiumStatus(session.user.id)
       } else {
         setIsPremium(false)
+        setProfile(null)
       }
     })
 
@@ -52,6 +69,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       subscription.unsubscribe()
     }
   }, [])
+
+  const fetchProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (error) {
+        console.error('Error fetching profile:', error);
+        return;
+      }
+      
+      setProfile(data);
+      setIsPremium(data?.is_premium || false);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    }
+  }
 
   const checkPremiumStatus = async (userId: string) => {
     try {
@@ -68,20 +105,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Error checking premium status:', error);
       
+      // Fallback - sprawdzamy w tabeli profiles
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('id')
+          .select('is_premium')
           .eq('id', userId)
-          .limit(1)
           .single();
         
-        if (error && error.code !== 'PGRST116') {
+        if (error) {
           console.error('Error checking premium status (fallback):', error);
           return;
         }
         
-        setIsPremium(!!data);
+        setIsPremium(data?.is_premium || false);
       } catch (fallbackError) {
         console.error('Error in fallback premium status check:', fallbackError);
       }
@@ -190,11 +227,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(testUser);
       setSession(testSession);
       setIsPremium(premium);
+      setProfile({
+        id: testUser.id,
+        email: testUser.email,
+        full_name: 'Test User',
+        is_premium: premium
+      });
       toast.success(`Test user logged in (${premium ? 'Premium' : 'Free'} account)`);
     } else {
       setUser(null);
       setSession(null);
       setIsPremium(false);
+      setProfile(null);
       toast.success('Test user logged out');
     }
   };
@@ -205,6 +249,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session, 
       loading, 
       isPremium,
+      profile,
       signInWithGoogle,
       signInWithEmail,
       signUpWithEmail,
