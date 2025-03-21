@@ -123,13 +123,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const setTestUserState = (loggedIn: boolean) => {
     if (loggedIn) {
       // Create a fake user and session for testing
+      // Must match the User type from @supabase/supabase-js
       const testUser = {
         id: 'test-user-id',
-        email: 'test@example.com',
+        app_metadata: {},
         user_metadata: {
           avatar_url: '',
           full_name: 'Test User'
-        }
+        },
+        aud: 'authenticated',
+        created_at: new Date().toISOString(),
+        email: 'test@example.com',
+        role: '',
+        updated_at: new Date().toISOString()
       } as User;
       
       const testSession = {
