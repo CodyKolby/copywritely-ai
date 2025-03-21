@@ -102,11 +102,6 @@ const Pricing = () => {
               <div className="p-6">
                 <div className="flex items-center justify-between mb-2">
                   <h2 className="text-3xl font-bold">Pro</h2>
-                  {billingCycle === 'annual' && (
-                    <Badge className="bg-green-100 text-green-700 border-green-200">
-                      Save 50%
-                    </Badge>
-                  )}
                 </div>
                 <p className="text-gray-600 mb-6">
                   Pełen dostęp do zaawansowanych funkcji copywritingu.
@@ -115,6 +110,13 @@ const Pricing = () => {
                   <span className="text-5xl font-bold">{getProPrice()}</span>
                   <span className="text-xl ml-1">PLN</span>
                   <span className="text-gray-500 ml-2">/ {getPricingLabel()}</span>
+                  
+                  {/* Moved "Save 50%" badge here next to the price */}
+                  {billingCycle === 'annual' && (
+                    <Badge className="bg-green-100 text-green-700 border-green-200 ml-3">
+                      Save 50%
+                    </Badge>
+                  )}
                 </div>
                 
                 {billingCycle === 'annual' && (
