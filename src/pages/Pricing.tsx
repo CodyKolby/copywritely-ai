@@ -8,16 +8,24 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { createCheckoutSession } from '@/lib/stripe';
+import { createCheckoutSession, PRICE_IDS } from '@/lib/stripe';
 
 const Pricing = () => {
   const [billingCycle, setBillingCycle] = useState<'annual' | 'monthly'>('annual');
+  const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
   
   // Scroll to top on page load
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
+
+  // Zapisz email użytkownika w localStorage (dla Stripe)
+  useEffect(() => {
+    if (user?.email) {
+      localStorage.setItem('userEmail', user.email);
+    }
+  }, [user]);
 
   // Calculate pro price based on billing cycle (50% off for annual)
   const getProPrice = () => {
@@ -29,11 +37,11 @@ const Pricing = () => {
     return 'miesięcznie';
   };
 
-  // Przykładowe ID produktów Stripe (w rzeczywistej implementacji powinny pochodzić z backendu)
+  // Pobierz ID cennika na podstawie wybranego planu
   const getPriceId = () => {
     return billingCycle === 'annual' 
-      ? 'price_annual_123456' // Przykładowe ID dla rocznego planu
-      : 'price_monthly_123456'; // Przykładowe ID dla miesięcznego planu
+      ? PRICE_IDS.PRO_ANNUAL
+      : PRICE_IDS.PRO_MONTHLY;
   };
 
   // Obsługa kliknięcia przycisku zakupu
@@ -49,15 +57,23 @@ const Pricing = () => {
       return;
     }
 
+    setIsLoading(true);
+    
     try {
-      // W rzeczywistej implementacji, to powinno wywołać endpoint API,
-      // który tworzy sesję Checkout i zwraca ID sesji
       await createCheckoutSession(getPriceId());
-    } catch (error) {
-      console.error('Error creating checkout session:', error);
-      toast.error('Wystąpił błąd', {
-        description: 'Nie udało się utworzyć sesji płatności'
+      // Jeśli dotarliśmy tutaj, to przekierowanie nie nastąpiło
+      toast.error('Nie udało się przekierować do płatności', {
+        description: 'Spróbuj ponownie później'
       });
+    } catch (error) {
+      if (error instanceof Error) {
+        toast.error('Wystąpił błąd', {
+          description: error.message || 'Nie udało się utworzyć sesji płatności'
+        });
+      }
+      console.error('Error creating checkout session:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -173,8 +189,9 @@ const Pricing = () => {
                 <Button 
                   className="w-full mb-6 bg-copywrite-teal hover:bg-copywrite-teal-dark h-12 text-base"
                   onClick={handleSubscribe}
+                  disabled={isLoading}
                 >
-                  Rozpocznij darmowy okres próbny
+                  {isLoading ? 'Ładowanie...' : 'Rozpocznij darmowy okres próbny'}
                 </Button>
               </div>
               

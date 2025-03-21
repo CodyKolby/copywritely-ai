@@ -2,7 +2,7 @@
 import { loadStripe } from '@stripe/stripe-js';
 
 // Pobieramy publiczny klucz ze zmiennych środowiskowych
-const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_51OtvALG0KQWtMCjDDpPlM4C2Gm2MUbZb3O8ZkDTkKCU6Dsk4NQe7EDc9l6XmLhB2Ll9x9pXnLDTWVF8kPmtxEWGh00uzNZCIMh';
+const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '';
 
 // Inicjalizujemy Stripe
 let stripePromise: Promise<any> | null = null;
@@ -14,13 +14,19 @@ export const getStripe = () => {
   return stripePromise;
 };
 
+// Rzeczywiste ID cenników produktów ze Stripe
+export const PRICE_IDS = {
+  PRO_MONTHLY: 'price_1P3ASkG0KQWtMCjDnTvlSb27',
+  PRO_ANNUAL: 'price_1P3AT7G0KQWtMCjD7bkvKKSt',
+};
+
 // Funkcja do tworzenia sesji Checkout
 export const createCheckoutSession = async (priceId: string) => {
   const stripe = await getStripe();
   
-  // W prawdziwej implementacji, ten obiekt powinien pochodzić z backendu
-  // aby zabezpieczyć proces płatności, ale na potrzeby demonstracji
-  // tworzymy go tutaj
+  if (!stripe) {
+    throw new Error('Nie udało się zainicjalizować Stripe');
+  }
   
   // Przekieruj do Stripe Checkout
   const { error } = await stripe.redirectToCheckout({
@@ -33,9 +39,28 @@ export const createCheckoutSession = async (priceId: string) => {
     mode: 'subscription',
     successUrl: `${window.location.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
     cancelUrl: `${window.location.origin}/pricing`,
+    // Dodaj informacje o kliencie (opcjonalnie)
+    customerEmail: localStorage.getItem('userEmail') || undefined,
   });
 
   if (error) {
     console.error('Wystąpił błąd podczas przekierowania do Stripe Checkout:', error);
+    throw new Error(error.message);
+  }
+};
+
+// Funkcja do sprawdzania statusu subskrypcji (do zaimplementowania z backendem)
+export const checkSubscriptionStatus = async (userId: string): Promise<boolean> => {
+  // W rzeczywistej implementacji, to powinno wywołać endpoint API,
+  // który sprawdza status subskrypcji w bazie danych
+  
+  // Tymczasowa implementacja dla testów
+  try {
+    // Sprawdź czy użytkownik ma aktywną subskrypcję
+    // W prawdziwej implementacji, sprawdź w Supabase lub przez API
+    return false;
+  } catch (error) {
+    console.error('Error checking subscription status:', error);
+    return false;
   }
 };
