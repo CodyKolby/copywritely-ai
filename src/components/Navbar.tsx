@@ -3,11 +3,21 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { LogIn } from 'lucide-react';
+import { LogIn, LogOut, User, Menu } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from '@/components/ui/button';
 
 const Navbar = () => {
   const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
+  const { user, signOut } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -24,6 +34,12 @@ const Navbar = () => {
     { path: '/copy-editor', label: 'Copy Editor' },
     { path: '/about', label: 'About' },
   ];
+
+  // Get initials for avatar fallback
+  const getInitials = () => {
+    if (!user?.email) return 'U';
+    return user.email.charAt(0).toUpperCase();
+  };
 
   return (
     <header
@@ -49,31 +65,61 @@ const Navbar = () => {
         </nav>
 
         <div className="flex items-center gap-4">
-          <Link to="/login">
-            <button className="flex items-center gap-2 bg-copywrite-teal text-white py-2 px-4 rounded-md hover:bg-copywrite-teal-dark transition-colors">
-              <LogIn size={18} />
-              <span className="hidden sm:inline">Log in</span>
-            </button>
-          </Link>
+          {user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                  <Avatar>
+                    <AvatarImage src={user.user_metadata?.avatar_url} alt="Profile" />
+                    <AvatarFallback className="bg-copywrite-teal text-white">
+                      {getInitials()}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem className="gap-2">
+                  <User size={16} /> 
+                  <span>Profile</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={signOut} className="gap-2 text-red-500">
+                  <LogOut size={16} /> 
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Link to="/login">
+              <Button variant="default" className="bg-copywrite-teal hover:bg-copywrite-teal-dark flex items-center gap-2">
+                <LogIn size={18} />
+                <span className="hidden sm:inline">Log in</span>
+              </Button>
+            </Link>
+          )}
           
           <div className="md:hidden">
-            {/* Mobile menu button (simplified for now) */}
-            <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6 text-copywrite-teal"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-              </svg>
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Menu className="h-6 w-6 text-copywrite-teal" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                {navItems.map((item) => (
+                  <DropdownMenuItem key={item.path} asChild>
+                    <Link 
+                      to={item.path} 
+                      className={cn(
+                        "w-full", 
+                        location.pathname === item.path ? "text-copywrite-teal" : ""
+                      )}
+                    >
+                      {item.label}
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>
