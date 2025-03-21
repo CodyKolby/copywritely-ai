@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import BriefGenerator from "./pages/BriefGenerator";
 import CopyEditor from "./pages/CopyEditor";
 import About from "./pages/About";
+import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import Navbar from "./components/Navbar";
 import AnimatedTransition from "./components/AnimatedTransition";
@@ -29,6 +30,7 @@ const App = () => (
               <Route path="/brief-generator" element={<BriefGenerator />} />
               <Route path="/copy-editor" element={<CopyEditor />} />
               <Route path="/about" element={<About />} />
+              <Route path="/login" element={<Login />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AnimatedTransition>
