@@ -38,6 +38,26 @@ const BriefGenerator = () => {
     setDialogOpen(true);
   };
 
+  const handleGenerationTypeSubmit = (values: FormValues) => {
+    if (!isPremium) {
+      setDialogOpen(false);
+      toast.error('Nie posiadasz konta premium', {
+        description: 'Ta funkcjonalność jest dostępna tylko dla użytkowników premium.'
+      });
+      return;
+    }
+    
+    setSelectedGenerationType(values.generationType);
+    setGuidanceText(values.guidanceText || '');
+    setDialogOpen(false);
+    
+    if (currentTemplateId === 'ad') {
+      setAdObjectiveDialogOpen(true);
+    } else {
+      generateBrief(currentTemplateId, values.generationType, values.guidanceText || '');
+    }
+  };
+
   const handleAdObjectiveSubmit = (values: AdObjectiveFormValues) => {
     if (!isPremium) {
       setAdObjectiveDialogOpen(false);
@@ -53,37 +73,21 @@ const BriefGenerator = () => {
     generateBriefWithObjective(currentTemplateId, selectedGenerationType, guidanceText, values.objective);
   };
 
-  const generateBrief = (templateId: string, values: FormValues) => {
-    if (!isPremium) {
-      setDialogOpen(false);
-      toast.error('Nie posiadasz konta premium', {
-        description: 'Ta funkcjonalność jest dostępna tylko dla użytkowników premium.'
-      });
-      return;
+  const generateBrief = (templateId: string, generationType: 'ai' | 'guided', guidanceText: string) => {
+    setIsLoading(true);
+    setSelectedTemplate(templateId);
+    setGeneratedBrief(null);
+    
+    console.log('Generation type:', generationType);
+    if (generationType === 'guided' && guidanceText) {
+      console.log('User guidance:', guidanceText);
     }
     
-    setSelectedGenerationType(values.generationType);
-    setGuidanceText(values.guidanceText || '');
-    setDialogOpen(false);
-    
-    if (templateId === 'ad') {
-      setAdObjectiveDialogOpen(true);
-    } else {
-      setIsLoading(true);
-      setSelectedTemplate(templateId);
-      setGeneratedBrief(null);
-      
-      console.log('Generation type:', values.generationType);
-      if (values.generationType === 'guided' && values.guidanceText) {
-        console.log('User guidance:', values.guidanceText);
-      }
-      
-      setTimeout(() => {
-        setGeneratedBrief(sampleBriefs[templateId]);
-        setIsLoading(false);
-        toast.success('Brief generated successfully!');
-      }, 1500);
-    }
+    setTimeout(() => {
+      setGeneratedBrief(sampleBriefs[templateId]);
+      setIsLoading(false);
+      toast.success('Brief generated successfully!');
+    }, 1500);
   };
 
   const generateBriefWithObjective = (templateId: string, generationType: 'ai' | 'guided', guidance: string, objective: string) => {
@@ -169,7 +173,7 @@ const BriefGenerator = () => {
         <GenerationTypeDialog
           open={dialogOpen}
           onOpenChange={setDialogOpen}
-          onSubmit={generateBrief}
+          onSubmit={handleGenerationTypeSubmit}
           isPremium={isPremium}
         />
 
