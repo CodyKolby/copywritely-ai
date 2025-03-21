@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Check, Clock } from 'lucide-react';
@@ -20,8 +19,9 @@ const Pricing = () => {
     return billingCycle === 'annual' ? '39.99' : '79.99';
   };
   
+  // Fixed: Now correctly returns "miesięcznie" for both billing cycles
   const getPricingLabel = () => {
-    return billingCycle === 'annual' ? 'rocznie' : 'miesięcznie';
+    return 'miesięcznie';
   };
 
   // Animation variants
@@ -111,10 +111,10 @@ const Pricing = () => {
                   <span className="text-xl ml-1">PLN</span>
                   <span className="text-gray-500 ml-2">/ {getPricingLabel()}</span>
                   
-                  {/* Moved "Save 50%" badge here next to the price */}
+                  {/* Billing cycle badge */}
                   {billingCycle === 'annual' && (
                     <Badge className="bg-green-100 text-green-700 border-green-200 ml-3">
-                      Save 50%
+                      Rozliczenie roczne
                     </Badge>
                   )}
                 </div>
