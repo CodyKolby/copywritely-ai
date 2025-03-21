@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
@@ -8,7 +9,11 @@ interface AuthContextType {
   session: Session | null
   loading: boolean
   signInWithGoogle: () => Promise<void>
+  signInWithEmail: (email: string, password: string) => Promise<void>
+  signUpWithEmail: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
+  // For testing auth states
+  setTestUserState: (loggedIn: boolean) => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -58,6 +63,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const signInWithEmail = async (email: string, password: string) => {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      })
+      
+      if (error) throw error
+      toast.success('Signed in successfully')
+    } catch (error) {
+      if (error instanceof Error) {
+        toast.error('Error signing in', {
+          description: error.message
+        })
+      }
+      console.error('Error signing in with email:', error)
+    }
+  }
+
+  const signUpWithEmail = async (email: string, password: string) => {
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/login`
+        }
+      })
+      
+      if (error) throw error
+      toast.success('Account created! Check your email for verification link.')
+    } catch (error) {
+      if (error instanceof Error) {
+        toast.error('Error creating account', {
+          description: error.message
+        })
+      }
+      console.error('Error signing up with email:', error)
+    }
+  }
+
   const signOut = async () => {
     try {
       const { error } = await supabase.auth.signOut()
@@ -73,13 +119,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  // Special function just for testing auth states locally
+  const setTestUserState = (loggedIn: boolean) => {
+    if (loggedIn) {
+      // Create a fake user and session for testing
+      const testUser = {
+        id: 'test-user-id',
+        email: 'test@example.com',
+        user_metadata: {
+          avatar_url: '',
+          full_name: 'Test User'
+        }
+      } as User;
+      
+      const testSession = {
+        user: testUser,
+        access_token: 'fake-token',
+        refresh_token: 'fake-refresh-token',
+        expires_at: Date.now() + 3600000, // 1 hour from now
+      } as Session;
+      
+      setUser(testUser);
+      setSession(testSession);
+      toast.success('Test user logged in');
+    } else {
+      setUser(null);
+      setSession(null);
+      toast.success('Test user logged out');
+    }
+  };
+
   return (
     <AuthContext.Provider value={{ 
       user, 
       session, 
       loading, 
-      signInWithGoogle, 
-      signOut 
+      signInWithGoogle,
+      signInWithEmail,
+      signUpWithEmail,
+      signOut,
+      setTestUserState
     }}>
       {children}
     </AuthContext.Provider>
