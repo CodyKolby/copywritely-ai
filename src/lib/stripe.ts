@@ -1,4 +1,3 @@
-
 import { loadStripe } from '@stripe/stripe-js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -17,8 +16,8 @@ export const getStripe = () => {
 
 // Rzeczywiste ID cenników produktów ze Stripe
 export const PRICE_IDS = {
-  PRO_MONTHLY: 'price_1P3ASkG0KQWtMCjDnTvlSb27', // To będzie zastąpione prawdziwym ID cennika dla produktu prod_Rz7Lpm5vk4zmRY
-  PRO_ANNUAL: 'price_1P3AT7G0KQWtMCjD7bkvKKSt', // To będzie zastąpione prawdziwym ID cennika dla produktu prod_Rz7MpFmtOEfxIb
+  PRO_MONTHLY: 'price_1R596mAGO17NLUWtqihnmue7', // ID cennika dla subskrypcji miesięcznej
+  PRO_ANNUAL: 'price_1R597PAGO17NLUWtrF0bJNot', // ID cennika dla subskrypcji rocznej
 };
 
 // Funkcja do tworzenia sesji Checkout
