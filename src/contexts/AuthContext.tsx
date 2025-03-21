@@ -9,6 +9,8 @@ interface AuthContextType {
   session: Session | null
   loading: boolean
   signInWithGoogle: () => Promise<void>
+  signInWithEmail: (email: string, password: string) => Promise<void>
+  signUpWithEmail: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
 }
 
@@ -59,6 +61,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const signInWithEmail = async (email: string, password: string) => {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      })
+
+      if (error) throw error
+      toast.success('Signed in successfully')
+    } catch (error) {
+      if (error instanceof Error) {
+        toast.error('Error signing in', {
+          description: error.message
+        })
+      }
+      console.error('Error signing in with email/password:', error)
+      throw error
+    }
+  }
+
+  const signUpWithEmail = async (email: string, password: string) => {
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/login`
+        }
+      })
+
+      if (error) throw error
+      toast.success('Sign up successful', {
+        description: 'Please check your email for verification instructions.'
+      })
+    } catch (error) {
+      if (error instanceof Error) {
+        toast.error('Error signing up', {
+          description: error.message
+        })
+      }
+      console.error('Error signing up with email/password:', error)
+      throw error
+    }
+  }
+
   const signOut = async () => {
     try {
       const { error } = await supabase.auth.signOut()
@@ -75,7 +122,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      session, 
+      loading, 
+      signInWithGoogle, 
+      signInWithEmail, 
+      signUpWithEmail, 
+      signOut 
+    }}>
       {children}
     </AuthContext.Provider>
   )

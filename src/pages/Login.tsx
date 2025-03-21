@@ -18,7 +18,7 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [configError, setConfigError] = useState(false);
-  const { user, signInWithGoogle } = useAuth();
+  const { user, signInWithGoogle, signInWithEmail, signUpWithEmail } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -51,12 +51,17 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
     
-    // This is where you would implement email/password login with Supabase
-    // For now, just show a toast message
-    setTimeout(() => {
+    try {
+      if (isLogin) {
+        await signInWithEmail(email, password);
+      } else {
+        await signUpWithEmail(email, password);
+      }
+    } catch (error) {
+      console.error('Authentication error:', error);
+    } finally {
       setLoading(false);
-      toast.info('Email/password login not implemented yet');
-    }, 1500);
+    }
   };
 
   const handleGoogleSignIn = async () => {
