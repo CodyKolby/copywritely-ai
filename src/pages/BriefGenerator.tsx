@@ -19,6 +19,9 @@ import { Form, FormField, FormItem, FormControl, FormDescription } from '@/compo
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
+import { useAuth } from '@/contexts/AuthContext';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { ExclamationTriangleIcon } from '@radix-ui/react-icons';
 
 const sampleBriefTemplates = [
   { 
@@ -142,6 +145,7 @@ type FormValues = z.infer<typeof formSchema>;
 type AdObjectiveFormValues = z.infer<typeof adObjectiveSchema>;
 
 const BriefGenerator = () => {
+  const { isPremium } = useAuth();
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [generatedBrief, setGeneratedBrief] = useState<Brief | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -151,21 +155,6 @@ const BriefGenerator = () => {
   const [selectedGenerationType, setSelectedGenerationType] = useState<'ai' | 'guided'>('ai');
   const [guidanceText, setGuidanceText] = useState<string>('');
   const [selectedAdObjective, setSelectedAdObjective] = useState<string>('');
-
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      generationType: 'ai',
-      guidanceText: '',
-    },
-  });
-
-  const adObjectiveForm = useForm<AdObjectiveFormValues>({
-    resolver: zodResolver(adObjectiveSchema),
-    defaultValues: {
-      objective: '',
-    },
-  });
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -177,6 +166,14 @@ const BriefGenerator = () => {
   };
 
   const handleAdObjectiveSubmit = (values: AdObjectiveFormValues) => {
+    if (!isPremium) {
+      setAdObjectiveDialogOpen(false);
+      toast.error('Nie posiadasz konta premium', {
+        description: 'Ta funkcjonalność jest dostępna tylko dla użytkowników premium.'
+      });
+      return;
+    }
+    
     setSelectedAdObjective(values.objective);
     setAdObjectiveDialogOpen(false);
     
@@ -184,6 +181,14 @@ const BriefGenerator = () => {
   };
 
   const generateBrief = (templateId: string, values: FormValues) => {
+    if (!isPremium) {
+      setDialogOpen(false);
+      toast.error('Nie posiadasz konta premium', {
+        description: 'Ta funkcjonalność jest dostępna tylko dla użytkowników premium.'
+      });
+      return;
+    }
+    
     setSelectedGenerationType(values.generationType);
     setGuidanceText(values.guidanceText || '');
     setDialogOpen(false);
@@ -261,6 +266,23 @@ const BriefGenerator = () => {
             Generate creative briefs for your copywriting practice. Select a template to get started.
           </p>
         </motion.div>
+
+        {!isPremium && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="mb-8"
+          >
+            <Alert variant="destructive">
+              <ExclamationTriangleIcon className="h-4 w-4" />
+              <AlertTitle>Premium feature</AlertTitle>
+              <AlertDescription>
+                Brief generation is a premium feature. You'll be able to preview the brief templates, but generating briefs requires a premium account.
+              </AlertDescription>
+            </Alert>
+          </motion.div>
+        )}
 
         {!selectedTemplate ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
@@ -368,61 +390,15 @@ const BriefGenerator = () => {
               </DialogDescription>
             </DialogHeader>
             
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <FormField
-                  control={form.control}
-                  name="generationType"
-                  render={({ field }) => (
-                    <FormItem className="space-y-1">
-                      <RadioGroup
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        className="gap-6"
-                      >
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="ai" id="ai" />
-                          <Label htmlFor="ai" className="font-medium">Fully AI-generated</Label>
-                        </div>
-                        <FormDescription className="ml-6">
-                          AI will generate a complete brief based on the selected template.
-                        </FormDescription>
-                        
-                        <div className="flex items-center space-x-2 mt-4">
-                          <RadioGroupItem value="guided" id="guided" />
-                          <Label htmlFor="guided" className="font-medium">User-guided generation</Label>
-                        </div>
-                        <FormDescription className="ml-6">
-                          Provide specific details about your target audience, product, or campaign goals.
-                        </FormDescription>
-                      </RadioGroup>
-                    </FormItem>
-                  )}
-                />
-                
-                {watchGenerationType === 'guided' && (
-                  <FormField
-                    control={form.control}
-                    name="guidanceText"
-                    render={({ field }) => (
-                      <FormItem>
-                        <Label htmlFor="guidanceText">Describe what you need</Label>
-                        <FormControl>
-                          <Textarea
-                            id="guidanceText"
-                            placeholder="Example: I need a brief for a fitness business targeting women over 30..."
-                            className="min-h-[100px]"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Be specific about your audience, product details, or any particular messages you want to include.
-                        </FormDescription>
-                      </FormItem>
-                    )}
-                  />
-                )}
-                
+            {!isPremium ? (
+              <div className="py-4">
+                <Alert variant="destructive" className="mb-4">
+                  <ExclamationTriangleIcon className="h-4 w-4" />
+                  <AlertTitle>Premium feature</AlertTitle>
+                  <AlertDescription>
+                    Brief generation is only available for premium users. Upgrade your account to access this feature.
+                  </AlertDescription>
+                </Alert>
                 <DialogFooter>
                   <Button
                     type="button"
@@ -431,12 +407,85 @@ const BriefGenerator = () => {
                   >
                     Cancel
                   </Button>
-                  <Button type="submit" className="bg-copywrite-teal hover:bg-copywrite-teal-dark transition-colors">
-                    Generate Brief
+                  <Button 
+                    onClick={() => window.location.href = '/pricing'} 
+                    className="bg-copywrite-teal hover:bg-copywrite-teal-dark transition-colors"
+                  >
+                    View Pricing
                   </Button>
                 </DialogFooter>
-              </form>
-            </Form>
+              </div>
+            ) : (
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                  <FormField
+                    control={form.control}
+                    name="generationType"
+                    render={({ field }) => (
+                      <FormItem className="space-y-1">
+                        <RadioGroup
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          className="gap-6"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="ai" id="ai" />
+                            <Label htmlFor="ai" className="font-medium">Fully AI-generated</Label>
+                          </div>
+                          <FormDescription className="ml-6">
+                            AI will generate a complete brief based on the selected template.
+                          </FormDescription>
+                          
+                          <div className="flex items-center space-x-2 mt-4">
+                            <RadioGroupItem value="guided" id="guided" />
+                            <Label htmlFor="guided" className="font-medium">User-guided generation</Label>
+                          </div>
+                          <FormDescription className="ml-6">
+                            Provide specific details about your target audience, product, or campaign goals.
+                          </FormDescription>
+                        </RadioGroup>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  {watchGenerationType === 'guided' && (
+                    <FormField
+                      control={form.control}
+                      name="guidanceText"
+                      render={({ field }) => (
+                        <FormItem>
+                          <Label htmlFor="guidanceText">Describe what you need</Label>
+                          <FormControl>
+                            <Textarea
+                              id="guidanceText"
+                              placeholder="Example: I need a brief for a fitness business targeting women over 30..."
+                              className="min-h-[100px]"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Be specific about your audience, product details, or any particular messages you want to include.
+                          </FormDescription>
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                  
+                  <DialogFooter>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setDialogOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button type="submit" className="bg-copywrite-teal hover:bg-copywrite-teal-dark transition-colors">
+                      Generate Brief
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            )}
           </DialogContent>
         </Dialog>
 
@@ -449,29 +498,15 @@ const BriefGenerator = () => {
               </DialogDescription>
             </DialogHeader>
             
-            <Form {...adObjectiveForm}>
-              <form onSubmit={adObjectiveForm.handleSubmit(handleAdObjectiveSubmit)} className="space-y-6">
-                <FormField
-                  control={adObjectiveForm.control}
-                  name="objective"
-                  render={({ field }) => (
-                    <FormItem className="space-y-4">
-                      <RadioGroup
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        className="gap-3"
-                      >
-                        {adObjectives.map((objective) => (
-                          <div key={objective.id} className="flex items-center space-x-2">
-                            <RadioGroupItem value={objective.id} id={objective.id} />
-                            <Label htmlFor={objective.id} className="font-medium">{objective.title}</Label>
-                          </div>
-                        ))}
-                      </RadioGroup>
-                    </FormItem>
-                  )}
-                />
-                
+            {!isPremium ? (
+              <div className="py-4">
+                <Alert variant="destructive" className="mb-4">
+                  <ExclamationTriangleIcon className="h-4 w-4" />
+                  <AlertTitle>Premium feature</AlertTitle>
+                  <AlertDescription>
+                    Brief generation is only available for premium users. Upgrade your account to access this feature.
+                  </AlertDescription>
+                </Alert>
                 <DialogFooter>
                   <Button
                     type="button"
@@ -480,12 +515,53 @@ const BriefGenerator = () => {
                   >
                     Anuluj
                   </Button>
-                  <Button type="submit" className="bg-copywrite-teal hover:bg-copywrite-teal-dark transition-colors">
-                    Dalej
+                  <Button 
+                    onClick={() => window.location.href = '/pricing'} 
+                    className="bg-copywrite-teal hover:bg-copywrite-teal-dark transition-colors"
+                  >
+                    View Pricing
                   </Button>
                 </DialogFooter>
-              </form>
-            </Form>
+              </div>
+            ) : (
+              <Form {...adObjectiveForm}>
+                <form onSubmit={adObjectiveForm.handleSubmit(handleAdObjectiveSubmit)} className="space-y-6">
+                  <FormField
+                    control={adObjectiveForm.control}
+                    name="objective"
+                    render={({ field }) => (
+                      <FormItem className="space-y-4">
+                        <RadioGroup
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          className="gap-3"
+                        >
+                          {adObjectives.map((objective) => (
+                            <div key={objective.id} className="flex items-center space-x-2">
+                              <RadioGroupItem value={objective.id} id={objective.id} />
+                              <Label htmlFor={objective.id} className="font-medium">{objective.title}</Label>
+                            </div>
+                          ))}
+                        </RadioGroup>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <DialogFooter>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setAdObjectiveDialogOpen(false)}
+                    >
+                      Anuluj
+                    </Button>
+                    <Button type="submit" className="bg-copywrite-teal hover:bg-copywrite-teal-dark transition-colors">
+                      Dalej
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            )}
           </DialogContent>
         </Dialog>
       </div>
