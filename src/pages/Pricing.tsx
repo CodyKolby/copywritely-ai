@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Star, Check, Clock } from 'lucide-react';
+import { Check, Clock } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -90,15 +90,7 @@ const Pricing = () => {
         >
           {/* Pro Plan */}
           <motion.div variants={itemVariants}>
-            <Card className="relative border-copywrite-teal/30 shadow-lg overflow-hidden pt-6">
-              {/* Popular badge - Fixing the cut-off by adjusting positioning and adding more top padding to the card */}
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                <Badge className="bg-amber-100 text-amber-700 border-amber-200 flex items-center gap-1 px-3 py-1">
-                  <Star className="h-4 w-4 fill-amber-500 text-amber-500" />
-                  <span className="font-medium">Plan Pro</span>
-                </Badge>
-              </div>
-              
+            <Card className="relative border-copywrite-teal/30 shadow-lg overflow-hidden">
               {/* Free trial badge */}
               <div className="absolute top-4 right-4">
                 <Badge className="bg-green-100 text-green-700 border-green-200 flex items-center gap-1 px-3 py-1">
@@ -107,7 +99,7 @@ const Pricing = () => {
                 </Badge>
               </div>
               
-              <div className="p-6 pt-8">
+              <div className="p-6">
                 <div className="flex items-center justify-between mb-2">
                   <h2 className="text-3xl font-bold">Pro</h2>
                   {billingCycle === 'annual' && (
