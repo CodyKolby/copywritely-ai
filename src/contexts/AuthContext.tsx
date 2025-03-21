@@ -1,7 +1,6 @@
-
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { Session, User } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/integrations/supabase/client'
 import { toast } from 'sonner'
 
 interface AuthContextType {
@@ -13,6 +12,7 @@ interface AuthContextType {
   signInWithEmail: (email: string, password: string) => Promise<void>
   signUpWithEmail: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
+  checkPremiumStatus: (userId: string) => Promise<void>
   // For testing auth states
   setTestUserState: (loggedIn: boolean, premium?: boolean) => void
 }
@@ -26,29 +26,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isPremium, setIsPremium] = useState(false)
 
   useEffect(() => {
-    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       setUser(session?.user ?? null)
       setLoading(false)
       
-      // Check premium status if user is logged in
       if (session?.user) {
         checkPremiumStatus(session.user.id)
       }
     })
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
       setUser(session?.user ?? null)
       setLoading(false)
       
-      // Check premium status if user is logged in
       if (session?.user) {
         checkPremiumStatus(session.user.id)
       } else {
-        setIsPremium(false) // Reset premium status when logged out
+        setIsPremium(false)
       }
     })
 
@@ -56,29 +52,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       subscription.unsubscribe()
     }
   }, [])
-  
-  // Function to check premium status from Supabase
+
   const checkPremiumStatus = async (userId: string) => {
     try {
-      // In a real app, this would query a subscriptions or users table
-      // For now, we'll simulate this by checking if the user exists in the database
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', userId)
-        .limit(1)
-        .single()
+      const { data, error } = await supabase.functions.invoke('check-subscription-status', {
+        body: { userId }
+      });
       
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error checking premium status:', error)
-        return
+      if (error) {
+        console.error('Error checking premium status:', error);
+        return;
       }
       
-      // For now, just check if user exists in profiles table
-      // In a real implementation, you'd check a premium field or subscription status
-      setIsPremium(!!data)
+      setIsPremium(data?.isPremium || false);
     } catch (error) {
-      console.error('Error checking premium status:', error)
+      console.error('Error checking premium status:', error);
+      
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', userId)
+          .limit(1)
+          .single();
+        
+        if (error && error.code !== 'PGRST116') {
+          console.error('Error checking premium status (fallback):', error);
+          return;
+        }
+        
+        setIsPremium(!!data);
+      } catch (fallbackError) {
+        console.error('Error in fallback premium status check:', fallbackError);
+      }
     }
   }
 
@@ -158,11 +164,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  // Special function just for testing auth states locally
   const setTestUserState = (loggedIn: boolean, premium: boolean = false) => {
     if (loggedIn) {
-      // Create a fake user and session for testing
-      // Must match the User type from @supabase/supabase-js
       const testUser = {
         id: 'test-user-id',
         app_metadata: {},
@@ -181,12 +184,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: testUser,
         access_token: 'fake-token',
         refresh_token: 'fake-refresh-token',
-        expires_at: Date.now() + 3600000, // 1 hour from now
+        expires_at: Date.now() + 3600000,
       } as Session;
       
       setUser(testUser);
       setSession(testSession);
-      setIsPremium(premium); // Set premium status based on parameter
+      setIsPremium(premium);
       toast.success(`Test user logged in (${premium ? 'Premium' : 'Free'} account)`);
     } else {
       setUser(null);
@@ -206,6 +209,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signInWithEmail,
       signUpWithEmail,
       signOut,
+      checkPremiumStatus,
       setTestUserState
     }}>
       {children}

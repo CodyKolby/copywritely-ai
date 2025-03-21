@@ -1,5 +1,6 @@
 
 import { loadStripe } from '@stripe/stripe-js';
+import { supabase } from '@/integrations/supabase/client';
 
 // Pobieramy publiczny klucz ze zmiennych środowiskowych
 const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '';
@@ -22,30 +23,37 @@ export const PRICE_IDS = {
 
 // Funkcja do tworzenia sesji Checkout
 export const createCheckoutSession = async (priceId: string) => {
-  const stripe = await getStripe();
-  
-  if (!stripe) {
-    throw new Error('Nie udało się zainicjalizować Stripe');
-  }
-  
-  // Przekieruj do Stripe Checkout
-  const { error } = await stripe.redirectToCheckout({
-    lineItems: [
-      {
-        price: priceId, // ID cennika z panelu Stripe
-        quantity: 1,
-      },
-    ],
-    mode: 'subscription',
-    successUrl: `${window.location.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
-    cancelUrl: `${window.location.origin}/pricing`,
-    // Dodaj informacje o kliencie (opcjonalnie)
-    customerEmail: localStorage.getItem('userEmail') || undefined,
-  });
+  try {
+    // Pobierz zapisany email użytkownika
+    const userEmail = localStorage.getItem('userEmail');
+    
+    // Wygeneruj URL powrotu
+    const successUrl = `${window.location.origin}/success?session_id={CHECKOUT_SESSION_ID}`;
+    const cancelUrl = `${window.location.origin}/pricing`;
 
-  if (error) {
+    // Wywołaj funkcję edge w Supabase
+    const { data, error } = await supabase.functions.invoke('stripe-checkout', {
+      body: {
+        priceId,
+        customerEmail: userEmail || undefined,
+        successUrl,
+        cancelUrl
+      }
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    // Jeśli funkcja zwróciła URL, przekieruj użytkownika
+    if (data?.url) {
+      window.location.href = data.url;
+    } else {
+      throw new Error('Nie otrzymano poprawnej odpowiedzi z serwera');
+    }
+  } catch (error) {
     console.error('Wystąpił błąd podczas przekierowania do Stripe Checkout:', error);
-    throw new Error(error.message);
+    throw error;
   }
 };
 
