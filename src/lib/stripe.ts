@@ -1,3 +1,4 @@
+
 import { loadStripe } from '@stripe/stripe-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -38,6 +39,13 @@ export const createCheckoutSession = async (priceId: string) => {
     // Pokazujemy toast informujący o rozpoczęciu procesu
     toast.info('Przygotowujemy proces płatności...');
 
+    console.log('Wysyłanie zapytania do stripe-checkout z parametrami:', {
+      priceId,
+      customerEmail: userEmail || undefined,
+      successUrl,
+      cancelUrl
+    });
+
     // Wywołaj funkcję edge w Supabase
     const { data, error } = await supabase.functions.invoke('stripe-checkout', {
       body: {
@@ -63,6 +71,7 @@ export const createCheckoutSession = async (priceId: string) => {
 
     // Jeśli funkcja zwróciła URL, przekieruj użytkownika
     if (data?.url) {
+      console.log('Przekierowuję do Stripe Checkout URL:', data.url);
       window.location.href = data.url;
     } else {
       throw new Error('Nie otrzymano poprawnej odpowiedzi z serwera');

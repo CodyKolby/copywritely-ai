@@ -31,26 +31,53 @@ serve(async (req) => {
       throw new Error('Błąd konfiguracji: brak klucza API Stripe');
     }
 
-    console.log(`Tworzenie sesji Stripe Checkout dla priceId: ${priceId}`);
+    // Szczegółowe logowanie
+    console.log(`Rozpoczynam tworzenie sesji checkout - tryb ${stripeSecretKey.startsWith('sk_test') ? 'testowy' : 'produkcyjny'}`);
+    console.log(`Używam priceId: ${priceId}`);
+    console.log(`Email klienta: ${customerEmail || 'nie podano'}`);
 
     // Tworzymy parametry dla sesji Checkout
-    const params = new URLSearchParams({
-      'success_url': successUrl || `${req.headers.get('origin') || ''}/success?session_id={CHECKOUT_SESSION_ID}`,
-      'cancel_url': cancelUrl || `${req.headers.get('origin') || ''}/pricing`,
-      'mode': 'subscription',
-      'line_items[0][price]': priceId,
-      'line_items[0][quantity]': '1',
-    });
-
-    // Dodajemy 3-dniowy okres próbny - upewniamy się że jest liczbą
-    params.append('subscription_data[trial_period_days]', '3');
-
+    const checkoutParams = {
+      mode: 'subscription',
+      success_url: successUrl || `${req.headers.get('origin') || ''}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: cancelUrl || `${req.headers.get('origin') || ''}/pricing`,
+      line_items: [
+        {
+          price: priceId,
+          quantity: 1,
+        },
+      ],
+      subscription_data: {
+        trial_period_days: 3,
+      },
+    };
+    
     // Dodajemy opcjonalny email klienta, jeśli został podany
     if (customerEmail) {
-      params.append('customer_email', customerEmail);
+      checkoutParams.customer_email = customerEmail;
     }
 
-    console.log('Parametry sesji Stripe:', Object.fromEntries(params));
+    console.log('Parametry sesji Stripe:', JSON.stringify(checkoutParams, null, 2));
+
+    // Konwertujemy parametry na format x-www-form-urlencoded
+    const formParams = new URLSearchParams();
+    
+    // Dodajemy podstawowe parametry
+    formParams.append('mode', 'subscription');
+    formParams.append('success_url', successUrl || `${req.headers.get('origin') || ''}/success?session_id={CHECKOUT_SESSION_ID}`);
+    formParams.append('cancel_url', cancelUrl || `${req.headers.get('origin') || ''}/pricing`);
+    
+    // Dodajemy pozycje zamówienia
+    formParams.append('line_items[0][price]', priceId);
+    formParams.append('line_items[0][quantity]', '1');
+    
+    // Dodajemy okres próbny
+    formParams.append('subscription_data[trial_period_days]', '3');
+    
+    // Dodajemy email klienta, jeśli został podany
+    if (customerEmail) {
+      formParams.append('customer_email', customerEmail);
+    }
 
     // Tworzymy sesję Stripe za pomocą Fetch API
     const response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
@@ -59,18 +86,27 @@ serve(async (req) => {
         'Authorization': `Bearer ${stripeSecretKey}`,
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: params,
+      body: formParams,
     });
 
-    // Przetwarzamy odpowiedź
-    const sessionData = await response.json();
+    // Pobieramy dane odpowiedzi
+    const responseText = await response.text();
+    let sessionData;
+    
+    try {
+      sessionData = JSON.parse(responseText);
+    } catch (e) {
+      console.error('Nieprawidłowa odpowiedź JSON:', responseText);
+      throw new Error('Nieprawidłowa odpowiedź z API Stripe');
+    }
 
     // Szczegółowe logowanie odpowiedzi
     if (!response.ok) {
       console.error('Błąd API Stripe:', {
-        statusCode: response.status,
+        status: response.status,
         statusText: response.statusText,
-        error: sessionData.error
+        error: sessionData.error,
+        rawResponse: responseText.substring(0, 500) // Logujemy tylko część odpowiedzi
       });
       
       // Obsługa błędu dotyczącego trybu testowego/produkcyjnego
@@ -106,7 +142,8 @@ serve(async (req) => {
     
     return new Response(
       JSON.stringify({ 
-        error: error.message || 'Wystąpił błąd podczas tworzenia sesji płatności' 
+        error: error.message || 'Wystąpił błąd podczas tworzenia sesji płatności',
+        details: error.stack
       }),
       { 
         status: 400, 
