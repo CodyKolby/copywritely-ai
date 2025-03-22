@@ -47,13 +47,12 @@ export const createCheckoutSession = async (priceId: string) => {
     // Pokazujemy toast informujący o rozpoczęciu procesu
     toast.info('Przygotowujemy proces płatności...');
 
-    // Log request parameters
-    console.log('Sending checkout request with parameters:', {
-      priceId,
-      customerEmail: userEmail || undefined,
-      successUrl,
-      cancelUrl
-    });
+    console.log('====== STRIPE CHECKOUT REQUEST ======');
+    console.log('Price ID:', priceId);
+    console.log('User email:', userEmail || 'not provided');
+    console.log('Success URL:', successUrl);
+    console.log('Cancel URL:', cancelUrl);
+    console.log('====================================');
 
     // Wywołaj funkcję edge w Supabase
     const { data, error } = await supabase.functions.invoke('stripe-checkout', {
@@ -65,8 +64,10 @@ export const createCheckoutSession = async (priceId: string) => {
       }
     });
 
-    // Log response for debugging
-    console.log('Response from stripe-checkout:', { data, error });
+    console.log('====== STRIPE CHECKOUT RESPONSE ======');
+    console.log('Response data:', data);
+    console.log('Response error:', error);
+    console.log('======================================');
 
     if (error) {
       console.error('Supabase function error:', error);
@@ -87,7 +88,12 @@ export const createCheckoutSession = async (priceId: string) => {
       throw new Error('Nie otrzymano poprawnej odpowiedzi z serwera');
     }
   } catch (error) {
-    console.error('Error during Stripe checkout redirection:', error);
+    console.error('====== STRIPE CHECKOUT ERROR ======');
+    console.error('Error type:', error.constructor.name);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    console.error('=====================================');
+    
     toast.error('Wystąpił błąd', {
       description: error instanceof Error ? error.message : 'Nie można uruchomić procesu płatności'
     });

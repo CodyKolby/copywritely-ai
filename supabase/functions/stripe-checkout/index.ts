@@ -14,46 +14,62 @@ serve(async (req) => {
   }
 
   try {
-    // Log stripe key availability for debugging
+    // Print environment for debugging
+    console.log("Function executed in environment:", Deno.env.get("SUPABASE_ENV") || "unknown");
+    
+    // Detailed logging of Stripe key
     const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
     console.log(`Stripe key available: ${!!stripeSecretKey}`);
-    console.log(`Stripe key prefix: ${stripeSecretKey?.substring(0, 7)}...`);
-    
-    if (!stripeSecretKey) {
-      console.error('STRIPE_SECRET_KEY is not set in environment variables');
-      throw new Error('Błąd konfiguracji: brak klucza API Stripe');
+    if (stripeSecretKey) {
+      console.log(`Stripe key type: ${stripeSecretKey.startsWith('sk_test_') ? 'TEST' : 'LIVE'}`);
+      console.log(`Stripe key prefix: ${stripeSecretKey.substring(0, 10)}...`);
+    } else {
+      throw new Error('STRIPE_SECRET_KEY is not set in environment variables');
     }
-
-    // Parse request body
-    const requestData = await req.json().catch(e => {
-      console.error('Failed to parse request JSON:', e);
-      throw new Error('Invalid request format');
-    });
+    
+    // Parse and validate request data
+    let requestData;
+    try {
+      const requestText = await req.text();
+      console.log(`Raw request body: ${requestText.substring(0, 200)}${requestText.length > 200 ? '...' : ''}`);
+      
+      try {
+        requestData = JSON.parse(requestText);
+      } catch (parseError) {
+        console.error('Failed to parse request as JSON:', parseError);
+        throw new Error('Invalid request format: not valid JSON');
+      }
+    } catch (e) {
+      console.error('Failed to read request body:', e);
+      throw new Error('Unable to read request body');
+    }
     
     console.log('Request data received:', JSON.stringify(requestData, null, 2));
     
-    // Extract parameters from request
+    // Extract and validate parameters
     const { priceId, customerEmail, successUrl, cancelUrl } = requestData;
 
-    // Validate required parameters
     if (!priceId) {
       console.error('Missing priceId in request');
-      throw new Error('Brak identyfikatora cennika (priceId)');
+      throw new Error('Missing priceId parameter');
     }
 
-    // Log more details about the price ID and environment
-    console.log(`Received priceId: ${priceId}`);
+    // Detailed environment and price ID validation
     const isTestMode = stripeSecretKey.startsWith('sk_test_');
     console.log(`Using Stripe in ${isTestMode ? 'TEST' : 'PRODUCTION'} mode`);
-    console.log(`Price ID should be from ${isTestMode ? 'test' : 'live'} mode`);
+    console.log(`Received priceId: ${priceId}`);
     
-    if (isTestMode && !priceId.startsWith('price_')) {
-      console.warn('Price ID format warning: Test mode price IDs typically start with "price_"');
+    // Check if price ID format matches environment
+    const isPriceIdTestFormat = priceId.startsWith('price_');
+    if (isTestMode && !isPriceIdTestFormat) {
+      console.warn('TEST MODE WARNING: Price ID does not have expected test mode format');
+    }
+    
+    if (!isTestMode && isPriceIdTestFormat) {
+      console.warn('LIVE MODE WARNING: Price ID has test mode format in live environment');
     }
 
-    console.log(`Customer email: ${customerEmail || 'not provided'}`);
-
-    // Create checkout session parameters
+    // Create Stripe session parameters
     const params = new URLSearchParams();
     params.append('mode', 'subscription');
     params.append('success_url', successUrl || `${req.headers.get('origin') || ''}/success?session_id={CHECKOUT_SESSION_ID}`);
@@ -68,7 +84,8 @@ serve(async (req) => {
 
     console.log('Stripe API request parameters:', params.toString());
 
-    // Call Stripe API
+    // Call Stripe API with detailed logging
+    console.log(`Making Stripe API request to: https://api.stripe.com/v1/checkout/sessions`);
     const response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
       method: 'POST',
       headers: {
@@ -78,12 +95,12 @@ serve(async (req) => {
       body: params,
     });
 
-    // Get response as text first for better error logging
-    const responseText = await response.text();
+    // Log response details
     console.log(`Stripe API response status: ${response.status} ${response.statusText}`);
+    const responseText = await response.text();
     console.log(`Stripe API response body (first 500 chars): ${responseText.substring(0, 500)}`);
 
-    // Try to parse the response as JSON
+    // Parse response JSON
     let sessionData;
     try {
       sessionData = JSON.parse(responseText);
@@ -93,24 +110,20 @@ serve(async (req) => {
       throw new Error('Invalid response from Stripe API');
     }
 
-    // Check for Stripe API errors
+    // Handle Stripe API errors with specific error detection
     if (!response.ok) {
-      console.error('Stripe API error:', {
-        status: response.status,
-        statusText: response.statusText,
-        error: sessionData.error,
-      });
+      console.error('Stripe API error details:', sessionData.error || 'No detailed error from Stripe');
       
-      // Special handling for test/live mode mismatch
+      // Detect key environment mismatch
       if (sessionData.error?.message?.includes('test mode') && sessionData.error?.message?.includes('live mode')) {
-        console.error('TEST/LIVE MODE MISMATCH DETECTED IN STRIPE API RESPONSE');
-        throw new Error('Test/Live mode mismatch: You are using a test mode price ID with a live mode API key or vice versa.');
+        console.error('TEST/LIVE MODE MISMATCH DETECTED');
+        throw new Error(`Mode mismatch: ${sessionData.error?.message}`);
       }
       
-      // Check if error is about invalid price ID
+      // Handle specific price ID errors
       if (sessionData.error?.message?.includes('price') || sessionData.error?.message?.includes('Price')) {
-        console.error('PRICE ID ERROR DETECTED');
-        throw new Error(`Błąd identyfikatora cennika: ${sessionData.error?.message}`);
+        console.error('PRICE ID ERROR:', sessionData.error?.message);
+        throw new Error(`Price ID error: ${sessionData.error?.message}`);
       }
       
       throw new Error(sessionData.error?.message || 'Error creating Stripe checkout session');
@@ -136,16 +149,19 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    // Enhanced error logging
-    console.error('Error in stripe-checkout function:', error);
-    console.error('Error details:', error.message);
+    // Detailed error logging
+    console.error('********** ERROR IN STRIPE CHECKOUT FUNCTION **********');
+    console.error('Error type:', error.constructor.name);
+    console.error('Error message:', error.message);
     console.error('Error stack:', error.stack);
+    console.error('*******************************************************');
     
-    // Return error response
+    // Return formatted error response
     return new Response(
       JSON.stringify({ 
         error: error.message || 'An error occurred during checkout session creation',
-        details: error.stack
+        details: error.stack,
+        timestamp: new Date().toISOString()
       }),
       { 
         status: 400, 
