@@ -18,10 +18,10 @@ export const getStripe = () => {
 };
 
 // Rzeczywiste ID cenników produktów ze Stripe
-// Aktualizacja - używamy cen testowych
+// Aktualizacja - używamy prawidłowego price ID w trybie testowym
 export const PRICE_IDS = {
-  PRO_MONTHLY: 'price_1Owg1mG0KQWtMCjDUKnQVK6F', // Updated test mode price ID
-  PRO_ANNUAL: 'price_1Owg1mG0KQWtMCjDUKnQVK6F', // Using the same ID for testing
+  PRO_MONTHLY: 'price_1R5A8aAGO17NLUWtxzthF8lo', // Correct test mode price ID
+  PRO_ANNUAL: 'price_1R5A8aAGO17NLUWtxzthF8lo', // Using the same ID for testing
 };
 
 // Funkcja do tworzenia sesji Checkout
