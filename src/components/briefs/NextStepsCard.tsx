@@ -1,6 +1,7 @@
 
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
 
 const NextStepsCard = () => {
   return (
@@ -16,12 +17,13 @@ const NextStepsCard = () => {
         written your copy based on this brief, head over to the Copy Editor to submit it 
         for AI analysis and feedback.
       </p>
-      <Button 
-        onClick={() => window.location.href = '/copy-editor'} 
-        className="bg-copywrite-teal hover:bg-copywrite-teal-dark transition-colors"
-      >
-        Go to Copy Editor
-      </Button>
+      <Link to="/copy-editor">
+        <Button 
+          className="bg-copywrite-teal hover:bg-copywrite-teal-dark transition-colors"
+        >
+          Go to Copy Editor
+        </Button>
+      </Link>
     </motion.div>
   );
 };

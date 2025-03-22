@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/integrations/supabase/client'
@@ -40,28 +39,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      setLoading(false)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      console.log("Auth state changed", _event, !!newSession)
+      setSession(newSession)
+      setUser(newSession?.user ?? null)
       
-      if (session?.user) {
-        fetchProfile(session.user.id)
-        checkPremiumStatus(session.user.id)
-      }
-    })
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      setLoading(false)
-      
-      if (session?.user) {
-        fetchProfile(session.user.id)
-        checkPremiumStatus(session.user.id)
+      if (newSession?.user) {
+        fetchProfile(newSession.user.id)
+        checkPremiumStatus(newSession.user.id)
       } else {
         setIsPremium(false)
         setProfile(null)
+      }
+    })
+
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      console.log("Got existing session", !!currentSession)
+      setSession(currentSession)
+      setUser(currentSession?.user ?? null)
+      setLoading(false)
+      
+      if (currentSession?.user) {
+        fetchProfile(currentSession.user.id)
+        checkPremiumStatus(currentSession.user.id)
       }
     })
 
@@ -105,7 +105,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Error checking premium status:', error);
       
-      // Fallback - sprawdzamy w tabeli profiles
       try {
         const { data, error } = await supabase
           .from('profiles')
