@@ -33,13 +33,22 @@ const TextEditor = ({
   const [localProjectId, setLocalProjectId] = useState<string | undefined>(projectId);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const testUserIdRef = useRef<string | null>(null);
   const { user } = useAuth();
+
+  // Generate and store a consistent UUID for test users
+  useEffect(() => {
+    if (user && user.id === 'test-user-id' && !testUserIdRef.current) {
+      testUserIdRef.current = uuidv4();
+      console.log('Generated persistent UUID for test user:', testUserIdRef.current);
+    }
+  }, [user]);
 
   useEffect(() => {
     const loadDraft = async () => {
       if (projectId && user) {
         try {
-          // Use the client from integrations/supabase folder to ensure correct configuration
+          console.log('Loading draft for project:', projectId);
           const { data, error } = await supabase
             .from('projects')
             .select('content')
@@ -52,6 +61,7 @@ const TextEditor = ({
           }
           
           if (data && data.content) {
+            console.log('Draft loaded successfully');
             setText(data.content);
           }
         } catch (error) {
@@ -63,15 +73,33 @@ const TextEditor = ({
     loadDraft();
   }, [projectId, user]);
 
+  const getCurrentUserId = () => {
+    if (!user) return null;
+    
+    // For test users, use the persistent UUID reference
+    if (user.id === 'test-user-id') {
+      if (!testUserIdRef.current) {
+        testUserIdRef.current = uuidv4();
+        console.log('Generated new UUID for test user:', testUserIdRef.current);
+      }
+      return testUserIdRef.current;
+    }
+    
+    return user.id;
+  };
+
   const saveDraft = async () => {
     if (!user || !text.trim()) return;
     
     try {
       setIsSaving(true);
       
-      // Make sure we're using a proper UUID
-      const testUserUuid = uuidv4();
-      console.log('Using user ID:', user.id === 'test-user-id' ? `Test user UUID: ${testUserUuid}` : user.id);
+      const userId = getCurrentUserId();
+      if (!userId) {
+        throw new Error('No valid user ID available');
+      }
+      
+      console.log('Saving draft using user ID:', userId);
       
       if (localProjectId) {
         // Update existing project
@@ -92,7 +120,7 @@ const TextEditor = ({
       else {
         // Create new project with UUID
         const newProjectId = uuidv4();
-        console.log('Creating new project with ID:', newProjectId);
+        console.log('Creating new project with ID:', newProjectId, 'for user ID:', userId);
         
         const { data, error } = await supabase
           .from('projects')
@@ -100,7 +128,7 @@ const TextEditor = ({
             id: newProjectId,
             title: projectTitle,
             content: text,
-            user_id: user.id === 'test-user-id' ? testUserUuid : user.id,
+            user_id: userId,
             status: 'Draft'
           })
           .select('id')
@@ -160,6 +188,8 @@ const TextEditor = ({
       
       if (localProjectId && user) {
         try {
+          const userId = getCurrentUserId();
+          
           // Update project status to completed
           const { error } = await supabase
             .from('projects')
