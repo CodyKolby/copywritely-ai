@@ -47,35 +47,51 @@ const TextEditor = ({
 
   useEffect(() => {
     const loadDraft = async () => {
-      if (projectId && user) {
-        try {
-          console.log('Loading draft for project:', projectId);
-          
-          // For test users, we may not be able to load their drafts with the current RLS
-          // but we'll try anyway
-          const { data, error } = await supabase
-            .from('projects')
-            .select('content')
-            .eq('id', projectId)
-            .single();
-          
-          if (error) {
-            console.error('Error loading draft:', error);
-            return;
+      if (!localProjectId || !user) return;
+      
+      // For test users, check localStorage first
+      if (user.id === 'test-user-id') {
+        const localDraft = localStorage.getItem(`draft_${localProjectId}`);
+        if (localDraft) {
+          try {
+            const parsedDraft = JSON.parse(localDraft);
+            console.log('Loaded draft from localStorage:', parsedDraft);
+            if (parsedDraft.content) {
+              setText(parsedDraft.content);
+              return;
+            }
+          } catch (e) {
+            console.error('Error parsing local draft:', e);
           }
-          
-          if (data && data.content) {
-            console.log('Draft loaded successfully');
-            setText(data.content);
-          }
-        } catch (error) {
-          console.error('Error loading draft:', error);
         }
+      }
+      
+      // For all users: Try to load from the database
+      try {
+        console.log('Loading draft for project:', localProjectId);
+        
+        const { data, error } = await supabase
+          .from('projects')
+          .select('content')
+          .eq('id', localProjectId)
+          .single();
+        
+        if (error) {
+          console.error('Error loading draft:', error);
+          return;
+        }
+        
+        if (data && data.content) {
+          console.log('Draft loaded successfully from database');
+          setText(data.content);
+        }
+      } catch (error) {
+        console.error('Error loading draft:', error);
       }
     };
 
     loadDraft();
-  }, [projectId, user]);
+  }, [localProjectId, user]);
 
   // Helper function to get the correct user ID, handling test users
   const getCurrentUserId = () => {
@@ -107,30 +123,79 @@ const TextEditor = ({
       console.log('Saving draft using user ID:', userId);
       
       if (localProjectId) {
-        // Update existing project
-        console.log('Updating existing project:', localProjectId);
-        const { error } = await supabase
-          .from('projects')
-          .update({ 
-            content: text,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', localProjectId);
+        // If we're dealing with a test user and we've previously saved to localStorage
+        if (user.id === 'test-user-id') {
+          const localDraft = localStorage.getItem(`draft_${localProjectId}`);
+          if (localDraft) {
+            // Update the localStorage entry
+            const savedDraft = JSON.parse(localDraft);
+            savedDraft.content = text;
+            savedDraft.updated_at = new Date().toISOString();
+            localStorage.setItem(`draft_${localProjectId}`, JSON.stringify(savedDraft));
+            setLastSaved(new Date());
+            console.log('Draft updated in localStorage for test user');
+            toast.success('Draft saved locally (test user mode)');
+            return;
+          }
+        }
         
-        if (error) {
-          console.error('Update error:', error);
-          throw error;
+        // Try to update in database
+        try {
+          console.log('Updating existing project:', localProjectId);
+          const { error } = await supabase
+            .from('projects')
+            .update({ 
+              content: text,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', localProjectId);
+          
+          if (error) {
+            console.error('Update error:', error);
+            throw error;
+          }
+          
+          console.log('Draft updated successfully in database');
+        } catch (dbError) {
+          // If database update fails and it's a test user, fallback to localStorage
+          if (user.id === 'test-user-id') {
+            console.log('Database update failed, using localStorage for test user');
+            localStorage.setItem(`draft_${localProjectId}`, JSON.stringify({
+              id: localProjectId,
+              title: projectTitle,
+              content: text,
+              status: 'Draft',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }));
+            toast.success('Draft saved locally (test user mode)');
+          } else {
+            throw dbError;
+          }
         }
       } 
       else {
-        // For test users or real users, create a new project
+        // Create new project with a new ID
         const newProjectId = uuidv4();
         console.log('Creating new project with ID:', newProjectId, 'for user ID:', userId);
         
-        // For test users, try using the RPC endpoint which bypasses RLS
+        // For test users, always use localStorage for simplicity
         if (user.id === 'test-user-id') {
+          localStorage.setItem(`draft_${newProjectId}`, JSON.stringify({
+            id: newProjectId,
+            title: projectTitle,
+            content: text,
+            user_id: userId,
+            status: 'Draft',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }));
+          setLocalProjectId(newProjectId);
+          console.log('New draft saved to localStorage for test user');
+          toast.success('Draft saved locally (test user mode)');
+        } else {
+          // Regular authenticated users - use database
           try {
-            // Try direct insert first (this might work with our updated RLS policies)
             const { data, error } = await supabase
               .from('projects')
               .insert({
@@ -153,44 +218,10 @@ const TextEditor = ({
               setLocalProjectId(data.id);
               console.log('Project created successfully with ID:', data.id);
             }
-          } catch (firstError) {
-            console.error('First insert approach failed:', firstError);
-            // As a fallback for test users, just use the local storage
-            console.log('Using fallback approach for test users');
-            localStorage.setItem(`draft_${newProjectId}`, JSON.stringify({
-              id: newProjectId,
-              title: projectTitle,
-              content: text,
-              status: 'Draft',
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            }));
-            setLocalProjectId(newProjectId);
-            toast.success('Draft saved locally (test user mode)');
-          }
-        } else {
-          // Regular authenticated users
-          const { data, error } = await supabase
-            .from('projects')
-            .insert({
-              id: newProjectId,
-              title: projectTitle,
-              content: text,
-              user_id: userId,
-              status: 'Draft'
-            })
-            .select('id')
-            .single();
-          
-          if (error) {
-            console.error('Insert error:', error);
-            throw error;
-          }
-          
-          // Store the newly created project ID
-          if (data) {
-            setLocalProjectId(data.id);
-            console.log('Project created successfully with ID:', data.id);
+          } catch (error) {
+            console.error('Error creating new project:', error);
+            toast.error('Failed to save draft');
+            return;
           }
         }
       }
@@ -235,21 +266,34 @@ const TextEditor = ({
       await saveDraft();
       onSubmit(text);
       
-      if (localProjectId && user) {
-        try {
-          const userId = getCurrentUserId();
-          
-          // Update project status to completed
-          const { error } = await supabase
-            .from('projects')
-            .update({ status: 'Completed' })
-            .eq('id', localProjectId);
-          
-          if (error) {
+      if (localProjectId) {
+        // For test users, update the status in localStorage
+        if (user && user.id === 'test-user-id') {
+          const localDraft = localStorage.getItem(`draft_${localProjectId}`);
+          if (localDraft) {
+            try {
+              const savedDraft = JSON.parse(localDraft);
+              savedDraft.status = 'Completed';
+              localStorage.setItem(`draft_${localProjectId}`, JSON.stringify(savedDraft));
+              console.log('Project status updated to Completed in localStorage');
+            } catch (e) {
+              console.error('Error updating project status in localStorage:', e);
+            }
+          }
+        } else {
+          // For regular users, update in database
+          try {
+            const { error } = await supabase
+              .from('projects')
+              .update({ status: 'Completed' })
+              .eq('id', localProjectId);
+            
+            if (error) {
+              console.error('Error updating project status:', error);
+            }
+          } catch (error) {
             console.error('Error updating project status:', error);
           }
-        } catch (error) {
-          console.error('Error updating project status:', error);
         }
       }
     }
