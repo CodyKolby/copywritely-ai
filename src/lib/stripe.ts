@@ -47,12 +47,13 @@ export const createCheckoutSession = async (priceId: string) => {
     // Pokazujemy toast informujący o rozpoczęciu procesu
     toast.info('Przygotowujemy proces płatności...');
 
-    console.log('====== STRIPE CHECKOUT REQUEST ======');
-    console.log('Price ID:', priceId);
-    console.log('User email:', userEmail || 'not provided');
-    console.log('Success URL:', successUrl);
-    console.log('Cancel URL:', cancelUrl);
-    console.log('====================================');
+    console.log('Starting Stripe checkout with:', {
+      priceId,
+      userEmail: userEmail ? 'Email provided' : 'Not provided',
+      successUrl,
+      cancelUrl,
+      environment: stripePublicKey.startsWith('pk_test_') ? 'TEST' : 'LIVE'
+    });
 
     // Wywołaj funkcję edge w Supabase
     const { data, error } = await supabase.functions.invoke('stripe-checkout', {
@@ -63,11 +64,6 @@ export const createCheckoutSession = async (priceId: string) => {
         cancelUrl
       }
     });
-
-    console.log('====== STRIPE CHECKOUT RESPONSE ======');
-    console.log('Response data:', data);
-    console.log('Response error:', error);
-    console.log('======================================');
 
     if (error) {
       console.error('Supabase function error:', error);
@@ -88,14 +84,22 @@ export const createCheckoutSession = async (priceId: string) => {
       throw new Error('Nie otrzymano poprawnej odpowiedzi z serwera');
     }
   } catch (error) {
-    console.error('====== STRIPE CHECKOUT ERROR ======');
-    console.error('Error type:', error.constructor.name);
-    console.error('Error message:', error.message);
-    console.error('Error stack:', error.stack);
-    console.error('=====================================');
+    console.error('Stripe checkout error:', error);
+    
+    // Handle specific error messages
+    let errorMessage = error instanceof Error ? error.message : 'Nie można uruchomić procesu płatności';
+    
+    // Check for common Stripe errors and provide more user-friendly messages
+    if (errorMessage.includes('Missing Stripe API key')) {
+      errorMessage = 'Błąd konfiguracji: brak klucza API Stripe po stronie serwera';
+    } else if (errorMessage.includes('Mode mismatch')) {
+      errorMessage = 'Błąd konfiguracji: niezgodność pomiędzy trybem testowym i produkcyjnym';
+    } else if (errorMessage.includes('Price ID error')) {
+      errorMessage = 'Błąd: nieprawidłowy identyfikator produktu';
+    }
     
     toast.error('Wystąpił błąd', {
-      description: error instanceof Error ? error.message : 'Nie można uruchomić procesu płatności'
+      description: errorMessage
     });
     throw error;
   }
