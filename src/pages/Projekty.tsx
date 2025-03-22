@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { File, FileText, Newspaper, Loader2, FilePlus } from 'lucide-react';
@@ -184,16 +185,18 @@ const Projekty = () => {
             </div>
           ) : (
             <div className="text-center p-10 border rounded-lg bg-white">
-              <p className="text-gray-500 mb-6">Nie masz jeszcze żadnych projektów. Stwórz swój pierwszy tekst!</p>
+              <p className="text-gray-500 mb-6">Nie masz jeszcze żadnych projektów.</p>
               {!user ? (
                 <p className="text-sm text-gray-400">Zaloguj się, aby zobaczyć swoje projekty.</p>
               ) : (
-                <Link to="/brief-generator">
-                  <Button className="bg-copywrite-teal hover:bg-copywrite-teal-dark flex items-center gap-2">
-                    <FilePlus size={18} />
-                    <span>Stwórz nowy brief</span>
-                  </Button>
-                </Link>
+                <div className="flex justify-center">
+                  <Link to="/brief-generator">
+                    <Button className="bg-copywrite-teal hover:bg-copywrite-teal-dark flex items-center gap-2">
+                      <FilePlus size={18} />
+                      <span>Stwórz swój pierwszy tekst!</span>
+                    </Button>
+                  </Link>
+                </div>
               )}
             </div>
           )}
