@@ -1,26 +1,122 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 interface TextEditorProps {
   onSubmit: (text: string) => void;
   placeholder?: string;
   maxLength?: number;
   className?: string;
+  projectId?: string;
+  projectTitle?: string;
 }
 
 const TextEditor = ({ 
   onSubmit, 
   placeholder = "Write your copy here...", 
   maxLength = 500,
-  className 
+  className,
+  projectId,
+  projectTitle = "New Copy Draft" 
 }: TextEditorProps) => {
   const [text, setText] = useState('');
   const [isFocused, setIsFocused] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const { user } = useAuth();
+
+  useEffect(() => {
+    const loadDraft = async () => {
+      if (projectId && user) {
+        try {
+          const { data, error } = await supabase
+            .from('projects')
+            .select('content')
+            .eq('id', projectId)
+            .eq('user_id', user.id)
+            .single();
+          
+          if (error) {
+            console.error('Error loading draft:', error);
+            return;
+          }
+          
+          if (data && data.content) {
+            setText(data.content);
+          }
+        } catch (error) {
+          console.error('Error loading draft:', error);
+        }
+      }
+    };
+
+    loadDraft();
+  }, [projectId, user]);
+
+  const saveDraft = async () => {
+    if (!user || !text.trim()) return;
+    
+    try {
+      setIsSaving(true);
+      
+      if (projectId) {
+        const { error } = await supabase
+          .from('projects')
+          .update({ 
+            content: text,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', projectId)
+          .eq('user_id', user.id);
+        
+        if (error) throw error;
+      } 
+      else {
+        const { error } = await supabase
+          .from('projects')
+          .insert({
+            title: projectTitle,
+            content: text,
+            user_id: user.id,
+            status: 'Draft'
+          });
+        
+        if (error) throw error;
+      }
+      
+      setLastSaved(new Date());
+    } catch (error) {
+      console.error('Error saving draft:', error);
+      toast.error('Failed to save draft');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user && text.trim()) {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      
+      saveTimeoutRef.current = setTimeout(() => {
+        saveDraft();
+      }, 10000);
+    }
+    
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [text, user]);
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value;
@@ -29,9 +125,22 @@ const TextEditor = ({
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (text.trim()) {
+      await saveDraft();
       onSubmit(text);
+      
+      if (projectId && user) {
+        try {
+          await supabase
+            .from('projects')
+            .update({ status: 'Completed' })
+            .eq('id', projectId)
+            .eq('user_id', user.id);
+        } catch (error) {
+          console.error('Error updating project status:', error);
+        }
+      }
     }
   };
 
@@ -44,7 +153,6 @@ const TextEditor = ({
       const newText = text.substring(0, start) + '    ' + text.substring(end);
       setText(newText);
       
-      // Set cursor position after the inserted tab
       setTimeout(() => {
         if (textareaRef.current) {
           textareaRef.current.selectionStart = start + 4;
@@ -54,7 +162,6 @@ const TextEditor = ({
     }
   };
 
-  // Auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -89,8 +196,18 @@ const TextEditor = ({
         />
         
         <div className="flex items-center justify-between p-3 border-t border-gray-100">
-          <div className="text-sm text-gray-500">
-            {text.length}/{maxLength}
+          <div className="flex items-center gap-2">
+            <div className="text-sm text-gray-500">
+              {text.length}/{maxLength}
+            </div>
+            {lastSaved && (
+              <div className="text-xs text-gray-400">
+                Last saved: {lastSaved.toLocaleTimeString()}
+              </div>
+            )}
+            {isSaving && (
+              <div className="text-xs text-copywrite-teal">Saving...</div>
+            )}
           </div>
           
           <Button 

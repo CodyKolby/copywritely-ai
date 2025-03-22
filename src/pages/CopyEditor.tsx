@@ -2,11 +2,14 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import { useParams, useNavigate } from 'react-router-dom';
 import TextEditor from '@/components/TextEditor';
 import AnalysisResult, { AnalysisScore } from '@/components/AnalysisResult';
 import { Skeleton } from '@/components/ui/skeleton';
 import BriefCard from '@/components/BriefCard';
 import { CheckCheck, AlertCircle, FileText, Brain, MessageSquare, PenTool } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 // Sample brief for demo purposes
 const sampleBrief = {
@@ -72,6 +75,9 @@ const analysisSteps = [
 ];
 
 const CopyEditor = () => {
+  const { projectId } = useParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [submittedCopy, setSubmittedCopy] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<{
     scores: AnalysisScore[];
@@ -80,11 +86,41 @@ const CopyEditor = () => {
   } | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
+  const [projectTitle, setProjectTitle] = useState<string>("New Copy");
 
   // Scroll to top on page load
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
+
+  // Load project title if projectId is provided
+  useEffect(() => {
+    const loadProjectTitle = async () => {
+      if (projectId && user) {
+        try {
+          const { data, error } = await supabase
+            .from('projects')
+            .select('title')
+            .eq('id', projectId)
+            .eq('user_id', user.id)
+            .single();
+          
+          if (error) {
+            console.error('Error loading project title:', error);
+            return;
+          }
+          
+          if (data && data.title) {
+            setProjectTitle(data.title);
+          }
+        } catch (error) {
+          console.error('Error loading project title:', error);
+        }
+      }
+    };
+
+    loadProjectTitle();
+  }, [projectId, user]);
 
   // Effect to handle the analysis steps animation
   useEffect(() => {
@@ -121,10 +157,13 @@ const CopyEditor = () => {
   };
 
   const resetEditor = () => {
+    // Navigate to copy editor without projectId parameter
+    navigate('/copy-editor');
     setSubmittedCopy(null);
     setAnalysis(null);
     setIsAnalyzing(false);
     setCurrentStep(0);
+    setProjectTitle("New Copy");
   };
 
   return (
@@ -151,6 +190,8 @@ const CopyEditor = () => {
               onSubmit={handleSubmit} 
               placeholder="Write your advertising copy here based on the brief..."
               maxLength={500}
+              projectId={projectId}
+              projectTitle={projectTitle}
             />
             
             {submittedCopy && (
