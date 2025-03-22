@@ -49,6 +49,15 @@ serve(async (req) => {
       throw new Error('Missing priceId parameter');
     }
 
+    // Log to debug valid price IDs
+    console.log(`Received priceId: ${priceId}`);
+    
+    // Validate price ID format
+    if (!priceId.startsWith('price_')) {
+      console.error('Invalid price ID format:', priceId);
+      throw new Error('Invalid price ID format - must start with "price_"');
+    }
+
     // Validate that price ID format matches environment (test/live)
     const isPriceIdTestFormat = priceId.startsWith('price_');
     if (isTestMode && !isPriceIdTestFormat) {
@@ -73,6 +82,7 @@ serve(async (req) => {
     }
 
     console.log('Stripe API request parameters:', params.toString());
+    console.log('Calling Stripe API at:', 'https://api.stripe.com/v1/checkout/sessions');
 
     // Call Stripe API
     const response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
