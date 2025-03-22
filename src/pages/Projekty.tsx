@@ -1,10 +1,10 @@
-
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { File, FileText, Newspaper, Loader2 } from 'lucide-react';
+import { File, FileText, Newspaper, Loader2, FileSparkles } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { Link } from 'react-router-dom';
 import { 
   Card, 
   CardContent, 
@@ -13,6 +13,7 @@ import {
   CardHeader, 
   CardTitle 
 } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import {
   Tabs,
   TabsContent,
@@ -191,9 +192,16 @@ const Projekty = () => {
             </div>
           ) : (
             <div className="text-center p-10 border rounded-lg bg-white">
-              <p className="text-gray-500 mb-4">Nie masz jeszcze żadnych projektów. Stwórz swój pierwszy brief lub tekst!</p>
-              {!user && (
+              <p className="text-gray-500 mb-6">Nie masz jeszcze żadnych projektów. Stwórz swój pierwszy tekst!</p>
+              {!user ? (
                 <p className="text-sm text-gray-400">Zaloguj się, aby zobaczyć swoje projekty.</p>
+              ) : (
+                <Link to="/brief-generator">
+                  <Button className="bg-copywrite-teal hover:bg-copywrite-teal-dark flex items-center gap-2">
+                    <FileSparkles size={18} />
+                    <span>Stwórz nowy brief</span>
+                  </Button>
+                </Link>
               )}
             </div>
           )}

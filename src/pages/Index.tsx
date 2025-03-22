@@ -68,11 +68,7 @@ const Index = () => {
                   Generate a Brief
                 </Button>
               </Link>
-              <Link to="/copy-editor">
-                <Button variant="outline" className="h-12 px-8 rounded-lg border-copywrite-teal text-copywrite-teal hover:bg-copywrite-teal/5 transition-colors">
-                  Write Copy
-                </Button>
-              </Link>
+              {/* Removed the direct link to Copy Editor */}
             </motion.div>
           </motion.div>
         </div>

@@ -35,7 +35,7 @@ const Navbar = () => {
   const navItems = [
     { path: '/', label: 'Home' },
     { path: '/brief-generator', label: 'Brief Generator' },
-    { path: '/copy-editor', label: 'Copy Editor' },
+    // Removed Copy Editor from navigation
     { path: '/pricing', label: 'Pricing' },
     { path: '/about', label: 'About' },
   ];
