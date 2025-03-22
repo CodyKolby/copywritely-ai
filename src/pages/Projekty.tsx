@@ -1,8 +1,10 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { File, FileText, Newspaper } from 'lucide-react';
+import { File, FileText, Newspaper, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import { 
   Card, 
   CardContent, 
@@ -17,14 +19,24 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 
-// Types for our projects
+// Interfejs dla projektów
 interface Project {
   id: string;
   title: string;
-  type: 'brief' | 'copy';
-  created: string;
   content: string;
+  status: 'Draft' | 'Completed' | 'Reviewed';
+  created_at: string;
+  updated_at: string;
 }
 
 const Projekty = () => {
@@ -33,58 +45,71 @@ const Projekty = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  useEffect(() => {
-    // In a real app, we would fetch projects from Supabase here
-    // For now, let's use mock data
-    const mockProjects: Project[] = [
-      {
-        id: '1',
-        title: 'Kampania reklamowa dla marki sportowej',
-        type: 'brief',
-        created: '2023-05-15',
-        content: 'Brief dla kampanii skierowanej do młodych sportowców...'
-      },
-      {
-        id: '2',
-        title: 'Tekst na stronę główną firmy',
-        type: 'copy',
-        created: '2023-06-20',
-        content: 'Witamy w naszej innowacyjnej firmie...'
-      },
-      {
-        id: '3',
-        title: 'Brief - Kampania letnia',
-        type: 'brief',
-        created: '2023-07-10',
-        content: 'Brief dla kampanii letniej promującej...'
-      }
-    ];
+  // Funkcja do pobierania projektów z Supabase
+  const fetchProjects = async () => {
+    if (!user) return;
     
-    // Simulate loading
-    setTimeout(() => {
-      setProjects(mockProjects);
+    try {
+      setLoading(true);
+      
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .order('updated_at', { ascending: false });
+      
+      if (error) {
+        throw error;
+      }
+      
+      setProjects(data as Project[]);
+    } catch (error) {
+      console.error('Błąd podczas pobierania projektów:', error);
+      toast.error('Nie udało się pobrać projektów');
+    } finally {
       setLoading(false);
-    }, 1000);
-  }, []);
-
-  // Filter projects based on active tab
-  const filteredProjects = activeTab === 'all' 
-    ? projects 
-    : projects.filter(project => project.type === activeTab);
-
-  // Get icon based on project type
-  const getProjectIcon = (type: string) => {
-    switch(type) {
-      case 'brief':
-        return <FileText className="text-copywrite-teal" />;
-      case 'copy':
-        return <Newspaper className="text-copywrite-teal-dark" />;
-      default:
-        return <File className="text-gray-400" />;
     }
   };
 
-  // Format date
+  useEffect(() => {
+    fetchProjects();
+  }, [user]);
+
+  // Filtrujemy projekty na podstawie aktywnej zakładki
+  const filteredProjects = activeTab === 'all' 
+    ? projects 
+    : projects.filter(project => {
+        if (activeTab === 'brief' || activeTab === 'copy') {
+          return project.title.toLowerCase().includes(activeTab);
+        }
+        return true;
+      });
+
+  // Pobierz ikonę na podstawie typu projektu
+  const getProjectIcon = (title: string) => {
+    if (title.toLowerCase().includes('brief')) {
+      return <FileText className="text-copywrite-teal" />;
+    } else if (title.toLowerCase().includes('tekst') || title.toLowerCase().includes('copy')) {
+      return <Newspaper className="text-copywrite-teal-dark" />;
+    } else {
+      return <File className="text-gray-400" />;
+    }
+  };
+
+  // Pobierz kolor badge'a na podstawie statusu
+  const getStatusBadge = (status: 'Draft' | 'Completed' | 'Reviewed') => {
+    switch(status) {
+      case 'Draft':
+        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Wersja robocza</Badge>;
+      case 'Completed':
+        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Ukończony</Badge>;
+      case 'Reviewed':
+        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Zweryfikowany</Badge>;
+      default:
+        return <Badge variant="outline">Nieznany</Badge>;
+    }
+  };
+
+  // Formatuj datę
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('pl-PL', { 
@@ -92,6 +117,13 @@ const Projekty = () => {
       month: 'long', 
       day: 'numeric' 
     });
+  };
+
+  // Obsługa otwierania projektu
+  const handleOpenProject = (projectId: string) => {
+    // Tutaj w przyszłości można zaimplementować przekierowanie do edycji projektu
+    console.log(`Otwieranie projektu: ${projectId}`);
+    toast.info('Funkcja edycji projektu będzie dostępna wkrótce');
   };
 
   return (
@@ -116,13 +148,9 @@ const Projekty = () => {
           </Tabs>
 
           {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1, 2, 3].map((i) => (
-                <Card key={i} className="bg-white shadow-sm animate-pulse">
-                  <CardHeader className="h-20 bg-gray-100"></CardHeader>
-                  <CardContent className="h-40 bg-gray-50"></CardContent>
-                </Card>
-              ))}
+            <div className="flex justify-center items-center py-20">
+              <Loader2 className="h-8 w-8 animate-spin text-copywrite-teal" />
+              <span className="ml-2 text-lg text-gray-600">Ładowanie projektów...</span>
             </div>
           ) : filteredProjects.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -136,10 +164,10 @@ const Projekty = () => {
                   <Card className="h-full flex flex-col hover:shadow-md transition-shadow duration-300">
                     <CardHeader>
                       <div className="flex items-center gap-2">
-                        {getProjectIcon(project.type)}
+                        {getProjectIcon(project.title)}
                         <div>
                           <CardTitle className="text-lg">{project.title}</CardTitle>
-                          <CardDescription>{formatDate(project.created)}</CardDescription>
+                          <CardDescription>{formatDate(project.created_at)}</CardDescription>
                         </div>
                       </div>
                     </CardHeader>
@@ -148,10 +176,11 @@ const Projekty = () => {
                     </CardContent>
                     <CardFooter className="border-t pt-4">
                       <div className="flex justify-between items-center w-full">
-                        <span className="text-sm text-gray-500 capitalize">
-                          {project.type === 'brief' ? 'Brief' : 'Tekst'}
-                        </span>
-                        <button className="text-sm text-copywrite-teal hover:text-copywrite-teal-dark transition-colors">
+                        <div>{getStatusBadge(project.status)}</div>
+                        <button 
+                          className="text-sm text-copywrite-teal hover:text-copywrite-teal-dark transition-colors"
+                          onClick={() => handleOpenProject(project.id)}
+                        >
                           Otwórz
                         </button>
                       </div>
@@ -162,7 +191,10 @@ const Projekty = () => {
             </div>
           ) : (
             <div className="text-center p-10 border rounded-lg bg-white">
-              <p className="text-gray-500">Nie masz jeszcze żadnych projektów. Stwórz swój pierwszy brief lub tekst!</p>
+              <p className="text-gray-500 mb-4">Nie masz jeszcze żadnych projektów. Stwórz swój pierwszy brief lub tekst!</p>
+              {!user && (
+                <p className="text-sm text-gray-400">Zaloguj się, aby zobaczyć swoje projekty.</p>
+              )}
             </div>
           )}
         </motion.div>
