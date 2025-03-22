@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { File, FileText, Newspaper, Loader2, FileSparkles } from 'lucide-react';
+import { File, FileText, Newspaper, Loader2, FilePlus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -30,7 +30,6 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 
-// Interfejs dla projektów
 interface Project {
   id: string;
   title: string;
@@ -46,7 +45,6 @@ const Projekty = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Funkcja do pobierania projektów z Supabase
   const fetchProjects = async () => {
     if (!user) return;
     
@@ -75,7 +73,6 @@ const Projekty = () => {
     fetchProjects();
   }, [user]);
 
-  // Filtrujemy projekty na podstawie aktywnej zakładki
   const filteredProjects = activeTab === 'all' 
     ? projects 
     : projects.filter(project => {
@@ -85,7 +82,6 @@ const Projekty = () => {
         return true;
       });
 
-  // Pobierz ikonę na podstawie typu projektu
   const getProjectIcon = (title: string) => {
     if (title.toLowerCase().includes('brief')) {
       return <FileText className="text-copywrite-teal" />;
@@ -96,7 +92,6 @@ const Projekty = () => {
     }
   };
 
-  // Pobierz kolor badge'a na podstawie statusu
   const getStatusBadge = (status: 'Draft' | 'Completed' | 'Reviewed') => {
     switch(status) {
       case 'Draft':
@@ -110,7 +105,6 @@ const Projekty = () => {
     }
   };
 
-  // Formatuj datę
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('pl-PL', { 
@@ -120,9 +114,7 @@ const Projekty = () => {
     });
   };
 
-  // Obsługa otwierania projektu
   const handleOpenProject = (projectId: string) => {
-    // Tutaj w przyszłości można zaimplementować przekierowanie do edycji projektu
     console.log(`Otwieranie projektu: ${projectId}`);
     toast.info('Funkcja edycji projektu będzie dostępna wkrótce');
   };
@@ -198,7 +190,7 @@ const Projekty = () => {
               ) : (
                 <Link to="/brief-generator">
                   <Button className="bg-copywrite-teal hover:bg-copywrite-teal-dark flex items-center gap-2">
-                    <FileSparkles size={18} />
+                    <FilePlus size={18} />
                     <span>Stwórz nowy brief</span>
                   </Button>
                 </Link>
