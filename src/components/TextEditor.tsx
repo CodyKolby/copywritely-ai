@@ -39,11 +39,11 @@ const TextEditor = ({
     const loadDraft = async () => {
       if (projectId && user) {
         try {
+          // Use the client from integrations/supabase folder to ensure correct configuration
           const { data, error } = await supabase
             .from('projects')
             .select('content')
             .eq('id', projectId)
-            .eq('user_id', user.id)
             .single();
           
           if (error) {
@@ -69,24 +69,30 @@ const TextEditor = ({
     try {
       setIsSaving(true);
       
-      // Check if the user ID is a test ID and convert it to a proper UUID if needed
-      const userId = user.id === 'test-user-id' ? uuidv4() : user.id;
+      // Make sure we're using a proper UUID
+      const testUserUuid = uuidv4();
+      console.log('Using user ID:', user.id === 'test-user-id' ? `Test user UUID: ${testUserUuid}` : user.id);
       
       if (localProjectId) {
+        // Update existing project
+        console.log('Updating existing project:', localProjectId);
         const { error } = await supabase
           .from('projects')
           .update({ 
             content: text,
             updated_at: new Date().toISOString()
           })
-          .eq('id', localProjectId)
-          .eq('user_id', userId);
+          .eq('id', localProjectId);
         
-        if (error) throw error;
+        if (error) {
+          console.error('Update error:', error);
+          throw error;
+        }
       } 
       else {
-        // Generate a new UUID for the project ID
+        // Create new project with UUID
         const newProjectId = uuidv4();
+        console.log('Creating new project with ID:', newProjectId);
         
         const { data, error } = await supabase
           .from('projects')
@@ -94,21 +100,26 @@ const TextEditor = ({
             id: newProjectId,
             title: projectTitle,
             content: text,
-            user_id: userId,
+            user_id: user.id === 'test-user-id' ? testUserUuid : user.id,
             status: 'Draft'
           })
           .select('id')
           .single();
         
-        if (error) throw error;
+        if (error) {
+          console.error('Insert error:', error);
+          throw error;
+        }
         
         // Store the newly created project ID
         if (data) {
           setLocalProjectId(data.id);
+          console.log('Project created successfully with ID:', data.id);
         }
       }
       
       setLastSaved(new Date());
+      console.log('Draft saved successfully at:', new Date().toLocaleTimeString());
     } catch (error) {
       console.error('Error saving draft:', error);
       toast.error('Failed to save draft');
@@ -149,14 +160,15 @@ const TextEditor = ({
       
       if (localProjectId && user) {
         try {
-          // Using the same user ID conversion logic
-          const userId = user.id === 'test-user-id' ? uuidv4() : user.id;
-          
-          await supabase
+          // Update project status to completed
+          const { error } = await supabase
             .from('projects')
             .update({ status: 'Completed' })
-            .eq('id', localProjectId)
-            .eq('user_id', userId);
+            .eq('id', localProjectId);
+          
+          if (error) {
+            console.error('Error updating project status:', error);
+          }
         } catch (error) {
           console.error('Error updating project status:', error);
         }
