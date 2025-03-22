@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -6,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { v4 as uuidv4 } from 'uuid';
 
 interface TextEditorProps {
   onSubmit: (text: string) => void;
@@ -28,6 +30,7 @@ const TextEditor = ({
   const [isFocused, setIsFocused] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [localProjectId, setLocalProjectId] = useState<string | undefined>(projectId);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { user } = useAuth();
@@ -66,29 +69,43 @@ const TextEditor = ({
     try {
       setIsSaving(true);
       
-      if (projectId) {
+      // Check if the user ID is a test ID and convert it to a proper UUID if needed
+      const userId = user.id === 'test-user-id' ? uuidv4() : user.id;
+      
+      if (localProjectId) {
         const { error } = await supabase
           .from('projects')
           .update({ 
             content: text,
             updated_at: new Date().toISOString()
           })
-          .eq('id', projectId)
-          .eq('user_id', user.id);
+          .eq('id', localProjectId)
+          .eq('user_id', userId);
         
         if (error) throw error;
       } 
       else {
-        const { error } = await supabase
+        // Generate a new UUID for the project ID
+        const newProjectId = uuidv4();
+        
+        const { data, error } = await supabase
           .from('projects')
           .insert({
+            id: newProjectId,
             title: projectTitle,
             content: text,
-            user_id: user.id,
+            user_id: userId,
             status: 'Draft'
-          });
+          })
+          .select('id')
+          .single();
         
         if (error) throw error;
+        
+        // Store the newly created project ID
+        if (data) {
+          setLocalProjectId(data.id);
+        }
       }
       
       setLastSaved(new Date());
@@ -130,13 +147,16 @@ const TextEditor = ({
       await saveDraft();
       onSubmit(text);
       
-      if (projectId && user) {
+      if (localProjectId && user) {
         try {
+          // Using the same user ID conversion logic
+          const userId = user.id === 'test-user-id' ? uuidv4() : user.id;
+          
           await supabase
             .from('projects')
             .update({ status: 'Completed' })
-            .eq('id', projectId)
-            .eq('user_id', user.id);
+            .eq('id', localProjectId)
+            .eq('user_id', userId);
         } catch (error) {
           console.error('Error updating project status:', error);
         }
