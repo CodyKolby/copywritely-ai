@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/auth/AuthContext';
@@ -57,30 +56,7 @@ const Pricing = () => {
     }
   }, [user]);
 
-  // Enhanced timeout handling - reduced to 3 seconds for faster user feedback
-  useEffect(() => {
-    let loadingTimeout: number;
-    
-    if (isLoading) {
-      // Show a toast after a very short delay to indicate to user something is happening
-      toast.loading('Przygotowujemy proces płatności...');
-      
-      loadingTimeout = window.setTimeout(() => {
-        console.log('Timeout triggered: resetting loading state');
-        setIsLoading(false);
-        toast.dismiss();
-        toast.error('Proces płatności przerwany', {
-          description: 'Serwer nie odpowiada. Spróbuj ponownie później lub skontaktuj się z obsługą.'
-        });
-      }, 3000); // Very short 3-second timeout
-    }
-    
-    return () => {
-      if (loadingTimeout) clearTimeout(loadingTimeout);
-    };
-  }, [isLoading]);
-
-  // Handle subscribe button click with improved error handling
+  // Handle subscribe button click
   const handleSubscribe = async () => {
     if (!user) {
       toast.error('Musisz się zalogować', {
@@ -95,6 +71,10 @@ const Pricing = () => {
 
     // Dismiss any existing toasts before starting new payment process
     toast.dismiss();
+    
+    // Show a clear loading toast
+    const loadingToastId = toast.loading('Łączenie z systemem płatności...');
+    
     setIsLoading(true);
     
     try {
@@ -102,18 +82,28 @@ const Pricing = () => {
       const priceId = getPriceId(billingCycle);
       console.log('Using price ID for checkout:', priceId);
       
-      const redirectSuccessful = await createCheckoutSession(priceId);
+      // Flag that we're redirecting to Stripe
+      sessionStorage.setItem('redirectingToStripe', 'true');
       
-      // If the checkout function returns false, it means there was an error or it didn't redirect
-      if (!redirectSuccessful) {
-        console.log('Checkout failed or was cancelled, resetting loading state');
+      // Direct window location redirect approach
+      const result = await createCheckoutSession(priceId);
+      
+      if (!result) {
+        // If the checkout function returns false, it means there was an error
+        console.log('Checkout failed, resetting loading state');
         setIsLoading(false);
+        toast.dismiss(loadingToastId);
+        toast.error('Nie udało się połączyć z systemem płatności', {
+          description: 'Spróbuj ponownie za chwilę lub skontaktuj się z obsługą'
+        });
       }
-      // If it was successful, the page will redirect, so no need to reset loading state
+      // If successful, the page will redirect, so we don't need to do anything
+      
     } catch (error) {
       console.error('Error in handleSubscribe:', error);
       // Reset loading state if there's an exception
       setIsLoading(false);
+      toast.dismiss(loadingToastId);
       
       // Show a more specific error message
       toast.error('Wystąpił błąd podczas inicjowania płatności', {

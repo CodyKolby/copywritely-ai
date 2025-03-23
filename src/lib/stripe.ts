@@ -2,10 +2,10 @@ import { loadStripe } from '@stripe/stripe-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-// Pobieramy publiczny klucz ze zmiennych środowiskowych
+// Get public key from environment variables
 const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '';
 
-// Inicjalizujemy Stripe
+// Initialize Stripe
 let stripePromise: Promise<any> | null = null;
 
 export const getStripe = () => {
@@ -16,23 +16,16 @@ export const getStripe = () => {
   return stripePromise;
 };
 
-// Rzeczywiste ID cenników produktów ze Stripe
+// Actual price IDs from Stripe
 export const PRICE_IDS = {
-  PRO_MONTHLY: 'price_1R5A8aAGO17NLUWtxzthF8lo', // Correct test mode price ID
+  PRO_MONTHLY: 'price_1R5A8aAGO17NLUWtxzthF8lo', // Test mode price ID
   PRO_ANNUAL: 'price_1R5A8aAGO17NLUWtxzthF8lo', // Using the same ID for testing
 };
 
-// Funkcja do tworzenia sesji Checkout - z maksymalnie skróconym czasem oczekiwania
+// Function to create checkout session - simplified for reliability
 export const createCheckoutSession = async (priceId: string) => {
-  // Store reference to the toast ID so we can dismiss it later
-  let loadingToastId: string | number = '';
-  
-  // Setup extremely short timeout to prevent long waiting - reduced to 3 seconds
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => reject(new Error('Przekroczono czas oczekiwania na odpowiedź serwera')), 3000);
-  });
-  
   try {
+    // Basic validation
     if (!priceId) {
       console.error('Missing priceId');
       throw new Error('Nieprawidłowy identyfikator cennika');
@@ -43,18 +36,13 @@ export const createCheckoutSession = async (priceId: string) => {
       throw new Error('Brak klucza Stripe');
     }
 
-    // Pobierz zapisany email użytkownika
+    // Get stored user email
     const userEmail = localStorage.getItem('userEmail');
     
-    // Upewnijmy się, że używamy absolutnych URL-i z pełną domeną
+    // Ensure absolute URLs with full domain
     const fullOrigin = window.location.origin;
-    
-    // Generujemy kompletne, absolutne URL-e
     const successUrl = `${fullOrigin}/success?session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${fullOrigin}/pricing?canceled=true`;
-
-    // Pokazujemy toast informujący o rozpoczęciu procesu
-    loadingToastId = toast.loading('Przygotowujemy proces płatności...');
 
     console.log('Starting Stripe checkout with:', {
       priceId,
@@ -64,79 +52,48 @@ export const createCheckoutSession = async (priceId: string) => {
       fullOrigin
     });
 
-    // Use a very short timeout for Supabase function call
-    try {
-      // Race the Supabase function call with a timeout
-      const result = await Promise.race([
-        supabase.functions.invoke('stripe-checkout', {
-          body: {
-            priceId,
-            customerEmail: userEmail || undefined,
-            successUrl,
-            cancelUrl,
-            origin: fullOrigin
-          }
-        }),
-        timeoutPromise
-      ]);
-
-      // Always dismiss the loading toast once we get a response
-      if (loadingToastId) {
-        toast.dismiss(loadingToastId);
+    // Direct API call to Supabase function - with simplified error handling
+    const { data, error } = await supabase.functions.invoke('stripe-checkout', {
+      body: {
+        priceId,
+        customerEmail: userEmail || undefined,
+        successUrl,
+        cancelUrl,
+        origin: fullOrigin
       }
+    });
 
-      const { data, error } = result;
+    if (error) {
+      console.error('Supabase function error:', error);
+      throw new Error(error.message || 'Błąd przy wywoływaniu funkcji Stripe');
+    }
 
-      if (error) {
-        console.error('Supabase function error:', error);
-        throw new Error(error.message || 'Błąd przy wywoływaniu funkcji Stripe');
-      }
+    // Check for API-level errors
+    if (data?.error) {
+      console.error('Stripe error:', data.error);
+      throw new Error(data.error);
+    }
 
-      // Jeśli funkcja zwróciła błąd w danych
-      if (data?.error) {
-        console.error('Stripe error:', data.error);
-        throw new Error(data.error);
-      }
-
-      // Jeśli funkcja zwróciła URL, przekieruj użytkownika
-      if (data?.url) {
-        console.log('Redirecting to Stripe Checkout URL:', data.url);
-        
-        // Zamień toast ładowania na toast sukcesu
-        toast.success('Przekierowujemy do strony płatności...');
-        
-        // Ustawiamy flagę, że przekierowujemy do Stripe
-        sessionStorage.setItem('redirectingToStripe', 'true');
-        
-        // Przekierowanie natychmiastowe bez opóźnienia
-        window.location.href = data.url;
-        
-        return true;
-      } else {
-        throw new Error('Nie otrzymano poprawnej odpowiedzi z serwera');
-      }
-    } catch (error) {
-      // Always dismiss the loading toast on error
-      if (loadingToastId) {
-        toast.dismiss(loadingToastId);
-      }
-      throw error;
+    // If function returned a URL, redirect user
+    if (data?.url) {
+      console.log('Redirecting to Stripe Checkout URL:', data.url);
+      
+      // Success toast
+      toast.success('Przekierowujemy do strony płatności...');
+      
+      // Set redirect flag
+      sessionStorage.setItem('redirectingToStripe', 'true');
+      
+      // Immediate redirect
+      window.location.href = data.url;
+      return true;
+    } else {
+      throw new Error('Nie otrzymano poprawnej odpowiedzi z serwera');
     }
   } catch (error) {
     console.error('Stripe checkout error:', error);
     
-    // Always dismiss the loading toast if there's an error
-    if (loadingToastId) {
-      toast.dismiss(loadingToastId);
-    }
-    
-    // Handle specific error messages
     let errorMessage = error instanceof Error ? error.message : 'Nie można uruchomić procesu płatności';
-    
-    // Check for timeout errors
-    if (errorMessage.includes('czas oczekiwania')) {
-      errorMessage = 'Serwer nie odpowiada. Spróbuj ponownie później lub skontaktuj się z obsługą.';
-    }
     
     toast.error('Wystąpił błąd', {
       description: errorMessage
@@ -199,7 +156,6 @@ export const cancelSubscription = async (userId: string, subscriptionId: string)
 // Funkcja do sprawdzania statusu subskrypcji
 export const checkSubscriptionStatus = async (userId: string): Promise<boolean> => {
   try {
-    // Wywołaj funkcję edge do sprawdzenia statusu subskrypcji
     const { data, error } = await supabase.functions.invoke('check-subscription-status', {
       body: { userId }
     });
