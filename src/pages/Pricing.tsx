@@ -9,10 +9,14 @@ import { BillingToggle } from '@/components/pricing/BillingToggle';
 import { PricingCard } from '@/components/pricing/PricingCard';
 import { PricingFAQ } from '@/components/pricing/PricingFAQ';
 import { BillingCycle, getProPrice, getPricingLabel, getPriceId } from '@/components/pricing/pricing-utils';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 const Pricing = () => {
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('annual');
   const [isLoading, setIsLoading] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<Record<string, string>>({});
+  const [isDebugOpen, setIsDebugOpen] = useState(false);
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -34,12 +38,43 @@ const Pricing = () => {
     
     // Clear any existing toasts
     toast.dismiss();
+    
+    // Add a diagnostic toast when flags are cleared
+    toast.info('System płatności zresetowany');
   }, []);
   
-  // Run cleanup on component mount, route changes, and URL parameter changes
+  // Collect debug information
+  const collectDebugInfo = useCallback(() => {
+    const info: Record<string, string> = {
+      'User authenticated': user ? 'Yes' : 'No',
+      'User ID': user?.id || 'Not logged in',
+      'Browser': navigator.userAgent,
+      'URL': window.location.href,
+      'Route params': searchParams.toString() || 'None',
+      'stripeCheckoutInProgress': sessionStorage.getItem('stripeCheckoutInProgress') || 'Not set',
+      'redirectingToStripe': sessionStorage.getItem('redirectingToStripe') || 'Not set',
+      'Timestamp': new Date().toISOString()
+    };
+    
+    setDebugInfo(info);
+    return info;
+  }, [user, searchParams]);
+  
+  // Check for stale stripe flags on component mount
   useEffect(() => {
-    // CRITICAL: Reset all states and flags
+    const stripeProgress = sessionStorage.getItem('stripeCheckoutInProgress');
+    const redirecting = sessionStorage.getItem('redirectingToStripe');
+    
+    if (stripeProgress || redirecting) {
+      console.log('Found stale Stripe flags on page load:', { stripeProgress, redirecting });
+      toast.warning('Znaleziono nieaktualne flagi płatności - resetowanie...', {
+        duration: 3000
+      });
+    }
+    
+    // CRITICAL: Reset all states and flags on mount
     clearAllFlags();
+    collectDebugInfo();
     
     // Handle canceled payment if needed
     if (isCanceled) {
@@ -50,7 +85,37 @@ const Pricing = () => {
     
     // Clean up function will also be called when component unmounts
     return clearAllFlags;
-  }, [isCanceled, clearAllFlags, location.pathname, location.search]);
+  }, [isCanceled, clearAllFlags, collectDebugInfo]);
+  
+  // Listen for route or URL changes to reset flags
+  useEffect(() => {
+    // Add event listener for visibility changes
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        // When page becomes visible again (like returning from another tab)
+        console.log('Page visibility changed - clearing flags');
+        clearAllFlags();
+        collectDebugInfo();
+      }
+    };
+    
+    // Add event listener for browser history navigation
+    const handlePopState = () => {
+      console.log('Browser navigation event detected - clearing flags');
+      clearAllFlags();
+      collectDebugInfo();
+    };
+    
+    // Register the event listeners
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('popstate', handlePopState);
+    
+    // Clean up on unmount
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [clearAllFlags, collectDebugInfo]);
   
   // Save user email in localStorage (for Stripe)
   useEffect(() => {
@@ -61,12 +126,17 @@ const Pricing = () => {
 
   // Handle subscribe button click
   const handleSubscribe = async () => {
+    // Collect debug info
+    const debug = collectDebugInfo();
+    console.log('Debug info at subscription start:', debug);
+    
     // Explicitly clear any existing flags before starting
     clearAllFlags();
     
     // Prevent multiple clicks or processing while already loading
     if (isLoading) {
       console.log('Already processing payment request, ignoring click');
+      toast.info('Płatność jest już w trakcie przetwarzania...');
       return;
     }
     
@@ -117,9 +187,27 @@ const Pricing = () => {
       
       // Show a more specific error message
       toast.error('Wystąpił błąd podczas inicjowania płatności', {
-        description: 'Prosimy odświeżyć stronę i spróbować ponownie'
+        description: 'Prosimy odświeżyć stronę i spróbować ponownie',
+        action: {
+          label: 'Odśwież',
+          onClick: () => window.location.reload()
+        }
       });
     }
+  };
+
+  // Show debug dialog
+  const showDebugDialog = () => {
+    collectDebugInfo();
+    setIsDebugOpen(true);
+  };
+
+  // Handle manual reset
+  const handleManualReset = () => {
+    clearAllFlags();
+    collectDebugInfo();
+    setIsDebugOpen(false);
+    window.location.reload();
   };
 
   // Animation variants
@@ -149,6 +237,14 @@ const Pricing = () => {
             Profesjonalne narzędzie do copywritingu, które pomoże Ci tworzyć
             skuteczne teksty reklamowe.
           </p>
+          
+          {/* Debug button */}
+          <button 
+            onClick={showDebugDialog}
+            className="mt-2 text-xs text-gray-400 hover:text-gray-600"
+          >
+            Debug
+          </button>
         </motion.div>
 
         {/* Billing toggle */}
@@ -174,6 +270,37 @@ const Pricing = () => {
         {/* FAQ Section */}
         <PricingFAQ />
       </div>
+      
+      {/* Debug Dialog */}
+      <Dialog open={isDebugOpen} onOpenChange={setIsDebugOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Informacje diagnostyczne</DialogTitle>
+            <DialogDescription>
+              Informacje o statusie płatności i sesji
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="mt-4 text-sm">
+            <div className="bg-gray-50 p-4 rounded-md max-h-60 overflow-y-auto">
+              {Object.entries(debugInfo).map(([key, value]) => (
+                <div key={key} className="mb-2">
+                  <span className="font-medium">{key}:</span> {value}
+                </div>
+              ))}
+            </div>
+            
+            <div className="mt-4 flex justify-between">
+              <Button variant="outline" onClick={() => setIsDebugOpen(false)}>
+                Zamknij
+              </Button>
+              <Button onClick={handleManualReset} className="bg-red-500 hover:bg-red-600">
+                Wyczyść flagi i odśwież
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

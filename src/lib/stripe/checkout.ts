@@ -3,15 +3,20 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { PRICE_IDS } from './client';
 
-// Function to create checkout session - simplified for reliability
+// Function to create checkout session - with improved diagnostics
 export const createCheckoutSession = async (priceId: string) => {
   try {
+    // Display diagnostic message
+    toast.info('Starting checkout process');
     console.log('Starting checkout process with clean state');
     
-    // CRITICAL: Clear ANY existing flags at the start of checkout process
+    // CRITICAL: Aggressively clear ALL flags at the start of the process
     sessionStorage.removeItem('redirectingToStripe');
     sessionStorage.removeItem('stripeCheckoutInProgress');
     localStorage.removeItem('stripeCheckoutInProgress');
+    
+    // Add additional diagnostic info
+    toast.info('Step 1: Input validation');
     
     // Basic validation
     if (!priceId) {
@@ -40,12 +45,16 @@ export const createCheckoutSession = async (priceId: string) => {
       cancelUrl,
       fullOrigin
     });
+    
+    toast.info('Step 2: Setting session flags');
 
     // Set a new checkout flag with timestamp
     const timestamp = Date.now().toString();
     sessionStorage.setItem('stripeCheckoutInProgress', timestamp);
+    
+    toast.info('Step 3: Calling Supabase function');
 
-    // Direct API call to Supabase function - with simplified error handling
+    // Direct API call to Supabase function
     const { data, error } = await supabase.functions.invoke('stripe-checkout', {
       body: {
         priceId,
@@ -61,6 +70,7 @@ export const createCheckoutSession = async (priceId: string) => {
       sessionStorage.removeItem('stripeCheckoutInProgress');
       sessionStorage.removeItem('redirectingToStripe');
       console.error('Supabase function error:', error);
+      toast.error('Błąd API', { description: error.message || 'Błąd przy wywoływaniu funkcji Stripe' });
       throw new Error(error.message || 'Błąd przy wywoływaniu funkcji Stripe');
     }
 
@@ -70,11 +80,13 @@ export const createCheckoutSession = async (priceId: string) => {
       sessionStorage.removeItem('stripeCheckoutInProgress');
       sessionStorage.removeItem('redirectingToStripe');
       console.error('Stripe error:', data.error);
+      toast.error('Błąd Stripe', { description: data.error });
       throw new Error(data.error);
     }
 
     // If function returned a URL, redirect user
     if (data?.url) {
+      toast.info('Step 4: Otrzymano URL, przygotowanie do przekierowania');
       console.log('Redirecting to Stripe Checkout URL:', data.url);
       
       // Success toast
@@ -83,13 +95,18 @@ export const createCheckoutSession = async (priceId: string) => {
       // Set redirect flag - WITH A TIMESTAMP to avoid stale flags
       sessionStorage.setItem('redirectingToStripe', timestamp);
       
-      // Immediate redirect
-      window.location.href = data.url;
+      // Use a slight delay before redirect to ensure toasts are visible
+      setTimeout(() => {
+        toast.info('Step 5: Przekierowanie do Stripe');
+        window.location.href = data.url;
+      }, 1500);
+      
       return true;
     } else {
       // Clear flags when there's an error
       sessionStorage.removeItem('stripeCheckoutInProgress');
       sessionStorage.removeItem('redirectingToStripe');
+      toast.error('Brak URL', { description: 'Nie otrzymano poprawnej odpowiedzi z serwera' });
       throw new Error('Nie otrzymano poprawnej odpowiedzi z serwera');
     }
   } catch (error) {
