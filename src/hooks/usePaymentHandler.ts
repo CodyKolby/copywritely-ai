@@ -104,7 +104,7 @@ export function usePaymentHandler() {
             onClick: () => window.location.reload()
           }
         });
-      }, 8000); // 8 seconds timeout, reduced from 12 seconds
+      }, 15000); // 15 seconds timeout
       
       // Initiate checkout process
       const result = await createCheckoutSession(priceId);

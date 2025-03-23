@@ -19,6 +19,8 @@ serve(async (req) => {
   try {
     // Get Stripe secret key from environment
     const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
+    console.log("Stripe secret key available:", !!stripeSecretKey);
+    
     if (!stripeSecretKey) {
       console.error('STRIPE_SECRET_KEY is not set in environment variables');
       throw new Error('Missing Stripe API key in server configuration');
@@ -93,106 +95,58 @@ serve(async (req) => {
     console.log('Final success URL:', finalSuccessUrl);
     console.log('Final cancel URL:', finalCancelUrl);
 
-    // Create Stripe session parameters with minimal required fields
-    const params = new URLSearchParams();
-    params.append('mode', 'subscription');
-    params.append('success_url', finalSuccessUrl);
-    params.append('cancel_url', finalCancelUrl);
-    params.append('line_items[0][price]', priceId);
-    params.append('line_items[0][quantity]', '1');
-    // Optional free trial (can be removed if not needed)
-    params.append('subscription_data[trial_period_days]', '3');
-    
-    if (customerEmail) {
-      params.append('customer_email', customerEmail);
-    }
+    // Create Stripe session
+    try {
+      console.log('Creating Stripe checkout session...');
+      const response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${stripeSecretKey}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Stripe-Version': '2023-10-16'
+        },
+        body: new URLSearchParams({
+          'mode': 'subscription',
+          'success_url': finalSuccessUrl,
+          'cancel_url': finalCancelUrl,
+          'line_items[0][price]': priceId,
+          'line_items[0][quantity]': '1',
+          'subscription_data[trial_period_days]': '3',
+          ...(customerEmail ? { 'customer_email': customerEmail } : {})
+        })
+      });
 
-    console.log('Calling Stripe API at:', 'https://api.stripe.com/v1/checkout/sessions');
-
-    // Make the Stripe API call with retries
-    let response;
-    let lastError = null;
-    const maxRetries = 3;
-    
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        console.log(`Attempt ${attempt} to create Stripe checkout session`);
-        
-        // Set a timeout for the fetch operation
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout per attempt
-        
-        response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${stripeSecretKey}`,
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Stripe-Version': '2023-10-16' // Adding explicit API version
-          },
-          body: params,
-          signal: controller.signal
-        }).finally(() => clearTimeout(timeoutId));
-        
-        // If successful, break the retry loop
-        if (response.ok) {
-          console.log(`Stripe API call successful on attempt ${attempt}`);
-          break;
-        }
-        
-        // If not successful but not last attempt
-        const statusCode = response.status;
+      if (!response.ok) {
         const errorText = await response.text();
-        lastError = `Stripe API error (${statusCode}): ${errorText}`;
-        
-        console.error(`Stripe API error (${statusCode}) on attempt ${attempt}:`, errorText);
-        
-        if (attempt < maxRetries) {
-          // Wait before retrying (exponential backoff)
-          const delay = 200 * Math.pow(2, attempt);
-          console.log(`Retrying in ${delay}ms...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-        }
-      } catch (fetchError) {
-        lastError = `Network error: ${fetchError.message || "Unknown error"}`;
-        console.error(`Network error on attempt ${attempt}:`, fetchError);
-        
-        // If this is the last attempt, we'll throw after the loop
-        if (attempt < maxRetries) {
-          // Wait before retrying
-          const delay = 200 * Math.pow(2, attempt);
-          console.log(`Retrying in ${delay}ms...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-        }
+        console.error(`Stripe API error (${response.status}):`, errorText);
+        throw new Error(`Stripe API error (${response.status}): ${errorText}`);
       }
-    }
-    
-    // If we still don't have a response or it's not OK
-    if (!response || !response.ok) {
-      throw new Error(lastError || 'Failed to create Stripe checkout session after multiple attempts');
-    }
 
-    // Parse response
-    const sessionData = await response.json();
-    
-    const endTime = Date.now();
-    console.log(`Stripe session created successfully in ${endTime - startTime}ms:`, {
-      sessionId: sessionData.id,
-      url: sessionData.url
-    });
-
-    // Return successful response with URL for client
-    return new Response(
-      JSON.stringify({ 
+      const sessionData = await response.json();
+      
+      const endTime = Date.now();
+      console.log(`Stripe session created successfully in ${endTime - startTime}ms:`, {
         sessionId: sessionData.id,
-        url: sessionData.url 
-      }),
-      { 
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json' 
-        } 
-      }
-    );
+        url: sessionData.url
+      });
+
+      // Return successful response with URL for client
+      return new Response(
+        JSON.stringify({ 
+          sessionId: sessionData.id,
+          url: sessionData.url 
+        }),
+        { 
+          headers: { 
+            ...corsHeaders,
+            'Content-Type': 'application/json' 
+          } 
+        }
+      );
+    } catch (stripeError) {
+      console.error('Error calling Stripe API:', stripeError);
+      throw new Error(`Stripe API error: ${stripeError.message}`);
+    }
     
   } catch (error) {
     const endTime = Date.now();

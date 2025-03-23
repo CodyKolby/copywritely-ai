@@ -40,34 +40,42 @@ export const createCheckoutSession = async (priceId: string) => {
       duration: 3000,
     });
     
-    // Call the Supabase Edge Function with fixes for TypeScript errors
+    // Call the Supabase Edge Function with direct fetch for more control
     console.log('Calling Supabase function: stripe-checkout');
     
     // Get current session access token using the correct API
     const { data: { session } } = await supabase.auth.getSession();
     const accessToken = session?.access_token || '';
     
-    // Use invoke method instead of direct URL access
-    const { data, error } = await supabase.functions.invoke('stripe-checkout', {
-      body: {
+    // Create URL with the full Supabase project domain
+    const functionsUrl = `https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/stripe-checkout`;
+    console.log('Function URL:', functionsUrl);
+    
+    const response = await fetch(functionsUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`
+      },
+      body: JSON.stringify({
         priceId,
         customerEmail: userEmail || undefined,
         successUrl,
         cancelUrl,
         origin: fullOrigin
-      },
-      headers: {
-        Authorization: `Bearer ${accessToken}`
-      }
+      })
     });
     
-    // Log the response for debugging
-    if (error) {
-      console.error('Supabase function error:', error);
-      throw new Error(`Błąd funkcji: ${error.message}`);
+    // Handle non-200 responses
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Supabase function error response:', response.status, errorText);
+      throw new Error(`Błąd serwera: ${response.status} ${errorText}`);
     }
     
-    console.log('Supabase function response:', data);
+    // Parse response JSON
+    const data = await response.json();
+    console.log('Supabase function successful response:', data);
     
     // If function returned a URL, redirect user
     if (data?.url) {
