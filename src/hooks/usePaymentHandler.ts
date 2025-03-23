@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth/AuthContext';
 import { toast } from 'sonner';
@@ -14,6 +14,9 @@ export function usePaymentHandler() {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  
+  // Timeout reference
+  const timeoutRef = useRef<number | null>(null);
   
   // Check for URL parameters but don't immediately trigger actions
   const isCanceled = searchParams.get('canceled') === 'true';
@@ -43,6 +46,12 @@ export function usePaymentHandler() {
     // Clear session storage flags
     sessionStorage.removeItem('redirectingToStripe');
     sessionStorage.removeItem('stripeCheckoutInProgress');
+    
+    // Clear any pending timeout
+    if (timeoutRef.current) {
+      window.clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
     
     // Reset loading state
     setIsLoading(false);
@@ -85,24 +94,28 @@ export function usePaymentHandler() {
       console.log('Using price ID for checkout:', priceId);
       
       // Add automatic timeout to reset loading state if checkout process takes too long
-      const timeoutId = setTimeout(() => {
+      timeoutRef.current = window.setTimeout(() => {
         console.log('Checkout process timeout reached, resetting state');
         clearPaymentFlags();
-        setIsLoading(false);
         toast.error('Proces płatności trwa zbyt długo', {
-          description: 'Spróbuj ponownie za chwilę'
+          description: 'Spróbuj ponownie za chwilę lub skontaktuj się z obsługą',
+          action: {
+            label: 'Spróbuj ponownie',
+            onClick: () => window.location.reload()
+          }
         });
-      }, 10000); // 10 seconds timeout
+      }, 12000); // 12 seconds timeout
       
       // Initiate checkout process
       const result = await createCheckoutSession(priceId);
       
-      // Clear timeout if we get a response
-      clearTimeout(timeoutId);
-      
       // If checkout function returns false, reset loading state
       if (!result) {
         console.log('Checkout failed, resetting loading state');
+        if (timeoutRef.current) {
+          window.clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
         setIsLoading(false);
       }
       // If successful, the page will redirect, so we don't need to do anything else here
@@ -110,6 +123,10 @@ export function usePaymentHandler() {
     } catch (error) {
       console.error('Error in handleSubscribe:', error);
       // Reset loading state if there's an exception
+      if (timeoutRef.current) {
+        window.clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
       setIsLoading(false);
       clearPaymentFlags();
       
@@ -151,6 +168,14 @@ export function usePaymentHandler() {
     
     // Collect initial debug info
     collectDebugInfo();
+    
+    // Clean up timeout on unmount
+    return () => {
+      if (timeoutRef.current) {
+        window.clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
   }, [isCanceled, clearPaymentFlags, collectDebugInfo, user, searchParams, navigate]);
 
   return {

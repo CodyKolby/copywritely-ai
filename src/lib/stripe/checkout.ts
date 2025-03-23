@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { PRICE_IDS } from './client';
 
-// Function to create checkout session - completely rewritten
+// Function to create checkout session
 export const createCheckoutSession = async (priceId: string) => {
   try {
     console.log('Starting checkout process with priceId', priceId);
@@ -40,28 +40,22 @@ export const createCheckoutSession = async (priceId: string) => {
       duration: 3000,
     });
     
-    // Use standard fetch for more control
-    const response = await fetch(`${fullOrigin}/.netlify/functions/stripe-checkout`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    // Call the Supabase Edge Function
+    const { data, error } = await supabase.functions.invoke('stripe-checkout', {
+      body: {
         priceId,
         customerEmail: userEmail || undefined,
         successUrl,
         cancelUrl,
         origin: fullOrigin
-      })
+      }
     });
     
-    // Handle API response
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Błąd API: ${response.status} - ${errorText}`);
+    // Handle API errors
+    if (error) {
+      console.error('Supabase function error:', error);
+      throw new Error(`Błąd funkcji: ${error.message}`);
     }
-    
-    const data = await response.json();
     
     // If function returned a URL, redirect user
     if (data?.url) {
@@ -72,7 +66,7 @@ export const createCheckoutSession = async (priceId: string) => {
       
       toast.success('Przekierowujemy do strony płatności...');
       
-      // Use direct window.location.href for immediate redirect
+      // Use window.location.href for immediate redirect
       window.location.href = data.url;
       
       return true;
