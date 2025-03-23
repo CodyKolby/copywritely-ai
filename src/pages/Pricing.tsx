@@ -64,7 +64,7 @@ const Pricing = () => {
     }
   }, [user]);
 
-  // Improved timeout handling - reduced to 10 seconds for faster feedback
+  // Improved timeout handling - further reduced to 5 seconds for even faster feedback
   useEffect(() => {
     let loadingTimeout: number;
     
@@ -72,10 +72,10 @@ const Pricing = () => {
       loadingTimeout = window.setTimeout(() => {
         console.log('Timeout triggered: resetting loading state');
         setIsLoading(false);
-        toast.error('Wystąpił problem z przetwarzaniem płatności', {
-          description: 'Płatność nie została ukończona z powodu timeout. Spróbuj ponownie.'
+        toast.error('Proces płatności przerwany', {
+          description: 'Serwer nie odpowiada. Spróbuj ponownie później lub skontaktuj się z obsługą.'
         });
-      }, 10000); // Reduced to 10 seconds timeout for faster feedback
+      }, 5000); // Very short 5-second timeout
     }
     
     return () => {

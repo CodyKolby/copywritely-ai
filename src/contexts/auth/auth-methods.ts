@@ -65,15 +65,43 @@ export const signUpWithEmail = async (email: string, password: string) => {
 
 export const signOut = async () => {
   try {
-    const { error } = await supabase.auth.signOut()
-    if (error) throw error
-    toast.success('Signed out successfully')
+    // Show a loading toast
+    const loadingToastId = toast.loading('Wylogowywanie...');
+    
+    // Implement a timeout to prevent hanging
+    const timeoutPromise = new Promise<{error: Error}>((_, reject) => {
+      setTimeout(() => reject({error: new Error('Timeout wylogowania')}), 3000);
+    });
+    
+    // Race between actual signOut and timeout
+    const result = await Promise.race([
+      supabase.auth.signOut(),
+      timeoutPromise
+    ]);
+    
+    // Dismiss loading toast
+    toast.dismiss(loadingToastId);
+    
+    if (result.error) throw result.error;
+    
+    // Force clear local storage auth data to ensure logout works even if Supabase fails
+    localStorage.removeItem('sb-' + supabase.supabaseUrl + '-auth-token');
+    
+    // Force reload the page to ensure all auth state is reset
+    toast.success('Wylogowano pomyślnie');
+    setTimeout(() => window.location.reload(), 1000);
   } catch (error) {
     if (error instanceof Error) {
-      toast.error('Error signing out', {
+      toast.error('Błąd podczas wylogowywania', {
         description: error.message
-      })
+      });
+      
+      // Force clear local storage auth data as a fallback
+      localStorage.removeItem('sb-' + supabase.supabaseUrl + '-auth-token');
+      
+      // Force reload the page to ensure all auth state is reset
+      setTimeout(() => window.location.reload(), 1000);
     }
-    console.error('Error signing out:', error)
+    console.error('Error signing out:', error);
   }
 }

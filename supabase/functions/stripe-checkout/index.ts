@@ -158,12 +158,12 @@ serve(async (req) => {
     console.log('Stripe API request parameters:', params.toString());
     console.log('Calling Stripe API at:', 'https://api.stripe.com/v1/checkout/sessions');
 
-    // Set shorter timeout for fetch to prevent hanging (5 seconds instead of 10)
+    // Set even shorter timeout for fetch to prevent hanging (3 seconds instead of 5)
     const controller = new AbortController();
     const timeout = setTimeout(() => {
       controller.abort();
-      console.error('Stripe API request timed out after 5 seconds');
-    }, 5000);
+      console.error('Stripe API request timed out after 3 seconds');
+    }, 3000);
 
     try {
       // Call Stripe API with timeout

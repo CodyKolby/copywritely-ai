@@ -24,14 +24,14 @@ export const PRICE_IDS = {
   PRO_ANNUAL: 'price_1R5A8aAGO17NLUWtxzthF8lo', // Using the same ID for testing
 };
 
-// Funkcja do tworzenia sesji Checkout - z ulepszonym zarządzaniem timeout i obsługą błędów
+// Funkcja do tworzenia sesji Checkout - z maksymalnie skróconym czasem oczekiwania
 export const createCheckoutSession = async (priceId: string) => {
   // Store reference to the toast ID so we can dismiss it later
   let loadingToastId: string | number = '';
   
-  // Setup shorter timeout to prevent long waiting
+  // Setup extremely short timeout to prevent long waiting - reduced to 4 seconds
   const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => reject(new Error('Przekroczono czas oczekiwania na odpowiedź serwera')), 8000);
+    setTimeout(() => reject(new Error('Przekroczono czas oczekiwania na odpowiedź serwera')), 4000);
   });
   
   try {
@@ -68,56 +68,63 @@ export const createCheckoutSession = async (priceId: string) => {
       environment: stripePublicKey.startsWith('pk_test_') ? 'TEST' : 'LIVE'
     });
 
-    // Race the Supabase function call with a timeout
-    const result = await Promise.race([
-      supabase.functions.invoke('stripe-checkout', {
-        body: {
-          priceId,
-          customerEmail: userEmail || undefined,
-          successUrl,
-          cancelUrl,
-          origin: fullOrigin
-        }
-      }),
-      timeoutPromise
-    ]);
+    // Use a very short timeout for Supabase function call
+    try {
+      // Race the Supabase function call with a timeout
+      const result = await Promise.race([
+        supabase.functions.invoke('stripe-checkout', {
+          body: {
+            priceId,
+            customerEmail: userEmail || undefined,
+            successUrl,
+            cancelUrl,
+            origin: fullOrigin
+          }
+        }),
+        timeoutPromise
+      ]);
 
-    // Always dismiss the loading toast once we get a response
-    if (loadingToastId) {
-      toast.dismiss(loadingToastId);
-    }
+      // Always dismiss the loading toast once we get a response
+      if (loadingToastId) {
+        toast.dismiss(loadingToastId);
+      }
 
-    const { data, error } = result;
+      const { data, error } = result;
 
-    if (error) {
-      console.error('Supabase function error:', error);
-      throw new Error(error.message || 'Błąd przy wywoływaniu funkcji Stripe');
-    }
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw new Error(error.message || 'Błąd przy wywoływaniu funkcji Stripe');
+      }
 
-    // Jeśli funkcja zwróciła błąd w danych
-    if (data?.error) {
-      console.error('Stripe error:', data.error);
-      throw new Error(data.error);
-    }
+      // Jeśli funkcja zwróciła błąd w danych
+      if (data?.error) {
+        console.error('Stripe error:', data.error);
+        throw new Error(data.error);
+      }
 
-    // Jeśli funkcja zwróciła URL, przekieruj użytkownika
-    if (data?.url) {
-      console.log('Redirecting to Stripe Checkout URL:', data.url);
-      
-      // Zamień toast ładowania na toast sukcesu
-      toast.success('Przekierowujemy do strony płatności...');
-      
-      // Ustawiamy flagę, że przekierowujemy do Stripe
-      sessionStorage.setItem('redirectingToStripe', 'true');
-      
-      // Dodajemy małe opóźnienie przed przekierowaniem, aby zminimalizować problemy z czasowaniem
-      setTimeout(() => {
+      // Jeśli funkcja zwróciła URL, przekieruj użytkownika
+      if (data?.url) {
+        console.log('Redirecting to Stripe Checkout URL:', data.url);
+        
+        // Zamień toast ładowania na toast sukcesu
+        toast.success('Przekierowujemy do strony płatności...');
+        
+        // Ustawiamy flagę, że przekierowujemy do Stripe
+        sessionStorage.setItem('redirectingToStripe', 'true');
+        
+        // Przekierowanie natychmiastowe bez opóźnienia
         window.location.href = data.url;
-      }, 500);
-      
-      return true;
-    } else {
-      throw new Error('Nie otrzymano poprawnej odpowiedzi z serwera');
+        
+        return true;
+      } else {
+        throw new Error('Nie otrzymano poprawnej odpowiedzi z serwera');
+      }
+    } catch (error) {
+      // Always dismiss the loading toast on error
+      if (loadingToastId) {
+        toast.dismiss(loadingToastId);
+      }
+      throw error;
     }
   } catch (error) {
     console.error('Stripe checkout error:', error);
@@ -132,7 +139,7 @@ export const createCheckoutSession = async (priceId: string) => {
     
     // Check for timeout errors
     if (errorMessage.includes('czas oczekiwania')) {
-      errorMessage = 'Przekroczono czas oczekiwania na odpowiedź serwera. Spróbuj ponownie później.';
+      errorMessage = 'Serwer nie odpowiada. Spróbuj ponownie później lub skontaktuj się z obsługą.';
     }
     // Check for common Stripe errors and provide more user-friendly messages
     else if (errorMessage.includes('Missing Stripe API key')) {
