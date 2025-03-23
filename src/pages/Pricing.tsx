@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/auth/AuthContext';
@@ -21,19 +22,27 @@ const Pricing = () => {
   
   // Check for Stripe redirect flag
   useEffect(() => {
-    const wasRedirectingToStripe = sessionStorage.getItem('redirectingToStripe') === 'true';
+    // Get the redirect timestamp (if it exists)
+    const redirectTimestamp = sessionStorage.getItem('redirectingToStripe');
     
-    if (wasRedirectingToStripe && !isCanceled) {
+    // Check if it's a recent redirect (less than 1 hour old)
+    const isRecentRedirect = redirectTimestamp && 
+      (Date.now() - parseInt(redirectTimestamp)) < 3600000;
+    
+    if (isRecentRedirect && !isCanceled) {
       // This is a return from Stripe without success or cancel parameters
       toast.info('Płatność nie została ukończona', {
         description: 'Możesz spróbować ponownie lub skontaktować się z obsługą'
       });
       // Clear redirect flag
       sessionStorage.removeItem('redirectingToStripe');
-    } else if (!wasRedirectingToStripe) {
-      // If we're not returning from Stripe, just ensure the flag is cleared
+    } else if (redirectTimestamp) {
+      // If it's an old timestamp, just clear it
       sessionStorage.removeItem('redirectingToStripe');
     }
+    
+    // Always reset loading state on component mount
+    setIsLoading(false);
   }, [isCanceled]);
   
   // Scroll to top on page load and show message if user canceled payment
@@ -46,6 +55,8 @@ const Pricing = () => {
       });
       // Ensure we clear the redirecting flag
       sessionStorage.removeItem('redirectingToStripe');
+      // Reset loading state
+      setIsLoading(false);
     }
   }, [isCanceled]);
 
@@ -69,12 +80,19 @@ const Pricing = () => {
       return;
     }
 
+    // Prevent multiple clicks - check if already loading
+    if (isLoading) {
+      console.log('Already processing payment request, ignoring click');
+      return;
+    }
+
     // Dismiss any existing toasts before starting new payment process
     toast.dismiss();
     
     // Show a clear loading toast
     const loadingToastId = toast.loading('Łączenie z systemem płatności...');
     
+    // Set loading state
     setIsLoading(true);
     
     try {
@@ -82,8 +100,8 @@ const Pricing = () => {
       const priceId = getPriceId(billingCycle);
       console.log('Using price ID for checkout:', priceId);
       
-      // Flag that we're redirecting to Stripe
-      sessionStorage.setItem('redirectingToStripe', 'true');
+      // Clear any old redirect flags
+      sessionStorage.removeItem('redirectingToStripe');
       
       // Direct window location redirect approach
       const result = await createCheckoutSession(priceId);

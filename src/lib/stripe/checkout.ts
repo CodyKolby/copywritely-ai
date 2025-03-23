@@ -63,8 +63,8 @@ export const createCheckoutSession = async (priceId: string) => {
       // Success toast
       toast.success('Przekierowujemy do strony płatności...');
       
-      // Set redirect flag
-      sessionStorage.setItem('redirectingToStripe', 'true');
+      // Set redirect flag - WITH A TIMESTAMP to avoid stale flags
+      sessionStorage.setItem('redirectingToStripe', Date.now().toString());
       
       // Immediate redirect
       window.location.href = data.url;

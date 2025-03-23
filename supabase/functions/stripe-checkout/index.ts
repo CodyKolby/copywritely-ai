@@ -109,20 +109,47 @@ serve(async (req) => {
 
     console.log('Calling Stripe API at:', 'https://api.stripe.com/v1/checkout/sessions');
 
-    // Make the Stripe API call with a very short timeout (1 second)
-    const response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${stripeSecretKey}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: params,
-    });
-      
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Stripe API error (${response.status}):`, errorText);
-      throw new Error(`Stripe API error: ${response.status}`);
+    // Make the Stripe API call with retries
+    let response;
+    const maxRetries = 3;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${stripeSecretKey}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: params,
+        });
+        
+        // If successful, break the retry loop
+        if (response.ok) break;
+        
+        // If not successful but not last attempt
+        if (attempt < maxRetries) {
+          const errorText = await response.text();
+          console.error(`Stripe API error (${response.status}) on attempt ${attempt}:`, errorText);
+          // Wait before retrying (exponential backoff)
+          await new Promise(resolve => setTimeout(resolve, 200 * Math.pow(2, attempt)));
+        }
+      } catch (fetchError) {
+        console.error(`Network error on attempt ${attempt}:`, fetchError);
+        
+        // If this is the last attempt, rethrow
+        if (attempt === maxRetries) throw fetchError;
+        
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, 200 * Math.pow(2, attempt)));
+      }
+    }
+    
+    // If we still don't have a response or it's not OK
+    if (!response || !response.ok) {
+      const errorText = response ? await response.text() : 'No response';
+      console.error(`Stripe API error after ${maxRetries} attempts (${response?.status}):`, errorText);
+      throw new Error(`Stripe API error: ${response?.status || 'Network error'}`);
     }
 
     // Parse response
