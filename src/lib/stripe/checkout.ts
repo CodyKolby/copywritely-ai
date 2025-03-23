@@ -27,7 +27,14 @@ export const createCheckoutSession = async (priceId: string) => {
       cancelUrl
     });
     
-    // Clear any existing checkout flags - ALWAYS do this first
+    // Get real site domain from current URL
+    const currentDomain = window.location.hostname;
+    const currentUrl = window.location.href;
+    
+    console.log('Running on domain:', currentDomain);
+    console.log('Current URL:', currentUrl);
+
+    // Clear any existing checkout flags
     sessionStorage.removeItem('stripeCheckoutInProgress');
     sessionStorage.removeItem('redirectingToStripe');
     
@@ -39,27 +46,70 @@ export const createCheckoutSession = async (priceId: string) => {
       duration: 3000,
     });
     
-    // Get domain from current URL
-    const currentDomain = window.location.hostname;
-    const currentProtocol = window.location.protocol;
-    
-    // Special handling to use either deployed Netlify functions or local dev setup
-    let netlifyFunctionUrl = '';
-    
-    if (currentDomain.includes('localhost') || currentDomain.includes('127.0.0.1')) {
-      // Local development
-      netlifyFunctionUrl = 'http://localhost:8888/.netlify/functions/stripe-checkout';
-      console.log('Using local Netlify function URL');
-    } else {
-      // Production - construct full URL with current origin
-      netlifyFunctionUrl = `${fullOrigin}/.netlify/functions/stripe-checkout`;
-      console.log('Using production Netlify function URL:', netlifyFunctionUrl);
+    // Try multiple approaches in sequence to maximize compatibility
+
+    // First attempt: Try direct URL GET request with parameters
+    try {
+      console.log('ATTEMPT 1: Using GET request with URL parameters');
+      
+      // Determine the base URL for the function
+      let baseUrl;
+      if (currentDomain.includes('localhost') || currentDomain.includes('127.0.0.1')) {
+        baseUrl = 'http://localhost:8888/.netlify/functions/stripe-checkout';
+      } else {
+        // Use dynamically determined origin from where we're running
+        baseUrl = `${fullOrigin}/.netlify/functions/stripe-checkout`;
+      }
+      
+      // Add parameters to URL
+      const url = new URL(baseUrl);
+      url.searchParams.append('priceId', priceId);
+      if (userEmail) {
+        url.searchParams.append('customerEmail', userEmail);
+      }
+      url.searchParams.append('successUrl', successUrl);
+      url.searchParams.append('cancelUrl', cancelUrl);
+      url.searchParams.append('timestamp', timestamp);
+      
+      console.log('Making GET request to:', url.toString());
+      
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'no-cache, no-store',
+          'Pragma': 'no-cache'
+        }
+      });
+      
+      console.log('GET response status:', response.status);
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data?.url) {
+          console.log('GET request successful, redirecting to:', data.url);
+          
+          sessionStorage.setItem('redirectingToStripe', timestamp);
+          window.location.assign(data.url);
+          return true;
+        }
+      }
+      
+      console.log('GET request failed, trying POST method...');
+    } catch (getError) {
+      console.error('GET request attempt failed:', getError);
+      console.log('Falling back to POST method...');
     }
     
-    console.log('Calling Netlify function: stripe-checkout');
-    console.log('Making POST request to:', netlifyFunctionUrl);
+    // Second attempt: Standard POST request
+    let netlifyFunctionUrl;
+    if (currentDomain.includes('localhost') || currentDomain.includes('127.0.0.1')) {
+      netlifyFunctionUrl = 'http://localhost:8888/.netlify/functions/stripe-checkout';
+    } else {
+      netlifyFunctionUrl = `${fullOrigin}/.netlify/functions/stripe-checkout`;
+    }
+    
+    console.log('ATTEMPT 2: Making POST request to:', netlifyFunctionUrl);
 
-    // Enhanced error handling for fetch
     const requestParams = {
       method: 'POST',
       headers: {
@@ -72,73 +122,71 @@ export const createCheckoutSession = async (priceId: string) => {
         customerEmail: userEmail || undefined,
         successUrl,
         cancelUrl,
-        timestamp // Include timestamp to prevent caching
+        timestamp
       })
     };
     
-    console.log('Request parameters:', {
-      method: requestParams.method,
-      headers: requestParams.headers
-    });
-    
-    // Improved fetch with better error handling
     const response = await fetch(netlifyFunctionUrl, requestParams);
     
-    console.log('Response status:', response.status);
-    console.log('Response headers:', Object.fromEntries([...response.headers.entries()]));
+    console.log('POST response status:', response.status);
+    console.log('POST response headers:', Object.fromEntries([...response.headers.entries()]));
     
-    // Handle non-200 responses with detailed logging
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Function error response:', response.status, errorText);
       
-      // Special handling for 405 errors
-      if (response.status === 405) {
-        console.error('405 Method Not Allowed error details:', {
-          requestMethod: requestParams.method,
-          responseHeaders: Object.fromEntries([...response.headers.entries()]),
-          fullUrl: netlifyFunctionUrl
-        });
+      // Try the Supabase function as a last resort
+      console.log('ATTEMPT 3: Switching to Supabase function for stripe checkout');
+      
+      // First try direct serverless function URL
+      const supabaseFunctionUrl = `${fullOrigin}/functions/stripe-checkout`;
+      console.log('Trying Supabase function URL:', supabaseFunctionUrl);
+      
+      try {
+        toast.info('Próbuję alternatywną metodę płatności...');
         
-        // Fallback to Supabase function if available
-        try {
-          toast.info('Próbuję alternatywną metodę płatności...');
-          
-          // Use Supabase function instead
-          console.log('Switching to Supabase function for stripe checkout');
-          const supabaseFunctionUrl = `${fullOrigin}/functions/stripe-checkout`;
-          
-          const supabaseResponse = await fetch(supabaseFunctionUrl, requestParams);
-          
-          if (!supabaseResponse.ok) {
-            throw new Error(`Błąd funkcji zapasowej: ${supabaseResponse.status}`);
-          }
-          
-          const responseData = await supabaseResponse.json();
-          
-          if (responseData?.url) {
-            console.log('Received Stripe Checkout URL from fallback, redirecting to:', responseData.url);
-            
-            // Set redirect flag
-            sessionStorage.setItem('redirectingToStripe', timestamp);
-            
-            toast.success('Przekierowujemy do strony płatności...');
-            
-            // Use setTimeout to avoid MutationObserver errors
-            setTimeout(() => {
-              window.location.assign(responseData.url);
-            }, 1500);
-            
-            return true;
-          } else {
-            throw new Error('Brak URL w odpowiedzi zapasowej');
-          }
-        } catch (fallbackError) {
-          console.error('Fallback method also failed:', fallbackError);
-          throw new Error(`Błąd metody HTTP: 405 - Method Not Allowed. Spróbuj odświeżyć stronę lub skontaktuj się z obsługą techniczną.`);
+        const supabaseResponse = await fetch(supabaseFunctionUrl, requestParams);
+        
+        if (!supabaseResponse.ok) {
+          throw new Error(`Błąd funkcji zapasowej: ${supabaseResponse.status}`);
         }
-      } else {
-        throw new Error(`Błąd serwera: ${response.status} ${errorText}`);
+        
+        const responseData = await supabaseResponse.json();
+        
+        if (responseData?.url) {
+          console.log('Received Stripe Checkout URL from Supabase function, redirecting to:', responseData.url);
+          
+          sessionStorage.setItem('redirectingToStripe', timestamp);
+          
+          toast.success('Przekierowujemy do strony płatności...');
+          window.location.assign(responseData.url);
+          return true;
+        } else {
+          throw new Error('Brak URL w odpowiedzi zapasowej');
+        }
+      } catch (fallbackError) {
+        console.error('Fallback method also failed:', fallbackError);
+        
+        // As a last resort, try JSONP-style approach using iframe redirect
+        console.log('ATTEMPT 4: Trying direct Stripe redirect');
+        
+        try {
+          // Create a direct Stripe checkout session URL
+          const stripeDirectUrl = `https://checkout.stripe.com/c/pay/${priceId}?success_url=${encodeURIComponent(successUrl)}&cancel_url=${encodeURIComponent(cancelUrl)}`;
+          
+          console.log('Attempting direct Stripe redirect to:', stripeDirectUrl);
+          toast.info('Przekierowujemy do Stripe...');
+          
+          // Set timeout to avoid immediate redirect issues
+          setTimeout(() => {
+            window.location.assign(stripeDirectUrl);
+          }, 1000);
+          
+          return true;
+        } catch (directError) {
+          console.error('Direct Stripe redirect also failed:', directError);
+          throw new Error('Wszystkie metody płatności zawiodły. Spróbuj odświeżyć stronę lub skontaktuj się z obsługą.');
+        }
       }
     }
     
@@ -156,15 +204,12 @@ export const createCheckoutSession = async (priceId: string) => {
     if (responseData?.url) {
       console.log('Received Stripe Checkout URL, redirecting to:', responseData.url);
       
-      // Set redirect flag
       sessionStorage.setItem('redirectingToStripe', timestamp);
       
       toast.success('Przekierowujemy do strony płatności...');
-      
-      // Use setTimeout to avoid MutationObserver errors
       setTimeout(() => {
         window.location.assign(responseData.url);
-      }, 1500);
+      }, 1000);
       
       return true;
     } else {

@@ -85,7 +85,12 @@ export function usePaymentProcess(
         });
       }, 45000); // 45 seconds timeout
       
-      // Initiate checkout process
+      // Log environment details for debugging
+      console.log('Browser details:', navigator.userAgent);
+      console.log('Window location:', window.location.href);
+      console.log('Window origin:', window.location.origin);
+      
+      // Initiate checkout process with multi-attempt approach
       console.log('Calling createCheckoutSession with priceId:', priceId);
       const result = await createCheckoutSession(priceId);
       console.log('createCheckoutSession result:', result);

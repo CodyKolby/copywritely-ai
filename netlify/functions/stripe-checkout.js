@@ -6,7 +6,7 @@ exports.handler = async (event, context) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
     'Cache-Control': 'no-cache, no-store',
     'Content-Type': 'application/json'
   };
@@ -14,7 +14,8 @@ exports.handler = async (event, context) => {
   console.log(`Netlify function: Received ${event.httpMethod} request to stripe-checkout`);
   console.log('Headers:', JSON.stringify(event.headers));
   console.log('Path:', event.path);
-  console.log('HTTP method:', event.httpMethod);
+  console.log('Raw body length:', event.body ? event.body.length : 0);
+  console.log('Body content type:', event.headers['content-type'] || 'Not specified');
   
   // Critical - handle OPTIONS preflight requests properly
   if (event.httpMethod === 'OPTIONS') {
@@ -26,8 +27,8 @@ exports.handler = async (event, context) => {
     };
   }
 
-  // Only allow POST requests - be very explicit
-  if (event.httpMethod !== 'POST') {
+  // Allow both GET and POST for maximum compatibility
+  if (event.httpMethod !== 'POST' && event.httpMethod !== 'GET') {
     console.error(`Netlify function: Method ${event.httpMethod} not allowed`);
     return {
       statusCode: 405,
@@ -35,46 +36,50 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({ 
         error: 'Method Not Allowed', 
         method: event.httpMethod,
-        allowedMethod: 'POST'
+        allowedMethods: 'GET,POST,OPTIONS'
       })
     };
   }
 
   try {
-    console.log('Netlify function: Processing POST request');
+    console.log(`Netlify function: Processing ${event.httpMethod} request`);
     
-    // Check for body content
-    if (!event.body) {
-      console.error('Netlify function: No request body provided');
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({ error: 'Missing request body' })
-      };
-    }
-    
-    console.log('Netlify function: Request body length:', event.body.length);
-    
-    // Parse request body with detailed logging
+    // Parse request data - handle both GET and POST
     let requestData;
-    try {
-      requestData = JSON.parse(event.body);
-      console.log('Netlify function: Successfully parsed request body');
-      console.log('Netlify function: Parsed data:', JSON.stringify(requestData));
-    } catch (parseError) {
-      console.error('Netlify function: Error parsing request body:', parseError);
-      console.error('Netlify function: Raw body received:', event.body);
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({ 
-          error: 'Invalid request format', 
-          details: parseError.message,
-          receivedContentType: event.headers['content-type'] || 'not specified'
-        })
-      };
+    
+    if (event.httpMethod === 'POST') {
+      if (!event.body) {
+        console.error('Netlify function: No request body provided');
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: 'Missing request body' })
+        };
+      }
+      
+      try {
+        requestData = JSON.parse(event.body);
+        console.log('Netlify function: Successfully parsed request body');
+      } catch (parseError) {
+        console.error('Netlify function: Error parsing request body:', parseError);
+        console.error('Netlify function: Raw body received:', event.body);
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ 
+            error: 'Invalid request format', 
+            details: parseError.message,
+            receivedContentType: event.headers['content-type'] || 'not specified'
+          })
+        };
+      }
+    } else if (event.httpMethod === 'GET') {
+      // Handle GET requests by parsing query parameters
+      requestData = event.queryStringParameters || {};
+      console.log('Netlify function: Using query parameters:', requestData);
     }
     
+    // Extract and validate parameters
     const { priceId, customerEmail, successUrl, cancelUrl, timestamp } = requestData;
 
     if (!priceId) {
