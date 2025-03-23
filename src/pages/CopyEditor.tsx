@@ -8,7 +8,7 @@ import AnalysisResult, { AnalysisScore } from '@/components/AnalysisResult';
 import { Skeleton } from '@/components/ui/skeleton';
 import BriefCard from '@/components/BriefCard';
 import { CheckCheck, AlertCircle, FileText, Brain, MessageSquare, PenTool } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
 // Sample brief for demo purposes
