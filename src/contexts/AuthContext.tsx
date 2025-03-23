@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/integrations/supabase/client'
@@ -80,6 +81,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (error) {
         console.error('Error fetching profile:', error);
+        
+        // If profile not found (code 406), create a new profile
+        if (error.code === 'PGRST116') {
+          await createProfile(userId);
+          return;
+        }
         return;
       }
       
@@ -87,6 +94,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsPremium(data?.is_premium || false);
     } catch (error) {
       console.error('Error fetching profile:', error);
+    }
+  }
+
+  const createProfile = async (userId: string) => {
+    try {
+      // Get user details from supabase auth
+      const { data: userData } = await supabase.auth.getUser();
+      
+      if (!userData?.user) {
+        console.error('No user data available to create profile');
+        return;
+      }
+      
+      const { email, user_metadata } = userData.user;
+      
+      const newProfile = {
+        id: userId,
+        email: email,
+        full_name: user_metadata?.full_name || user_metadata?.name || '',
+        avatar_url: user_metadata?.avatar_url || '',
+        is_premium: false
+      };
+      
+      console.log('Creating new profile:', newProfile);
+      
+      const { error } = await supabase.from('profiles').insert(newProfile);
+      
+      if (error) {
+        console.error('Error creating profile:', error);
+        toast.error('Nie udało się utworzyć profilu użytkownika');
+        return;
+      }
+      
+      console.log('Profile created successfully');
+      setProfile(newProfile as Profile);
+      
+      // Refresh profile data
+      fetchProfile(userId);
+      
+    } catch (error) {
+      console.error('Error creating profile:', error);
     }
   }
 
