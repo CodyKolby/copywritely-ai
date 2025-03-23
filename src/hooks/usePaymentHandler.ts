@@ -26,13 +26,15 @@ export function usePaymentHandler() {
     const info: Record<string, string> = {
       'User authenticated': user ? 'Yes' : 'No',
       'User ID': user?.id || 'Not logged in',
+      'User Email': user?.email || 'Not available',
       'Browser': navigator.userAgent,
       'URL': window.location.href,
       'Route params': searchParams.toString() || 'None',
       'stripeCheckoutInProgress': sessionStorage.getItem('stripeCheckoutInProgress') || 'Not set',
       'redirectingToStripe': sessionStorage.getItem('redirectingToStripe') || 'Not set',
       'isLoading state': isLoading ? 'True' : 'False',
-      'Timestamp': new Date().toISOString()
+      'Timestamp': new Date().toISOString(),
+      'localStorage.userEmail': localStorage.getItem('userEmail') || 'Not set'
     };
     
     setDebugInfo(info);
@@ -57,10 +59,13 @@ export function usePaymentHandler() {
     setIsLoading(false);
     
     toast.info('System płatności zresetowany');
-  }, []);
+    collectDebugInfo();
+  }, [collectDebugInfo]);
   
   // Handle subscribe button click
   const handleSubscribe = async (billingCycle: BillingCycle) => {
+    console.log('Subscribe button clicked, billing cycle:', billingCycle);
+    
     // Force clear any flags that might be stuck from previous attempts
     sessionStorage.removeItem('redirectingToStripe');
     sessionStorage.removeItem('stripeCheckoutInProgress');
@@ -76,6 +81,7 @@ export function usePaymentHandler() {
     }
     
     if (!user) {
+      console.log('No authenticated user, redirecting to login');
       toast.error('Musisz się zalogować', {
         description: 'Zaloguj się, aby kontynuować zakup subskrypcji',
         action: {
@@ -86,11 +92,20 @@ export function usePaymentHandler() {
       return;
     }
 
+    // Make sure user email is stored in localStorage
+    if (user.email) {
+      console.log('Storing user email in localStorage');
+      localStorage.setItem('userEmail', user.email);
+    } else {
+      console.warn('User email not available');
+    }
+
     // Dismiss any existing toasts
     toast.dismiss();
     
     // Set loading state
     setIsLoading(true);
+    console.log('Setting isLoading to true');
     
     try {
       // Log the price ID we're using for debugging
@@ -108,10 +123,12 @@ export function usePaymentHandler() {
             onClick: () => window.location.reload()
           }
         });
-      }, 8000); // 8 seconds timeout
+      }, 10000); // 10 seconds timeout
       
       // Initiate checkout process
+      console.log('Calling createCheckoutSession with priceId:', priceId);
       const result = await createCheckoutSession(priceId);
+      console.log('createCheckoutSession result:', result);
       
       // If checkout function returns false, reset loading state
       if (!result) {
@@ -121,6 +138,7 @@ export function usePaymentHandler() {
           timeoutRef.current = null;
         }
         setIsLoading(false);
+        console.log('isLoading set to false after failed checkout');
       }
       // If successful, the page will redirect, so we don't need to do anything else here
       
@@ -132,6 +150,7 @@ export function usePaymentHandler() {
         timeoutRef.current = null;
       }
       setIsLoading(false);
+      console.log('isLoading set to false after error');
       clearPaymentFlags();
       
       // Show a more specific error message
@@ -147,10 +166,13 @@ export function usePaymentHandler() {
 
   // Handle canceled payments when the page is first loaded
   useEffect(() => {
+    console.log('usePaymentHandler useEffect running');
+    
     // Force clear any flags when the component mounts
     sessionStorage.removeItem('redirectingToStripe');
     sessionStorage.removeItem('stripeCheckoutInProgress');
     setIsLoading(false);
+    console.log('Flags cleared and isLoading set to false on mount');
     
     if (isCanceled) {
       console.log('Payment canceled via URL parameter');
@@ -172,6 +194,7 @@ export function usePaymentHandler() {
     
     // Save user email in localStorage (for Stripe)
     if (user?.email) {
+      console.log('Storing user email in localStorage on mount');
       localStorage.setItem('userEmail', user.email);
     }
     
@@ -180,6 +203,7 @@ export function usePaymentHandler() {
     
     // Clean up timeout on unmount
     return () => {
+      console.log('usePaymentHandler cleanup running');
       if (timeoutRef.current) {
         window.clearTimeout(timeoutRef.current);
         timeoutRef.current = null;

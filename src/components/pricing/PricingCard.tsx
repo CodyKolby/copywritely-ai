@@ -84,11 +84,19 @@ export const PricingCard = ({
           </div>
           
           <Button 
-            className="w-full mb-6 bg-copywrite-teal hover:bg-copywrite-teal-dark h-12 text-base"
+            className="w-full mb-6 bg-copywrite-teal hover:bg-copywrite-teal-dark h-12 text-base relative"
             onClick={onSubscribe}
             disabled={isLoading}
           >
-            {isLoading ? 'Ładowanie...' : 'Rozpocznij darmowy okres próbny'}
+            {isLoading ? (
+              <>
+                <span className="opacity-0">Placeholder</span>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="h-5 w-5 rounded-full border-2 border-t-transparent border-white animate-spin"></div>
+                  <span className="ml-2">Ładowanie...</span>
+                </div>
+              </>
+            ) : 'Rozpocznij darmowy okres próbny'}
           </Button>
         </div>
         

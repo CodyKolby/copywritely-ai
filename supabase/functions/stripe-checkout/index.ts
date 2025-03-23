@@ -96,12 +96,29 @@ serve(async (req) => {
     console.log('Final success URL:', finalSuccessUrl);
     console.log('Final cancel URL:', finalCancelUrl);
 
-    // Create Stripe session - FIXED: removed cache-busting parameter from URL
+    // Create Stripe session - using clean URL without any parameters
     try {
       console.log('Creating Stripe checkout session...');
       
       // Use the standard Stripe API URL without cache-busting
       const stripeUrl = 'https://api.stripe.com/v1/checkout/sessions';
+      
+      // Create form parameters
+      const formData = new URLSearchParams({
+        'mode': 'subscription',
+        'success_url': finalSuccessUrl,
+        'cancel_url': finalCancelUrl,
+        'line_items[0][price]': priceId,
+        'line_items[0][quantity]': '1',
+        'subscription_data[trial_period_days]': '3'
+      });
+      
+      // Add customer email if provided
+      if (customerEmail) {
+        formData.append('customer_email', customerEmail);
+      }
+      
+      console.log('Request parameters:', Object.fromEntries(formData.entries()));
       
       // Add cache-busting to the headers instead
       const response = await fetch(stripeUrl, {
@@ -111,18 +128,9 @@ serve(async (req) => {
           'Content-Type': 'application/x-www-form-urlencoded',
           'Stripe-Version': '2023-10-16',
           'Cache-Control': 'no-cache, no-store',
-          // Add a timestamp header for cache busting
           'X-Request-Timestamp': `${timestamp || Date.now()}`
         },
-        body: new URLSearchParams({
-          'mode': 'subscription',
-          'success_url': finalSuccessUrl,
-          'cancel_url': finalCancelUrl,
-          'line_items[0][price]': priceId,
-          'line_items[0][quantity]': '1',
-          'subscription_data[trial_period_days]': '3',
-          ...(customerEmail ? { 'customer_email': customerEmail } : {})
-        })
+        body: formData
       });
 
       if (!response.ok) {

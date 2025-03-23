@@ -20,13 +20,22 @@ exports.handler = async (event, context) => {
   }
 
   try {
+    console.log('Netlify function: Received request body:', event.body);
+    
     // Parse request body
     const requestData = JSON.parse(event.body);
     const { priceId, customerEmail, successUrl, cancelUrl, timestamp } = requestData;
 
-    console.log('Netlify function called with timestamp:', timestamp || 'Not provided');
+    console.log('Netlify function: Parsed data:', {
+      priceId,
+      customerEmail: customerEmail ? 'Email provided' : 'Not provided',
+      successUrl,
+      cancelUrl,
+      timestamp: timestamp || 'Not provided'
+    });
 
     if (!priceId) {
+      console.error('Netlify function: Missing priceId parameter');
       return {
         statusCode: 400,
         headers,
@@ -35,7 +44,7 @@ exports.handler = async (event, context) => {
     }
 
     // Create session parameters
-    const session = await stripe.checkout.sessions.create({
+    const sessionParams = {
       mode: 'subscription',
       success_url: successUrl,
       cancel_url: cancelUrl,
@@ -47,8 +56,21 @@ exports.handler = async (event, context) => {
       ],
       subscription_data: {
         trial_period_days: 3
-      },
-      customer_email: customerEmail
+      }
+    };
+    
+    // Add customer email if provided
+    if (customerEmail) {
+      sessionParams.customer_email = customerEmail;
+    }
+    
+    console.log('Netlify function: Creating session with params:', JSON.stringify(sessionParams));
+
+    // Create session
+    const session = await stripe.checkout.sessions.create(sessionParams);
+    console.log('Netlify function: Session created successfully:', {
+      id: session.id,
+      url: session.url
     });
 
     // Return success with session URL
@@ -62,7 +84,7 @@ exports.handler = async (event, context) => {
     };
     
   } catch (error) {
-    console.error('Error creating checkout session:', error);
+    console.error('Netlify function: Error creating checkout session:', error);
     
     return {
       statusCode: 500,

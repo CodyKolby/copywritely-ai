@@ -56,7 +56,7 @@ export const createCheckoutSession = async (priceId: string) => {
     const functionsUrl = `https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/stripe-checkout`;
     console.log('Function URL:', functionsUrl);
     
-    const response = await fetch(`${functionsUrl}?t=${timestamp}`, { // Add cache busting to URL
+    const response = await fetch(functionsUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
