@@ -7,6 +7,7 @@ exports.handler = async (event, context) => {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Cache-Control': 'no-cache, no-store'
   };
 
   // Handle preflight requests
@@ -21,7 +22,9 @@ exports.handler = async (event, context) => {
   try {
     // Parse request body
     const requestData = JSON.parse(event.body);
-    const { priceId, customerEmail, successUrl, cancelUrl } = requestData;
+    const { priceId, customerEmail, successUrl, cancelUrl, timestamp } = requestData;
+
+    console.log('Netlify function called with timestamp:', timestamp || 'Not provided');
 
     if (!priceId) {
       return {
@@ -65,7 +68,8 @@ exports.handler = async (event, context) => {
       statusCode: 500,
       headers,
       body: JSON.stringify({ 
-        error: error.message || 'An error occurred during checkout session creation'
+        error: error.message || 'An error occurred during checkout session creation',
+        timestamp: new Date().toISOString()
       })
     };
   }

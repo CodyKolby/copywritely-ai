@@ -28,7 +28,7 @@ export const createCheckoutSession = async (priceId: string) => {
       cancelUrl
     });
     
-    // Clear any existing checkout flags
+    // Clear any existing checkout flags - ALWAYS do this first
     sessionStorage.removeItem('stripeCheckoutInProgress');
     sessionStorage.removeItem('redirectingToStripe');
     
@@ -43,9 +43,14 @@ export const createCheckoutSession = async (priceId: string) => {
     // Call the Supabase Edge Function with direct fetch for more control
     console.log('Calling Supabase function: stripe-checkout');
     
-    // Get current session access token using the correct API
-    const { data: { session } } = await supabase.auth.getSession();
-    const accessToken = session?.access_token || '';
+    // Get current session access token
+    const { data } = await supabase.auth.getSession();
+    const accessToken = data.session?.access_token || '';
+    
+    if (!accessToken) {
+      console.error('No access token available - user might be logged out');
+      throw new Error('Błąd autoryzacji - zaloguj się ponownie');
+    }
     
     // Create URL with the full Supabase project domain
     const functionsUrl = `https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/stripe-checkout`;
@@ -62,7 +67,8 @@ export const createCheckoutSession = async (priceId: string) => {
         customerEmail: userEmail || undefined,
         successUrl,
         cancelUrl,
-        origin: fullOrigin
+        origin: fullOrigin,
+        timestamp: timestamp // Include timestamp to prevent caching
       })
     });
     
@@ -86,7 +92,7 @@ export const createCheckoutSession = async (priceId: string) => {
       
       toast.success('Przekierowujemy do strony płatności...');
       
-      // Use window.location.href for immediate redirect
+      // Force a new page load to avoid browser caching issues
       window.location.href = data.url;
       
       return true;

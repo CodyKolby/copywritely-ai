@@ -61,6 +61,10 @@ export function usePaymentHandler() {
   
   // Handle subscribe button click
   const handleSubscribe = async (billingCycle: BillingCycle) => {
+    // Force clear any flags that might be stuck from previous attempts
+    sessionStorage.removeItem('redirectingToStripe');
+    sessionStorage.removeItem('stripeCheckoutInProgress');
+    
     // Collect debug info
     collectDebugInfo();
     
@@ -104,7 +108,7 @@ export function usePaymentHandler() {
             onClick: () => window.location.reload()
           }
         });
-      }, 15000); // 15 seconds timeout
+      }, 8000); // 8 seconds timeout
       
       // Initiate checkout process
       const result = await createCheckoutSession(priceId);
@@ -143,6 +147,11 @@ export function usePaymentHandler() {
 
   // Handle canceled payments when the page is first loaded
   useEffect(() => {
+    // Force clear any flags when the component mounts
+    sessionStorage.removeItem('redirectingToStripe');
+    sessionStorage.removeItem('stripeCheckoutInProgress');
+    setIsLoading(false);
+    
     if (isCanceled) {
       console.log('Payment canceled via URL parameter');
       clearPaymentFlags();
@@ -175,6 +184,10 @@ export function usePaymentHandler() {
         window.clearTimeout(timeoutRef.current);
         timeoutRef.current = null;
       }
+      
+      // Force clear any flags when the component unmounts
+      sessionStorage.removeItem('redirectingToStripe');
+      sessionStorage.removeItem('stripeCheckoutInProgress');
     };
   }, [isCanceled, clearPaymentFlags, collectDebugInfo, user, searchParams, navigate]);
 

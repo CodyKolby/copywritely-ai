@@ -33,6 +33,7 @@ serve(async (req) => {
       console.log('Request data received:', JSON.stringify({
         ...requestData,
         customerEmail: requestData.customerEmail ? 'Email provided' : 'No email',
+        timestamp: requestData.timestamp || 'Not provided'
       }));
     } catch (e) {
       console.error('Failed to parse request body:', e);
@@ -40,7 +41,7 @@ serve(async (req) => {
     }
     
     // Extract and validate parameters
-    const { priceId, customerEmail, successUrl, cancelUrl, origin } = requestData;
+    const { priceId, customerEmail, successUrl, cancelUrl, origin, timestamp } = requestData;
 
     if (!priceId) {
       console.error('Missing priceId in request');
@@ -98,12 +99,17 @@ serve(async (req) => {
     // Create Stripe session
     try {
       console.log('Creating Stripe checkout session...');
-      const response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+      
+      // Add cache-busting parameter to Stripe API URL
+      const stripeUrl = `https://api.stripe.com/v1/checkout/sessions?_=${timestamp || Date.now()}`;
+      
+      const response = await fetch(stripeUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${stripeSecretKey}`,
           'Content-Type': 'application/x-www-form-urlencoded',
-          'Stripe-Version': '2023-10-16'
+          'Stripe-Version': '2023-10-16',
+          'Cache-Control': 'no-cache, no-store'
         },
         body: new URLSearchParams({
           'mode': 'subscription',
@@ -139,7 +145,8 @@ serve(async (req) => {
         { 
           headers: { 
             ...corsHeaders,
-            'Content-Type': 'application/json' 
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache, no-store'
           } 
         }
       );
@@ -161,7 +168,8 @@ serve(async (req) => {
         status: 400, 
         headers: { 
           ...corsHeaders,
-          'Content-Type': 'application/json' 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store'
         } 
       }
     );
