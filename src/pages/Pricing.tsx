@@ -9,16 +9,28 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from '@/contexts/auth/AuthContext';
 import { toast } from 'sonner';
 import { createCheckoutSession, PRICE_IDS } from '@/lib/stripe';
+import { useSearchParams } from 'react-router-dom';
 
 const Pricing = () => {
   const [billingCycle, setBillingCycle] = useState<'annual' | 'monthly'>('annual');
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  
+  // Sprawdź czy użytkownik został przekierowany po anulowaniu płatności
+  const isCanceled = searchParams.get('canceled') === 'true';
   
   // Scroll to top on page load
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, []);
+    
+    // Wyświetl komunikat jeśli użytkownik anulował płatność
+    if (isCanceled) {
+      toast.info('Anulowano proces płatności', {
+        description: 'Możesz kontynuować korzystanie z aplikacji w wersji podstawowej'
+      });
+    }
+  }, [isCanceled]);
 
   // Zapisz email użytkownika w localStorage (dla Stripe)
   useEffect(() => {

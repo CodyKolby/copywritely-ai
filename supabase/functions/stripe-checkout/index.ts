@@ -42,7 +42,7 @@ serve(async (req) => {
     }
     
     // Extract and validate parameters
-    const { priceId, customerEmail, successUrl, cancelUrl } = requestData;
+    const { priceId, customerEmail, successUrl, cancelUrl, origin } = requestData;
 
     if (!priceId) {
       console.error('Missing priceId in request');
@@ -68,24 +68,28 @@ serve(async (req) => {
       console.warn('LIVE MODE WARNING: Using test format price ID in live environment');
     }
 
-    // Validate that the success and cancel URLs contain the proper domain (not just a path)
-    if (successUrl && !successUrl.startsWith('http')) {
-      console.warn('Success URL does not contain protocol:', successUrl);
-    }
-
+    // WAŻNE: Dbamy o poprawne adresy URL z pełną domeną
+    console.log('Origin:', origin);
     console.log('Success URL being used:', successUrl);
     console.log('Cancel URL being used:', cancelUrl);
 
-    // Ensure the cancel URL is properly formatted and contains the full origin
-    const origin = req.headers.get('origin') || '';
-    const finalCancelUrl = cancelUrl || `${origin}/pricing`;
-    console.log('Final cancel URL being used:', finalCancelUrl);
+    // Upewniamy się, że mamy prawidłowe, absolutne URL-e
+    const validSuccessUrl = successUrl?.startsWith('http') 
+      ? successUrl 
+      : `${origin || req.headers.get('origin') || ''}/success?session_id={CHECKOUT_SESSION_ID}`;
+      
+    const validCancelUrl = cancelUrl?.startsWith('http') 
+      ? cancelUrl 
+      : `${origin || req.headers.get('origin') || ''}/pricing?canceled=true`;
+
+    console.log('Final success URL:', validSuccessUrl);
+    console.log('Final cancel URL:', validCancelUrl);
 
     // Create Stripe session parameters
     const params = new URLSearchParams();
     params.append('mode', 'subscription');
-    params.append('success_url', successUrl || `${origin}/success?session_id={CHECKOUT_SESSION_ID}`);
-    params.append('cancel_url', finalCancelUrl);
+    params.append('success_url', validSuccessUrl);
+    params.append('cancel_url', validCancelUrl);
     params.append('line_items[0][price]', priceId);
     params.append('line_items[0][quantity]', '1');
     params.append('subscription_data[trial_period_days]', '3');

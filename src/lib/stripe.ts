@@ -40,11 +40,12 @@ export const createCheckoutSession = async (priceId: string) => {
     // Pobierz zapisany email użytkownika
     const userEmail = localStorage.getItem('userEmail');
     
-    // Upewnijmy się, że używamy pełnych adresów URL z protokołem
+    // Upewnijmy się, że używamy absolutnych URL-i
     const fullOrigin = window.location.origin;
-    // Wygeneruj pełne URL powrotu zawierające protokół i domenę (nie relatywne)
+    
+    // WAŻNE: Używamy absolutnego URL z pełną domeną
     const successUrl = `${fullOrigin}/success?session_id={CHECKOUT_SESSION_ID}`;
-    const cancelUrl = `${fullOrigin}/pricing`;
+    const cancelUrl = `${fullOrigin}/pricing?canceled=true`;
 
     // Pokazujemy toast informujący o rozpoczęciu procesu
     toast.info('Przygotowujemy proces płatności...');
@@ -64,7 +65,8 @@ export const createCheckoutSession = async (priceId: string) => {
         priceId,
         customerEmail: userEmail || undefined,
         successUrl,
-        cancelUrl
+        cancelUrl,
+        origin: fullOrigin // Dodajemy pełny adres do body
       }
     });
 
