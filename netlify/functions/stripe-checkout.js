@@ -13,6 +13,8 @@ exports.handler = async (event, context) => {
 
   console.log(`Netlify function: Received ${event.httpMethod} request to stripe-checkout`);
   console.log('Headers:', JSON.stringify(event.headers));
+  console.log('Body:', event.body ? 'Contains data' : 'Empty');
+  console.log('Path:', event.path);
 
   // Handle preflight requests
   if (event.httpMethod === 'OPTIONS') {
@@ -39,7 +41,19 @@ exports.handler = async (event, context) => {
     console.log('Netlify function: Received request body:', event.body);
     
     // Parse request body
-    const requestData = JSON.parse(event.body);
+    let requestData;
+    try {
+      requestData = JSON.parse(event.body);
+      console.log('Netlify function: Successfully parsed request body');
+    } catch (parseError) {
+      console.error('Netlify function: Error parsing request body:', parseError);
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: 'Invalid request format', details: parseError.message })
+      };
+    }
+    
     const { priceId, customerEmail, successUrl, cancelUrl, timestamp } = requestData;
 
     console.log('Netlify function: Parsed data:', {

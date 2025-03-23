@@ -45,16 +45,21 @@ export const createCheckoutSession = async (priceId: string) => {
     // Check if we're running locally or in production
     let netlifyFunctionUrl = '';
     
+    // Get domain from current URL
+    const currentDomain = window.location.hostname;
+    
     // Special handling to use either deployed Netlify functions or local dev setup
-    if (fullOrigin.includes('localhost') || fullOrigin.includes('127.0.0.1')) {
+    if (currentDomain.includes('localhost') || currentDomain.includes('127.0.0.1')) {
       // Local development
       netlifyFunctionUrl = 'http://localhost:8888/.netlify/functions/stripe-checkout';
       console.log('Using local Netlify function URL');
     } else {
-      // Production
+      // Production - construct full URL with current origin
       netlifyFunctionUrl = `${fullOrigin}/.netlify/functions/stripe-checkout`;
       console.log('Using production Netlify function URL:', netlifyFunctionUrl);
     }
+    
+    console.log('Making POST request to:', netlifyFunctionUrl);
     
     const response = await fetch(netlifyFunctionUrl, {
       method: 'POST',
@@ -80,15 +85,21 @@ export const createCheckoutSession = async (priceId: string) => {
       console.error('Function error response:', response.status, errorText);
       
       if (response.status === 405) {
-        throw new Error('Błąd metody HTTP: 405 - Method Not Allowed. Skontaktuj się z obsługą techniczną.');
+        throw new Error('Błąd metody HTTP: 405 - Method Not Allowed. Spróbuj odświeżyć stronę lub skontaktuj się z obsługą techniczną.');
       } else {
         throw new Error(`Błąd serwera: ${response.status} ${errorText}`);
       }
     }
     
     // Parse response JSON
-    const responseData = await response.json();
-    console.log('Function successful response:', responseData);
+    let responseData;
+    try {
+      responseData = await response.json();
+      console.log('Function successful response:', responseData);
+    } catch (parseError) {
+      console.error('Error parsing response:', parseError);
+      throw new Error('Nieprawidłowa odpowiedź z serwera płatności');
+    }
     
     // If function returned a URL, redirect user
     if (responseData?.url) {
@@ -102,7 +113,7 @@ export const createCheckoutSession = async (priceId: string) => {
       // Use setTimeout to avoid MutationObserver errors
       setTimeout(() => {
         window.location.assign(responseData.url);
-      }, 1000);
+      }, 1500);
       
       return true;
     } else {

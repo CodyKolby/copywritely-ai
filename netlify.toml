@@ -12,10 +12,11 @@
   status = 200
   force = true
 
-# Add a specific redirect for the stripe-checkout function
+# Add a specific redirect for the stripe-checkout function with explicit method handling
 [[redirects]]
   from = "/.netlify/functions/stripe-checkout"
   to = "/.netlify/functions/stripe-checkout"
   status = 200
   force = true
   methods = "GET,POST,OPTIONS"
+  headers = { Access-Control-Allow-Origin = "*", Access-Control-Allow-Methods = "GET,POST,OPTIONS", Access-Control-Allow-Headers = "Content-Type, Authorization, X-Requested-With" }

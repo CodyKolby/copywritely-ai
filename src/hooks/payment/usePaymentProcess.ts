@@ -22,8 +22,7 @@ export function usePaymentProcess(
     console.log('Subscribe button clicked, billing cycle:', billingCycle);
     
     // Force clear any flags that might be stuck from previous attempts
-    sessionStorage.removeItem('redirectingToStripe');
-    sessionStorage.removeItem('stripeCheckoutInProgress');
+    clearPaymentFlags();
     
     // Collect debug info
     collectDebugInfo(user);
@@ -68,7 +67,6 @@ export function usePaymentProcess(
       console.log('Using price ID for checkout:', priceId);
       
       // Add automatic timeout to reset loading state if checkout process takes too long
-      // Increase timeout to 45 seconds to avoid premature timeout
       if (timeoutRef.current) {
         window.clearTimeout(timeoutRef.current);
       }
