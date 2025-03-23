@@ -105,8 +105,20 @@ export function usePaymentHandler() {
       const priceId = getPriceId(billingCycle);
       console.log('Using price ID for checkout:', priceId);
       
+      // Add timeout to reset loading state if checkout process takes too long
+      const timeoutId = setTimeout(() => {
+        console.log('Checkout process timeout reached, resetting state');
+        setIsLoading(false);
+        toast.error('Proces płatności trwa zbyt długo', {
+          description: 'Spróbuj ponownie za chwilę'
+        });
+      }, 20000); // 20 seconds timeout
+      
       // Initiate checkout process
       const result = await createCheckoutSession(priceId);
+      
+      // Clear timeout if we get a response
+      clearTimeout(timeoutId);
       
       // If checkout function returns false, reset loading state
       if (!result) {

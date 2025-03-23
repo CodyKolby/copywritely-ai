@@ -43,10 +43,16 @@ export const createCheckoutSession = async (priceId: string) => {
     const timestamp = Date.now().toString();
     sessionStorage.setItem('stripeCheckoutInProgress', timestamp);
     
-    toast.info('Łączenie z systemem płatności...');
+    toast.info('Łączenie z systemem płatności...', {
+      duration: 10000, // Longer duration for this message
+    });
 
-    // Direct API call to Supabase function
-    const { data, error } = await supabase.functions.invoke('stripe-checkout', {
+    // Direct API call to Supabase function with timeout handling
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Przekroczono czas oczekiwania na odpowiedź')), 15000)
+    );
+    
+    const fetchPromise = supabase.functions.invoke('stripe-checkout', {
       body: {
         priceId,
         customerEmail: userEmail || undefined,
@@ -55,6 +61,12 @@ export const createCheckoutSession = async (priceId: string) => {
         origin: fullOrigin
       }
     });
+    
+    // Race between the fetch and the timeout
+    const result = await Promise.race([fetchPromise, timeoutPromise]);
+    
+    // If we get here, fetchPromise won the race
+    const { data, error } = result as any;
 
     if (error) {
       // Only clear specific flags when there's an error
@@ -81,12 +93,15 @@ export const createCheckoutSession = async (priceId: string) => {
       sessionStorage.setItem('redirectingToStripe', timestamp);
       
       // Success toast - only show this when we have a URL
-      toast.success('Przekierowujemy do strony płatności...');
+      toast.success('Przekierowujemy do strony płatności...', {
+        description: 'Za chwilę zostaniesz przekierowany do bezpiecznej strony płatności Stripe',
+      });
       
       // Use a slight delay before redirect to ensure toasts are visible
       setTimeout(() => {
+        console.log('Redirecting to Stripe checkout page');
         window.location.href = data.url;
-      }, 1000);
+      }, 1500);
       
       return true;
     } else {
@@ -106,6 +121,8 @@ export const createCheckoutSession = async (priceId: string) => {
     toast.error('Wystąpił błąd', {
       description: errorMessage
     });
+
+    // Allow the button to be clickable again
     return false;
   }
 };

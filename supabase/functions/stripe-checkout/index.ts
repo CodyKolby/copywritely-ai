@@ -118,14 +118,20 @@ serve(async (req) => {
       try {
         console.log(`Attempt ${attempt} to create Stripe checkout session`);
         
+        // Set a timeout for the fetch operation
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout per attempt
+        
         response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${stripeSecretKey}`,
             'Content-Type': 'application/x-www-form-urlencoded',
+            'Stripe-Version': '2023-10-16' // Adding explicit API version
           },
           body: params,
-        });
+          signal: controller.signal
+        }).finally(() => clearTimeout(timeoutId));
         
         // If successful, break the retry loop
         if (response.ok) {
