@@ -2,7 +2,7 @@
 import { toast } from 'sonner';
 import { getStripe, PRICE_IDS } from './client';
 
-// Function to create checkout session
+// Simplified function to create checkout session
 export const createCheckoutSession = async (priceId: string) => {
   try {
     console.log('Starting checkout process with priceId', priceId);
@@ -27,17 +27,17 @@ export const createCheckoutSession = async (priceId: string) => {
       cancelUrl
     });
     
-    // Get Stripe instance - with hardcoded key as fallback
+    // Get Stripe instance with hardcoded key
     const stripe = await getStripe();
     
     if (!stripe) {
-      console.error('Failed to initialize Stripe - public key may be missing or invalid');
-      throw new Error('Nie można zainicjować systemu płatności - brak klucza API');
+      console.error('Failed to initialize Stripe');
+      throw new Error('Nie można zainicjować systemu płatności');
     }
     
     console.log('Stripe initialized successfully, redirecting to checkout...');
     
-    // Set checkout options using valid parameters
+    // Set checkout options
     const options = {
       lineItems: [{ price: priceId, quantity: 1 }],
       mode: 'subscription',
