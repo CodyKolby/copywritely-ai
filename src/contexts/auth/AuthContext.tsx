@@ -4,12 +4,13 @@ import { supabase } from '@/integrations/supabase/client'
 import { AuthContextType, Profile } from './types'
 import { 
   fetchProfile, 
+  createProfile,
   checkPremiumStatus, 
   signInWithGoogle, 
   signInWithEmail, 
   signUpWithEmail, 
   signOut 
-} from './auth-utils'  // This import still works because of the re-exports
+} from './auth-utils'  // Explicitly import createProfile
 import { useTestUser } from './use-test-user'
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
