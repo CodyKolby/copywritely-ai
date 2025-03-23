@@ -108,7 +108,7 @@ export function usePaymentHandler() {
       // Add timeout to reset loading state if checkout process takes too long
       const timeoutId = setTimeout(() => {
         console.log('Checkout process timeout reached, resetting state');
-        setIsLoading(false);
+        clearPaymentFlags();
         toast.error('Proces płatności trwa zbyt długo', {
           description: 'Spróbuj ponownie za chwilę'
         });
@@ -125,7 +125,8 @@ export function usePaymentHandler() {
         console.log('Checkout failed, resetting loading state');
         setIsLoading(false);
         toast.error('Nie udało się połączyć z systemem płatności', {
-          description: 'Spróbuj ponownie za chwilę lub skontaktuj się z obsługą'
+          description: 'Spróbuj ponownie za chwilę lub skontaktuj się z obsługą',
+          duration: 5000
         });
       }
       // If successful, the page will redirect, so we don't need to do anything else here
@@ -134,6 +135,7 @@ export function usePaymentHandler() {
       console.error('Error in handleSubscribe:', error);
       // Reset loading state if there's an exception
       setIsLoading(false);
+      clearPaymentFlags();
       
       // Show a more specific error message
       toast.error('Wystąpił błąd podczas inicjowania płatności', {
