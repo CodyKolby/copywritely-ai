@@ -5,6 +5,7 @@ import { Profile } from './types'
 
 export const fetchProfile = async (userId: string): Promise<Profile | null> => {
   try {
+    console.log('Fetching profile for user:', userId);
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
@@ -16,12 +17,14 @@ export const fetchProfile = async (userId: string): Promise<Profile | null> => {
       
       // If profile not found (code 406), create a new profile
       if (error.code === 'PGRST116') {
+        console.log('Profile not found, creating new profile');
         const newProfile = await createProfile(userId);
         return newProfile;
       }
       return null;
     }
     
+    console.log('Profile fetched successfully:', data);
     return data;
   } catch (error) {
     console.error('Error fetching profile:', error);
@@ -32,7 +35,13 @@ export const fetchProfile = async (userId: string): Promise<Profile | null> => {
 export const createProfile = async (userId: string): Promise<Profile | null> => {
   try {
     // Get user details from supabase auth
-    const { data: userData } = await supabase.auth.getUser();
+    console.log('Getting user details for profile creation:', userId);
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    
+    if (userError) {
+      console.error('Error getting user data:', userError);
+      return null;
+    }
     
     if (!userData?.user) {
       console.error('No user data available to create profile');
@@ -51,7 +60,7 @@ export const createProfile = async (userId: string): Promise<Profile | null> => 
     
     console.log('Creating new profile:', newProfile);
     
-    // Try to directly insert the profile
+    // Try direct insert first
     const { error: insertError } = await supabase
       .from('profiles')
       .insert(newProfile);
@@ -76,6 +85,8 @@ export const createProfile = async (userId: string): Promise<Profile | null> => 
           user_avatar_url: user_metadata?.avatar_url || null
         };
         
+        console.log('Attempting to create profile using RPC:', params);
+        
         // Use explicit type casting for the RPC call
         const { error: rpcError } = await supabase.rpc(
           'create_user_profile', 
@@ -94,7 +105,7 @@ export const createProfile = async (userId: string): Promise<Profile | null> => 
       }
     }
     
-    console.log('Profile created successfully');
+    console.log('Profile creation attempt completed, fetching fresh profile');
     
     // Refresh and return profile data
     return await fetchProfile(userId);

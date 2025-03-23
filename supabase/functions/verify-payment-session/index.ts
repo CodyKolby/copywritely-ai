@@ -22,7 +22,7 @@ serve(async (req) => {
       throw new Error('Missing Stripe API key in server configuration');
     }
     
-    // Inicjalizacja klienta Supabase
+    // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
     
@@ -62,6 +62,12 @@ serve(async (req) => {
     }
 
     const session = await response.json();
+    console.log('Stripe session data:', {
+      id: session.id,
+      payment_status: session.payment_status,
+      subscription: !!session.subscription,
+      customer: !!session.customer
+    });
 
     // Validate payment status
     if (session.payment_status !== 'paid') {
@@ -96,23 +102,54 @@ serve(async (req) => {
         subscriptionStatus = subscription.status;
         // Convert UNIX timestamp to ISO string
         subscriptionExpiry = new Date(subscription.current_period_end * 1000).toISOString();
+        console.log('Subscription details:', {
+          status: subscriptionStatus,
+          expiry: subscriptionExpiry
+        });
       }
     }
 
-    // Update user profile in database
-    const { error: updateError } = await supabase
+    // First check if profile exists
+    const { data: existingProfile, error: profileCheckError } = await supabase
       .from('profiles')
-      .update({
-        is_premium: true,
-        subscription_id: subscriptionId || null,
-        subscription_status: subscriptionStatus,
-        subscription_expiry: subscriptionExpiry
-      })
-      .eq('id', userId);
+      .select('id')
+      .eq('id', userId)
+      .single();
+      
+    if (profileCheckError && profileCheckError.code === 'PGRST116') {
+      // Profile doesn't exist, create it first
+      console.log('Profile not found, creating basic profile before update');
+      const { error: createError } = await supabase
+        .from('profiles')
+        .insert({
+          id: userId,
+          is_premium: true,
+          subscription_id: subscriptionId || null,
+          subscription_status: subscriptionStatus,
+          subscription_expiry: subscriptionExpiry
+        });
+        
+      if (createError) {
+        console.error('Error creating user profile:', createError);
+        throw new Error('Error creating user profile');
+      }
+    } else {
+      // Update existing profile
+      console.log('Updating existing profile with premium status');
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          is_premium: true,
+          subscription_id: subscriptionId || null,
+          subscription_status: subscriptionStatus,
+          subscription_expiry: subscriptionExpiry
+        })
+        .eq('id', userId);
 
-    if (updateError) {
-      console.error('Error updating user profile:', updateError);
-      throw new Error('Error updating user profile');
+      if (updateError) {
+        console.error('Error updating user profile:', updateError);
+        throw new Error('Error updating user profile');
+      }
     }
 
     return new Response(

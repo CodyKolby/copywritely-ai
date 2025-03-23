@@ -10,73 +10,81 @@ import { toast } from 'sonner';
 const Success = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [successToastShown, setSuccessToastShown] = useState(false);
+  const { user, checkPremiumStatus } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, checkPremiumStatus } = useAuth();
+  
+  const successToastShown = sessionStorage.getItem('paymentProcessed') === 'true';
 
   useEffect(() => {
-    const hasProcessedPayment = sessionStorage.getItem('paymentProcessed') === 'true';
-    
-    const checkSession = async () => {
+    const verifyPayment = async () => {
       try {
+        if (successToastShown) {
+          console.log('Payment already processed in this session, skipping verification');
+          setLoading(false);
+          return;
+        }
+
         const searchParams = new URLSearchParams(location.search);
         const sessionId = searchParams.get('session_id');
 
         if (!sessionId) {
+          console.error('No session ID found in URL');
           setError('Brak identyfikatora sesji płatności');
           setLoading(false);
           return;
         }
 
-        if (hasProcessedPayment) {
+        if (!user?.id) {
+          console.error('No user ID available');
+          setError('Nie udało się zidentyfikować użytkownika');
           setLoading(false);
           return;
         }
 
-        if (user?.id) {
-          const { data, error: verifyError } = await supabase.functions.invoke('verify-payment-session', {
-            body: { 
-              sessionId,
-              userId: user.id
-            }
-          });
+        console.log('Verifying payment session:', { sessionId, userId: user.id });
 
-          if (verifyError) {
-            console.error('Błąd podczas weryfikacji płatności:', verifyError);
-            setError('Wystąpił błąd podczas weryfikacji płatności');
-            setLoading(false);
-            return;
+        const { data, error: verifyError } = await supabase.functions.invoke('verify-payment-session', {
+          body: { 
+            sessionId,
+            userId: user.id
           }
+        });
 
-          if (!data?.success) {
-            setError(data?.message || 'Wystąpił błąd podczas weryfikacji płatności');
-            setLoading(false);
-            return;
-          }
+        if (verifyError) {
+          console.error('Error verifying payment:', verifyError);
+          setError('Wystąpił błąd podczas weryfikacji płatności');
+          setLoading(false);
+          return;
+        }
 
-          await checkPremiumStatus(user.id);
-          
-          if (!successToastShown && !hasProcessedPayment) {
-            toast.success('Gratulacje! Twoje konto zostało zaktualizowane do wersji Premium.');
-            setSuccessToastShown(true);
-            sessionStorage.setItem('paymentProcessed', 'true');
-          }
+        if (!data?.success) {
+          console.error('Payment verification returned failure:', data);
+          setError(data?.message || 'Wystąpił błąd podczas weryfikacji płatności');
+          setLoading(false);
+          return;
+        }
+
+        console.log('Payment verification successful, checking premium status');
+        
+        const isPremium = await checkPremiumStatus(user.id, false);
+        console.log('Premium status after verification:', isPremium);
+        
+        if (isPremium && !successToastShown) {
+          console.log('Showing premium success toast');
+          toast.success('Gratulacje! Twoje konto zostało zaktualizowane do wersji Premium.');
+          sessionStorage.setItem('paymentProcessed', 'true');
         }
 
         setLoading(false);
       } catch (err) {
-        console.error('Błąd podczas weryfikacji płatności:', err);
+        console.error('Error during payment verification process:', err);
         setError('Wystąpił błąd podczas weryfikacji płatności');
         setLoading(false);
       }
     };
 
-    checkSession();
-
-    return () => {
-      sessionStorage.setItem('paymentProcessed', 'true');
-    };
+    verifyPayment();
   }, [location, user, checkPremiumStatus, successToastShown]);
 
   return (

@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/integrations/supabase/client'
@@ -59,12 +58,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // Otherwise check for a real session
-      const { data: { session: currentSession } } = await supabase.auth.getSession()
-      setSession(currentSession)
-      setUser(currentSession?.user ?? null)
-      
-      if (currentSession?.user) {
-        await handleUserAuthenticated(currentSession.user.id)
+      try {
+        console.log('Initializing auth state');
+        const { data: { session: currentSession } } = await supabase.auth.getSession()
+        setSession(currentSession)
+        setUser(currentSession?.user ?? null)
+        
+        if (currentSession?.user) {
+          console.log('Found existing session, user ID:', currentSession.user.id);
+          await handleUserAuthenticated(currentSession.user.id)
+        } else {
+          console.log('No active session found');
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
       }
       
       setLoading(false)
@@ -78,18 +85,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [testUser, testSession, testIsPremium, testProfile])
 
   const handleUserAuthenticated = async (userId: string) => {
-    const userProfile = await fetchProfile(userId)
-    setProfile(userProfile)
-    
-    // Don't show any toast here - we'll handle that in the Success page
-    const isPremiumStatus = await checkPremiumStatus(userId)
-    setIsPremium(isPremiumStatus)
+    try {
+      console.log('Handling authenticated user:', userId);
+      const userProfile = await fetchProfile(userId)
+      setProfile(userProfile)
+      
+      if (!userProfile) {
+        console.warn('No profile found or created for user:', userId);
+      }
+      
+      // Don't show any toast here - we'll handle that in the Success page
+      const isPremiumStatus = await checkPremiumStatus(userId)
+      setIsPremium(isPremiumStatus)
+    } catch (error) {
+      console.error('Error in handleUserAuthenticated:', error);
+    }
   }
 
   const checkUserPremiumStatus = async (userId: string, showToast = false) => {
-    const isPremiumStatus = await checkPremiumStatus(userId)
-    setIsPremium(isPremiumStatus)
-    return isPremiumStatus;
+    try {
+      console.log('Manual premium status check for user:', userId);
+      const isPremiumStatus = await checkPremiumStatus(userId, showToast)
+      setIsPremium(isPremiumStatus)
+      return isPremiumStatus;
+    } catch (error) {
+      console.error('Error checking premium status:', error);
+      return false;
+    }
   }
 
   return (
