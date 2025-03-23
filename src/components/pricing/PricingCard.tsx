@@ -38,6 +38,14 @@ export const PricingCard = ({
     "Zapis projektów w aplikacji"
   ];
 
+  // Function to handle the click event with logging
+  const handleSubscribeClick = () => {
+    console.log('Subscribe button clicked in PricingCard component');
+    
+    // Call the parent onSubscribe function
+    onSubscribe();
+  };
+
   return (
     <motion.div variants={itemVariants}>
       <Card className="relative border-copywrite-teal/30 shadow-lg overflow-hidden">
@@ -85,18 +93,17 @@ export const PricingCard = ({
           
           <Button 
             className="w-full mb-6 bg-copywrite-teal hover:bg-copywrite-teal-dark h-12 text-base relative"
-            onClick={onSubscribe}
+            onClick={handleSubscribeClick}
             disabled={isLoading}
           >
             {isLoading ? (
-              <>
-                <span className="opacity-0">Placeholder</span>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="h-5 w-5 rounded-full border-2 border-t-transparent border-white animate-spin"></div>
-                  <span className="ml-2">Ładowanie...</span>
-                </div>
-              </>
-            ) : 'Rozpocznij darmowy okres próbny'}
+              <div className="flex items-center justify-center w-full">
+                <div className="h-5 w-5 rounded-full border-2 border-t-transparent border-white animate-spin mr-2"></div>
+                <span>Ładowanie...</span>
+              </div>
+            ) : (
+              'Rozpocznij darmowy okres próbny'
+            )}
           </Button>
         </div>
         

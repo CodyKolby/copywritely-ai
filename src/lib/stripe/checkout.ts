@@ -44,8 +44,8 @@ export const createCheckoutSession = async (priceId: string) => {
     console.log('Calling Supabase function: stripe-checkout');
     
     // Get current session access token
-    const { data: sessionData } = await supabase.auth.getSession();
-    const accessToken = sessionData.session?.access_token || '';
+    const { data: authData } = await supabase.auth.getSession();
+    const accessToken = authData?.session?.access_token || '';
     
     if (!accessToken) {
       console.error('No access token available - user might be logged out');
@@ -55,6 +55,16 @@ export const createCheckoutSession = async (priceId: string) => {
     // Create URL with the full Supabase project domain
     const functionsUrl = `https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/stripe-checkout`;
     console.log('Function URL:', functionsUrl);
+    
+    // IMPORTANT: Add detailed logging for the request
+    console.log('Sending request to Supabase function with params:', {
+      priceId,
+      customerEmail: userEmail ? 'Email available' : 'Not available',
+      successUrl: successUrl,
+      cancelUrl: cancelUrl,
+      origin: fullOrigin,
+      timestamp: timestamp
+    });
     
     const response = await fetch(functionsUrl, {
       method: 'POST',
@@ -74,10 +84,14 @@ export const createCheckoutSession = async (priceId: string) => {
       })
     });
     
+    console.log('Response status:', response.status);
+    
     // Handle non-200 responses
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Supabase function error response:', response.status, errorText);
+      
+      // Add detailed error information to help debug
       throw new Error(`Błąd serwera: ${response.status} ${errorText}`);
     }
     
@@ -99,6 +113,7 @@ export const createCheckoutSession = async (priceId: string) => {
       
       return true;
     } else {
+      console.error('No URL in response:', responseData);
       toast.error('Brak URL', { description: 'Nie otrzymano poprawnej odpowiedzi z serwera' });
       throw new Error('Nie otrzymano poprawnej odpowiedzi z serwera');
     }

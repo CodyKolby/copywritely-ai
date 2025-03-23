@@ -26,7 +26,7 @@ serve(async (req) => {
       throw new Error('Missing Stripe API key in server configuration');
     }
 
-    // Parse request data - with improved error handling
+    // Parse request data with improved error handling
     let requestData;
     try {
       requestData = await req.json();
