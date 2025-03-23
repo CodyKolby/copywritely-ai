@@ -92,7 +92,7 @@ export const createCheckoutSession = async (priceId: string) => {
       // Zamień toast ładowania na toast sukcesu
       toast.success('Przekierowujemy do strony płatności...');
       
-      // Ustawiamy ważną flagę, że przekierowujemy do Stripe
+      // Ustawiamy flagę, że przekierowujemy do Stripe - TERAZ WYŁĄCZNIE gdy faktycznie następuje przekierowanie
       sessionStorage.setItem('redirectingToStripe', 'true');
       
       // Dodajemy małe opóźnienie przed przekierowaniem, aby zminimalizować problemy z czasowaniem

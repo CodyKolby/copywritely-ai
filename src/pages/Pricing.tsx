@@ -24,7 +24,7 @@ const Pricing = () => {
   useEffect(() => {
     const wasRedirectingToStripe = sessionStorage.getItem('redirectingToStripe') === 'true';
     
-    // Show payment failure notification ONLY when:
+    // Only show payment failure notification when:
     // 1. We returned from a Stripe redirect (redirectingToStripe == true)
     // 2. We are on the pricing page
     // 3. There's no canceled=true parameter (which already has its own toast)
