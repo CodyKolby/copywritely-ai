@@ -44,8 +44,8 @@ export const createCheckoutSession = async (priceId: string) => {
     console.log('Calling Supabase function: stripe-checkout');
     
     // Get current session access token
-    const { data } = await supabase.auth.getSession();
-    const accessToken = data.session?.access_token || '';
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token || '';
     
     if (!accessToken) {
       console.error('No access token available - user might be logged out');
@@ -80,12 +80,12 @@ export const createCheckoutSession = async (priceId: string) => {
     }
     
     // Parse response JSON
-    const data = await response.json();
-    console.log('Supabase function successful response:', data);
+    const responseData = await response.json();
+    console.log('Supabase function successful response:', responseData);
     
     // If function returned a URL, redirect user
-    if (data?.url) {
-      console.log('Received Stripe Checkout URL, redirecting to:', data.url);
+    if (responseData?.url) {
+      console.log('Received Stripe Checkout URL, redirecting to:', responseData.url);
       
       // Set redirect flag
       sessionStorage.setItem('redirectingToStripe', timestamp);
@@ -93,7 +93,7 @@ export const createCheckoutSession = async (priceId: string) => {
       toast.success('Przekierowujemy do strony płatności...');
       
       // Force a new page load to avoid browser caching issues
-      window.location.href = data.url;
+      window.location.href = responseData.url;
       
       return true;
     } else {
