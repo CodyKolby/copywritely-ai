@@ -1,41 +1,40 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Check, Clock } from 'lucide-react';
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { useAuth } from '@/contexts/auth/AuthContext';
 import { toast } from 'sonner';
-import { createCheckoutSession, PRICE_IDS } from '@/lib/stripe';
+import { createCheckoutSession } from '@/lib/stripe';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { BillingToggle } from '@/components/pricing/BillingToggle';
+import { PricingCard } from '@/components/pricing/PricingCard';
+import { PricingFAQ } from '@/components/pricing/PricingFAQ';
+import { BillingCycle, getProPrice, getPricingLabel, getPriceId } from '@/components/pricing/pricing-utils';
 
 const Pricing = () => {
-  const [billingCycle, setBillingCycle] = useState<'annual' | 'monthly'>('annual');
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>('annual');
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   
-  // Sprawdź czy użytkownik został przekierowany po anulowaniu płatności
+  // Check if the user was redirected after canceling payment
   const isCanceled = searchParams.get('canceled') === 'true';
   
-  // Sprawdź flagę przekierowania ze Stripe
+  // Check for Stripe redirect flag
   useEffect(() => {
     const wasRedirectingToStripe = sessionStorage.getItem('redirectingToStripe') === 'true';
     
-    // Pokaż komunikat o niepowodzeniu płatności TYLKO gdy:
-    // 1. Wróciliśmy z przekierowania do Stripe (redirectingToStripe == true)
-    // 2. Jesteśmy na stronie cennika
-    // 3. Nie ma parametru canceled=true (który już ma własny toast)
+    // Show payment failure notification ONLY when:
+    // 1. We returned from a Stripe redirect (redirectingToStripe == true)
+    // 2. We are on the pricing page
+    // 3. There's no canceled=true parameter (which already has its own toast)
     if (wasRedirectingToStripe && !isCanceled && window.location.pathname === '/pricing') {
       toast.info('Płatność nie została ukończona', {
         description: 'Możesz spróbować ponownie lub skontaktować się z obsługą'
       });
     }
     
-    // Wyczyść flagę przekierowania
+    // Clear redirect flag
     sessionStorage.removeItem('redirectingToStripe');
   }, [isCanceled]);
   
@@ -43,7 +42,7 @@ const Pricing = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
     
-    // Wyświetl komunikat jeśli użytkownik anulował płatność
+    // Show message if user canceled payment
     if (isCanceled) {
       toast.info('Anulowano proces płatności', {
         description: 'Możesz kontynuować korzystanie z aplikacji w wersji podstawowej'
@@ -51,32 +50,14 @@ const Pricing = () => {
     }
   }, [isCanceled]);
 
-  // Zapisz email użytkownika w localStorage (dla Stripe)
+  // Save user email in localStorage (for Stripe)
   useEffect(() => {
     if (user?.email) {
       localStorage.setItem('userEmail', user.email);
     }
   }, [user]);
 
-  // Calculate pro price based on billing cycle (50% off for annual)
-  const getProPrice = () => {
-    return billingCycle === 'annual' ? '39.99' : '79.99';
-  };
-  
-  // Return the label for pricing display
-  const getPricingLabel = () => {
-    return 'miesięcznie';
-  };
-
-  // Pobierz ID cennika na podstawie wybranego planu
-  const getPriceId = () => {
-    // Make sure we're using the test mode price IDs
-    return billingCycle === 'annual' 
-      ? PRICE_IDS.PRO_ANNUAL
-      : PRICE_IDS.PRO_MONTHLY;
-  };
-
-  // Obsługa kliknięcia przycisku zakupu
+  // Handle subscribe button click
   const handleSubscribe = async () => {
     if (!user) {
       toast.error('Musisz się zalogować', {
@@ -93,12 +74,12 @@ const Pricing = () => {
     
     try {
       // Log the price ID we're using for debugging
-      const priceId = getPriceId();
+      const priceId = getPriceId(billingCycle);
       console.log('Using price ID for checkout:', priceId);
       
       const redirectSuccessful = await createCheckoutSession(priceId);
       
-      // Jeśli nie nastąpiło przekierowanie, ale nie było błędu
+      // If no redirect happened, but there was no error
       if (!redirectSuccessful) {
         toast.error('Nie udało się rozpocząć procesu płatności', {
           description: 'Spróbuj ponownie później lub skontaktuj się z obsługą'
@@ -106,7 +87,7 @@ const Pricing = () => {
       }
     } catch (error) {
       console.error('Error creating checkout session:', error);
-      // Toast error jest już wyświetlany w funkcji createCheckoutSession
+      // Toast error is already shown in createCheckoutSession function
     } finally {
       setIsLoading(false);
     }
@@ -120,15 +101,6 @@ const Pricing = () => {
       transition: {
         staggerChildren: 0.1
       }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.5 }
     }
   };
 
@@ -151,23 +123,7 @@ const Pricing = () => {
         </motion.div>
 
         {/* Billing toggle */}
-        <div className="flex justify-center mb-8">
-          <Tabs
-            defaultValue="annual"
-            value={billingCycle}
-            onValueChange={(value) => setBillingCycle(value as 'annual' | 'monthly')}
-            className="bg-gray-100 p-1 rounded-full"
-          >
-            <TabsList className="grid grid-cols-2 w-[280px]">
-              <TabsTrigger value="monthly" className="rounded-full">
-                Monthly
-              </TabsTrigger>
-              <TabsTrigger value="annual" className="rounded-full">
-                Annual <span className="ml-1 text-green-600 text-xs font-medium">(Save 50%)</span>
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
+        <BillingToggle value={billingCycle} onChange={setBillingCycle} />
 
         {/* Pricing card centered with max width */}
         <motion.div 
@@ -177,101 +133,17 @@ const Pricing = () => {
           animate="visible"
         >
           {/* Pro Plan */}
-          <motion.div variants={itemVariants}>
-            <Card className="relative border-copywrite-teal/30 shadow-lg overflow-hidden">
-              {/* Free trial badge */}
-              <div className="absolute top-4 right-4">
-                <Badge className="bg-green-100 text-green-700 border-green-200 flex items-center gap-1 px-3 py-1">
-                  <Clock className="h-4 w-4 text-green-600" />
-                  <span className="font-medium">3 dni za darmo</span>
-                </Badge>
-              </div>
-              
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-2">
-                  <h2 className="text-3xl font-bold">Pro</h2>
-                </div>
-                <p className="text-gray-600 mb-6">
-                  Pełen dostęp do zaawansowanych funkcji copywritingu.
-                </p>
-                <div className="flex items-baseline mb-2">
-                  <span className="text-5xl font-bold">{getProPrice()}</span>
-                  <span className="text-xl ml-1">PLN</span>
-                  <span className="text-gray-500 ml-2">/ {getPricingLabel()}</span>
-                  
-                  {/* Save 50% badge */}
-                  {billingCycle === 'annual' && (
-                    <Badge className="bg-green-100 text-green-700 border-green-200 ml-3">
-                      50% taniej
-                    </Badge>
-                  )}
-                </div>
-                
-                {billingCycle === 'annual' && (
-                  <div className="mb-4">
-                    <span className="text-gray-400 line-through">79.99 PLN</span>
-                  </div>
-                )}
-                
-                {/* Free trial notice */}
-                <div className="mb-6 bg-green-50 p-3 rounded-lg border border-green-100">
-                  <p className="text-green-700 text-sm flex items-center">
-                    <Clock className="h-4 w-4 mr-2 flex-shrink-0" />
-                    Rozpocznij od 3-dniowego darmowego okresu próbnego. Anuluj w dowolnym momencie.
-                  </p>
-                </div>
-                
-                <Button 
-                  className="w-full mb-6 bg-copywrite-teal hover:bg-copywrite-teal-dark h-12 text-base"
-                  onClick={handleSubscribe}
-                  disabled={isLoading}
-                >
-                  {isLoading ? 'Ładowanie...' : 'Rozpocznij darmowy okres próbny'}
-                </Button>
-              </div>
-              
-              <CardContent className="border-t border-gray-100 bg-gray-50 p-6">
-                <ul className="space-y-3">
-                  <li className="flex items-start">
-                    <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                    <span>Nielimitowana liczba briefów i analiz</span>
-                  </li>
-                  <li className="flex items-start">
-                    <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                    <span>Gotowe briefy generowane przez AI</span>
-                  </li>
-                  <li className="flex items-start">
-                    <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                    <span>Tworzenie spersonalizowanych briefów pod swoją grupę docelową</span>
-                  </li>
-                  <li className="flex items-start">
-                    <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                    <span>Zaawansowana analiza tekstów przez AI</span>
-                  </li>
-                  <li className="flex items-start">
-                    <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                    <span>Zapis projektów w aplikacji</span>
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
-          </motion.div>
+          <PricingCard 
+            price={getProPrice(billingCycle)}
+            pricingLabel={getPricingLabel()}
+            isAnnual={billingCycle === 'annual'}
+            isLoading={isLoading}
+            onSubscribe={handleSubscribe}
+          />
         </motion.div>
 
         {/* FAQ Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-          className="mt-20 text-center"
-        >
-          <h2 className="text-3xl font-bold mb-8">Masz pytania?</h2>
-          <div className="flex justify-center">
-            <Button variant="outline" className="border-copywrite-teal text-copywrite-teal">
-              Skontaktuj się z nami
-            </Button>
-          </div>
-        </motion.div>
+        <PricingFAQ />
       </div>
     </div>
   );
