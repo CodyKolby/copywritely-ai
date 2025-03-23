@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/auth/AuthContext';
 import { toast } from 'sonner';
@@ -20,21 +20,25 @@ const Pricing = () => {
   // Check if the user was redirected after canceling payment
   const isCanceled = searchParams.get('canceled') === 'true';
   
-  // Reset loading state and check for redirect flags on component mount and when route changes
-  useEffect(() => {
-    // CRITICAL: Immediate reset of loading state on ANY component render
+  // Force reset all Stripe-related flags on component mount and route changes
+  const clearAllFlags = useCallback(() => {
+    console.log('Forcing clear of all Stripe flags and loading state on page load/navigation');
+    
+    // Clear all session storage flags
+    sessionStorage.removeItem('redirectingToStripe');
+    sessionStorage.removeItem('stripeCheckoutInProgress');
+    localStorage.removeItem('stripeCheckoutInProgress');
+    
+    // Reset loading state
     setIsLoading(false);
     
-    // CRITICAL: Clear ALL possible redirect flags
-    const clearAllFlags = () => {
-      console.log('Clearing all Stripe flags on page load/navigation');
-      sessionStorage.removeItem('redirectingToStripe');
-      sessionStorage.removeItem('stripeCheckoutInProgress');
-      localStorage.removeItem('stripeCheckoutInProgress');
-      toast.dismiss(); // Clear any existing toasts
-    };
-    
-    // Run the cleanup immediately
+    // Clear any existing toasts
+    toast.dismiss();
+  }, []);
+  
+  // Run cleanup on component mount, route changes, and URL parameter changes
+  useEffect(() => {
+    // CRITICAL: Reset all states and flags
     clearAllFlags();
     
     // Handle canceled payment if needed
@@ -45,11 +49,9 @@ const Pricing = () => {
     }
     
     // Clean up function will also be called when component unmounts
-    return () => {
-      clearAllFlags();
-    };
-  }, [isCanceled, location.pathname]); // Add location.pathname to ensure this runs on route changes
-
+    return clearAllFlags;
+  }, [isCanceled, clearAllFlags, location.pathname, location.search]);
+  
   // Save user email in localStorage (for Stripe)
   useEffect(() => {
     if (user?.email) {
@@ -59,9 +61,8 @@ const Pricing = () => {
 
   // Handle subscribe button click
   const handleSubscribe = async () => {
-    // CRITICAL: Immediately clear any stale flags
-    sessionStorage.removeItem('redirectingToStripe');
-    sessionStorage.removeItem('stripeCheckoutInProgress');
+    // Explicitly clear any existing flags before starting
+    clearAllFlags();
     
     // Prevent multiple clicks or processing while already loading
     if (isLoading) {
@@ -80,7 +81,7 @@ const Pricing = () => {
       return;
     }
 
-    // Dismiss any existing toasts before starting new payment process
+    // Dismiss any existing toasts
     toast.dismiss();
     
     // Show a clear loading toast
@@ -97,7 +98,7 @@ const Pricing = () => {
       // Initiate checkout process
       const result = await createCheckoutSession(priceId);
       
-      // CRITICAL: If checkout function returns false or takes too long, reset loading state
+      // If checkout function returns false, reset loading state
       if (!result) {
         console.log('Checkout failed, resetting loading state');
         setIsLoading(false);
