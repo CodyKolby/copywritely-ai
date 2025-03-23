@@ -40,10 +40,11 @@ export const createCheckoutSession = async (priceId: string) => {
     // Pobierz zapisany email użytkownika
     const userEmail = localStorage.getItem('userEmail');
     
+    // Upewnijmy się, że używamy pełnych adresów URL z protokołem
+    const fullOrigin = window.location.origin;
     // Wygeneruj pełne URL powrotu zawierające protokół i domenę (nie relatywne)
-    // Używamy window.location.origin aby upewnić się, że URL zawiera prawidłową domenę
-    const successUrl = `${window.location.origin}/success?session_id={CHECKOUT_SESSION_ID}`;
-    const cancelUrl = `${window.location.origin}/pricing`;
+    const successUrl = `${fullOrigin}/success?session_id={CHECKOUT_SESSION_ID}`;
+    const cancelUrl = `${fullOrigin}/pricing`;
 
     // Pokazujemy toast informujący o rozpoczęciu procesu
     toast.info('Przygotowujemy proces płatności...');
@@ -53,6 +54,7 @@ export const createCheckoutSession = async (priceId: string) => {
       userEmail: userEmail ? 'Email provided' : 'Not provided',
       successUrl,
       cancelUrl,
+      fullOrigin,
       environment: stripePublicKey.startsWith('pk_test_') ? 'TEST' : 'LIVE'
     });
 

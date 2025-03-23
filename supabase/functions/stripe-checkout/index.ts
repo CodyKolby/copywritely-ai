@@ -76,11 +76,16 @@ serve(async (req) => {
     console.log('Success URL being used:', successUrl);
     console.log('Cancel URL being used:', cancelUrl);
 
+    // Ensure the cancel URL is properly formatted and contains the full origin
+    const origin = req.headers.get('origin') || '';
+    const finalCancelUrl = cancelUrl || `${origin}/pricing`;
+    console.log('Final cancel URL being used:', finalCancelUrl);
+
     // Create Stripe session parameters
     const params = new URLSearchParams();
     params.append('mode', 'subscription');
-    params.append('success_url', successUrl || `${req.headers.get('origin') || ''}/success?session_id={CHECKOUT_SESSION_ID}`);
-    params.append('cancel_url', cancelUrl || `${req.headers.get('origin') || ''}/pricing`);
+    params.append('success_url', successUrl || `${origin}/success?session_id={CHECKOUT_SESSION_ID}`);
+    params.append('cancel_url', finalCancelUrl);
     params.append('line_items[0][price]', priceId);
     params.append('line_items[0][quantity]', '1');
     params.append('subscription_data[trial_period_days]', '3');
