@@ -1,4 +1,3 @@
-
 import { loadStripe } from '@stripe/stripe-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -18,7 +17,6 @@ export const getStripe = () => {
 };
 
 // Rzeczywiste ID cenników produktów ze Stripe
-// Aktualizacja - używamy prawidłowego price ID w trybie testowym
 export const PRICE_IDS = {
   PRO_MONTHLY: 'price_1R5A8aAGO17NLUWtxzthF8lo', // Correct test mode price ID
   PRO_ANNUAL: 'price_1R5A8aAGO17NLUWtxzthF8lo', // Using the same ID for testing
@@ -29,9 +27,9 @@ export const createCheckoutSession = async (priceId: string) => {
   // Store reference to the toast ID so we can dismiss it later
   let loadingToastId: string | number = '';
   
-  // Setup extremely short timeout to prevent long waiting - reduced to 4 seconds
+  // Setup extremely short timeout to prevent long waiting - reduced to 3 seconds
   const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => reject(new Error('Przekroczono czas oczekiwania na odpowiedź serwera')), 4000);
+    setTimeout(() => reject(new Error('Przekroczono czas oczekiwania na odpowiedź serwera')), 3000);
   });
   
   try {
@@ -63,9 +61,7 @@ export const createCheckoutSession = async (priceId: string) => {
       userEmail: userEmail ? 'Email provided' : 'Not provided',
       successUrl,
       cancelUrl,
-      fullOrigin,
-      hostname: window.location.hostname,
-      environment: stripePublicKey.startsWith('pk_test_') ? 'TEST' : 'LIVE'
+      fullOrigin
     });
 
     // Use a very short timeout for Supabase function call
@@ -140,14 +136,6 @@ export const createCheckoutSession = async (priceId: string) => {
     // Check for timeout errors
     if (errorMessage.includes('czas oczekiwania')) {
       errorMessage = 'Serwer nie odpowiada. Spróbuj ponownie później lub skontaktuj się z obsługą.';
-    }
-    // Check for common Stripe errors and provide more user-friendly messages
-    else if (errorMessage.includes('Missing Stripe API key')) {
-      errorMessage = 'Błąd konfiguracji: brak klucza API Stripe po stronie serwera';
-    } else if (errorMessage.includes('Mode mismatch')) {
-      errorMessage = 'Błąd konfiguracji: niezgodność pomiędzy trybem testowym i produkcyjnym';
-    } else if (errorMessage.includes('Price ID error')) {
-      errorMessage = 'Błąd: nieprawidłowy identyfikator produktu';
     }
     
     toast.error('Wystąpił błąd', {

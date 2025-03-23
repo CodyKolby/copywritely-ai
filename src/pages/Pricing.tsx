@@ -22,11 +22,6 @@ const Pricing = () => {
   
   // Check for Stripe redirect flag
   useEffect(() => {
-    // Only show payment failure notification when:
-    // 1. We returned from a Stripe redirect (redirectingToStripe == true)
-    // 2. We are on the pricing page
-    // 3. There's no canceled=true parameter (which already has its own toast)
-    
     const wasRedirectingToStripe = sessionStorage.getItem('redirectingToStripe') === 'true';
     
     if (wasRedirectingToStripe && !isCanceled) {
@@ -38,16 +33,14 @@ const Pricing = () => {
       sessionStorage.removeItem('redirectingToStripe');
     } else if (!wasRedirectingToStripe) {
       // If we're not returning from Stripe, just ensure the flag is cleared
-      // This prevents showing the message for new users or page refreshes
       sessionStorage.removeItem('redirectingToStripe');
     }
   }, [isCanceled]);
   
-  // Scroll to top on page load
+  // Scroll to top on page load and show message if user canceled payment
   useEffect(() => {
     window.scrollTo(0, 0);
     
-    // Show message if user canceled payment
     if (isCanceled) {
       toast.info('Anulowano proces płatności', {
         description: 'Możesz kontynuować korzystanie z aplikacji w wersji podstawowej'
@@ -64,18 +57,22 @@ const Pricing = () => {
     }
   }, [user]);
 
-  // Improved timeout handling - further reduced to 5 seconds for even faster feedback
+  // Enhanced timeout handling - reduced to 3 seconds for faster user feedback
   useEffect(() => {
     let loadingTimeout: number;
     
     if (isLoading) {
+      // Show a toast after a very short delay to indicate to user something is happening
+      toast.loading('Przygotowujemy proces płatności...');
+      
       loadingTimeout = window.setTimeout(() => {
         console.log('Timeout triggered: resetting loading state');
         setIsLoading(false);
+        toast.dismiss();
         toast.error('Proces płatności przerwany', {
           description: 'Serwer nie odpowiada. Spróbuj ponownie później lub skontaktuj się z obsługą.'
         });
-      }, 5000); // Very short 5-second timeout
+      }, 3000); // Very short 3-second timeout
     }
     
     return () => {

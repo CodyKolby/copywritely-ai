@@ -85,7 +85,16 @@ export const signOut = async () => {
     if (result.error) throw result.error;
     
     // Force clear local storage auth data to ensure logout works even if Supabase fails
-    localStorage.removeItem('sb-' + supabase.supabaseUrl + '-auth-token');
+    // Use the correct approach for clearing auth data
+    const storageKey = `sb-${window.location.hostname}-auth-token`;
+    localStorage.removeItem(storageKey);
+    
+    // Add a fallback for different key formats
+    const allKeys = Object.keys(localStorage);
+    const supabaseAuthKeys = allKeys.filter(key => key.startsWith('sb-') && key.includes('-auth-token'));
+    for (const key of supabaseAuthKeys) {
+      localStorage.removeItem(key);
+    }
     
     // Force reload the page to ensure all auth state is reset
     toast.success('Wylogowano pomyślnie');
@@ -97,7 +106,16 @@ export const signOut = async () => {
       });
       
       // Force clear local storage auth data as a fallback
-      localStorage.removeItem('sb-' + supabase.supabaseUrl + '-auth-token');
+      // Use the correct approach for clearing auth data
+      const storageKey = `sb-${window.location.hostname}-auth-token`;
+      localStorage.removeItem(storageKey);
+      
+      // Add a fallback for different key formats
+      const allKeys = Object.keys(localStorage);
+      const supabaseAuthKeys = allKeys.filter(key => key.startsWith('sb-') && key.includes('-auth-token'));
+      for (const key of supabaseAuthKeys) {
+        localStorage.removeItem(key);
+      }
       
       // Force reload the page to ensure all auth state is reset
       setTimeout(() => window.location.reload(), 1000);

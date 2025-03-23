@@ -24,17 +24,7 @@ serve(async (req) => {
       throw new Error('Missing Stripe API key in server configuration');
     }
 
-    // Verify Stripe key format
-    if (!stripeSecretKey.startsWith('sk_')) {
-      console.error('Invalid Stripe key format', { keyPrefix: stripeSecretKey.substring(0, 5) });
-      throw new Error('Invalid Stripe key format');
-    }
-    
-    // Log environment info for debugging
-    const isTestMode = stripeSecretKey.startsWith('sk_test_');
-    console.log(`Using Stripe in ${isTestMode ? 'TEST' : 'PRODUCTION'} mode`);
-    
-    // Parse and validate request data - with improved error handling
+    // Parse request data - with improved error handling
     let requestData;
     try {
       requestData = await req.json();
@@ -54,48 +44,21 @@ serve(async (req) => {
       console.error('Missing priceId in request');
       throw new Error('Missing priceId parameter');
     }
-
-    // Log to debug valid price IDs
-    console.log(`Received priceId: ${priceId}`);
     
-    // Validate price ID format
-    if (!priceId.startsWith('price_')) {
-      console.error('Invalid price ID format:', priceId);
-      throw new Error('Invalid price ID format - must start with "price_"');
-    }
-
-    // Validate that price ID format matches environment (test/live)
-    const isPriceIdTestFormat = priceId.startsWith('price_');
-    if (isTestMode && !isPriceIdTestFormat) {
-      console.warn('TEST MODE WARNING: Price ID format may not be compatible with test mode');
-    }
-    
-    if (!isTestMode && isPriceIdTestFormat) {
-      console.warn('LIVE MODE WARNING: Using test format price ID in live environment');
-    }
-
-    // Ensure we have full URLs for redirection
-    console.log('Origin from request:', origin);
-    console.log('Raw success URL:', successUrl);
-    console.log('Raw cancel URL:', cancelUrl);
-
     // Determine base URL with improved fallback logic
     let baseUrl = '';
     
     if (origin && origin.includes('://')) {
-      // If origin contains protocol, use it directly
       baseUrl = origin;
       if (baseUrl.endsWith('/')) {
         baseUrl = baseUrl.slice(0, -1);
       }
     } else if (origin) {
-      // If origin doesn't contain protocol, add https://
       baseUrl = `https://${origin}`;
       if (baseUrl.endsWith('/')) {
         baseUrl = baseUrl.slice(0, -1);
       }
     } else {
-      // If we don't have origin, try to get from headers
       const referer = req.headers.get('referer');
       const originHeader = req.headers.get('origin');
       
@@ -105,11 +68,9 @@ serve(async (req) => {
           baseUrl = baseUrl.slice(0, -1);
         }
       } else if (referer) {
-        // Z referer musimy wyciąć ścieżkę i zostawić tylko początek URL
         const url = new URL(referer);
         baseUrl = `${url.protocol}//${url.host}`;
       } else {
-        // If all else fails, use default URL (for local testing)
         baseUrl = "https://copywrite-assist.com";
         console.warn("No origin or referer found, using hardcoded fallback URL:", baseUrl);
       }
@@ -158,12 +119,12 @@ serve(async (req) => {
     console.log('Stripe API request parameters:', params.toString());
     console.log('Calling Stripe API at:', 'https://api.stripe.com/v1/checkout/sessions');
 
-    // Set even shorter timeout for fetch to prevent hanging (3 seconds instead of 5)
+    // Set even shorter timeout for fetch to prevent hanging (2 seconds instead of 3)
     const controller = new AbortController();
     const timeout = setTimeout(() => {
       controller.abort();
-      console.error('Stripe API request timed out after 3 seconds');
-    }, 3000);
+      console.error('Stripe API request timed out after 2 seconds');
+    }, 2000);
 
     try {
       // Call Stripe API with timeout
@@ -182,7 +143,7 @@ serve(async (req) => {
       // Parse response with improved error handling
       const responseText = await response.text();
       console.log(`Stripe API response status: ${response.status}`);
-      console.log(`Stripe API response body: ${responseText.substring(0, 200)}...`);
+      console.log(`Stripe API response body length: ${responseText.length}`);
       
       let sessionData;
       try {
@@ -196,17 +157,6 @@ serve(async (req) => {
       // Handle Stripe API errors with improved error messages
       if (!response.ok) {
         console.error('Stripe API error:', sessionData.error || 'Unknown error');
-        
-        // Detect key environment mismatch
-        if (sessionData.error?.message?.includes('test mode') && sessionData.error?.message?.includes('live mode')) {
-          throw new Error(`Mode mismatch: ${sessionData.error?.message}`);
-        }
-        
-        // Handle specific price ID errors
-        if (sessionData.error?.message?.includes('price') || sessionData.error?.message?.includes('Price')) {
-          throw new Error(`Price ID error: ${sessionData.error?.message}`);
-        }
-        
         throw new Error(sessionData.error?.message || 'Error creating Stripe checkout session');
       }
 
@@ -216,7 +166,7 @@ serve(async (req) => {
         url: sessionData.url
       });
 
-      // Return successful response
+      // Return successful response immediately
       return new Response(
         JSON.stringify({ 
           sessionId: sessionData.id,
