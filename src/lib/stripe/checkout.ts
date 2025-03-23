@@ -47,26 +47,33 @@ export const createCheckoutSession = async (priceId: string) => {
       duration: 10000, // Longer duration for this message
     });
 
+    // Prepare request body
+    const requestBody = {
+      priceId,
+      customerEmail: userEmail || undefined,
+      successUrl,
+      cancelUrl,
+      origin: fullOrigin
+    };
+    
+    console.log('Sending checkout request to Supabase function with body:', JSON.stringify(requestBody));
+
     try {
-      // Direct API call to Supabase function with timeout handling
+      // Set a global timeout for the entire checkout process
+      const GLOBAL_TIMEOUT = 12000; // 12 seconds total timeout
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Przekroczono czas oczekiwania na odpowiedź')), 15000)
+        setTimeout(() => reject(new Error('Przekroczono czas oczekiwania na odpowiedź')), GLOBAL_TIMEOUT)
       );
       
+      // Make the API call
       const fetchPromise = supabase.functions.invoke('stripe-checkout', {
-        body: {
-          priceId,
-          customerEmail: userEmail || undefined,
-          successUrl,
-          cancelUrl,
-          origin: fullOrigin
-        }
+        body: requestBody
       });
       
       // Race between the fetch and the timeout
       const result = await Promise.race([fetchPromise, timeoutPromise]);
       
-      // If we get here, fetchPromise won the race
+      // Handle API response
       const { data, error } = result as any;
 
       if (error) {
@@ -98,10 +105,10 @@ export const createCheckoutSession = async (priceId: string) => {
           description: 'Za chwilę zostaniesz przekierowany do bezpiecznej strony płatności Stripe',
         });
         
-        // Force a direct window location change instead of setTimeout
-        console.log('Redirecting to Stripe checkout page now');
-        window.location.assign(data.url);
+        // CRITICAL FIX: Force an immediate hard redirect instead of changing window.location
+        window.location.href = data.url;
         
+        // The page will be unloaded at this point, so nothing after this should execute
         return true;
       } else {
         // Only clear specific flags when there's an error
