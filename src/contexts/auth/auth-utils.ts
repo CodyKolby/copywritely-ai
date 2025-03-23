@@ -62,12 +62,12 @@ export const createProfile = async (userId: string): Promise<Profile | null> => 
       // Try using RPC as a fallback
       try {
         // Define the parameter types explicitly to fix the TypeScript error
-        type CreateProfileParams = {
+        interface CreateProfileParams {
           user_id: string;
           user_email: string | null;
           user_full_name: string | null;
           user_avatar_url: string | null;
-        };
+        }
 
         const params: CreateProfileParams = {
           user_id: userId,
@@ -76,7 +76,11 @@ export const createProfile = async (userId: string): Promise<Profile | null> => 
           user_avatar_url: user_metadata?.avatar_url || null
         };
         
-        const { error: rpcError } = await supabase.rpc('create_user_profile', params);
+        // Use explicit type casting for the RPC call
+        const { error: rpcError } = await supabase.rpc(
+          'create_user_profile', 
+          params as any  // Use type assertion to bypass TypeScript error
+        );
         
         if (rpcError) {
           console.error('Error creating profile with RPC:', rpcError);
