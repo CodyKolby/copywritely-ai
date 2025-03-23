@@ -102,7 +102,7 @@ export const createCheckoutSession = async (priceId: string) => {
       // Use setTimeout to avoid MutationObserver errors
       setTimeout(() => {
         window.location.assign(responseData.url);
-      }, 500);
+      }, 1000);
       
       return true;
     } else {

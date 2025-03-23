@@ -11,3 +11,11 @@
   to = "/.netlify/functions/:splat"
   status = 200
   force = true
+
+# Add a specific redirect for the stripe-checkout function
+[[redirects]]
+  from = "/.netlify/functions/stripe-checkout"
+  to = "/.netlify/functions/stripe-checkout"
+  status = 200
+  force = true
+  methods = "GET,POST,OPTIONS"

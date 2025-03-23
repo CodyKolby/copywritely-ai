@@ -2,19 +2,23 @@
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 exports.handler = async (event, context) => {
-  // Set CORS headers
+  // Set CORS headers with proper method list
   const headers = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Cache-Control': 'no-cache, no-store'
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Cache-Control': 'no-cache, no-store',
+    'Content-Type': 'application/json'
   };
+
+  console.log(`Netlify function: Received ${event.httpMethod} request to stripe-checkout`);
+  console.log('Headers:', JSON.stringify(event.headers));
 
   // Handle preflight requests
   if (event.httpMethod === 'OPTIONS') {
     console.log('Netlify function: Handling OPTIONS request');
     return {
-      statusCode: 200,
+      statusCode: 204, // No content needed for OPTIONS
       headers,
       body: ''
     };
@@ -22,15 +26,16 @@ exports.handler = async (event, context) => {
 
   // Only allow POST requests
   if (event.httpMethod !== 'POST') {
-    console.log(`Netlify function: Method ${event.httpMethod} not allowed`);
+    console.error(`Netlify function: Method ${event.httpMethod} not allowed`);
     return {
       statusCode: 405,
       headers,
-      body: JSON.stringify({ error: 'Method Not Allowed' })
+      body: JSON.stringify({ error: 'Method Not Allowed', method: event.httpMethod })
     };
   }
 
   try {
+    console.log('Netlify function: Processing POST request');
     console.log('Netlify function: Received request body:', event.body);
     
     // Parse request body
