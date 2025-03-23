@@ -23,6 +23,7 @@ export function usePaymentProcess(
     
     // Force clear any flags that might be stuck from previous attempts
     clearPaymentFlags();
+    console.log('Explicitly clearing payment flags');
     
     // Collect debug info
     collectDebugInfo(user);
@@ -98,6 +99,7 @@ export function usePaymentProcess(
         }
         setIsLoading(false);
         console.log('isLoading set to false after failed checkout');
+        clearPaymentFlags(); // Clear flags again after failure
       }
       // If successful, the page will redirect, so we don't need to do anything else here
       

@@ -39,16 +39,13 @@ export const createCheckoutSession = async (priceId: string) => {
       duration: 3000,
     });
     
-    // Use Netlify function for improved reliability
-    console.log('Calling Netlify function: stripe-checkout');
-    
-    // Check if we're running locally or in production
-    let netlifyFunctionUrl = '';
-    
     // Get domain from current URL
     const currentDomain = window.location.hostname;
+    const currentProtocol = window.location.protocol;
     
     // Special handling to use either deployed Netlify functions or local dev setup
+    let netlifyFunctionUrl = '';
+    
     if (currentDomain.includes('localhost') || currentDomain.includes('127.0.0.1')) {
       // Local development
       netlifyFunctionUrl = 'http://localhost:8888/.netlify/functions/stripe-checkout';
@@ -59,9 +56,11 @@ export const createCheckoutSession = async (priceId: string) => {
       console.log('Using production Netlify function URL:', netlifyFunctionUrl);
     }
     
+    console.log('Calling Netlify function: stripe-checkout');
     console.log('Making POST request to:', netlifyFunctionUrl);
-    
-    const response = await fetch(netlifyFunctionUrl, {
+
+    // Enhanced error handling for fetch
+    const requestParams = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -75,17 +74,69 @@ export const createCheckoutSession = async (priceId: string) => {
         cancelUrl,
         timestamp // Include timestamp to prevent caching
       })
+    };
+    
+    console.log('Request parameters:', {
+      method: requestParams.method,
+      headers: requestParams.headers
     });
     
-    console.log('Response status:', response.status);
+    // Improved fetch with better error handling
+    const response = await fetch(netlifyFunctionUrl, requestParams);
     
-    // Handle non-200 responses
+    console.log('Response status:', response.status);
+    console.log('Response headers:', Object.fromEntries([...response.headers.entries()]));
+    
+    // Handle non-200 responses with detailed logging
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Function error response:', response.status, errorText);
       
+      // Special handling for 405 errors
       if (response.status === 405) {
-        throw new Error('Błąd metody HTTP: 405 - Method Not Allowed. Spróbuj odświeżyć stronę lub skontaktuj się z obsługą techniczną.');
+        console.error('405 Method Not Allowed error details:', {
+          requestMethod: requestParams.method,
+          responseHeaders: Object.fromEntries([...response.headers.entries()]),
+          fullUrl: netlifyFunctionUrl
+        });
+        
+        // Fallback to Supabase function if available
+        try {
+          toast.info('Próbuję alternatywną metodę płatności...');
+          
+          // Use Supabase function instead
+          console.log('Switching to Supabase function for stripe checkout');
+          const supabaseFunctionUrl = `${fullOrigin}/functions/stripe-checkout`;
+          
+          const supabaseResponse = await fetch(supabaseFunctionUrl, requestParams);
+          
+          if (!supabaseResponse.ok) {
+            throw new Error(`Błąd funkcji zapasowej: ${supabaseResponse.status}`);
+          }
+          
+          const responseData = await supabaseResponse.json();
+          
+          if (responseData?.url) {
+            console.log('Received Stripe Checkout URL from fallback, redirecting to:', responseData.url);
+            
+            // Set redirect flag
+            sessionStorage.setItem('redirectingToStripe', timestamp);
+            
+            toast.success('Przekierowujemy do strony płatności...');
+            
+            // Use setTimeout to avoid MutationObserver errors
+            setTimeout(() => {
+              window.location.assign(responseData.url);
+            }, 1500);
+            
+            return true;
+          } else {
+            throw new Error('Brak URL w odpowiedzi zapasowej');
+          }
+        } catch (fallbackError) {
+          console.error('Fallback method also failed:', fallbackError);
+          throw new Error(`Błąd metody HTTP: 405 - Method Not Allowed. Spróbuj odświeżyć stronę lub skontaktuj się z obsługą techniczną.`);
+        }
       } else {
         throw new Error(`Błąd serwera: ${response.status} ${errorText}`);
       }

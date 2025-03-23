@@ -2,67 +2,80 @@
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 exports.handler = async (event, context) => {
-  // Set CORS headers with proper method list
+  // Enhanced CORS headers with explicit method permissions
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Cache-Control': 'no-cache, no-store',
     'Content-Type': 'application/json'
   };
 
   console.log(`Netlify function: Received ${event.httpMethod} request to stripe-checkout`);
   console.log('Headers:', JSON.stringify(event.headers));
-  console.log('Body:', event.body ? 'Contains data' : 'Empty');
   console.log('Path:', event.path);
-
-  // Handle preflight requests
+  console.log('HTTP method:', event.httpMethod);
+  
+  // Critical - handle OPTIONS preflight requests properly
   if (event.httpMethod === 'OPTIONS') {
-    console.log('Netlify function: Handling OPTIONS request');
+    console.log('Netlify function: Handling OPTIONS preflight request');
     return {
-      statusCode: 204, // No content needed for OPTIONS
+      statusCode: 204,
       headers,
       body: ''
     };
   }
 
-  // Only allow POST requests
+  // Only allow POST requests - be very explicit
   if (event.httpMethod !== 'POST') {
     console.error(`Netlify function: Method ${event.httpMethod} not allowed`);
     return {
       statusCode: 405,
       headers,
-      body: JSON.stringify({ error: 'Method Not Allowed', method: event.httpMethod })
+      body: JSON.stringify({ 
+        error: 'Method Not Allowed', 
+        method: event.httpMethod,
+        allowedMethod: 'POST'
+      })
     };
   }
 
   try {
     console.log('Netlify function: Processing POST request');
-    console.log('Netlify function: Received request body:', event.body);
     
-    // Parse request body
+    // Check for body content
+    if (!event.body) {
+      console.error('Netlify function: No request body provided');
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: 'Missing request body' })
+      };
+    }
+    
+    console.log('Netlify function: Request body length:', event.body.length);
+    
+    // Parse request body with detailed logging
     let requestData;
     try {
       requestData = JSON.parse(event.body);
       console.log('Netlify function: Successfully parsed request body');
+      console.log('Netlify function: Parsed data:', JSON.stringify(requestData));
     } catch (parseError) {
       console.error('Netlify function: Error parsing request body:', parseError);
+      console.error('Netlify function: Raw body received:', event.body);
       return {
         statusCode: 400,
         headers,
-        body: JSON.stringify({ error: 'Invalid request format', details: parseError.message })
+        body: JSON.stringify({ 
+          error: 'Invalid request format', 
+          details: parseError.message,
+          receivedContentType: event.headers['content-type'] || 'not specified'
+        })
       };
     }
     
     const { priceId, customerEmail, successUrl, cancelUrl, timestamp } = requestData;
-
-    console.log('Netlify function: Parsed data:', {
-      priceId,
-      customerEmail: customerEmail ? 'Email provided' : 'Not provided',
-      successUrl,
-      cancelUrl,
-      timestamp: timestamp || 'Not provided'
-    });
 
     if (!priceId) {
       console.error('Netlify function: Missing priceId parameter');
