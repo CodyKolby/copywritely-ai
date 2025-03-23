@@ -20,36 +20,22 @@ const Pricing = () => {
   // Check if the user was redirected after canceling payment
   const isCanceled = searchParams.get('canceled') === 'true';
   
-  // Reset loading state and check for redirect flags on component mount
+  // Reset loading state and check for redirect flags on component mount and when route changes
   useEffect(() => {
-    // Always reset loading state on mount - this is critical to prevent stale states
+    // CRITICAL: Immediate reset of loading state on ANY component render
     setIsLoading(false);
     
-    const handleInitialState = () => {
-      // Clear any stale loading toasts
-      toast.dismiss();
-      
-      // Get the redirect timestamp (if it exists)
-      const redirectTimestamp = sessionStorage.getItem('redirectingToStripe');
-      
-      if (redirectTimestamp) {
-        // Check if it's a recent redirect (less than 30 minutes old)
-        const isRecentRedirect = 
-          (Date.now() - parseInt(redirectTimestamp)) < 1800000;
-        
-        if (isRecentRedirect && !isCanceled) {
-          // This is a return from Stripe without success or cancel parameters
-          toast.info('Płatność nie została ukończona', {
-            description: 'Możesz spróbować ponownie lub skontaktować się z obsługą'
-          });
-        }
-        
-        // Always clear the redirect flag to ensure a fresh state
-        sessionStorage.removeItem('redirectingToStripe');
-      }
+    // CRITICAL: Clear ALL possible redirect flags
+    const clearAllFlags = () => {
+      console.log('Clearing all Stripe flags on page load/navigation');
+      sessionStorage.removeItem('redirectingToStripe');
+      sessionStorage.removeItem('stripeCheckoutInProgress');
+      localStorage.removeItem('stripeCheckoutInProgress');
+      toast.dismiss(); // Clear any existing toasts
     };
     
-    handleInitialState();
+    // Run the cleanup immediately
+    clearAllFlags();
     
     // Handle canceled payment if needed
     if (isCanceled) {
@@ -57,7 +43,12 @@ const Pricing = () => {
         description: 'Możesz kontynuować korzystanie z aplikacji w wersji podstawowej'
       });
     }
-  }, [isCanceled]);
+    
+    // Clean up function will also be called when component unmounts
+    return () => {
+      clearAllFlags();
+    };
+  }, [isCanceled, location.pathname]); // Add location.pathname to ensure this runs on route changes
 
   // Save user email in localStorage (for Stripe)
   useEffect(() => {
@@ -68,6 +59,10 @@ const Pricing = () => {
 
   // Handle subscribe button click
   const handleSubscribe = async () => {
+    // CRITICAL: Immediately clear any stale flags
+    sessionStorage.removeItem('redirectingToStripe');
+    sessionStorage.removeItem('stripeCheckoutInProgress');
+    
     // Prevent multiple clicks or processing while already loading
     if (isLoading) {
       console.log('Already processing payment request, ignoring click');
@@ -95,9 +90,6 @@ const Pricing = () => {
     setIsLoading(true);
     
     try {
-      // Clear any old redirect flags before starting
-      sessionStorage.removeItem('redirectingToStripe');
-      
       // Log the price ID we're using for debugging
       const priceId = getPriceId(billingCycle);
       console.log('Using price ID for checkout:', priceId);
@@ -105,7 +97,7 @@ const Pricing = () => {
       // Initiate checkout process
       const result = await createCheckoutSession(priceId);
       
-      // If checkout function returns false, there was an error
+      // CRITICAL: If checkout function returns false or takes too long, reset loading state
       if (!result) {
         console.log('Checkout failed, resetting loading state');
         setIsLoading(false);
@@ -114,7 +106,7 @@ const Pricing = () => {
           description: 'Spróbuj ponownie za chwilę lub skontaktuj się z obsługą'
         });
       }
-      // If successful, the page will redirect, so we don't need to do anything else
+      // If successful, the page will redirect, so we don't need to do anything else here
       
     } catch (error) {
       console.error('Error in handleSubscribe:', error);

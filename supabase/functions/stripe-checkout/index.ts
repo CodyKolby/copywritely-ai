@@ -111,10 +111,13 @@ serve(async (req) => {
 
     // Make the Stripe API call with retries
     let response;
+    let lastError = null;
     const maxRetries = 3;
     
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
+        console.log(`Attempt ${attempt} to create Stripe checkout session`);
+        
         response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
           method: 'POST',
           headers: {
@@ -125,31 +128,41 @@ serve(async (req) => {
         });
         
         // If successful, break the retry loop
-        if (response.ok) break;
+        if (response.ok) {
+          console.log(`Stripe API call successful on attempt ${attempt}`);
+          break;
+        }
         
         // If not successful but not last attempt
+        const statusCode = response.status;
+        const errorText = await response.text();
+        lastError = `Stripe API error (${statusCode}): ${errorText}`;
+        
+        console.error(`Stripe API error (${statusCode}) on attempt ${attempt}:`, errorText);
+        
         if (attempt < maxRetries) {
-          const errorText = await response.text();
-          console.error(`Stripe API error (${response.status}) on attempt ${attempt}:`, errorText);
           // Wait before retrying (exponential backoff)
-          await new Promise(resolve => setTimeout(resolve, 200 * Math.pow(2, attempt)));
+          const delay = 200 * Math.pow(2, attempt);
+          console.log(`Retrying in ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
         }
       } catch (fetchError) {
+        lastError = `Network error: ${fetchError.message || "Unknown error"}`;
         console.error(`Network error on attempt ${attempt}:`, fetchError);
         
-        // If this is the last attempt, rethrow
-        if (attempt === maxRetries) throw fetchError;
-        
-        // Wait before retrying
-        await new Promise(resolve => setTimeout(resolve, 200 * Math.pow(2, attempt)));
+        // If this is the last attempt, we'll throw after the loop
+        if (attempt < maxRetries) {
+          // Wait before retrying
+          const delay = 200 * Math.pow(2, attempt);
+          console.log(`Retrying in ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
       }
     }
     
     // If we still don't have a response or it's not OK
     if (!response || !response.ok) {
-      const errorText = response ? await response.text() : 'No response';
-      console.error(`Stripe API error after ${maxRetries} attempts (${response?.status}):`, errorText);
-      throw new Error(`Stripe API error: ${response?.status || 'Network error'}`);
+      throw new Error(lastError || 'Failed to create Stripe checkout session after multiple attempts');
     }
 
     // Parse response

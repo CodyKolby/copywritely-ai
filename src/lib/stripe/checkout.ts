@@ -34,8 +34,13 @@ export const createCheckoutSession = async (priceId: string) => {
       fullOrigin
     });
 
-    // Clear any existing redirect flags before starting a new checkout
+    // CRITICAL: Clear ALL possible redirect and loading flags
     sessionStorage.removeItem('redirectingToStripe');
+    sessionStorage.removeItem('stripeCheckoutInProgress');
+    localStorage.removeItem('stripeCheckoutInProgress');
+
+    // Set a new checkout flag with timestamp
+    sessionStorage.setItem('stripeCheckoutInProgress', Date.now().toString());
 
     // Direct API call to Supabase function - with simplified error handling
     const { data, error } = await supabase.functions.invoke('stripe-checkout', {
@@ -49,12 +54,18 @@ export const createCheckoutSession = async (priceId: string) => {
     });
 
     if (error) {
+      // CRITICAL: Clear flags when there's an error
+      sessionStorage.removeItem('stripeCheckoutInProgress');
+      sessionStorage.removeItem('redirectingToStripe');
       console.error('Supabase function error:', error);
       throw new Error(error.message || 'Błąd przy wywoływaniu funkcji Stripe');
     }
 
     // Check for API-level errors
     if (data?.error) {
+      // CRITICAL: Clear flags when there's an error
+      sessionStorage.removeItem('stripeCheckoutInProgress');
+      sessionStorage.removeItem('redirectingToStripe');
       console.error('Stripe error:', data.error);
       throw new Error(data.error);
     }
@@ -73,10 +84,17 @@ export const createCheckoutSession = async (priceId: string) => {
       window.location.href = data.url;
       return true;
     } else {
+      // CRITICAL: Clear flags when there's an error
+      sessionStorage.removeItem('stripeCheckoutInProgress');
+      sessionStorage.removeItem('redirectingToStripe');
       throw new Error('Nie otrzymano poprawnej odpowiedzi z serwera');
     }
   } catch (error) {
     console.error('Stripe checkout error:', error);
+    
+    // CRITICAL: Clear flags when there's an error
+    sessionStorage.removeItem('stripeCheckoutInProgress');
+    sessionStorage.removeItem('redirectingToStripe');
     
     let errorMessage = error instanceof Error ? error.message : 'Nie można uruchomić procesu płatności';
     
