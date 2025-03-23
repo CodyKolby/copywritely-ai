@@ -27,42 +27,29 @@ export const createCheckoutSession = async (priceId: string) => {
       cancelUrl
     });
     
-    // Clear any existing checkout flags
-    sessionStorage.removeItem('stripeCheckoutInProgress');
-    sessionStorage.removeItem('redirectingToStripe');
-    
-    toast.info('Rozpoczynam proces płatności', {
-      duration: 3000,
-    });
-    
-    // Try direct redirect to Stripe Checkout via their JS SDK
-    console.log('Attempting direct Stripe Checkout integration');
-    
-    // Initialize Stripe
+    // Get Stripe instance
     const stripe = await getStripe();
     
     if (!stripe) {
-      console.error('Failed to initialize Stripe');
-      throw new Error('Nie można zainicjować systemu płatności');
+      console.error('Failed to initialize Stripe - public key may be missing or invalid');
+      throw new Error('Nie można zainicjować systemu płatności - brak klucza API');
     }
     
-    console.log('Stripe initialized successfully');
+    console.log('Stripe initialized successfully, redirecting to checkout...');
     
-    // Set checkout options
+    // Set checkout options using valid parameters
     const options = {
       lineItems: [{ price: priceId, quantity: 1 }],
       mode: 'subscription',
-      successUrl: successUrl,
-      cancelUrl: cancelUrl,
-      customerEmail: userEmail || undefined,
-      allowPromotionCodes: true,
-      billingAddressCollection: 'auto',
-      subscriptionData: {
-        trial_period_days: 3
-      }
+      successUrl,
+      cancelUrl,
+      customerEmail: userEmail || undefined
     };
     
-    console.log('Redirecting to Stripe Checkout with options:', options);
+    console.log('Redirecting to Stripe Checkout with options:', {
+      ...options,
+      lineItems: options.lineItems.map(item => ({ price: item.price, quantity: item.quantity }))
+    });
     
     // Redirect to Stripe Checkout
     const result = await stripe.redirectToCheckout(options);

@@ -63,7 +63,7 @@ export function usePaymentProcess(
     console.log('Setting isLoading to true');
     
     try {
-      // Log the price ID we're using for debugging
+      // Get the price ID for the selected billing cycle
       const priceId = getPriceId(billingCycle);
       console.log('Using price ID for checkout:', priceId);
       
@@ -89,9 +89,9 @@ export function usePaymentProcess(
       console.log('Browser details:', navigator.userAgent);
       console.log('Window location:', window.location.href);
       console.log('Window origin:', window.location.origin);
+      console.log('Stripe public key available:', !!import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
       
-      // Initiate checkout process with Stripe directly
-      console.log('Calling createCheckoutSession with priceId:', priceId);
+      // Direct checkout with Stripe
       const result = await createCheckoutSession(priceId);
       console.log('createCheckoutSession result:', result);
       
