@@ -58,7 +58,7 @@ export const createProfile = async (userId: string): Promise<Profile | null> => 
       is_premium: false
     };
     
-    console.log('Creating new profile:', newProfile);
+    console.log('Creating new profile with data:', newProfile);
     
     // Try direct insert first
     const { error: insertError } = await supabase
@@ -85,7 +85,7 @@ export const createProfile = async (userId: string): Promise<Profile | null> => 
           user_avatar_url: user_metadata?.avatar_url || null
         };
         
-        console.log('Attempting to create profile using RPC:', params);
+        console.log('Attempting to create profile using RPC with data:', params);
         
         // Use explicit type casting for the RPC call
         const { error: rpcError } = await supabase.rpc(
