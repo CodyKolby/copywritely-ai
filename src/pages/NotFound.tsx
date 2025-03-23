@@ -32,7 +32,10 @@ const NotFound = () => {
       sessionStorage.removeItem('redirectingToStripe');
       
       if (location.search.includes('session_id')) {
-        toast.info('Przekierowujemy do strony potwierdzenia...');
+        // Inform the user we're redirecting without showing multiple toasts
+        if (sessionStorage.getItem('paymentProcessed') !== 'true') {
+          toast.info('Przekierowujemy do strony potwierdzenia...');
+        }
         navigate(`/success${location.search}`);
       } else if (location.search.includes('canceled')) {
         toast.info('Przekierowujemy do strony cennika...');

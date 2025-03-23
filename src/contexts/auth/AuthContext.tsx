@@ -81,13 +81,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const userProfile = await fetchProfile(userId)
     setProfile(userProfile)
     
+    // Don't show any toast here - we'll handle that in the Success page
     const isPremiumStatus = await checkPremiumStatus(userId)
     setIsPremium(isPremiumStatus)
   }
 
-  const checkUserPremiumStatus = async (userId: string) => {
+  const checkUserPremiumStatus = async (userId: string, showToast = false) => {
     const isPremiumStatus = await checkPremiumStatus(userId)
     setIsPremium(isPremiumStatus)
+    return isPremiumStatus;
   }
 
   return (

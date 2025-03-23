@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -11,14 +10,16 @@ import { toast } from 'sonner';
 const Success = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [successToastShown, setSuccessToastShown] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, checkPremiumStatus } = useAuth();
 
   useEffect(() => {
+    const hasProcessedPayment = sessionStorage.getItem('paymentProcessed') === 'true';
+    
     const checkSession = async () => {
       try {
-        // Pobierz session_id z query params
         const searchParams = new URLSearchParams(location.search);
         const sessionId = searchParams.get('session_id');
 
@@ -28,7 +29,11 @@ const Success = () => {
           return;
         }
 
-        // Weryfikacja sesji i aktualizacja statusu premium
+        if (hasProcessedPayment) {
+          setLoading(false);
+          return;
+        }
+
         if (user?.id) {
           const { data, error: verifyError } = await supabase.functions.invoke('verify-payment-session', {
             body: { 
@@ -50,9 +55,13 @@ const Success = () => {
             return;
           }
 
-          // Odświeżamy status premium użytkownika
           await checkPremiumStatus(user.id);
-          toast.success('Gratulacje! Twoje konto zostało zaktualizowane do wersji Premium.');
+          
+          if (!successToastShown && !hasProcessedPayment) {
+            toast.success('Gratulacje! Twoje konto zostało zaktualizowane do wersji Premium.');
+            setSuccessToastShown(true);
+            sessionStorage.setItem('paymentProcessed', 'true');
+          }
         }
 
         setLoading(false);
@@ -64,7 +73,11 @@ const Success = () => {
     };
 
     checkSession();
-  }, [location, user, checkPremiumStatus]);
+
+    return () => {
+      sessionStorage.setItem('paymentProcessed', 'true');
+    };
+  }, [location, user, checkPremiumStatus, successToastShown]);
 
   return (
     <div className="min-h-screen pt-24 pb-12 px-4">
