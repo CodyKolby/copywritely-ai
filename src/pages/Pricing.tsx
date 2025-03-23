@@ -64,7 +64,7 @@ const Pricing = () => {
     }
   }, [user]);
 
-  // Timeout to reset loading state after 20 seconds if it gets stuck
+  // Improved timeout handling - reduced to 10 seconds for faster feedback
   useEffect(() => {
     let loadingTimeout: number;
     
@@ -75,7 +75,7 @@ const Pricing = () => {
         toast.error('Wystąpił problem z przetwarzaniem płatności', {
           description: 'Płatność nie została ukończona z powodu timeout. Spróbuj ponownie.'
         });
-      }, 20000); // 20 seconds timeout
+      }, 10000); // Reduced to 10 seconds timeout for faster feedback
     }
     
     return () => {
@@ -83,7 +83,7 @@ const Pricing = () => {
     };
   }, [isLoading]);
 
-  // Handle subscribe button click
+  // Handle subscribe button click with improved error handling
   const handleSubscribe = async () => {
     if (!user) {
       toast.error('Musisz się zalogować', {
@@ -96,6 +96,8 @@ const Pricing = () => {
       return;
     }
 
+    // Dismiss any existing toasts before starting new payment process
+    toast.dismiss();
     setIsLoading(true);
     
     try {
@@ -115,6 +117,11 @@ const Pricing = () => {
       console.error('Error in handleSubscribe:', error);
       // Reset loading state if there's an exception
       setIsLoading(false);
+      
+      // Show a more specific error message
+      toast.error('Wystąpił błąd podczas inicjowania płatności', {
+        description: 'Prosimy odświeżyć stronę i spróbować ponownie'
+      });
     }
   };
 

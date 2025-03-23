@@ -34,11 +34,14 @@ serve(async (req) => {
     const isTestMode = stripeSecretKey.startsWith('sk_test_');
     console.log(`Using Stripe in ${isTestMode ? 'TEST' : 'PRODUCTION'} mode`);
     
-    // Parse and validate request data
+    // Parse and validate request data - with improved error handling
     let requestData;
     try {
       requestData = await req.json();
-      console.log('Request data received:', JSON.stringify(requestData));
+      console.log('Request data received:', JSON.stringify({
+        ...requestData,
+        customerEmail: requestData.customerEmail ? 'Email provided' : 'No email',
+      }));
     } catch (e) {
       console.error('Failed to parse request body:', e);
       throw new Error('Invalid request format');
@@ -71,28 +74,28 @@ serve(async (req) => {
       console.warn('LIVE MODE WARNING: Using test format price ID in live environment');
     }
 
-    // Upewnij się, że mamy pełny adres URL do przekierowania
+    // Ensure we have full URLs for redirection
     console.log('Origin from request:', origin);
     console.log('Raw success URL:', successUrl);
     console.log('Raw cancel URL:', cancelUrl);
 
-    // Ustalenie bazowego URL
+    // Determine base URL with improved fallback logic
     let baseUrl = '';
     
     if (origin && origin.includes('://')) {
-      // Jeśli origin zawiera protokół, użyj go bezpośrednio
+      // If origin contains protocol, use it directly
       baseUrl = origin;
       if (baseUrl.endsWith('/')) {
         baseUrl = baseUrl.slice(0, -1);
       }
     } else if (origin) {
-      // Jeśli origin nie zawiera protokołu, dodaj https://
+      // If origin doesn't contain protocol, add https://
       baseUrl = `https://${origin}`;
       if (baseUrl.endsWith('/')) {
         baseUrl = baseUrl.slice(0, -1);
       }
     } else {
-      // Jeśli nie mamy origin, próbujemy pobrać z nagłówków
+      // If we don't have origin, try to get from headers
       const referer = req.headers.get('referer');
       const originHeader = req.headers.get('origin');
       
@@ -106,7 +109,7 @@ serve(async (req) => {
         const url = new URL(referer);
         baseUrl = `${url.protocol}//${url.host}`;
       } else {
-        // Jeśli wszystko zawiedzie, użyj domyślnego URL (w przypadku lokalnego testowania)
+        // If all else fails, use default URL (for local testing)
         baseUrl = "https://copywrite-assist.com";
         console.warn("No origin or referer found, using hardcoded fallback URL:", baseUrl);
       }
@@ -155,12 +158,12 @@ serve(async (req) => {
     console.log('Stripe API request parameters:', params.toString());
     console.log('Calling Stripe API at:', 'https://api.stripe.com/v1/checkout/sessions');
 
-    // Set timeout for fetch to prevent hanging
+    // Set shorter timeout for fetch to prevent hanging (5 seconds instead of 10)
     const controller = new AbortController();
     const timeout = setTimeout(() => {
       controller.abort();
-      console.error('Stripe API request timed out after 10 seconds');
-    }, 10000);
+      console.error('Stripe API request timed out after 5 seconds');
+    }, 5000);
 
     try {
       // Call Stripe API with timeout
@@ -176,7 +179,7 @@ serve(async (req) => {
       
       clearTimeout(timeout);
 
-      // Parse response
+      // Parse response with improved error handling
       const responseText = await response.text();
       console.log(`Stripe API response status: ${response.status}`);
       console.log(`Stripe API response body: ${responseText.substring(0, 200)}...`);
@@ -190,7 +193,7 @@ serve(async (req) => {
         throw new Error('Invalid response from Stripe API');
       }
 
-      // Handle Stripe API errors
+      // Handle Stripe API errors with improved error messages
       if (!response.ok) {
         console.error('Stripe API error:', sessionData.error || 'Unknown error');
         

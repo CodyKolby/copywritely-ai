@@ -1,3 +1,4 @@
+
 import { loadStripe } from '@stripe/stripe-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -23,14 +24,14 @@ export const PRICE_IDS = {
   PRO_ANNUAL: 'price_1R5A8aAGO17NLUWtxzthF8lo', // Using the same ID for testing
 };
 
-// Funkcja do tworzenia sesji Checkout
+// Funkcja do tworzenia sesji Checkout - z ulepszonym zarządzaniem timeout i obsługą błędów
 export const createCheckoutSession = async (priceId: string) => {
   // Store reference to the toast ID so we can dismiss it later
   let loadingToastId: string | number = '';
   
-  // Setup timeout to prevent infinite loading
+  // Setup shorter timeout to prevent long waiting
   const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => reject(new Error('Przekroczono czas oczekiwania na odpowiedź serwera')), 15000);
+    setTimeout(() => reject(new Error('Przekroczono czas oczekiwania na odpowiedź serwera')), 8000);
   });
   
   try {
@@ -75,7 +76,7 @@ export const createCheckoutSession = async (priceId: string) => {
           customerEmail: userEmail || undefined,
           successUrl,
           cancelUrl,
-          origin: fullOrigin // Dodajemy pełny adres URL z protokołem i domeną
+          origin: fullOrigin
         }
       }),
       timeoutPromise
@@ -106,13 +107,13 @@ export const createCheckoutSession = async (priceId: string) => {
       // Zamień toast ładowania na toast sukcesu
       toast.success('Przekierowujemy do strony płatności...');
       
-      // Ustawiamy flagę, że przekierowujemy do Stripe - TERAZ WYŁĄCZNIE gdy faktycznie następuje przekierowanie
+      // Ustawiamy flagę, że przekierowujemy do Stripe
       sessionStorage.setItem('redirectingToStripe', 'true');
       
       // Dodajemy małe opóźnienie przed przekierowaniem, aby zminimalizować problemy z czasowaniem
       setTimeout(() => {
         window.location.href = data.url;
-      }, 1000);
+      }, 500);
       
       return true;
     } else {
