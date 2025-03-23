@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/integrations/supabase/client'
@@ -9,7 +10,7 @@ import {
   signInWithEmail, 
   signUpWithEmail, 
   signOut 
-} from './auth-utils'
+} from './auth-utils'  // This import still works because of the re-exports
 import { useTestUser } from './use-test-user'
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
