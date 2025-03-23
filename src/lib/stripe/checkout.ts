@@ -40,32 +40,33 @@ export const createCheckoutSession = async (priceId: string) => {
       duration: 3000,
     });
     
-    // Call the Supabase Edge Function with direct approach
+    // Call the Supabase Edge Function with fixes for TypeScript errors
     console.log('Calling Supabase function: stripe-checkout');
-    const response = await fetch(`${supabase.functions.url}/stripe-checkout`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${supabase.auth.session()?.access_token || ''}`
-      },
-      body: JSON.stringify({
+    
+    // Get current session access token using the correct API
+    const { data: { session } } = await supabase.auth.getSession();
+    const accessToken = session?.access_token || '';
+    
+    // Use invoke method instead of direct URL access
+    const { data, error } = await supabase.functions.invoke('stripe-checkout', {
+      body: {
         priceId,
         customerEmail: userEmail || undefined,
         successUrl,
         cancelUrl,
         origin: fullOrigin
-      })
+      },
+      headers: {
+        Authorization: `Bearer ${accessToken}`
+      }
     });
     
-    // Check if response is ok
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Supabase function error response:', response.status, errorText);
-      throw new Error(`Error ${response.status}: ${errorText}`);
+    // Log the response for debugging
+    if (error) {
+      console.error('Supabase function error:', error);
+      throw new Error(`Błąd funkcji: ${error.message}`);
     }
     
-    // Parse response JSON
-    const data = await response.json();
     console.log('Supabase function response:', data);
     
     // If function returned a URL, redirect user
