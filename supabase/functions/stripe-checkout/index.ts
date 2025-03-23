@@ -96,22 +96,18 @@ serve(async (req) => {
     console.log('Final success URL:', finalSuccessUrl);
     console.log('Final cancel URL:', finalCancelUrl);
 
-    // Create Stripe session - using clean URL without any parameters
+    // Create Stripe session - avoid URL parameters in the main URL
     try {
       console.log('Creating Stripe checkout session...');
       
-      // Use the standard Stripe API URL without cache-busting
-      const stripeUrl = 'https://api.stripe.com/v1/checkout/sessions';
-      
-      // Create form parameters
-      const formData = new URLSearchParams({
-        'mode': 'subscription',
-        'success_url': finalSuccessUrl,
-        'cancel_url': finalCancelUrl,
-        'line_items[0][price]': priceId,
-        'line_items[0][quantity]': '1',
-        'subscription_data[trial_period_days]': '3'
-      });
+      // Create form parameters - ensure no extra parameters are sent
+      const formData = new URLSearchParams();
+      formData.append('mode', 'subscription');
+      formData.append('success_url', finalSuccessUrl);
+      formData.append('cancel_url', finalCancelUrl);
+      formData.append('line_items[0][price]', priceId);
+      formData.append('line_items[0][quantity]', '1');
+      formData.append('subscription_data[trial_period_days]', '3');
       
       // Add customer email if provided
       if (customerEmail) {
@@ -120,17 +116,16 @@ serve(async (req) => {
       
       console.log('Request parameters:', Object.fromEntries(formData.entries()));
       
-      // Add cache-busting to the headers instead
-      const response = await fetch(stripeUrl, {
+      // Call Stripe API directly with form parameters
+      const response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${stripeSecretKey}`,
           'Content-Type': 'application/x-www-form-urlencoded',
           'Stripe-Version': '2023-10-16',
-          'Cache-Control': 'no-cache, no-store',
-          'X-Request-Timestamp': `${timestamp || Date.now()}`
+          'Cache-Control': 'no-cache, no-store'
         },
-        body: formData
+        body: formData.toString()
       });
 
       if (!response.ok) {

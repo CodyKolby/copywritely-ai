@@ -40,37 +40,17 @@ export const createCheckoutSession = async (priceId: string) => {
       duration: 3000,
     });
     
-    // Call the Supabase Edge Function with direct fetch for more control
-    console.log('Calling Supabase function: stripe-checkout');
+    // Use Netlify function instead of Supabase function for improved reliability
+    console.log('Calling Netlify function: stripe-checkout');
     
-    // Get current session access token
-    const { data: authData } = await supabase.auth.getSession();
-    const accessToken = authData?.session?.access_token || '';
+    // We won't need the auth token for the Netlify function
+    const netlifyFunctionUrl = `${fullOrigin}/.netlify/functions/stripe-checkout`;
+    console.log('Function URL:', netlifyFunctionUrl);
     
-    if (!accessToken) {
-      console.error('No access token available - user might be logged out');
-      throw new Error('Błąd autoryzacji - zaloguj się ponownie');
-    }
-    
-    // Create URL with the full Supabase project domain
-    const functionsUrl = `https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/stripe-checkout`;
-    console.log('Function URL:', functionsUrl);
-    
-    // IMPORTANT: Add detailed logging for the request
-    console.log('Sending request to Supabase function with params:', {
-      priceId,
-      customerEmail: userEmail ? 'Email available' : 'Not available',
-      successUrl: successUrl,
-      cancelUrl: cancelUrl,
-      origin: fullOrigin,
-      timestamp: timestamp
-    });
-    
-    const response = await fetch(functionsUrl, {
+    const response = await fetch(netlifyFunctionUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}`,
         'Cache-Control': 'no-cache, no-store',
         'Pragma': 'no-cache'
       },
@@ -79,8 +59,7 @@ export const createCheckoutSession = async (priceId: string) => {
         customerEmail: userEmail || undefined,
         successUrl,
         cancelUrl,
-        origin: fullOrigin,
-        timestamp: timestamp // Include timestamp to prevent caching
+        timestamp // Include timestamp to prevent caching
       })
     });
     
@@ -89,15 +68,13 @@ export const createCheckoutSession = async (priceId: string) => {
     // Handle non-200 responses
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Supabase function error response:', response.status, errorText);
-      
-      // Add detailed error information to help debug
+      console.error('Function error response:', response.status, errorText);
       throw new Error(`Błąd serwera: ${response.status} ${errorText}`);
     }
     
     // Parse response JSON
     const responseData = await response.json();
-    console.log('Supabase function successful response:', responseData);
+    console.log('Function successful response:', responseData);
     
     // If function returned a URL, redirect user
     if (responseData?.url) {
@@ -108,8 +85,8 @@ export const createCheckoutSession = async (priceId: string) => {
       
       toast.success('Przekierowujemy do strony płatności...');
       
-      // Force a new page load to avoid browser caching issues
-      window.location.href = responseData.url;
+      // Use window.location.assign instead of window.location.href to avoid MutationObserver errors
+      window.location.assign(responseData.url);
       
       return true;
     } else {

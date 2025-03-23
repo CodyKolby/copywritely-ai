@@ -68,6 +68,11 @@ export function usePaymentProcess(
       console.log('Using price ID for checkout:', priceId);
       
       // Add automatic timeout to reset loading state if checkout process takes too long
+      // Increase timeout to 30 seconds to avoid premature timeout
+      if (timeoutRef.current) {
+        window.clearTimeout(timeoutRef.current);
+      }
+      
       timeoutRef.current = window.setTimeout(() => {
         console.log('Checkout process timeout reached, resetting state');
         clearPaymentFlags();
@@ -79,7 +84,7 @@ export function usePaymentProcess(
             onClick: () => window.location.reload()
           }
         });
-      }, 10000); // 10 seconds timeout
+      }, 30000); // 30 seconds timeout
       
       // Initiate checkout process
       console.log('Calling createCheckoutSession with priceId:', priceId);

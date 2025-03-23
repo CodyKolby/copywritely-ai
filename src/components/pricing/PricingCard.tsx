@@ -38,9 +38,15 @@ export const PricingCard = ({
     "Zapis projektów w aplikacji"
   ];
 
-  // Function to handle the click event with logging
+  // Function to handle the click event with improved logging
   const handleSubscribeClick = () => {
     console.log('Subscribe button clicked in PricingCard component');
+    
+    // Prevent multiple clicks
+    if (isLoading) {
+      console.log('Button already in loading state, ignoring click');
+      return;
+    }
     
     // Call the parent onSubscribe function
     onSubscribe();
