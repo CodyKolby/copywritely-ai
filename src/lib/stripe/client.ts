@@ -15,8 +15,8 @@ export const getStripe = () => {
   return stripePromise;
 };
 
-// Use valid price IDs - these need to be actual price IDs from your Stripe account
+// Use test mode price IDs that work with test mode
 export const PRICE_IDS = {
-  PRO_MONTHLY: 'price_1OtvALG0KQWtMCjDDpPlM4C2', // Updated valid price ID for monthly
-  PRO_ANNUAL: 'price_1OtvALG0KQWtMCjDDpPlM4C2', // Updated valid price ID for annual
+  PRO_MONTHLY: 'price_1ORzDYAGO17NLUWtQEg4cYBE', // Updated test mode price ID for monthly
+  PRO_ANNUAL: 'price_1ORzDYAGO17NLUWtQEg4cYBE', // Same ID for annual for testing
 };

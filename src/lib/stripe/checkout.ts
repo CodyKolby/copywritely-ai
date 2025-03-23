@@ -27,7 +27,7 @@ export const createCheckoutSession = async (priceId: string) => {
       cancelUrl
     });
     
-    // Get Stripe instance with hardcoded key
+    // Get Stripe instance
     const stripe = await getStripe();
     
     if (!stripe) {
@@ -37,29 +37,21 @@ export const createCheckoutSession = async (priceId: string) => {
     
     console.log('Stripe initialized successfully, redirecting to checkout...');
     
-    // Set checkout options
-    const options = {
+    // Create a checkout session directly in the browser
+    // with the Stripe.js redirectToCheckout method
+    const { error } = await stripe.redirectToCheckout({
       lineItems: [{ price: priceId, quantity: 1 }],
       mode: 'subscription',
       successUrl,
       cancelUrl,
       customerEmail: userEmail || undefined
-    };
-    
-    console.log('Redirecting to Stripe Checkout with options:', {
-      ...options,
-      lineItems: options.lineItems.map(item => ({ price: item.price, quantity: item.quantity }))
     });
     
-    // Redirect to Stripe Checkout
-    const result = await stripe.redirectToCheckout(options);
-    
-    if (result.error) {
-      console.error('Stripe checkout redirect error:', result.error);
-      throw new Error(result.error.message || 'Nie można przekierować do systemu płatności');
+    if (error) {
+      console.error('Stripe checkout error:', error);
+      throw new Error(error.message || 'Błąd podczas przekierowania do płatności');
     }
     
-    console.log('Stripe checkout redirect initiated');
     return true;
     
   } catch (error) {

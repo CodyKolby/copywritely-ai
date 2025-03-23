@@ -7,7 +7,6 @@ import { PricingCard } from '@/components/pricing/PricingCard';
 import { PricingFAQ } from '@/components/pricing/PricingFAQ';
 import { BillingCycle, getProPrice, getPricingLabel } from '@/components/pricing/pricing-utils';
 import { DebugDialog } from '@/components/pricing/DebugDialog';
-import { Button } from '@/components/ui/button';
 
 const Pricing = () => {
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('annual');
@@ -30,7 +29,6 @@ const Pricing = () => {
   // Handle manual reset
   const handleManualReset = () => {
     clearPaymentFlags();
-    collectDebugInfo();
     setIsDebugOpen(false);
     window.location.reload();
   };

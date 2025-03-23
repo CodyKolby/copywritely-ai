@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PricingFeatureItem } from "./PricingFeatureItem";
+import { useState } from "react";
 
 interface PricingCardProps {
   price: string;
@@ -21,6 +22,8 @@ export const PricingCard = ({
   isLoading,
   onSubscribe
 }: PricingCardProps) => {
+  const [clickCount, setClickCount] = useState(0);
+  
   const itemVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
@@ -41,6 +44,12 @@ export const PricingCard = ({
   // Function to handle the click event with improved logging
   const handleSubscribeClick = () => {
     console.log('Subscribe button clicked in PricingCard component');
+    setClickCount(prev => prev + 1);
+    
+    // Log click count for debugging
+    if (clickCount > 0) {
+      console.log(`Button clicked ${clickCount + 1} times`);
+    }
     
     // Prevent multiple clicks
     if (isLoading) {
