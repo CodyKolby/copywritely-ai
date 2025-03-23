@@ -25,8 +25,10 @@ const Pricing = () => {
   useEffect(() => {
     const wasRedirectingToStripe = sessionStorage.getItem('redirectingToStripe') === 'true';
     
-    // Jeśli wróciliśmy z przekierowania do Stripe i jesteśmy na stronie cennika,
-    // ale bez parametru canceled, to prawdopodobnie wystąpił problem z URL
+    // Pokaż komunikat o niepowodzeniu płatności TYLKO gdy:
+    // 1. Wróciliśmy z przekierowania do Stripe (redirectingToStripe == true)
+    // 2. Jesteśmy na stronie cennika
+    // 3. Nie ma parametru canceled=true (który już ma własny toast)
     if (wasRedirectingToStripe && !isCanceled && window.location.pathname === '/pricing') {
       toast.info('Płatność nie została ukończona', {
         description: 'Możesz spróbować ponownie lub skontaktować się z obsługą'
