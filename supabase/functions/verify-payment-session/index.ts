@@ -89,30 +89,36 @@ serve(async (req) => {
     let subscriptionExpiry = null;
 
     if (subscriptionId) {
-      const subscriptionResponse = await fetch(`https://api.stripe.com/v1/subscriptions/${subscriptionId}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${stripeSecretKey}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-      });
-
-      if (subscriptionResponse.ok) {
-        const subscription = await subscriptionResponse.json();
-        subscriptionStatus = subscription.status;
-        // Convert UNIX timestamp to ISO string
-        subscriptionExpiry = new Date(subscription.current_period_end * 1000).toISOString();
-        console.log('Subscription details:', {
-          status: subscriptionStatus,
-          expiry: subscriptionExpiry
+      try {
+        const subscriptionResponse = await fetch(`https://api.stripe.com/v1/subscriptions/${subscriptionId}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${stripeSecretKey}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
         });
+
+        if (subscriptionResponse.ok) {
+          const subscription = await subscriptionResponse.json();
+          subscriptionStatus = subscription.status;
+          // Convert UNIX timestamp to ISO string
+          subscriptionExpiry = new Date(subscription.current_period_end * 1000).toISOString();
+          console.log('Subscription details:', {
+            status: subscriptionStatus,
+            expiry: subscriptionExpiry
+          });
+        } else {
+          console.error('Failed to fetch subscription details:', await subscriptionResponse.text());
+        }
+      } catch (subError) {
+        console.error('Error fetching subscription:', subError);
       }
     }
 
     // First check if profile exists
     const { data: existingProfile, error: profileCheckError } = await supabase
       .from('profiles')
-      .select('id')
+      .select('id, is_premium')
       .eq('id', userId)
       .single();
       
@@ -133,9 +139,13 @@ serve(async (req) => {
         console.error('Error creating user profile:', createError);
         throw new Error('Error creating user profile');
       }
+      
+      console.log('Successfully created new profile with premium status');
     } else {
       // Update existing profile
-      console.log('Updating existing profile with premium status');
+      console.log('Updating existing profile with premium status:', existingProfile);
+      console.log('Current premium status:', existingProfile?.is_premium);
+      
       const { error: updateError } = await supabase
         .from('profiles')
         .update({
@@ -150,6 +160,21 @@ serve(async (req) => {
         console.error('Error updating user profile:', updateError);
         throw new Error('Error updating user profile');
       }
+      
+      console.log('Successfully updated profile is_premium to TRUE');
+    }
+    
+    // Verify update was successful
+    const { data: verifiedProfile, error: verifyError } = await supabase
+      .from('profiles')
+      .select('is_premium')
+      .eq('id', userId)
+      .single();
+      
+    if (verifyError) {
+      console.error('Error verifying profile update:', verifyError);
+    } else {
+      console.log('Verified profile status after update:', verifiedProfile);
     }
 
     return new Response(

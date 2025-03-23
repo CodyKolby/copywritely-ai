@@ -68,7 +68,7 @@ serve(async (req) => {
       // If expiry date is in the future, user has active subscription
       if (expiryDate > now) {
         isPremium = true;
-      } else if (isPremium) {
+      } else if (isPremium && expiryDate <= now) {
         // If expiry date is in the past but is_premium flag is true,
         // update status to false
         console.log('Subscription expired, updating premium status to false');
@@ -109,6 +109,7 @@ serve(async (req) => {
             
             // Update DB if needed
             if (!profile.is_premium) {
+              console.log('Updating profile to premium based on active Stripe subscription');
               await supabase
                 .from('profiles')
                 .update({ 
@@ -119,6 +120,7 @@ serve(async (req) => {
             }
           } else if (profile.is_premium) {
             // Subscription is not active in Stripe, but marked as premium in DB
+            console.log('Updating profile to non-premium based on inactive Stripe subscription');
             isPremium = false;
             await supabase
               .from('profiles')
@@ -128,10 +130,41 @@ serve(async (req) => {
               })
               .eq('id', userId);
           }
+        } else {
+          console.error('Failed to fetch subscription from Stripe:', await response.text());
+          
+          // Force synchronize with Stripe on error if needed
+          if (isPremium && (await response.json())?.error?.type === 'invalid_request_error') {
+            console.log('Subscription not found in Stripe, updating premium status to false');
+            await supabase
+              .from('profiles')
+              .update({ 
+                is_premium: false,
+                subscription_status: 'canceled'
+              })
+              .eq('id', userId);
+            
+            isPremium = false;
+          }
         }
       } catch (stripeError) {
         console.error('Error validating with Stripe:', stripeError);
         // Continue with database values if Stripe validation fails
+      }
+    }
+
+    // Force an update to check consistency
+    if (isPremium) {
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ is_premium: true })
+        .eq('id', userId)
+        .eq('is_premium', false);
+        
+      if (updateError) {
+        console.error('Error updating premium status:', updateError);
+      } else if (updateError === null) {
+        console.log('Profile premium status consistency check completed');
       }
     }
 

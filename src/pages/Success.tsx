@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -10,6 +11,7 @@ import { toast } from 'sonner';
 const Success = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [verificationAttempt, setVerificationAttempt] = useState(0);
   const { user, checkPremiumStatus } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -67,13 +69,35 @@ const Success = () => {
 
         console.log('Payment verification successful, checking premium status');
         
-        const isPremium = await checkPremiumStatus(user.id, false);
-        console.log('Premium status after verification:', isPremium);
+        // Wait a short moment to allow database updates to propagate
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
+        // Check premium status twice to ensure consistency
+        let isPremium = await checkPremiumStatus(user.id, false);
+        console.log('Premium status after first verification check:', isPremium);
+        
+        if (!isPremium) {
+          console.log('First premium check failed, trying again after delay');
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          isPremium = await checkPremiumStatus(user.id, false);
+          console.log('Premium status after second verification check:', isPremium);
+        }
+        
+        // Even if we still don't have premium status, continue with success
+        // since the payment was confirmed by Stripe
         if (isPremium && !successToastShown) {
           console.log('Showing premium success toast');
           toast.success('Gratulacje! Twoje konto zostało zaktualizowane do wersji Premium.');
           sessionStorage.setItem('paymentProcessed', 'true');
+        } else if (!isPremium) {
+          console.warn('Payment verified but premium status not updated. Will retry shortly.');
+          // If we've tried less than 3 times, retry the verification
+          if (verificationAttempt < 3) {
+            setVerificationAttempt(prev => prev + 1);
+            setTimeout(() => {
+              checkPremiumStatus(user.id, true); // Force a premium check with toast
+            }, 3000);
+          }
         }
 
         setLoading(false);
@@ -85,7 +109,7 @@ const Success = () => {
     };
 
     verifyPayment();
-  }, [location, user, checkPremiumStatus, successToastShown]);
+  }, [location, user, checkPremiumStatus, successToastShown, verificationAttempt]);
 
   return (
     <div className="min-h-screen pt-24 pb-12 px-4">
