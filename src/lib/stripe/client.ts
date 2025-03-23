@@ -15,8 +15,8 @@ export const getStripe = () => {
   return stripePromise;
 };
 
-// Actual price IDs from Stripe
+// Use the actual price IDs from your Stripe account
 export const PRICE_IDS = {
-  PRO_MONTHLY: 'price_1R5A8aAGO17NLUWtxzthF8lo', // Test mode price ID
-  PRO_ANNUAL: 'price_1R5A8aAGO17NLUWtxzthF8lo', // Using the same ID for testing
+  PRO_MONTHLY: 'price_1R2BXjAGO17NLUWtWngMbzgh', // Updated Live price ID for monthly
+  PRO_ANNUAL: 'price_1R2BXjAGO17NLUWtWngMbzgh', // Updated Live price ID for annual
 };

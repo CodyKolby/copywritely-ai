@@ -48,6 +48,8 @@ serve(async (req) => {
       throw new Error('Missing priceId parameter');
     }
     
+    console.log('Using priceId:', priceId);
+    
     // Determine base URL with improved fallback logic
     let baseUrl = '';
     
@@ -96,17 +98,20 @@ serve(async (req) => {
     console.log('Final success URL:', finalSuccessUrl);
     console.log('Final cancel URL:', finalCancelUrl);
 
-    // Create Stripe session - avoid URL parameters in the main URL
+    // Create Stripe session with correct parameters
     try {
       console.log('Creating Stripe checkout session...');
       
-      // Create form parameters - ensure no extra parameters are sent
+      // Create form parameters with the correct Stripe format
       const formData = new URLSearchParams();
+      formData.append('payment_method_types[]', 'card');
       formData.append('mode', 'subscription');
       formData.append('success_url', finalSuccessUrl);
       formData.append('cancel_url', finalCancelUrl);
       formData.append('line_items[0][price]', priceId);
       formData.append('line_items[0][quantity]', '1');
+      formData.append('allow_promotion_codes', 'true');
+      formData.append('billing_address_collection', 'auto');
       formData.append('subscription_data[trial_period_days]', '3');
       
       // Add customer email if provided
@@ -114,7 +119,8 @@ serve(async (req) => {
         formData.append('customer_email', customerEmail);
       }
       
-      console.log('Request parameters:', Object.fromEntries(formData.entries()));
+      console.log('Stripe API request parameters:', Object.fromEntries(formData.entries()));
+      console.log('Sending request to Stripe API...');
       
       // Call Stripe API directly with form parameters
       const response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
@@ -123,18 +129,20 @@ serve(async (req) => {
           'Authorization': `Bearer ${stripeSecretKey}`,
           'Content-Type': 'application/x-www-form-urlencoded',
           'Stripe-Version': '2023-10-16',
-          'Cache-Control': 'no-cache, no-store'
         },
         body: formData.toString()
       });
 
+      const responseText = await response.text();
+      console.log(`Stripe API response status: ${response.status}`);
+      console.log('Stripe API raw response:', responseText);
+
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`Stripe API error (${response.status}):`, errorText);
-        throw new Error(`Stripe API error (${response.status}): ${errorText}`);
+        console.error(`Stripe API error (${response.status}):`, responseText);
+        throw new Error(`Stripe API error (${response.status}): ${responseText}`);
       }
 
-      const sessionData = await response.json();
+      const sessionData = JSON.parse(responseText);
       
       const endTime = Date.now();
       console.log(`Stripe session created successfully in ${endTime - startTime}ms:`, {
@@ -152,7 +160,6 @@ serve(async (req) => {
           headers: { 
             ...corsHeaders,
             'Content-Type': 'application/json',
-            'Cache-Control': 'no-cache, no-store'
           } 
         }
       );
@@ -175,7 +182,6 @@ serve(async (req) => {
         headers: { 
           ...corsHeaders,
           'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache, no-store'
         } 
       }
     );

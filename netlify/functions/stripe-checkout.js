@@ -59,7 +59,7 @@ exports.handler = async (event, context) => {
       
       try {
         requestData = JSON.parse(event.body);
-        console.log('Netlify function: Successfully parsed request body');
+        console.log('Netlify function: Successfully parsed request body:', JSON.stringify(requestData));
       } catch (parseError) {
         console.error('Netlify function: Error parsing request body:', parseError);
         console.error('Netlify function: Raw body received:', event.body);
@@ -91,17 +91,23 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Create session parameters
+    console.log('Netlify function: Using priceId:', priceId);
+    console.log('Netlify function: Stripe API key available:', !!process.env.STRIPE_SECRET_KEY);
+
+    // Create session parameters - use correct Stripe format
     const sessionParams = {
+      payment_method_types: ['card'],
       mode: 'subscription',
-      success_url: successUrl,
-      cancel_url: cancelUrl,
+      success_url: successUrl || 'https://copywrite-assist.com/success',
+      cancel_url: cancelUrl || 'https://copywrite-assist.com/pricing?canceled=true',
       line_items: [
         {
           price: priceId,
           quantity: 1
         }
       ],
+      allow_promotion_codes: true,
+      billing_address_collection: 'auto',
       subscription_data: {
         trial_period_days: 3
       }
@@ -112,7 +118,7 @@ exports.handler = async (event, context) => {
       sessionParams.customer_email = customerEmail;
     }
     
-    console.log('Netlify function: Creating session with params:', JSON.stringify(sessionParams));
+    console.log('Netlify function: Creating session with params:', JSON.stringify(sessionParams, null, 2));
 
     // Create session
     const session = await stripe.checkout.sessions.create(sessionParams);
