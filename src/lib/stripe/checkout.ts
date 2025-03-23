@@ -9,9 +9,6 @@ export const createCheckoutSession = async (priceId: string) => {
     // Don't show diagnostic messages for normal users, only in error cases
     console.log('Starting checkout process with priceId', priceId);
     
-    // Don't clear flags at the start of the process - that's causing our issues
-    // We'll only set them, and clear on success or error
-    
     // Basic validation
     if (!priceId) {
       console.error('Missing priceId');
@@ -40,14 +37,13 @@ export const createCheckoutSession = async (priceId: string) => {
       fullOrigin
     });
     
-    toast.info('Step 1: Input validation');
+    toast.info('Rozpoczynam proces płatności');
 
     // Set a new checkout flag with timestamp ONLY when we're sure we're proceeding
     const timestamp = Date.now().toString();
     sessionStorage.setItem('stripeCheckoutInProgress', timestamp);
     
-    toast.info('Step 2: Setting session flags');
-    toast.info('Step 3: Calling Supabase function');
+    toast.info('Łączenie z systemem płatności...');
 
     // Direct API call to Supabase function
     const { data, error } = await supabase.functions.invoke('stripe-checkout', {

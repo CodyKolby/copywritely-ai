@@ -21,7 +21,7 @@ const Pricing = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   
-  // Check if the user was redirected after canceling payment
+  // Check for URL parameters but don't immediately trigger actions
   const isCanceled = searchParams.get('canceled') === 'true';
   
   // Check for payment states without clearing them
@@ -61,7 +61,6 @@ const Pricing = () => {
     // Clear session storage flags
     sessionStorage.removeItem('redirectingToStripe');
     sessionStorage.removeItem('stripeCheckoutInProgress');
-    localStorage.removeItem('stripeCheckoutInProgress');
     
     // Reset loading state
     setIsLoading(false);
@@ -69,14 +68,29 @@ const Pricing = () => {
     toast.info('System płatności zresetowany');
   }, []);
   
-  // Only handle canceled payments
+  // Only handle canceled payments when the page is first loaded with the canceled parameter
   useEffect(() => {
-    // If the payment was canceled, show a message and clear flags
+    // If the payment was canceled via URL parameter, show a message and clear flags
     if (isCanceled) {
+      console.log('Payment canceled via URL parameter');
       clearPaymentFlags();
       toast.info('Anulowano proces płatności', {
         description: 'Możesz kontynuować korzystanie z aplikacji w wersji podstawowej'
       });
+      
+      // Clean up the URL to prevent the message from appearing again
+      if (searchParams.has('canceled')) {
+        // Create a new URLSearchParams without the canceled parameter
+        const newParams = new URLSearchParams(searchParams);
+        newParams.delete('canceled');
+        
+        // Replace the current URL without the canceled parameter
+        const newUrl = newParams.toString() 
+          ? `${window.location.pathname}?${newParams}` 
+          : window.location.pathname;
+        
+        navigate(newUrl, { replace: true });
+      }
     }
     
     // Save user email in localStorage (for Stripe)
@@ -86,7 +100,7 @@ const Pricing = () => {
     
     // Collect initial debug info
     collectDebugInfo();
-  }, [isCanceled, clearPaymentFlags, collectDebugInfo, user]);
+  }, [isCanceled, clearPaymentFlags, collectDebugInfo, user, searchParams, navigate]);
   
   // Handle subscribe button click
   const handleSubscribe = async () => {
