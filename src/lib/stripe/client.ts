@@ -1,8 +1,9 @@
 
 import { loadStripe } from '@stripe/stripe-js';
 
-// Get public key from environment variables
-const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '';
+// Get public key from environment variables or use direct value
+// Replace this with your actual publishable key if the environment variable isn't working
+const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_51OtvALG0KQWtMCjDDpPlM4C2Gm2MUbZb3O8ZkDTkKCU6Dsk4NQe7EDc9l6XmLhB2Ll9x9pXnLDTWVF8kPmtxEWGh00uzNZCIMh';
 
 // Initialize Stripe
 let stripePromise: Promise<any> | null = null;

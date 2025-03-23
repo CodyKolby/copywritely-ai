@@ -27,7 +27,7 @@ export const createCheckoutSession = async (priceId: string) => {
       cancelUrl
     });
     
-    // Get Stripe instance
+    // Get Stripe instance - with hardcoded key as fallback
     const stripe = await getStripe();
     
     if (!stripe) {
