@@ -3,20 +3,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { PRICE_IDS } from './client';
 
-// Function to create checkout session - with improved diagnostics
+// Function to create checkout session - completely refactored
 export const createCheckoutSession = async (priceId: string) => {
   try {
-    // Display diagnostic message
-    toast.info('Starting checkout process');
-    console.log('Starting checkout process with clean state');
+    // Don't show diagnostic messages for normal users, only in error cases
+    console.log('Starting checkout process with priceId', priceId);
     
-    // CRITICAL: Aggressively clear ALL flags at the start of the process
-    sessionStorage.removeItem('redirectingToStripe');
-    sessionStorage.removeItem('stripeCheckoutInProgress');
-    localStorage.removeItem('stripeCheckoutInProgress');
-    
-    // Add additional diagnostic info
-    toast.info('Step 1: Input validation');
+    // Don't clear flags at the start of the process - that's causing our issues
+    // We'll only set them, and clear on success or error
     
     // Basic validation
     if (!priceId) {
@@ -46,12 +40,13 @@ export const createCheckoutSession = async (priceId: string) => {
       fullOrigin
     });
     
-    toast.info('Step 2: Setting session flags');
+    toast.info('Step 1: Input validation');
 
-    // Set a new checkout flag with timestamp
+    // Set a new checkout flag with timestamp ONLY when we're sure we're proceeding
     const timestamp = Date.now().toString();
     sessionStorage.setItem('stripeCheckoutInProgress', timestamp);
     
+    toast.info('Step 2: Setting session flags');
     toast.info('Step 3: Calling Supabase function');
 
     // Direct API call to Supabase function
@@ -66,9 +61,8 @@ export const createCheckoutSession = async (priceId: string) => {
     });
 
     if (error) {
-      // Clear flags when there's an error
+      // Only clear specific flags when there's an error
       sessionStorage.removeItem('stripeCheckoutInProgress');
-      sessionStorage.removeItem('redirectingToStripe');
       console.error('Supabase function error:', error);
       toast.error('Błąd API', { description: error.message || 'Błąd przy wywoływaniu funkcji Stripe' });
       throw new Error(error.message || 'Błąd przy wywoływaniu funkcji Stripe');
@@ -76,9 +70,8 @@ export const createCheckoutSession = async (priceId: string) => {
 
     // Check for API-level errors
     if (data?.error) {
-      // Clear flags when there's an error
+      // Only clear specific flags when there's an error
       sessionStorage.removeItem('stripeCheckoutInProgress');
-      sessionStorage.removeItem('redirectingToStripe');
       console.error('Stripe error:', data.error);
       toast.error('Błąd Stripe', { description: data.error });
       throw new Error(data.error);
@@ -86,35 +79,31 @@ export const createCheckoutSession = async (priceId: string) => {
 
     // If function returned a URL, redirect user
     if (data?.url) {
-      toast.info('Step 4: Otrzymano URL, przygotowanie do przekierowania');
-      console.log('Redirecting to Stripe Checkout URL:', data.url);
+      console.log('Received Stripe Checkout URL:', data.url);
       
-      // Success toast
-      toast.success('Przekierowujemy do strony płatności...');
-      
-      // Set redirect flag - WITH A TIMESTAMP to avoid stale flags
+      // Set redirect flag - WITH A TIMESTAMP to track this specific checkout
       sessionStorage.setItem('redirectingToStripe', timestamp);
+      
+      // Success toast - only show this when we have a URL
+      toast.success('Przekierowujemy do strony płatności...');
       
       // Use a slight delay before redirect to ensure toasts are visible
       setTimeout(() => {
-        toast.info('Step 5: Przekierowanie do Stripe');
         window.location.href = data.url;
-      }, 1500);
+      }, 1000);
       
       return true;
     } else {
-      // Clear flags when there's an error
+      // Only clear specific flags when there's an error
       sessionStorage.removeItem('stripeCheckoutInProgress');
-      sessionStorage.removeItem('redirectingToStripe');
       toast.error('Brak URL', { description: 'Nie otrzymano poprawnej odpowiedzi z serwera' });
       throw new Error('Nie otrzymano poprawnej odpowiedzi z serwera');
     }
   } catch (error) {
     console.error('Stripe checkout error:', error);
     
-    // CRITICAL: Clear flags when there's an error
+    // Only clear specific flags when there's an error
     sessionStorage.removeItem('stripeCheckoutInProgress');
-    sessionStorage.removeItem('redirectingToStripe');
     
     let errorMessage = error instanceof Error ? error.message : 'Nie można uruchomić procesu płatności';
     

@@ -24,23 +24,16 @@ const Pricing = () => {
   // Check if the user was redirected after canceling payment
   const isCanceled = searchParams.get('canceled') === 'true';
   
-  // Force reset all Stripe-related flags on component mount and route changes
-  const clearAllFlags = useCallback(() => {
-    console.log('Forcing clear of all Stripe flags and loading state on page load/navigation');
+  // Check for payment states without clearing them
+  const checkPaymentStates = useCallback(() => {
+    const stripeProgress = sessionStorage.getItem('stripeCheckoutInProgress');
+    const redirecting = sessionStorage.getItem('redirectingToStripe');
     
-    // Clear all session storage flags
-    sessionStorage.removeItem('redirectingToStripe');
-    sessionStorage.removeItem('stripeCheckoutInProgress');
-    localStorage.removeItem('stripeCheckoutInProgress');
+    // Only log when debugging
+    console.log('Current payment states:', { stripeProgress, redirecting });
     
-    // Reset loading state
-    setIsLoading(false);
-    
-    // Clear any existing toasts
-    toast.dismiss();
-    
-    // Add a diagnostic toast when flags are cleared
-    toast.info('System płatności zresetowany');
+    // Return if payment is in progress
+    return !!stripeProgress;
   }, []);
   
   // Collect debug information
@@ -53,87 +46,63 @@ const Pricing = () => {
       'Route params': searchParams.toString() || 'None',
       'stripeCheckoutInProgress': sessionStorage.getItem('stripeCheckoutInProgress') || 'Not set',
       'redirectingToStripe': sessionStorage.getItem('redirectingToStripe') || 'Not set',
+      'isLoading state': isLoading ? 'True' : 'False',
       'Timestamp': new Date().toISOString()
     };
     
     setDebugInfo(info);
     return info;
-  }, [user, searchParams]);
+  }, [user, searchParams, isLoading]);
   
-  // Check for stale stripe flags on component mount
+  // Handle clear flags ONLY when explicitly needed
+  const clearPaymentFlags = useCallback(() => {
+    console.log('Explicitly clearing payment flags');
+    
+    // Clear session storage flags
+    sessionStorage.removeItem('redirectingToStripe');
+    sessionStorage.removeItem('stripeCheckoutInProgress');
+    localStorage.removeItem('stripeCheckoutInProgress');
+    
+    // Reset loading state
+    setIsLoading(false);
+    
+    toast.info('System płatności zresetowany');
+  }, []);
+  
+  // Only handle canceled payments
   useEffect(() => {
-    const stripeProgress = sessionStorage.getItem('stripeCheckoutInProgress');
-    const redirecting = sessionStorage.getItem('redirectingToStripe');
-    
-    if (stripeProgress || redirecting) {
-      console.log('Found stale Stripe flags on page load:', { stripeProgress, redirecting });
-      toast.warning('Znaleziono nieaktualne flagi płatności - resetowanie...', {
-        duration: 3000
-      });
-    }
-    
-    // CRITICAL: Reset all states and flags on mount
-    clearAllFlags();
-    collectDebugInfo();
-    
-    // Handle canceled payment if needed
+    // If the payment was canceled, show a message and clear flags
     if (isCanceled) {
+      clearPaymentFlags();
       toast.info('Anulowano proces płatności', {
         description: 'Możesz kontynuować korzystanie z aplikacji w wersji podstawowej'
       });
     }
     
-    // Clean up function will also be called when component unmounts
-    return clearAllFlags;
-  }, [isCanceled, clearAllFlags, collectDebugInfo]);
-  
-  // Listen for route or URL changes to reset flags
-  useEffect(() => {
-    // Add event listener for visibility changes
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        // When page becomes visible again (like returning from another tab)
-        console.log('Page visibility changed - clearing flags');
-        clearAllFlags();
-        collectDebugInfo();
-      }
-    };
-    
-    // Add event listener for browser history navigation
-    const handlePopState = () => {
-      console.log('Browser navigation event detected - clearing flags');
-      clearAllFlags();
-      collectDebugInfo();
-    };
-    
-    // Register the event listeners
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('popstate', handlePopState);
-    
-    // Clean up on unmount
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, [clearAllFlags, collectDebugInfo]);
-  
-  // Save user email in localStorage (for Stripe)
-  useEffect(() => {
+    // Save user email in localStorage (for Stripe)
     if (user?.email) {
       localStorage.setItem('userEmail', user.email);
     }
-  }, [user]);
-
+    
+    // Collect initial debug info
+    collectDebugInfo();
+  }, [isCanceled, clearPaymentFlags, collectDebugInfo, user]);
+  
   // Handle subscribe button click
   const handleSubscribe = async () => {
     // Collect debug info
-    const debug = collectDebugInfo();
-    console.log('Debug info at subscription start:', debug);
+    collectDebugInfo();
     
-    // Explicitly clear any existing flags before starting
-    clearAllFlags();
+    // Check if payment is already in progress
+    const paymentInProgress = checkPaymentStates();
+    if (paymentInProgress) {
+      console.log('Payment already in progress, resetting');
+      clearPaymentFlags();
+      toast.info('Poprzednia płatność została anulowana. Spróbuj ponownie.');
+      return;
+    }
     
-    // Prevent multiple clicks or processing while already loading
+    // Prevent multiple clicks while already loading
     if (isLoading) {
       console.log('Already processing payment request, ignoring click');
       toast.info('Płatność jest już w trakcie przetwarzania...');
@@ -154,9 +123,6 @@ const Pricing = () => {
     // Dismiss any existing toasts
     toast.dismiss();
     
-    // Show a clear loading toast
-    const loadingToastId = toast.loading('Łączenie z systemem płatności...');
-    
     // Set loading state
     setIsLoading(true);
     
@@ -172,7 +138,6 @@ const Pricing = () => {
       if (!result) {
         console.log('Checkout failed, resetting loading state');
         setIsLoading(false);
-        toast.dismiss(loadingToastId);
         toast.error('Nie udało się połączyć z systemem płatności', {
           description: 'Spróbuj ponownie za chwilę lub skontaktuj się z obsługą'
         });
@@ -183,7 +148,6 @@ const Pricing = () => {
       console.error('Error in handleSubscribe:', error);
       // Reset loading state if there's an exception
       setIsLoading(false);
-      toast.dismiss(loadingToastId);
       
       // Show a more specific error message
       toast.error('Wystąpił błąd podczas inicjowania płatności', {
@@ -204,7 +168,7 @@ const Pricing = () => {
 
   // Handle manual reset
   const handleManualReset = () => {
-    clearAllFlags();
+    clearPaymentFlags();
     collectDebugInfo();
     setIsDebugOpen(false);
     window.location.reload();
