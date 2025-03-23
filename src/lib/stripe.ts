@@ -48,7 +48,7 @@ export const createCheckoutSession = async (priceId: string) => {
     const cancelUrl = `${fullOrigin}/pricing?canceled=true`;
 
     // Pokazujemy toast informujący o rozpoczęciu procesu
-    toast.info('Przygotowujemy proces płatności...');
+    const loadingToast = toast.loading('Przygotowujemy proces płatności...');
 
     console.log('Starting Stripe checkout with:', {
       priceId,
@@ -71,6 +71,9 @@ export const createCheckoutSession = async (priceId: string) => {
       }
     });
 
+    // Zakończenie ładowania toastu
+    toast.dismiss(loadingToast);
+
     if (error) {
       console.error('Supabase function error:', error);
       throw new Error(error.message || 'Błąd przy wywoływaniu funkcji Stripe');
@@ -86,10 +89,18 @@ export const createCheckoutSession = async (priceId: string) => {
     if (data?.url) {
       console.log('Redirecting to Stripe Checkout URL:', data.url);
       
-      // Dodajemy małe opóźnienie przed przekierowaniem (może pomóc z problemami czasowania)
+      // Zamień toast ładowania na toast sukcesu
+      toast.success('Przekierowujemy do strony płatności...');
+      
+      // Ustawiamy ważną flagę, że przekierowujemy do Stripe
+      sessionStorage.setItem('redirectingToStripe', 'true');
+      
+      // Dodajemy małe opóźnienie przed przekierowaniem, aby zminimalizować problemy z czasowaniem
       setTimeout(() => {
         window.location.href = data.url;
-      }, 100);
+      }, 1000);
+      
+      return true;
     } else {
       throw new Error('Nie otrzymano poprawnej odpowiedzi z serwera');
     }

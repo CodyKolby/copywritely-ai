@@ -73,31 +73,65 @@ serve(async (req) => {
     console.log('Raw success URL:', successUrl);
     console.log('Raw cancel URL:', cancelUrl);
 
-    // Dodaj protokół, jeśli nie jest dołączony
-    let baseUrl = origin;
-    if (baseUrl && !baseUrl.startsWith('http')) {
-      baseUrl = `https://${baseUrl}`;
-    }
+    // Ustalenie bazowego URL
+    let baseUrl = '';
     
-    // Jeśli nie mamy origin, próbujemy pobrać z nagłówków
-    if (!baseUrl) {
-      baseUrl = req.headers.get('origin') || req.headers.get('referer') || '';
+    if (origin && origin.includes('://')) {
+      // Jeśli origin zawiera protokół, użyj go bezpośrednio
+      baseUrl = origin;
       if (baseUrl.endsWith('/')) {
         baseUrl = baseUrl.slice(0, -1);
       }
+    } else if (origin) {
+      // Jeśli origin nie zawiera protokołu, dodaj https://
+      baseUrl = `https://${origin}`;
+      if (baseUrl.endsWith('/')) {
+        baseUrl = baseUrl.slice(0, -1);
+      }
+    } else {
+      // Jeśli nie mamy origin, próbujemy pobrać z nagłówków
+      const referer = req.headers.get('referer');
+      const originHeader = req.headers.get('origin');
+      
+      if (originHeader) {
+        baseUrl = originHeader;
+        if (baseUrl.endsWith('/')) {
+          baseUrl = baseUrl.slice(0, -1);
+        }
+      } else if (referer) {
+        // Z referer musimy wyciąć ścieżkę i zostawić tylko początek URL
+        const url = new URL(referer);
+        baseUrl = `${url.protocol}//${url.host}`;
+      } else {
+        // Jeśli wszystko zawiedzie, użyj domyślnego URL (w przypadku lokalnego testowania)
+        baseUrl = "https://copywrite-assist.com";
+        console.warn("No origin or referer found, using hardcoded fallback URL:", baseUrl);
+      }
     }
 
-    // Jeśli nadal nie mamy baseUrl, używamy domyślnych ścieżek
-    console.log('Using base URL:', baseUrl || 'No base URL found');
+    console.log('Using base URL for redirects:', baseUrl);
 
-    // Utwórz pełne URL-e dla przekierowań
-    const finalSuccessUrl = successUrl && successUrl.startsWith('http') 
-      ? successUrl 
-      : `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`;
-      
-    const finalCancelUrl = cancelUrl && cancelUrl.startsWith('http') 
-      ? cancelUrl 
-      : `${baseUrl}/pricing?canceled=true`;
+    // Validate and format redirect URLs
+    let finalSuccessUrl: string;
+    let finalCancelUrl: string;
+
+    // Format success URL
+    if (successUrl && successUrl.startsWith('http')) {
+      finalSuccessUrl = successUrl;
+    } else if (successUrl && successUrl.startsWith('/')) {
+      finalSuccessUrl = `${baseUrl}${successUrl}`;
+    } else {
+      finalSuccessUrl = `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`;
+    }
+
+    // Format cancel URL
+    if (cancelUrl && cancelUrl.startsWith('http')) {
+      finalCancelUrl = cancelUrl;
+    } else if (cancelUrl && cancelUrl.startsWith('/')) {
+      finalCancelUrl = `${baseUrl}${cancelUrl}`;
+    } else {
+      finalCancelUrl = `${baseUrl}/pricing?canceled=true`;
+    }
 
     console.log('Final success URL:', finalSuccessUrl);
     console.log('Final cancel URL:', finalCancelUrl);

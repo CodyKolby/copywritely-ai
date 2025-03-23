@@ -9,16 +9,33 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from '@/contexts/auth/AuthContext';
 import { toast } from 'sonner';
 import { createCheckoutSession, PRICE_IDS } from '@/lib/stripe';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 
 const Pricing = () => {
   const [billingCycle, setBillingCycle] = useState<'annual' | 'monthly'>('annual');
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   
   // Sprawdź czy użytkownik został przekierowany po anulowaniu płatności
   const isCanceled = searchParams.get('canceled') === 'true';
+  
+  // Sprawdź flagę przekierowania ze Stripe
+  useEffect(() => {
+    const wasRedirectingToStripe = sessionStorage.getItem('redirectingToStripe') === 'true';
+    
+    // Jeśli wróciliśmy z przekierowania do Stripe i jesteśmy na stronie cennika,
+    // ale bez parametru canceled, to prawdopodobnie wystąpił problem z URL
+    if (wasRedirectingToStripe && !isCanceled && window.location.pathname === '/pricing') {
+      toast.info('Płatność nie została ukończona', {
+        description: 'Możesz spróbować ponownie lub skontaktować się z obsługą'
+      });
+    }
+    
+    // Wyczyść flagę przekierowania
+    sessionStorage.removeItem('redirectingToStripe');
+  }, [isCanceled]);
   
   // Scroll to top on page load
   useEffect(() => {
@@ -64,7 +81,7 @@ const Pricing = () => {
         description: 'Zaloguj się, aby kontynuować zakup subskrypcji',
         action: {
           label: 'Zaloguj',
-          onClick: () => window.location.href = '/login'
+          onClick: () => navigate('/login')
         }
       });
       return;
@@ -77,18 +94,17 @@ const Pricing = () => {
       const priceId = getPriceId();
       console.log('Using price ID for checkout:', priceId);
       
-      await createCheckoutSession(priceId);
-      // Jeśli dotarliśmy tutaj, to przekierowanie nie nastąpiło
-      toast.error('Nie udało się przekierować do płatności', {
-        description: 'Spróbuj ponownie później'
-      });
-    } catch (error) {
-      if (error instanceof Error) {
-        toast.error('Wystąpił błąd', {
-          description: error.message || 'Nie udało się utworzyć sesji płatności'
+      const redirectSuccessful = await createCheckoutSession(priceId);
+      
+      // Jeśli nie nastąpiło przekierowanie, ale nie było błędu
+      if (!redirectSuccessful) {
+        toast.error('Nie udało się rozpocząć procesu płatności', {
+          description: 'Spróbuj ponownie później lub skontaktuj się z obsługą'
         });
       }
+    } catch (error) {
       console.error('Error creating checkout session:', error);
+      // Toast error jest już wyświetlany w funkcji createCheckoutSession
     } finally {
       setIsLoading(false);
     }

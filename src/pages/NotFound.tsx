@@ -19,17 +19,26 @@ const NotFound = () => {
       document.referrer
     );
     
+    // Sprawdź, czy była flaga przekierowania ze Stripe
+    const wasRedirectingToStripe = sessionStorage.getItem('redirectingToStripe') === 'true';
+    
     // Sprawdź, czy w adresie URL znajduje się parametr od Stripe
     const hasStripeParam = location.search.includes('session_id') || 
                           location.search.includes('canceled');
     
-    // Jeśli jest parametr Stripe, a URL nie zawiera /success lub /pricing, 
-    // automatycznie przekieruj
-    if (hasStripeParam) {
+    // Jeśli jest parametr Stripe lub flaga przekierowania, automatycznie przekieruj
+    if (hasStripeParam || wasRedirectingToStripe) {
+      // Wyczyść flagę przekierowania po użyciu
+      sessionStorage.removeItem('redirectingToStripe');
+      
       if (location.search.includes('session_id')) {
         toast.info('Przekierowujemy do strony potwierdzenia...');
         navigate(`/success${location.search}`);
       } else if (location.search.includes('canceled')) {
+        toast.info('Przekierowujemy do strony cennika...');
+        navigate('/pricing?canceled=true');
+      } else if (wasRedirectingToStripe) {
+        // Jeśli tylko flaga była ustawiona, ale nie ma parametrów w URL, przekieruj do cennika
         toast.info('Przekierowujemy do strony cennika...');
         navigate('/pricing?canceled=true');
       }
@@ -39,7 +48,8 @@ const NotFound = () => {
   // Sprawdzamy, czy użytkownik przyszedł ze Stripe (adres zawiera parametry stripe lub referrer)
   const isFromPayment = location.search.includes('session_id') || 
                         location.search.includes('canceled') ||
-                        document.referrer.includes('stripe.com');
+                        document.referrer.includes('stripe.com') ||
+                        sessionStorage.getItem('redirectingToStripe') === 'true';
 
   // Obsługa przycisku odświeżenia
   const handleRefresh = () => {
