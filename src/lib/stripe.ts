@@ -40,10 +40,10 @@ export const createCheckoutSession = async (priceId: string) => {
     // Pobierz zapisany email użytkownika
     const userEmail = localStorage.getItem('userEmail');
     
-    // Upewnijmy się, że używamy absolutnych URL-i
+    // Upewnijmy się, że używamy absolutnych URL-i z pełną domeną
     const fullOrigin = window.location.origin;
     
-    // WAŻNE: Używamy absolutnego URL z pełną domeną
+    // Generujemy kompletne, absolutne URL-e
     const successUrl = `${fullOrigin}/success?session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${fullOrigin}/pricing?canceled=true`;
 
@@ -56,6 +56,7 @@ export const createCheckoutSession = async (priceId: string) => {
       successUrl,
       cancelUrl,
       fullOrigin,
+      hostname: window.location.hostname,
       environment: stripePublicKey.startsWith('pk_test_') ? 'TEST' : 'LIVE'
     });
 
@@ -66,7 +67,7 @@ export const createCheckoutSession = async (priceId: string) => {
         customerEmail: userEmail || undefined,
         successUrl,
         cancelUrl,
-        origin: fullOrigin // Dodajemy pełny adres do body
+        origin: fullOrigin // Dodajemy pełny adres URL z protokołem i domeną
       }
     });
 
@@ -84,7 +85,11 @@ export const createCheckoutSession = async (priceId: string) => {
     // Jeśli funkcja zwróciła URL, przekieruj użytkownika
     if (data?.url) {
       console.log('Redirecting to Stripe Checkout URL:', data.url);
-      window.location.href = data.url;
+      
+      // Dodajemy małe opóźnienie przed przekierowaniem (może pomóc z problemami czasowania)
+      setTimeout(() => {
+        window.location.href = data.url;
+      }, 100);
     } else {
       throw new Error('Nie otrzymano poprawnej odpowiedzi z serwera');
     }

@@ -68,28 +68,45 @@ serve(async (req) => {
       console.warn('LIVE MODE WARNING: Using test format price ID in live environment');
     }
 
-    // WAŻNE: Dbamy o poprawne adresy URL z pełną domeną
-    console.log('Origin:', origin);
-    console.log('Success URL being used:', successUrl);
-    console.log('Cancel URL being used:', cancelUrl);
+    // Upewnij się, że mamy pełny adres URL do przekierowania
+    console.log('Origin from request:', origin);
+    console.log('Raw success URL:', successUrl);
+    console.log('Raw cancel URL:', cancelUrl);
 
-    // Upewniamy się, że mamy prawidłowe, absolutne URL-e
-    const validSuccessUrl = successUrl?.startsWith('http') 
+    // Dodaj protokół, jeśli nie jest dołączony
+    let baseUrl = origin;
+    if (baseUrl && !baseUrl.startsWith('http')) {
+      baseUrl = `https://${baseUrl}`;
+    }
+    
+    // Jeśli nie mamy origin, próbujemy pobrać z nagłówków
+    if (!baseUrl) {
+      baseUrl = req.headers.get('origin') || req.headers.get('referer') || '';
+      if (baseUrl.endsWith('/')) {
+        baseUrl = baseUrl.slice(0, -1);
+      }
+    }
+
+    // Jeśli nadal nie mamy baseUrl, używamy domyślnych ścieżek
+    console.log('Using base URL:', baseUrl || 'No base URL found');
+
+    // Utwórz pełne URL-e dla przekierowań
+    const finalSuccessUrl = successUrl && successUrl.startsWith('http') 
       ? successUrl 
-      : `${origin || req.headers.get('origin') || ''}/success?session_id={CHECKOUT_SESSION_ID}`;
+      : `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`;
       
-    const validCancelUrl = cancelUrl?.startsWith('http') 
+    const finalCancelUrl = cancelUrl && cancelUrl.startsWith('http') 
       ? cancelUrl 
-      : `${origin || req.headers.get('origin') || ''}/pricing?canceled=true`;
+      : `${baseUrl}/pricing?canceled=true`;
 
-    console.log('Final success URL:', validSuccessUrl);
-    console.log('Final cancel URL:', validCancelUrl);
+    console.log('Final success URL:', finalSuccessUrl);
+    console.log('Final cancel URL:', finalCancelUrl);
 
     // Create Stripe session parameters
     const params = new URLSearchParams();
     params.append('mode', 'subscription');
-    params.append('success_url', validSuccessUrl);
-    params.append('cancel_url', validCancelUrl);
+    params.append('success_url', finalSuccessUrl);
+    params.append('cancel_url', finalCancelUrl);
     params.append('line_items[0][price]', priceId);
     params.append('line_items[0][quantity]', '1');
     params.append('subscription_data[trial_period_days]', '3');
