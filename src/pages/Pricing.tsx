@@ -22,20 +22,25 @@ const Pricing = () => {
   
   // Check for Stripe redirect flag
   useEffect(() => {
-    const wasRedirectingToStripe = sessionStorage.getItem('redirectingToStripe') === 'true';
-    
     // Only show payment failure notification when:
     // 1. We returned from a Stripe redirect (redirectingToStripe == true)
     // 2. We are on the pricing page
     // 3. There's no canceled=true parameter (which already has its own toast)
-    if (wasRedirectingToStripe && !isCanceled && window.location.pathname === '/pricing') {
+    
+    const wasRedirectingToStripe = sessionStorage.getItem('redirectingToStripe') === 'true';
+    
+    if (wasRedirectingToStripe && !isCanceled) {
+      // This is a return from Stripe without success or cancel parameters
       toast.info('Płatność nie została ukończona', {
         description: 'Możesz spróbować ponownie lub skontaktować się z obsługą'
       });
+      // Clear redirect flag
+      sessionStorage.removeItem('redirectingToStripe');
+    } else if (!wasRedirectingToStripe) {
+      // If we're not returning from Stripe, just ensure the flag is cleared
+      // This prevents showing the message for new users or page refreshes
+      sessionStorage.removeItem('redirectingToStripe');
     }
-    
-    // Clear redirect flag
-    sessionStorage.removeItem('redirectingToStripe');
   }, [isCanceled]);
   
   // Scroll to top on page load
@@ -47,6 +52,8 @@ const Pricing = () => {
       toast.info('Anulowano proces płatności', {
         description: 'Możesz kontynuować korzystanie z aplikacji w wersji podstawowej'
       });
+      // Ensure we clear the redirecting flag
+      sessionStorage.removeItem('redirectingToStripe');
     }
   }, [isCanceled]);
 

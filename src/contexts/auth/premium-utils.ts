@@ -9,23 +9,32 @@ export const checkPremiumStatus = async (userId: string, showToast = false): Pro
     // First try direct database check as it's most reliable
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('is_premium')
+      .select('is_premium, subscription_id, subscription_status')
       .eq('id', userId)
       .single();
       
     if (profileError) {
       console.error('Error checking premium in database:', profileError);
-    } else if (profile?.is_premium) {
-      console.log('User has premium status according to database:', profile.is_premium);
+    } else if (profile) {
+      console.log('Retrieved profile data:', {
+        is_premium: profile.is_premium,
+        subscription_id: profile.subscription_id ? 'Has subscription ID' : 'No subscription ID',
+        subscription_status: profile.subscription_status || 'Not set'
+      });
       
-      if (showToast) {
-        toast.success('Twoje konto ma status Premium!');
+      if (profile.is_premium) {
+        console.log('User has premium status according to database:', profile.is_premium);
+        
+        if (showToast) {
+          toast.success('Twoje konto ma status Premium!');
+        }
+        
+        return true;
       }
-      
-      return true;
     }
     
     // Then try edge function
+    console.log('DB check did not confirm premium status, trying edge function check');
     const { data, error } = await supabase.functions.invoke('check-subscription-status', {
       body: { userId }
     });
