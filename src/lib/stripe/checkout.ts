@@ -34,6 +34,9 @@ export const createCheckoutSession = async (priceId: string) => {
       fullOrigin
     });
 
+    // Clear any existing redirect flags before starting a new checkout
+    sessionStorage.removeItem('redirectingToStripe');
+
     // Direct API call to Supabase function - with simplified error handling
     const { data, error } = await supabase.functions.invoke('stripe-checkout', {
       body: {
