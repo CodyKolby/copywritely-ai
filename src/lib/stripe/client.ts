@@ -9,7 +9,7 @@ let stripePromise: Promise<any> | null = null;
 
 export const getStripe = () => {
   if (!stripePromise && stripePublicKey) {
-    console.log('Initializing Stripe with public key:', stripePublicKey ? 'Available' : 'Missing');
+    console.log('Initializing Stripe with public key:', stripePublicKey ? 'Key available' : 'Missing');
     stripePromise = loadStripe(stripePublicKey);
   }
   return stripePromise;
@@ -17,6 +17,6 @@ export const getStripe = () => {
 
 // Use the actual price IDs from your Stripe account
 export const PRICE_IDS = {
-  PRO_MONTHLY: 'price_1R2BXjAGO17NLUWtWngMbzgh', // Updated Live price ID for monthly
-  PRO_ANNUAL: 'price_1R2BXjAGO17NLUWtWngMbzgh', // Updated Live price ID for annual
+  PRO_MONTHLY: 'price_1RlTaxAGO17NLUWtX1RPFdcT', // Updated price ID for monthly
+  PRO_ANNUAL: 'price_1RlTaxAGO17NLUWtX1RPFdcT', // Updated price ID for annual
 };

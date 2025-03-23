@@ -90,7 +90,7 @@ export function usePaymentProcess(
       console.log('Window location:', window.location.href);
       console.log('Window origin:', window.location.origin);
       
-      // Initiate checkout process with multi-attempt approach
+      // Initiate checkout process with Stripe directly
       console.log('Calling createCheckoutSession with priceId:', priceId);
       const result = await createCheckoutSession(priceId);
       console.log('createCheckoutSession result:', result);
