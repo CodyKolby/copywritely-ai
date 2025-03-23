@@ -46,6 +46,25 @@ serve(async (req) => {
 
     if (!profile) {
       console.log('Profile not found, user has no premium status');
+      
+      // Try to create a basic profile since it doesn't exist
+      try {
+        const { error: createError } = await supabase
+          .from('profiles')
+          .insert({
+            id: userId,
+            is_premium: false
+          });
+          
+        if (createError) {
+          console.error('Error creating missing profile:', createError);
+        } else {
+          console.log('Created basic profile for missing user');
+        }
+      } catch (createError) {
+        console.error('Exception creating profile:', createError);
+      }
+      
       return new Response(
         JSON.stringify({ isPremium: false }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -54,11 +73,9 @@ serve(async (req) => {
 
     console.log('Profile data:', profile);
 
-    // Check if subscription is active
-    let isPremium = false;
-    
-    // If we have is_premium flag and/or subscription expiry date
-    isPremium = profile.is_premium || false;
+    // Default status - start with database flag
+    let isPremium = profile.is_premium || false;
+    console.log('Initial premium status from database flag:', isPremium);
     
     // Check expiry date if it exists
     if (profile.subscription_expiry) {
@@ -67,24 +84,52 @@ serve(async (req) => {
       
       // If expiry date is in the future, user has active subscription
       if (expiryDate > now) {
+        console.log('User has valid subscription until:', expiryDate);
         isPremium = true;
+        
+        // Update database if there's inconsistency
+        if (!profile.is_premium) {
+          console.log('Expiry date valid but is_premium flag is false. Fixing...');
+          await supabase
+            .from('profiles')
+            .update({ 
+              is_premium: true,
+              subscription_status: profile.subscription_status || 'active'
+            })
+            .eq('id', userId);
+        }
       } else if (isPremium && expiryDate <= now) {
         // If expiry date is in the past but is_premium flag is true,
-        // update status to false
-        console.log('Subscription expired, updating premium status to false');
-        await supabase
-          .from('profiles')
-          .update({ is_premium: false })
-          .eq('id', userId);
+        // update status to false only if we don't have conflicting info
+        console.log('Subscription expired, checking if we should update premium status');
         
-        isPremium = false;
+        // Only update if we don't also have a conflicting active status
+        if (profile.subscription_status !== 'active' && profile.subscription_status !== 'trialing') {
+          console.log('Updating premium status to false due to expiration');
+          await supabase
+            .from('profiles')
+            .update({ is_premium: false })
+            .eq('id', userId);
+          
+          isPremium = false;
+        }
       }
     }
     
     // Check subscription status
     if (profile.subscription_status === 'active' || 
         profile.subscription_status === 'trialing') {
+      console.log('User has active subscription status:', profile.subscription_status);
       isPremium = true;
+      
+      // Update database if there's inconsistency
+      if (!profile.is_premium) {
+        console.log('Subscription status active but is_premium flag is false. Fixing...');
+        await supabase
+          .from('profiles')
+          .update({ is_premium: true })
+          .eq('id', userId);
+      }
     }
 
     // If we have a subscription ID, validate with Stripe directly
@@ -103,18 +148,26 @@ serve(async (req) => {
           const subscription = await response.json();
           console.log('Stripe subscription status:', subscription.status);
           
-          // Update based on Stripe's data
+          // Update based on Stripe's data - the source of truth
           if (subscription.status === 'active' || subscription.status === 'trialing') {
             isPremium = true;
             
-            // Update DB if needed
-            if (!profile.is_premium) {
-              console.log('Updating profile to premium based on active Stripe subscription');
+            // Update DB if needed (adding subscription expiry if available)
+            if (!profile.is_premium || subscription.status !== profile.subscription_status) {
+              console.log('Updating profile based on active Stripe subscription');
+              
+              // Calculate expiry date from current_period_end if available
+              let expiryDate = profile.subscription_expiry;
+              if (subscription.current_period_end) {
+                expiryDate = new Date(subscription.current_period_end * 1000).toISOString();
+              }
+              
               await supabase
                 .from('profiles')
                 .update({ 
                   is_premium: true,
-                  subscription_status: subscription.status
+                  subscription_status: subscription.status,
+                  subscription_expiry: expiryDate
                 })
                 .eq('id', userId);
             }
@@ -133,8 +186,9 @@ serve(async (req) => {
         } else {
           console.error('Failed to fetch subscription from Stripe:', await response.text());
           
-          // Force synchronize with Stripe on error if needed
-          if (isPremium && (await response.json())?.error?.type === 'invalid_request_error') {
+          // Only force synchronize with Stripe on error if it's an invalid subscription
+          const errorData = await response.json();
+          if (isPremium && errorData?.error?.type === 'invalid_request_error') {
             console.log('Subscription not found in Stripe, updating premium status to false');
             await supabase
               .from('profiles')
@@ -153,18 +207,30 @@ serve(async (req) => {
       }
     }
 
-    // Force an update to check consistency
+    // Force an update to check consistency before returning
     if (isPremium) {
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ is_premium: true })
-        .eq('id', userId)
-        .eq('is_premium', false);
-        
-      if (updateError) {
-        console.error('Error updating premium status:', updateError);
-      } else if (updateError === null) {
-        console.log('Profile premium status consistency check completed');
+      try {
+        const { data: currentData, error: checkError } = await supabase
+          .from('profiles')
+          .select('is_premium')
+          .eq('id', userId)
+          .single();
+          
+        if (checkError) {
+          console.error('Error checking current premium status:', checkError);
+        } else if (!currentData.is_premium) {
+          console.log('Final consistency check - forcing premium flag to true');
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ is_premium: true })
+            .eq('id', userId);
+            
+          if (updateError) {
+            console.error('Error in final premium status update:', updateError);
+          }
+        }
+      } catch (finalCheckError) {
+        console.error('Error in final consistency check:', finalCheckError);
       }
     }
 

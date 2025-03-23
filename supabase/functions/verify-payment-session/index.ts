@@ -115,14 +115,24 @@ serve(async (req) => {
       }
     }
 
-    // First check if profile exists
+    // Check if profile exists and get current data
     const { data: existingProfile, error: profileCheckError } = await supabase
       .from('profiles')
       .select('id, is_premium')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
       
-    if (profileCheckError && profileCheckError.code === 'PGRST116') {
+    console.log('Existing profile check:', {
+      exists: !!existingProfile,
+      isPremium: existingProfile?.is_premium,
+      error: profileCheckError ? 'Yes' : 'No'
+    });
+
+    if (profileCheckError && profileCheckError.code !== 'PGRST116') {
+      console.error('Unexpected error checking profile:', profileCheckError);
+    }
+      
+    if (!existingProfile) {
       // Profile doesn't exist, create it first
       console.log('Profile not found, creating basic profile before update');
       const { error: createError } = await supabase
@@ -137,13 +147,52 @@ serve(async (req) => {
         
       if (createError) {
         console.error('Error creating user profile:', createError);
-        throw new Error('Error creating user profile');
+        
+        // Try using a database function as fallback
+        try {
+          console.log('Trying to create profile via RPC function');
+          const { error: rpcError } = await supabase.rpc(
+            'create_user_profile',
+            {
+              user_id: userId,
+              user_email: null,
+              user_full_name: null,
+              user_avatar_url: null
+            }
+          );
+          
+          if (rpcError) {
+            console.error('Error creating profile with RPC function:', rpcError);
+            throw new Error('Failed to create user profile');
+          } else {
+            console.log('Successfully created profile via RPC function');
+            
+            // Now update the premium status in a separate call
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update({
+                is_premium: true,
+                subscription_id: subscriptionId || null,
+                subscription_status: subscriptionStatus,
+                subscription_expiry: subscriptionExpiry
+              })
+              .eq('id', userId);
+              
+            if (updateError) {
+              console.error('Error updating new profile with premium data:', updateError);
+              throw new Error('Error updating new profile with premium data');
+            }
+          }
+        } catch (rpcError) {
+          console.error('RPC fallback failed:', rpcError);
+          throw new Error('Failed to create or update user profile');
+        }
+      } else {
+        console.log('Successfully created new profile with premium status');
       }
-      
-      console.log('Successfully created new profile with premium status');
     } else {
       // Update existing profile
-      console.log('Updating existing profile with premium status:', existingProfile);
+      console.log('Updating existing profile with premium status');
       console.log('Current premium status:', existingProfile?.is_premium);
       
       const { error: updateError } = await supabase
@@ -164,22 +213,60 @@ serve(async (req) => {
       console.log('Successfully updated profile is_premium to TRUE');
     }
     
-    // Verify update was successful
-    const { data: verifiedProfile, error: verifyError } = await supabase
-      .from('profiles')
-      .select('is_premium')
-      .eq('id', userId)
-      .single();
+    // Verify update was successful - retry up to 3 times if needed
+    let retries = 0;
+    let verificationSuccess = false;
+    let verifiedProfile = null;
+    
+    while (retries < 3 && !verificationSuccess) {
+      const { data: profile, error: verifyError } = await supabase
+        .from('profiles')
+        .select('is_premium, subscription_status')
+        .eq('id', userId)
+        .single();
+        
+      if (verifyError) {
+        console.error(`Verification attempt ${retries + 1} failed:`, verifyError);
+      } else if (!profile.is_premium) {
+        console.error(`Verification attempt ${retries + 1}: Profile found but is_premium is still false`);
+      } else {
+        console.log('Verified profile status after update:', profile);
+        verificationSuccess = true;
+        verifiedProfile = profile;
+        break;
+      }
       
-    if (verifyError) {
-      console.error('Error verifying profile update:', verifyError);
-    } else {
-      console.log('Verified profile status after update:', verifiedProfile);
+      // If verification failed and we haven't exceeded retries, wait and try again
+      if (!verificationSuccess && retries < 2) {
+        console.log(`Waiting before retry ${retries + 2}...`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Try direct UPDATE again before next verification
+        const { error: retryError } = await supabase
+          .from('profiles')
+          .update({ is_premium: true })
+          .eq('id', userId);
+          
+        if (retryError) {
+          console.error(`Retry ${retries + 1} update failed:`, retryError);
+        } else {
+          console.log(`Retry ${retries + 1} update succeeded`);
+        }
+      }
+      
+      retries++;
+    }
+    
+    if (!verificationSuccess) {
+      console.warn('Failed to verify premium status update after multiple attempts');
     }
 
+    // Return success even if verification failed, as we've tried our best
     return new Response(
       JSON.stringify({ 
         success: true,
+        verified: verificationSuccess,
+        profile: verifiedProfile,
         message: 'Płatność zweryfikowana pomyślnie i profil użytkownika zaktualizowany'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
