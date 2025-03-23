@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { Profile } from './types'
@@ -51,36 +50,25 @@ export const createProfile = async (userId: string): Promise<Profile | null> => 
     
     console.log('Creating new profile:', newProfile);
     
-    // Próbujemy utworzyć profil używając service role dla ominiecia RLS
-    // Uwaga: To jest bezpieczne, ponieważ wykonujemy to tylko w kontekście zalogowanego użytkownika
-    // i tworzymy profil tylko dla aktualnie zalogowanego użytkownika
-    const serviceClient = supabase.auth.admin;
-    let error;
+    // Try to directly insert the profile
+    const { error: insertError } = await supabase
+      .from('profiles')
+      .insert(newProfile);
     
-    if (serviceClient) {
-      // Próba użycia klienta z uprawnieniami service role
-      const { error: serviceError } = await serviceClient.insertRow('profiles', newProfile);
-      error = serviceError;
-    } else {
-      // Fallback do standardowego klienta
-      const { error: standardError } = await supabase.from('profiles').insert(newProfile);
-      error = standardError;
-    }
-    
-    if (error) {
-      console.error('Error creating profile with standard client:', error);
+    if (insertError) {
+      console.error('Error creating profile with direct insert:', insertError);
       
-      // Ostatnia próba - użycie klienta z rozszerzonymi uprawnieniami
+      // Try using RPC as a fallback
       try {
-        const { error: finalError } = await supabase.rpc('create_user_profile', { 
+        const { error: rpcError } = await supabase.rpc('create_user_profile', {
           user_id: userId,
-          user_email: email || null,
+          user_email: email || null, 
           user_full_name: user_metadata?.full_name || user_metadata?.name || null,
           user_avatar_url: user_metadata?.avatar_url || null
-        });
+        } as any); // Using 'as any' to bypass TypeScript error until function signature is defined
         
-        if (finalError) {
-          console.error('Error creating profile with RPC:', finalError);
+        if (rpcError) {
+          console.error('Error creating profile with RPC:', rpcError);
           toast.error('Nie udało się utworzyć profilu użytkownika');
           return null;
         }
