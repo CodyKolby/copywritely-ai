@@ -1,3 +1,4 @@
+
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { Profile } from './types'
@@ -60,12 +61,22 @@ export const createProfile = async (userId: string): Promise<Profile | null> => 
       
       // Try using RPC as a fallback
       try {
-        const { error: rpcError } = await supabase.rpc('create_user_profile', {
+        // Define the parameter types explicitly to fix the TypeScript error
+        type CreateProfileParams = {
+          user_id: string;
+          user_email: string | null;
+          user_full_name: string | null;
+          user_avatar_url: string | null;
+        };
+
+        const params: CreateProfileParams = {
           user_id: userId,
           user_email: email || null, 
           user_full_name: user_metadata?.full_name || user_metadata?.name || null,
           user_avatar_url: user_metadata?.avatar_url || null
-        } as any); // Using 'as any' to bypass TypeScript error until function signature is defined
+        };
+        
+        const { error: rpcError } = await supabase.rpc('create_user_profile', params);
         
         if (rpcError) {
           console.error('Error creating profile with RPC:', rpcError);
