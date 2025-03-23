@@ -1,15 +1,14 @@
 
 import { loadStripe } from '@stripe/stripe-js';
 
-// Get public key from environment variables or use direct value
-// Using the correct publishable key
+// The correct publishable key directly set as a fallback
 const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_51QfM9GAGO17NLUWtTEUDQB0czM3OCU3MFcZatLoi8LH5fil4we3YiXhg9c77yDELN12nlpyd185k0w8c1HX3dsEz0022Os2Bn5';
 
 // Initialize Stripe
 let stripePromise: Promise<any> | null = null;
 
 export const getStripe = () => {
-  if (!stripePromise && stripePublicKey) {
+  if (!stripePromise) {
     console.log('Initializing Stripe with public key:', stripePublicKey ? 'Key available' : 'Missing');
     stripePromise = loadStripe(stripePublicKey);
   }
