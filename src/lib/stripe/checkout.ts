@@ -1,5 +1,4 @@
 
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { PRICE_IDS } from './client';
 
@@ -40,12 +39,22 @@ export const createCheckoutSession = async (priceId: string) => {
       duration: 3000,
     });
     
-    // Use Netlify function instead of Supabase function for improved reliability
+    // Use Netlify function for improved reliability
     console.log('Calling Netlify function: stripe-checkout');
     
-    // We won't need the auth token for the Netlify function
-    const netlifyFunctionUrl = `${fullOrigin}/.netlify/functions/stripe-checkout`;
-    console.log('Function URL:', netlifyFunctionUrl);
+    // Check if we're running locally or in production
+    let netlifyFunctionUrl = '';
+    
+    // Special handling to use either deployed Netlify functions or local dev setup
+    if (fullOrigin.includes('localhost') || fullOrigin.includes('127.0.0.1')) {
+      // Local development
+      netlifyFunctionUrl = 'http://localhost:8888/.netlify/functions/stripe-checkout';
+      console.log('Using local Netlify function URL');
+    } else {
+      // Production
+      netlifyFunctionUrl = `${fullOrigin}/.netlify/functions/stripe-checkout`;
+      console.log('Using production Netlify function URL:', netlifyFunctionUrl);
+    }
     
     const response = await fetch(netlifyFunctionUrl, {
       method: 'POST',
@@ -69,7 +78,12 @@ export const createCheckoutSession = async (priceId: string) => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Function error response:', response.status, errorText);
-      throw new Error(`Błąd serwera: ${response.status} ${errorText}`);
+      
+      if (response.status === 405) {
+        throw new Error('Błąd metody HTTP: 405 - Method Not Allowed. Skontaktuj się z obsługą techniczną.');
+      } else {
+        throw new Error(`Błąd serwera: ${response.status} ${errorText}`);
+      }
     }
     
     // Parse response JSON
@@ -85,8 +99,10 @@ export const createCheckoutSession = async (priceId: string) => {
       
       toast.success('Przekierowujemy do strony płatności...');
       
-      // Use window.location.assign instead of window.location.href to avoid MutationObserver errors
-      window.location.assign(responseData.url);
+      // Use setTimeout to avoid MutationObserver errors
+      setTimeout(() => {
+        window.location.assign(responseData.url);
+      }, 500);
       
       return true;
     } else {

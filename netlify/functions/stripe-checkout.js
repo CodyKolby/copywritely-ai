@@ -5,17 +5,28 @@ exports.handler = async (event, context) => {
   // Set CORS headers
   const headers = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Cache-Control': 'no-cache, no-store'
   };
 
   // Handle preflight requests
   if (event.httpMethod === 'OPTIONS') {
+    console.log('Netlify function: Handling OPTIONS request');
     return {
       statusCode: 200,
       headers,
       body: ''
+    };
+  }
+
+  // Only allow POST requests
+  if (event.httpMethod !== 'POST') {
+    console.log(`Netlify function: Method ${event.httpMethod} not allowed`);
+    return {
+      statusCode: 405,
+      headers,
+      body: JSON.stringify({ error: 'Method Not Allowed' })
     };
   }
 
