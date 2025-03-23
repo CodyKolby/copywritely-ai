@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/auth/AuthContext';
@@ -63,6 +64,25 @@ const Pricing = () => {
     }
   }, [user]);
 
+  // Timeout to reset loading state after 20 seconds if it gets stuck
+  useEffect(() => {
+    let loadingTimeout: number;
+    
+    if (isLoading) {
+      loadingTimeout = window.setTimeout(() => {
+        console.log('Timeout triggered: resetting loading state');
+        setIsLoading(false);
+        toast.error('Wystąpił problem z przetwarzaniem płatności', {
+          description: 'Płatność nie została ukończona z powodu timeout. Spróbuj ponownie.'
+        });
+      }, 20000); // 20 seconds timeout
+    }
+    
+    return () => {
+      if (loadingTimeout) clearTimeout(loadingTimeout);
+    };
+  }, [isLoading]);
+
   // Handle subscribe button click
   const handleSubscribe = async () => {
     if (!user) {
@@ -85,16 +105,15 @@ const Pricing = () => {
       
       const redirectSuccessful = await createCheckoutSession(priceId);
       
-      // If no redirect happened, but there was no error
+      // If the checkout function returns false, it means there was an error or it didn't redirect
       if (!redirectSuccessful) {
-        toast.error('Nie udało się rozpocząć procesu płatności', {
-          description: 'Spróbuj ponownie później lub skontaktuj się z obsługą'
-        });
+        console.log('Checkout failed or was cancelled, resetting loading state');
+        setIsLoading(false);
       }
+      // If it was successful, the page will redirect, so no need to reset loading state
     } catch (error) {
-      console.error('Error creating checkout session:', error);
-      // Toast error is already shown in createCheckoutSession function
-    } finally {
+      console.error('Error in handleSubscribe:', error);
+      // Reset loading state if there's an exception
       setIsLoading(false);
     }
   };

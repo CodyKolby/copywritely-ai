@@ -8,6 +8,9 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log("Stripe checkout function called");
+  const startTime = Date.now();
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -152,67 +155,87 @@ serve(async (req) => {
     console.log('Stripe API request parameters:', params.toString());
     console.log('Calling Stripe API at:', 'https://api.stripe.com/v1/checkout/sessions');
 
-    // Call Stripe API
-    const response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${stripeSecretKey}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: params,
-    });
+    // Set timeout for fetch to prevent hanging
+    const controller = new AbortController();
+    const timeout = setTimeout(() => {
+      controller.abort();
+      console.error('Stripe API request timed out after 10 seconds');
+    }, 10000);
 
-    // Parse response
-    const responseText = await response.text();
-    console.log(`Stripe API response status: ${response.status}`);
-    console.log(`Stripe API response body: ${responseText.substring(0, 200)}...`);
-    
-    let sessionData;
     try {
-      sessionData = JSON.parse(responseText);
-    } catch (e) {
-      console.error('Failed to parse Stripe response:', e);
-      console.error('Raw response:', responseText);
-      throw new Error('Invalid response from Stripe API');
-    }
-
-    // Handle Stripe API errors
-    if (!response.ok) {
-      console.error('Stripe API error:', sessionData.error || 'Unknown error');
+      // Call Stripe API with timeout
+      const response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${stripeSecretKey}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: params,
+        signal: controller.signal
+      });
       
-      // Detect key environment mismatch
-      if (sessionData.error?.message?.includes('test mode') && sessionData.error?.message?.includes('live mode')) {
-        throw new Error(`Mode mismatch: ${sessionData.error?.message}`);
+      clearTimeout(timeout);
+
+      // Parse response
+      const responseText = await response.text();
+      console.log(`Stripe API response status: ${response.status}`);
+      console.log(`Stripe API response body: ${responseText.substring(0, 200)}...`);
+      
+      let sessionData;
+      try {
+        sessionData = JSON.parse(responseText);
+      } catch (e) {
+        console.error('Failed to parse Stripe response:', e);
+        console.error('Raw response:', responseText);
+        throw new Error('Invalid response from Stripe API');
       }
-      
-      // Handle specific price ID errors
-      if (sessionData.error?.message?.includes('price') || sessionData.error?.message?.includes('Price')) {
-        throw new Error(`Price ID error: ${sessionData.error?.message}`);
+
+      // Handle Stripe API errors
+      if (!response.ok) {
+        console.error('Stripe API error:', sessionData.error || 'Unknown error');
+        
+        // Detect key environment mismatch
+        if (sessionData.error?.message?.includes('test mode') && sessionData.error?.message?.includes('live mode')) {
+          throw new Error(`Mode mismatch: ${sessionData.error?.message}`);
+        }
+        
+        // Handle specific price ID errors
+        if (sessionData.error?.message?.includes('price') || sessionData.error?.message?.includes('Price')) {
+          throw new Error(`Price ID error: ${sessionData.error?.message}`);
+        }
+        
+        throw new Error(sessionData.error?.message || 'Error creating Stripe checkout session');
       }
-      
-      throw new Error(sessionData.error?.message || 'Error creating Stripe checkout session');
-    }
 
-    console.log('Stripe session created successfully:', {
-      sessionId: sessionData.id,
-      url: sessionData.url
-    });
-
-    // Return successful response
-    return new Response(
-      JSON.stringify({ 
+      const endTime = Date.now();
+      console.log(`Stripe session created successfully in ${endTime - startTime}ms:`, {
         sessionId: sessionData.id,
-        url: sessionData.url 
-      }),
-      { 
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json' 
-        } 
+        url: sessionData.url
+      });
+
+      // Return successful response
+      return new Response(
+        JSON.stringify({ 
+          sessionId: sessionData.id,
+          url: sessionData.url 
+        }),
+        { 
+          headers: { 
+            ...corsHeaders,
+            'Content-Type': 'application/json' 
+          } 
+        }
+      );
+    } catch (fetchError) {
+      clearTimeout(timeout);
+      if (fetchError.name === 'AbortError') {
+        throw new Error('Stripe API request timed out');
       }
-    );
+      throw fetchError;
+    }
   } catch (error) {
-    console.error('Error in Stripe checkout function:', error);
+    const endTime = Date.now();
+    console.error(`Error in Stripe checkout function after ${endTime - startTime}ms:`, error);
     
     return new Response(
       JSON.stringify({ 

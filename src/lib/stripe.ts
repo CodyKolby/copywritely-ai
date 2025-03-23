@@ -1,4 +1,3 @@
-
 import { loadStripe } from '@stripe/stripe-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -26,6 +25,14 @@ export const PRICE_IDS = {
 
 // Funkcja do tworzenia sesji Checkout
 export const createCheckoutSession = async (priceId: string) => {
+  // Store reference to the toast ID so we can dismiss it later
+  let loadingToastId: string | number = '';
+  
+  // Setup timeout to prevent infinite loading
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => reject(new Error('Przekroczono czas oczekiwania na odpowiedź serwera')), 15000);
+  });
+  
   try {
     if (!priceId) {
       console.error('Missing priceId');
@@ -48,7 +55,7 @@ export const createCheckoutSession = async (priceId: string) => {
     const cancelUrl = `${fullOrigin}/pricing?canceled=true`;
 
     // Pokazujemy toast informujący o rozpoczęciu procesu
-    const loadingToast = toast.loading('Przygotowujemy proces płatności...');
+    loadingToastId = toast.loading('Przygotowujemy proces płatności...');
 
     console.log('Starting Stripe checkout with:', {
       priceId,
@@ -60,19 +67,26 @@ export const createCheckoutSession = async (priceId: string) => {
       environment: stripePublicKey.startsWith('pk_test_') ? 'TEST' : 'LIVE'
     });
 
-    // Wywołaj funkcję edge w Supabase
-    const { data, error } = await supabase.functions.invoke('stripe-checkout', {
-      body: {
-        priceId,
-        customerEmail: userEmail || undefined,
-        successUrl,
-        cancelUrl,
-        origin: fullOrigin // Dodajemy pełny adres URL z protokołem i domeną
-      }
-    });
+    // Race the Supabase function call with a timeout
+    const result = await Promise.race([
+      supabase.functions.invoke('stripe-checkout', {
+        body: {
+          priceId,
+          customerEmail: userEmail || undefined,
+          successUrl,
+          cancelUrl,
+          origin: fullOrigin // Dodajemy pełny adres URL z protokołem i domeną
+        }
+      }),
+      timeoutPromise
+    ]);
 
-    // Zakończenie ładowania toastu
-    toast.dismiss(loadingToast);
+    // Always dismiss the loading toast once we get a response
+    if (loadingToastId) {
+      toast.dismiss(loadingToastId);
+    }
+
+    const { data, error } = result;
 
     if (error) {
       console.error('Supabase function error:', error);
@@ -107,11 +121,20 @@ export const createCheckoutSession = async (priceId: string) => {
   } catch (error) {
     console.error('Stripe checkout error:', error);
     
+    // Always dismiss the loading toast if there's an error
+    if (loadingToastId) {
+      toast.dismiss(loadingToastId);
+    }
+    
     // Handle specific error messages
     let errorMessage = error instanceof Error ? error.message : 'Nie można uruchomić procesu płatności';
     
+    // Check for timeout errors
+    if (errorMessage.includes('czas oczekiwania')) {
+      errorMessage = 'Przekroczono czas oczekiwania na odpowiedź serwera. Spróbuj ponownie później.';
+    }
     // Check for common Stripe errors and provide more user-friendly messages
-    if (errorMessage.includes('Missing Stripe API key')) {
+    else if (errorMessage.includes('Missing Stripe API key')) {
       errorMessage = 'Błąd konfiguracji: brak klucza API Stripe po stronie serwera';
     } else if (errorMessage.includes('Mode mismatch')) {
       errorMessage = 'Błąd konfiguracji: niezgodność pomiędzy trybem testowym i produkcyjnym';
@@ -122,7 +145,7 @@ export const createCheckoutSession = async (priceId: string) => {
     toast.error('Wystąpił błąd', {
       description: errorMessage
     });
-    throw error;
+    return false;
   }
 };
 
