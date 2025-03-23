@@ -3,22 +3,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { PRICE_IDS } from './client';
 
-// Function to create checkout session - completely refactored
+// Function to create checkout session - completely rewritten
 export const createCheckoutSession = async (priceId: string) => {
   try {
-    // Don't show diagnostic messages for normal users, only in error cases
     console.log('Starting checkout process with priceId', priceId);
     
     // Basic validation
     if (!priceId) {
-      console.error('Missing priceId');
       throw new Error('Nieprawidłowy identyfikator cennika');
-    }
-
-    const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '';
-    if (!stripePublicKey) {
-      console.error('Missing Stripe public key');
-      throw new Error('Brak klucza Stripe');
     }
 
     // Get stored user email
@@ -29,108 +21,71 @@ export const createCheckoutSession = async (priceId: string) => {
     const successUrl = `${fullOrigin}/success?session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${fullOrigin}/pricing?canceled=true`;
 
-    console.log('Stripe checkout parameters:', {
+    console.log('Preparing checkout with params:', {
       priceId,
       userEmail: userEmail ? 'Email provided' : 'Not provided',
       successUrl,
-      cancelUrl,
-      fullOrigin
+      cancelUrl
     });
     
-    toast.info('Rozpoczynam proces płatności');
-
-    // Set a new checkout flag with timestamp ONLY when we're sure we're proceeding
+    // Clear any existing checkout flags
+    sessionStorage.removeItem('stripeCheckoutInProgress');
+    sessionStorage.removeItem('redirectingToStripe');
+    
+    // Set a new checkout flag with timestamp
     const timestamp = Date.now().toString();
     sessionStorage.setItem('stripeCheckoutInProgress', timestamp);
     
-    toast.info('Łączenie z systemem płatności...', {
-      duration: 10000, // Longer duration for this message
+    toast.info('Rozpoczynam proces płatności', {
+      duration: 3000,
     });
-
-    // Prepare request body
-    const requestBody = {
-      priceId,
-      customerEmail: userEmail || undefined,
-      successUrl,
-      cancelUrl,
-      origin: fullOrigin
-    };
     
-    console.log('Sending checkout request to Supabase function with body:', JSON.stringify(requestBody));
-
-    try {
-      // Set a global timeout for the entire checkout process
-      const GLOBAL_TIMEOUT = 12000; // 12 seconds total timeout
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Przekroczono czas oczekiwania na odpowiedź')), GLOBAL_TIMEOUT)
-      );
+    // Use standard fetch for more control
+    const response = await fetch(`${fullOrigin}/.netlify/functions/stripe-checkout`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        priceId,
+        customerEmail: userEmail || undefined,
+        successUrl,
+        cancelUrl,
+        origin: fullOrigin
+      })
+    });
+    
+    // Handle API response
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Błąd API: ${response.status} - ${errorText}`);
+    }
+    
+    const data = await response.json();
+    
+    // If function returned a URL, redirect user
+    if (data?.url) {
+      console.log('Received Stripe Checkout URL, redirecting to:', data.url);
       
-      // Make the API call
-      const fetchPromise = supabase.functions.invoke('stripe-checkout', {
-        body: requestBody
-      });
+      // Set redirect flag
+      sessionStorage.setItem('redirectingToStripe', timestamp);
       
-      // Race between the fetch and the timeout
-      const result = await Promise.race([fetchPromise, timeoutPromise]);
+      toast.success('Przekierowujemy do strony płatności...');
       
-      // Handle API response
-      const { data, error } = result as any;
-
-      if (error) {
-        // Only clear specific flags when there's an error
-        sessionStorage.removeItem('stripeCheckoutInProgress');
-        console.error('Supabase function error:', error);
-        toast.error('Błąd API', { description: error.message || 'Błąd przy wywoływaniu funkcji Stripe' });
-        throw new Error(error.message || 'Błąd przy wywoływaniu funkcji Stripe');
-      }
-
-      // Check for API-level errors
-      if (data?.error) {
-        // Only clear specific flags when there's an error
-        sessionStorage.removeItem('stripeCheckoutInProgress');
-        console.error('Stripe error:', data.error);
-        toast.error('Błąd Stripe', { description: data.error });
-        throw new Error(data.error);
-      }
-
-      // If function returned a URL, redirect user
-      if (data?.url) {
-        console.log('Received Stripe Checkout URL:', data.url);
-        
-        // Set redirect flag - WITH A TIMESTAMP to track this specific checkout
-        sessionStorage.setItem('redirectingToStripe', timestamp);
-        
-        // Success toast - only show this when we have a URL
-        toast.success('Przekierowujemy do strony płatności...', {
-          description: 'Za chwilę zostaniesz przekierowany do bezpiecznej strony płatności Stripe',
-        });
-        
-        // CRITICAL FIX: Force an immediate hard redirect instead of changing window.location
-        window.location.href = data.url;
-        
-        // The page will be unloaded at this point, so nothing after this should execute
-        return true;
-      } else {
-        // Only clear specific flags when there's an error
-        sessionStorage.removeItem('stripeCheckoutInProgress');
-        toast.error('Brak URL', { description: 'Nie otrzymano poprawnej odpowiedzi z serwera' });
-        throw new Error('Nie otrzymano poprawnej odpowiedzi z serwera');
-      }
-    } catch (apiError) {
-      console.error('API call error:', apiError);
-      sessionStorage.removeItem('stripeCheckoutInProgress');
+      // Use direct window.location.href for immediate redirect
+      window.location.href = data.url;
       
-      toast.error('Problem z połączeniem', { 
-        description: apiError instanceof Error ? apiError.message : 'Nie można połączyć się z systemem płatności'
-      });
-      
-      return false;
+      return true;
+    } else {
+      toast.error('Brak URL', { description: 'Nie otrzymano poprawnej odpowiedzi z serwera' });
+      throw new Error('Nie otrzymano poprawnej odpowiedzi z serwera');
     }
   } catch (error) {
     console.error('Stripe checkout error:', error);
     
-    // Only clear specific flags when there's an error
+    // Clear session storage flags
     sessionStorage.removeItem('stripeCheckoutInProgress');
+    sessionStorage.removeItem('redirectingToStripe');
     
     let errorMessage = error instanceof Error ? error.message : 'Nie można uruchomić procesu płatności';
     
@@ -138,7 +93,6 @@ export const createCheckoutSession = async (priceId: string) => {
       description: errorMessage
     });
 
-    // Allow the button to be clickable again
     return false;
   }
 };

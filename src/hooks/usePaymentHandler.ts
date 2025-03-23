@@ -18,18 +18,6 @@ export function usePaymentHandler() {
   // Check for URL parameters but don't immediately trigger actions
   const isCanceled = searchParams.get('canceled') === 'true';
   
-  // Check for payment states without clearing them
-  const checkPaymentStates = useCallback(() => {
-    const stripeProgress = sessionStorage.getItem('stripeCheckoutInProgress');
-    const redirecting = sessionStorage.getItem('redirectingToStripe');
-    
-    // Only log when debugging
-    console.log('Current payment states:', { stripeProgress, redirecting });
-    
-    // Return if payment is in progress
-    return !!stripeProgress;
-  }, []);
-  
   // Collect debug information
   const collectDebugInfo = useCallback(() => {
     const info: Record<string, string> = {
@@ -66,15 +54,6 @@ export function usePaymentHandler() {
   const handleSubscribe = async (billingCycle: BillingCycle) => {
     // Collect debug info
     collectDebugInfo();
-    
-    // Check if payment is already in progress
-    const paymentInProgress = checkPaymentStates();
-    if (paymentInProgress) {
-      console.log('Payment already in progress, resetting');
-      clearPaymentFlags();
-      toast.info('Poprzednia płatność została anulowana. Spróbuj ponownie.');
-      return;
-    }
     
     // Prevent multiple clicks while already loading
     if (isLoading) {
@@ -113,7 +92,7 @@ export function usePaymentHandler() {
         toast.error('Proces płatności trwa zbyt długo', {
           description: 'Spróbuj ponownie za chwilę'
         });
-      }, 15000); // 15 seconds timeout
+      }, 10000); // 10 seconds timeout
       
       // Initiate checkout process
       const result = await createCheckoutSession(priceId);
@@ -125,10 +104,6 @@ export function usePaymentHandler() {
       if (!result) {
         console.log('Checkout failed, resetting loading state');
         setIsLoading(false);
-        toast.error('Nie udało się połączyć z systemem płatności', {
-          description: 'Spróbuj ponownie za chwilę lub skontaktuj się z obsługą',
-          duration: 5000
-        });
       }
       // If successful, the page will redirect, so we don't need to do anything else here
       
@@ -149,9 +124,8 @@ export function usePaymentHandler() {
     }
   };
 
-  // Only handle canceled payments when the page is first loaded with the canceled parameter
+  // Handle canceled payments when the page is first loaded
   useEffect(() => {
-    // If the payment was canceled via URL parameter, show a message and clear flags
     if (isCanceled) {
       console.log('Payment canceled via URL parameter');
       clearPaymentFlags();
@@ -159,17 +133,13 @@ export function usePaymentHandler() {
         description: 'Możesz kontynuować korzystanie z aplikacji w wersji podstawowej'
       });
       
-      // Clean up the URL to prevent the message from appearing again
+      // Clean up the URL
       if (searchParams.has('canceled')) {
-        // Create a new URLSearchParams without the canceled parameter
         const newParams = new URLSearchParams(searchParams);
         newParams.delete('canceled');
-        
-        // Replace the current URL without the canceled parameter
         const newUrl = newParams.toString() 
           ? `${window.location.pathname}?${newParams}` 
           : window.location.pathname;
-        
         navigate(newUrl, { replace: true });
       }
     }
