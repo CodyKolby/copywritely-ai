@@ -1,10 +1,9 @@
-
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { LogIn, LogOut, User, Menu, FolderOpen, CreditCard, Shield } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth/AuthContext';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -35,12 +34,10 @@ const Navbar = () => {
   const navItems = [
     { path: '/', label: 'Home' },
     { path: '/brief-generator', label: 'Brief Generator' },
-    // Removed Copy Editor from navigation
     { path: '/pricing', label: 'Pricing' },
     { path: '/about', label: 'About' },
   ];
 
-  // Get initials for avatar fallback
   const getInitials = () => {
     if (!user?.email) return 'U';
     return user.email.charAt(0).toUpperCase();
