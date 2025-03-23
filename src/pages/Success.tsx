@@ -5,6 +5,8 @@ import { motion } from 'framer-motion';
 import { CheckCircle, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/contexts/auth/AuthContext';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const Success = () => {
   const [loading, setLoading] = useState(true);
@@ -26,12 +28,31 @@ const Success = () => {
           return;
         }
 
-        // Tutaj możemy dodać weryfikację sesji przez API
-        // np. wywołanie funkcji edge do weryfikacji sesji
-
-        // Odświeżamy status premium użytkownika
+        // Weryfikacja sesji i aktualizacja statusu premium
         if (user?.id) {
+          const { data, error: verifyError } = await supabase.functions.invoke('verify-payment-session', {
+            body: { 
+              sessionId,
+              userId: user.id
+            }
+          });
+
+          if (verifyError) {
+            console.error('Błąd podczas weryfikacji płatności:', verifyError);
+            setError('Wystąpił błąd podczas weryfikacji płatności');
+            setLoading(false);
+            return;
+          }
+
+          if (!data?.success) {
+            setError(data?.message || 'Wystąpił błąd podczas weryfikacji płatności');
+            setLoading(false);
+            return;
+          }
+
+          // Odświeżamy status premium użytkownika
           await checkPremiumStatus(user.id);
+          toast.success('Gratulacje! Twoje konto zostało zaktualizowane do wersji Premium.');
         }
 
         setLoading(false);
