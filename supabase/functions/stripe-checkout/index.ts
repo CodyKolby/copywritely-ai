@@ -96,20 +96,23 @@ serve(async (req) => {
     console.log('Final success URL:', finalSuccessUrl);
     console.log('Final cancel URL:', finalCancelUrl);
 
-    // Create Stripe session
+    // Create Stripe session - FIXED: removed cache-busting parameter from URL
     try {
       console.log('Creating Stripe checkout session...');
       
-      // Add cache-busting parameter to Stripe API URL
-      const stripeUrl = `https://api.stripe.com/v1/checkout/sessions?_=${timestamp || Date.now()}`;
+      // Use the standard Stripe API URL without cache-busting
+      const stripeUrl = 'https://api.stripe.com/v1/checkout/sessions';
       
+      // Add cache-busting to the headers instead
       const response = await fetch(stripeUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${stripeSecretKey}`,
           'Content-Type': 'application/x-www-form-urlencoded',
           'Stripe-Version': '2023-10-16',
-          'Cache-Control': 'no-cache, no-store'
+          'Cache-Control': 'no-cache, no-store',
+          // Add a timestamp header for cache busting
+          'X-Request-Timestamp': `${timestamp || Date.now()}`
         },
         body: new URLSearchParams({
           'mode': 'subscription',
