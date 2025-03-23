@@ -68,6 +68,14 @@ serve(async (req) => {
       console.warn('LIVE MODE WARNING: Using test format price ID in live environment');
     }
 
+    // Validate that the success and cancel URLs contain the proper domain (not just a path)
+    if (successUrl && !successUrl.startsWith('http')) {
+      console.warn('Success URL does not contain protocol:', successUrl);
+    }
+
+    console.log('Success URL being used:', successUrl);
+    console.log('Cancel URL being used:', cancelUrl);
+
     // Create Stripe session parameters
     const params = new URLSearchParams();
     params.append('mode', 'subscription');

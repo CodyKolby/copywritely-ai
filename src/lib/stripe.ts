@@ -40,7 +40,8 @@ export const createCheckoutSession = async (priceId: string) => {
     // Pobierz zapisany email użytkownika
     const userEmail = localStorage.getItem('userEmail');
     
-    // Wygeneruj URL powrotu
+    // Wygeneruj pełne URL powrotu zawierające protokół i domenę (nie relatywne)
+    // Używamy window.location.origin aby upewnić się, że URL zawiera prawidłową domenę
     const successUrl = `${window.location.origin}/success?session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${window.location.origin}/pricing`;
 
