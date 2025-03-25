@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client'; 
 
 // Import refactored components
 import StepContainer from './target-audience-form/StepContainer';
@@ -147,8 +148,46 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
     }
   };
 
-  const handleSubmit = (data: FormValues) => {
-    onSubmit(data);
+  const handleSubmit = async (data: FormValues) => {
+    try {
+      // Auto-generate a name for the target audience if not provided
+      const audienceName = `Grupa docelowa - ${data.ageRange}, ${data.gender}`;
+      
+      // Insert data into Supabase
+      const { data: insertedData, error } = await supabase
+        .from('target_audiences')
+        .insert({
+          name: audienceName,
+          user_id: supabase.auth.getUser().then(({ data }) => data.user?.id),
+          age_range: data.ageRange,
+          gender: data.gender,
+          competitors: data.competitors,
+          language: data.language,
+          biography: data.biography,
+          beliefs: data.beliefs,
+          pains: data.pains,
+          desires: data.desires,
+          main_offer: data.mainOffer,
+          offer_details: data.offerDetails,
+          benefits: data.benefits,
+          why_it_works: data.whyItWorks,
+          experience: data.experience
+        })
+        .select();
+      
+      if (error) {
+        console.error("Error saving to Supabase:", error);
+        toast.error('Wystąpił błąd podczas zapisywania danych');
+        return;
+      }
+      
+      console.log("Data saved to Supabase:", insertedData);
+      toast.success('Dane zostały zapisane');
+      onSubmit(data);
+    } catch (error) {
+      console.error("Form submission error:", error);
+      toast.error('Wystąpił błąd podczas wysyłania formularza');
+    }
   };
 
   // Handle Enter key press to navigate to the next step

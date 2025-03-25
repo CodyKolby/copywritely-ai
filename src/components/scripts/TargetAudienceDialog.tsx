@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import TargetAudienceForm from './TargetAudienceForm';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { HelpCircle } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { ExclamationTriangleIcon } from '@radix-ui/react-icons';
+import { supabase } from '@/integrations/supabase/client';
 
 interface TargetAudienceDialogProps {
   open: boolean;
@@ -15,6 +16,11 @@ interface TargetAudienceDialogProps {
   templateId: string;
   userId: string;
   isPremium: boolean;
+}
+
+interface TargetAudience {
+  id: string;
+  name: string;
 }
 
 const TargetAudienceDialog = ({
@@ -28,12 +34,38 @@ const TargetAudienceDialog = ({
   const [showForm, setShowForm] = useState(false);
   const [audienceChoice, setAudienceChoice] = useState<string | null>(null);
   const [selectedAudienceId, setSelectedAudienceId] = useState<string | null>(null);
+  const [existingAudiences, setExistingAudiences] = useState<TargetAudience[]>([]);
   
-  // Mock existing target audiences
-  const existingAudiences = [
-    { id: '1', name: 'Grupa docelowa numer 1' },
-    { id: '2', name: 'Grupa docelowa numer 2' },
-  ];
+  useEffect(() => {
+    if (open && userId) {
+      fetchExistingAudiences();
+    }
+  }, [open, userId]);
+  
+  const fetchExistingAudiences = async () => {
+    if (!userId) return;
+    
+    try {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('target_audiences')
+        .select('id, name')
+        .eq('user_id', userId);
+        
+      if (error) {
+        console.error('Error fetching target audiences:', error);
+        toast.error('Błąd podczas pobierania grup docelowych');
+        return;
+      }
+      
+      setExistingAudiences(data || []);
+    } catch (error) {
+      console.error('Error in fetchExistingAudiences:', error);
+      toast.error('Nieoczekiwany błąd podczas pobierania danych');
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
   const handleChoiceSelection = (choice: string) => {
     setAudienceChoice(choice);
@@ -46,7 +78,7 @@ const TargetAudienceDialog = ({
     setSelectedAudienceId(audienceId);
   };
   
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!isPremium) {
       toast.error('Nie posiadasz konta premium', {
         description: 'Ta funkcjonalność jest dostępna tylko dla użytkowników premium.'
@@ -56,12 +88,36 @@ const TargetAudienceDialog = ({
     }
     
     if (audienceChoice === 'existing' && selectedAudienceId) {
-      // Here you would fetch the selected audience and use it
-      console.log(`Selected audience ID: ${selectedAudienceId}`);
-      toast.success('Wybrano grupę docelową', {
-        description: 'Twoja grupa docelowa została wybrana do generowania skryptu.'
-      });
-      onOpenChange(false);
+      try {
+        setIsLoading(true);
+        
+        // Fetch the complete target audience data
+        const { data, error } = await supabase
+          .from('target_audiences')
+          .select('*')
+          .eq('id', selectedAudienceId)
+          .single();
+          
+        if (error) {
+          console.error('Error fetching target audience details:', error);
+          toast.error('Błąd podczas pobierania szczegółów grupy docelowej');
+          return;
+        }
+        
+        toast.success('Wybrano grupę docelową', {
+          description: 'Twoja grupa docelowa została wybrana do generowania skryptu.'
+        });
+        
+        // Here you would proceed with script generation using the selected target audience data
+        console.log('Selected target audience data:', data);
+        
+        onOpenChange(false);
+      } catch (error) {
+        console.error('Error in handleContinue:', error);
+        toast.error('Nieoczekiwany błąd podczas przetwarzania danych');
+      } finally {
+        setIsLoading(false);
+      }
     } else if (audienceChoice === 'new') {
       setShowForm(true);
     } else {
@@ -95,12 +151,7 @@ const TargetAudienceDialog = ({
 
     setIsLoading(true);
     try {
-      // Here you would typically save the form data to a database
-      console.log('Form data submitted:', data);
-      
-      // Mock API call with a delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      // The form component now handles saving to Supabase
       toast.success('Zapisano dane grupy docelowej', {
         description: 'Twoje dane zostały zapisane i zostaną wykorzystane do generowania skryptu.'
       });
@@ -168,7 +219,11 @@ const TargetAudienceDialog = ({
               </div>
             ) : (
               <div className="py-4">
-                {existingAudiences.length > 0 && (
+                {isLoading ? (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-copywrite-teal"></div>
+                  </div>
+                ) : existingAudiences.length > 0 ? (
                   <div className="mb-6">
                     <h3 className="font-medium text-lg mb-3">Istniejące grupy docelowe</h3>
                     <ScrollArea className="h-[200px] w-full rounded-md border">
@@ -200,6 +255,11 @@ const TargetAudienceDialog = ({
                         ))}
                       </div>
                     </ScrollArea>
+                  </div>
+                ) : (
+                  <div className="text-center py-6 text-gray-500">
+                    <HelpCircle className="mx-auto h-12 w-12 opacity-50 mb-2" />
+                    <p>Nie masz jeszcze żadnych grup docelowych.</p>
                   </div>
                 )}
                 

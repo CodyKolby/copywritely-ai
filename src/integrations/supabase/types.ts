@@ -78,6 +78,69 @@ export type Database = {
         }
         Relationships: []
       }
+      target_audiences: {
+        Row: {
+          age_range: string
+          beliefs: string
+          benefits: string[]
+          biography: string
+          competitors: string[]
+          created_at: string
+          desires: string[]
+          experience: string
+          gender: string
+          id: string
+          language: string
+          main_offer: string
+          name: string
+          offer_details: string
+          pains: string[]
+          updated_at: string
+          user_id: string
+          why_it_works: string
+        }
+        Insert: {
+          age_range: string
+          beliefs: string
+          benefits: string[]
+          biography: string
+          competitors: string[]
+          created_at?: string
+          desires: string[]
+          experience: string
+          gender: string
+          id?: string
+          language: string
+          main_offer: string
+          name: string
+          offer_details: string
+          pains: string[]
+          updated_at?: string
+          user_id: string
+          why_it_works: string
+        }
+        Update: {
+          age_range?: string
+          beliefs?: string
+          benefits?: string[]
+          biography?: string
+          competitors?: string[]
+          created_at?: string
+          desires?: string[]
+          experience?: string
+          gender?: string
+          id?: string
+          language?: string
+          main_offer?: string
+          name?: string
+          offer_details?: string
+          pains?: string[]
+          updated_at?: string
+          user_id?: string
+          why_it_works?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
