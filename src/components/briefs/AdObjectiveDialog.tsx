@@ -81,12 +81,13 @@ const AdObjectiveDialog = ({ open, onOpenChange, onSubmit, isPremium }: AdObject
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
+                className="rounded-full"
               >
                 Anuluj
               </Button>
               <Button 
                 onClick={() => window.location.href = '/pricing'} 
-                className="bg-copywrite-teal hover:bg-copywrite-teal-dark transition-colors"
+                className="bg-copywrite-teal hover:bg-copywrite-teal-dark transition-colors rounded-full"
               >
                 View Pricing
               </Button>
@@ -121,10 +122,14 @@ const AdObjectiveDialog = ({ open, onOpenChange, onSubmit, isPremium }: AdObject
                   type="button"
                   variant="outline"
                   onClick={() => onOpenChange(false)}
+                  className="rounded-full"
                 >
                   Anuluj
                 </Button>
-                <Button type="submit" className="bg-copywrite-teal hover:bg-copywrite-teal-dark transition-colors">
+                <Button 
+                  type="submit" 
+                  className="bg-copywrite-teal hover:bg-copywrite-teal-dark transition-colors rounded-full"
+                >
                   Dalej
                 </Button>
               </DialogFooter>

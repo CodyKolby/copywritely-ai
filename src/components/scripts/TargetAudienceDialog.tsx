@@ -6,6 +6,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface TargetAudienceDialogProps {
   open: boolean;
@@ -25,27 +27,26 @@ const TargetAudienceDialog = ({
   const [isLoading, setIsLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [audienceChoice, setAudienceChoice] = useState<string | null>(null);
+  const [selectedAudienceId, setSelectedAudienceId] = useState<string | null>(null);
   
   // Mock existing target audiences
   const existingAudiences = [
-    { id: '1', name: 'Grupa biznesowa' },
-    { id: '2', name: 'Grupa konsumencka' },
+    { id: '1', name: 'Grupa docelowa numer 1' },
+    { id: '2', name: 'Grupa docelowa numer 2' },
   ];
   
   const handleChoiceSelection = (choice: string) => {
     setAudienceChoice(choice);
-    if (choice === 'existing' && existingAudiences.length === 0) {
-      toast.error('Nie masz zapisanych grup docelowych', {
-        description: 'Utwórz najpierw nową grupę docelową.'
-      });
-      setAudienceChoice('new');
-      setShowForm(true);
-      return;
+    if (choice === 'new') {
+      setSelectedAudienceId(null);
     }
-    setShowForm(true);
   };
   
   const handleExistingAudienceSelect = (audienceId: string) => {
+    setSelectedAudienceId(audienceId);
+  };
+  
+  const handleContinue = () => {
     if (!isPremium) {
       toast.error('Nie posiadasz konta premium', {
         description: 'Ta funkcjonalność jest dostępna tylko dla użytkowników premium.'
@@ -54,12 +55,20 @@ const TargetAudienceDialog = ({
       return;
     }
     
-    // Here you would fetch the selected audience and use it
-    console.log(`Selected audience ID: ${audienceId}`);
-    toast.success('Wybrano grupę docelową', {
-      description: 'Twoja grupa docelowa została wybrana do generowania skryptu.'
-    });
-    onOpenChange(false);
+    if (audienceChoice === 'existing' && selectedAudienceId) {
+      // Here you would fetch the selected audience and use it
+      console.log(`Selected audience ID: ${selectedAudienceId}`);
+      toast.success('Wybrano grupę docelową', {
+        description: 'Twoja grupa docelowa została wybrana do generowania skryptu.'
+      });
+      onOpenChange(false);
+    } else if (audienceChoice === 'new') {
+      setShowForm(true);
+    } else {
+      toast.error('Wybierz grupę docelową', {
+        description: 'Musisz wybrać istniejącą grupę docelową lub stworzyć nową.'
+      });
+    }
   };
   
   const handleFormSubmit = async (data: any) => {
@@ -97,6 +106,7 @@ const TargetAudienceDialog = ({
   const handleBack = () => {
     setShowForm(false);
     setAudienceChoice(null);
+    setSelectedAudienceId(null);
   };
 
   const handleCancel = () => {
@@ -106,62 +116,70 @@ const TargetAudienceDialog = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-semibold">
-            {!showForm ? 'Wybierz grupę docelową dla której chcesz stworzyć skrypt' : 
-             audienceChoice === 'existing' ? 'Wybierz zapisaną grupę docelową' : 
-             'Stwórz nową grupę docelową'}
-          </DialogTitle>
-          <DialogDescription>
-            {!showForm && 'Możesz wybrać istniejącą grupę docelową lub stworzyć nową.'}
-          </DialogDescription>
-        </DialogHeader>
-        
         {!showForm ? (
-          <div className="py-6">
-            <RadioGroup defaultValue={audienceChoice || ''} className="space-y-4">
-              <div className="flex items-center space-x-2 rounded-md border p-4 cursor-pointer hover:bg-slate-50" 
-                   onClick={() => handleChoiceSelection('existing')}>
-                <RadioGroupItem value="existing" id="existing" />
-                <Label htmlFor="existing" className="flex-1 cursor-pointer">Użyj istniejącej grupy docelowej</Label>
-              </div>
-              <div className="flex items-center space-x-2 rounded-md border p-4 cursor-pointer hover:bg-slate-50"
-                   onClick={() => handleChoiceSelection('new')}>
-                <RadioGroupItem value="new" id="new" />
-                <Label htmlFor="new" className="flex-1 cursor-pointer">Stwórz nową grupę docelową</Label>
-              </div>
-            </RadioGroup>
+          <>
+            <DialogHeader>
+              <DialogTitle className="text-xl font-semibold">
+                Wybierz grupę docelową dla której chcesz stworzyć skrypt
+              </DialogTitle>
+              <DialogDescription>
+                Jakiś tekst dotyczący tego okna, coś może tłumaczącego itd.
+              </DialogDescription>
+            </DialogHeader>
             
-            <div className="mt-6 flex justify-end">
-              <Button variant="outline" onClick={handleCancel}>
-                Anuluj
-              </Button>
-            </div>
-          </div>
-        ) : audienceChoice === 'existing' ? (
-          <div className="py-4">
-            <div className="space-y-4">
-              {existingAudiences.map((audience) => (
-                <div 
-                  key={audience.id}
-                  className="flex items-center justify-between rounded-md border p-4 cursor-pointer hover:bg-slate-50"
-                  onClick={() => handleExistingAudienceSelect(audience.id)}
-                >
-                  <span>{audience.name}</span>
-                  <Button size="sm">Wybierz</Button>
+            <div className="py-4">
+              {existingAudiences.length > 0 && (
+                <div className="mb-6 bg-red-500 rounded-lg p-4">
+                  <ScrollArea className="h-[200px] w-full">
+                    <div className="space-y-3">
+                      {existingAudiences.map((audience) => (
+                        <div 
+                          key={audience.id}
+                          className="flex items-center justify-between bg-blue-600 rounded-full p-4 text-white"
+                          onClick={() => {
+                            handleExistingAudienceSelect(audience.id);
+                            handleChoiceSelection('existing');
+                          }}
+                        >
+                          <span className="font-medium">{audience.name}</span>
+                          <div className="h-8 w-8 rounded-full bg-sky-300 flex items-center justify-center">
+                            {selectedAudienceId === audience.id && (
+                              <div className="h-4 w-4 rounded-full bg-white" />
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
                 </div>
-              ))}
+              )}
+              
+              <div className="flex items-center space-x-3 mb-6">
+                <div 
+                  className="h-8 w-8 rounded-full bg-sky-300 flex items-center justify-center cursor-pointer"
+                  onClick={() => handleChoiceSelection('new')}
+                >
+                  {audienceChoice === 'new' && (
+                    <div className="h-4 w-4 rounded-full bg-white" />
+                  )}
+                </div>
+                <Label htmlFor="new" className="cursor-pointer text-white">Stwórz nową grupę docelową</Label>
+              </div>
+              
+              <div className="flex justify-between mt-8">
+                <Button variant="outline" onClick={handleCancel} className="rounded-full px-8 py-6">
+                  Anuluj
+                </Button>
+                <Button 
+                  onClick={handleContinue} 
+                  disabled={!audienceChoice}
+                  className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-8 py-6"
+                >
+                  Dalej
+                </Button>
+              </div>
             </div>
-            
-            <div className="mt-6 flex justify-between">
-              <Button variant="outline" onClick={handleBack}>
-                Wróć
-              </Button>
-              <Button variant="outline" onClick={handleCancel}>
-                Anuluj
-              </Button>
-            </div>
-          </div>
+          </>
         ) : (
           <TargetAudienceForm 
             onSubmit={handleFormSubmit}
