@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { Profile } from './types'
@@ -109,12 +108,16 @@ export const createProfile = async (userId: string): Promise<Profile | null> => 
         
         if (rpcError) {
           console.error('Error creating profile with RPC:', rpcError);
-          toast.error('Nie udało się utworzyć profilu użytkownika');
+          toast.error('Nie udało się utworzyć profilu użytkownika', {
+            dismissible: true
+          });
           return null;
         }
       } catch (rpcError) {
         console.error('RPC call failed:', rpcError);
-        toast.error('Nie udało się utworzyć profilu użytkownika');
+        toast.error('Nie udało się utworzyć profilu użytkownika', {
+          dismissible: true
+        });
         return null;
       }
     }

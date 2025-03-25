@@ -37,7 +37,8 @@ const BriefGenerator = () => {
     // Check if template is "landing" which is marked as coming soon
     if (templateId === 'landing') {
       toast.info('Wkrótce dostępne', {
-        description: 'Ta funkcjonalność będzie dostępna w przyszłych aktualizacjach.'
+        description: 'Ta funkcjonalność będzie dostępna w przyszłych aktualizacjach.',
+        dismissible: true
       });
       return;
     }
@@ -50,7 +51,8 @@ const BriefGenerator = () => {
     if (!isPremium) {
       setDialogOpen(false);
       toast.error('Nie posiadasz konta premium', {
-        description: 'Ta funkcjonalność jest dostępna tylko dla użytkowników premium.'
+        description: 'Ta funkcjonalność jest dostępna tylko dla użytkowników premium.',
+        dismissible: true
       });
       return;
     }
@@ -70,7 +72,8 @@ const BriefGenerator = () => {
     if (!isPremium) {
       setAdObjectiveDialogOpen(false);
       toast.error('Nie posiadasz konta premium', {
-        description: 'Ta funkcjonalność jest dostępna tylko dla użytkowników premium.'
+        description: 'Ta funkcjonalność jest dostępna tylko dla użytkowników premium.',
+        dismissible: true
       });
       return;
     }
@@ -94,7 +97,9 @@ const BriefGenerator = () => {
     setTimeout(() => {
       setGeneratedBrief(sampleBriefs[templateId]);
       setIsLoading(false);
-      toast.success('Brief generated successfully!');
+      toast.success('Brief generated successfully!', {
+        dismissible: true
+      });
     }, 1500);
   };
 
@@ -119,7 +124,9 @@ const BriefGenerator = () => {
       
       setGeneratedBrief(modifiedBrief);
       setIsLoading(false);
-      toast.success('Brief generated successfully!');
+      toast.success('Brief generated successfully!', {
+        dismissible: true
+      });
     }, 1500);
   };
 

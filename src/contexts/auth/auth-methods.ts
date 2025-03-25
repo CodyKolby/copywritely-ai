@@ -15,7 +15,8 @@ export const signInWithGoogle = async () => {
   } catch (error) {
     if (error instanceof Error) {
       toast.error('Error signing in with Google', {
-        description: error.message
+        description: error.message,
+        dismissible: true
       })
     }
     console.error('Error signing in with Google:', error)
@@ -30,11 +31,14 @@ export const signInWithEmail = async (email: string, password: string) => {
     })
     
     if (error) throw error
-    toast.success('Signed in successfully')
+    toast.success('Signed in successfully', {
+      dismissible: true
+    })
   } catch (error) {
     if (error instanceof Error) {
       toast.error('Error signing in', {
-        description: error.message
+        description: error.message,
+        dismissible: true
       })
     }
     console.error('Error signing in with email:', error)
@@ -52,11 +56,14 @@ export const signUpWithEmail = async (email: string, password: string) => {
     })
     
     if (error) throw error
-    toast.success('Account created! Check your email for verification link.')
+    toast.success('Account created! Check your email for verification link.', {
+      dismissible: true
+    })
   } catch (error) {
     if (error instanceof Error) {
       toast.error('Error creating account', {
-        description: error.message
+        description: error.message,
+        dismissible: true
       })
     }
     console.error('Error signing up with email:', error)
@@ -65,7 +72,9 @@ export const signUpWithEmail = async (email: string, password: string) => {
 
 export const signOut = async () => {
   try {
-    toast.loading('Wylogowywanie...');
+    toast.loading('Wylogowywanie...', {
+      dismissible: true
+    });
     
     // Force clear local storage auth data immediately to ensure logout works
     const allKeys = Object.keys(localStorage);
@@ -80,7 +89,9 @@ export const signOut = async () => {
     });
     
     // Success message
-    toast.success('Wylogowano pomyślnie');
+    toast.success('Wylogowano pomyślnie', {
+      dismissible: true
+    });
     
     // Force reload the page immediately to ensure all auth state is reset
     setTimeout(() => window.location.reload(), 100);
@@ -97,7 +108,8 @@ export const signOut = async () => {
     // Show error message
     if (error instanceof Error) {
       toast.error('Błąd podczas wylogowywania', {
-        description: error.message
+        description: error.message,
+        dismissible: true
       })
     }
     

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -20,7 +19,6 @@ const Success = () => {
   const successToastShown = sessionStorage.getItem('paymentProcessed') === 'true';
 
   useEffect(() => {
-    // Funkcja przeprowadzająca bezpośrednią aktualizację statusu premium w profilu
     const forceUpdatePremiumStatus = async (userId: string) => {
       try {
         console.log('Forced update of premium status for user:', userId);
@@ -69,7 +67,6 @@ const Success = () => {
 
         console.log('Verifying payment session:', { sessionId, userId: user.id });
 
-        // Wywołanie funkcji Edge Function do weryfikacji płatności
         const { data, error: verifyError } = await supabase.functions.invoke('verify-payment-session', {
           body: { 
             sessionId,
@@ -93,25 +90,20 @@ const Success = () => {
 
         console.log('Payment verification successful, checking premium status');
         
-        // Wymuszenie aktualizacji statusu premium niezależnie od edge function
         const forceUpdateSuccess = await forceUpdatePremiumStatus(user.id);
         console.log('Force update result:', forceUpdateSuccess);
         
-        // Poczekaj chwilę, aby zmiany mogły się rozpropagować
         await new Promise(resolve => setTimeout(resolve, 1500));
         
-        // Sprawdź status premium
         let isPremiumStatus = await checkPremiumStatus(user.id, false);
         console.log('Premium status after verification and forced update:', isPremiumStatus);
         
-        // Jeśli wciąż nie ma statusu premium, spróbuj jeszcze raz po dłuższym czasie
         if (!isPremiumStatus) {
           console.log('First premium check failed, trying again after longer delay');
           await new Promise(resolve => setTimeout(resolve, 3000));
           isPremiumStatus = await checkPremiumStatus(user.id, false);
           console.log('Premium status after second check:', isPremiumStatus);
           
-          // Jeśli nadal nie ma statusu premium, spróbuj ostatni raz z wymuszeniem
           if (!isPremiumStatus) {
             console.log('Second premium check failed, forcing premium status update again');
             await forceUpdatePremiumStatus(user.id);
@@ -121,26 +113,26 @@ const Success = () => {
           }
         }
         
-        // Nawet jeśli nadal nie mamy statusu premium, kontynuuj z sukcesem
-        // ponieważ płatność została potwierdzona przez Stripe
         if (isPremiumStatus && !successToastShown) {
           console.log('Showing premium success toast');
-          toast.success('Gratulacje! Twoje konto zostało zaktualizowane do wersji Premium.');
+          toast.success('Gratulacje! Twoje konto zostało zaktualizowane do wersji Premium.', {
+            dismissible: true
+          });
           sessionStorage.setItem('paymentProcessed', 'true');
           setVerificationSuccess(true);
         } else if (!isPremiumStatus) {
           console.warn('Payment verified but premium status not updated. Will retry shortly.');
-          // Jeśli próbowaliśmy mniej niż 3 razy, spróbuj ponownie weryfikację
           if (verificationAttempt < 3) {
             setVerificationAttempt(prev => prev + 1);
             setTimeout(() => {
-              checkPremiumStatus(user.id, true); // Wymuszenie sprawdzenia premium z powiadomieniem
+              checkPremiumStatus(user.id, true);
             }, 3000);
           } else {
-            // Po 3 próbach, zakładamy że się udało i przejdźmy dalej
             console.log('Maximum verification attempts reached, assuming success');
             setVerificationSuccess(true);
-            toast.success('Gratulacje! Twoja płatność została zarejestrowana. Jeśli status Premium nie jest widoczny od razu, odśwież stronę za kilka minut.');
+            toast.success('Gratulacje! Twoja płatność została zarejestrowana. Jeśli status Premium nie jest widoczny od razu, odśwież stronę za kilka minut.', {
+              dismissible: true
+            });
             sessionStorage.setItem('paymentProcessed', 'true');
           }
         }

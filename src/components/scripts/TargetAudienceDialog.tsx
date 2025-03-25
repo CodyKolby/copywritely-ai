@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import TargetAudienceForm from './TargetAudienceForm';
@@ -50,7 +51,8 @@ const TargetAudienceDialog = ({
   const handleContinue = async () => {
     if (!isPremium) {
       toast.error('Nie posiadasz konta premium', {
-        description: 'Ta funkcjonalność jest dostępna tylko dla użytkowników premium.'
+        description: 'Ta funkcjonalność jest dostępna tylko dla użytkowników premium.',
+        dismissible: true
       });
       onOpenChange(false);
       return;
@@ -68,7 +70,9 @@ const TargetAudienceDialog = ({
         
       } catch (error) {
         console.error('Error in handleContinue:', error);
-        toast.error('Nieoczekiwany błąd podczas przetwarzania danych');
+        toast.error('Nieoczekiwany błąd podczas przetwarzania danych', {
+          dismissible: true
+        });
       } finally {
         setIsLoading(false);
       }
@@ -76,7 +80,8 @@ const TargetAudienceDialog = ({
       setShowForm(true);
     } else {
       toast.error('Wybierz grupę docelową', {
-        description: 'Musisz wybrać istniejącą grupę docelową lub stworzyć nową.'
+        description: 'Musisz wybrać istniejącą grupę docelową lub stworzyć nową.',
+        dismissible: true
       });
     }
   };
@@ -84,7 +89,8 @@ const TargetAudienceDialog = ({
   const handleCreateNewAudience = () => {
     if (!isPremium) {
       toast.error('Nie posiadasz konta premium', {
-        description: 'Ta funkcjonalność jest dostępna tylko dla użytkowników premium.'
+        description: 'Ta funkcjonalność jest dostępna tylko dla użytkowników premium.',
+        dismissible: true
       });
       onOpenChange(false);
       return;
@@ -97,7 +103,8 @@ const TargetAudienceDialog = ({
   const handleFormSubmit = async (data: any, targetAudienceId?: string) => {
     if (!isPremium) {
       toast.error('Nie posiadasz konta premium', {
-        description: 'Ta funkcjonalność jest dostępna tylko dla użytkowników premium.'
+        description: 'Ta funkcjonalność jest dostępna tylko dla użytkowników premium.',
+        dismissible: true
       });
       onOpenChange(false);
       return;
@@ -105,7 +112,9 @@ const TargetAudienceDialog = ({
 
     setIsLoading(true);
     try {
-      toast.success('Zapisano dane grupy docelowej');
+      toast.success('Zapisano dane grupy docelowej', {
+        dismissible: true
+      });
       
       if (targetAudienceId) {
         setSelectedAudienceId(targetAudienceId);
@@ -114,7 +123,8 @@ const TargetAudienceDialog = ({
     } catch (error) {
       console.error('Error submitting form:', error);
       toast.error('Błąd podczas zapisywania danych', {
-        description: 'Spróbuj ponownie później lub skontaktuj się z obsługą klienta.'
+        description: 'Spróbuj ponownie później lub skontaktuj się z obsługą klienta.',
+        dismissible: true
       });
     } finally {
       setIsLoading(false);

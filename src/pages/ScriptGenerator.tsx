@@ -29,7 +29,8 @@ const ScriptGenerator = () => {
     
     if (selectedTemplate?.comingSoon) {
       toast.info('Wkrótce dostępne', {
-        description: 'Ta funkcjonalność będzie dostępna w przyszłych aktualizacjach.'
+        description: 'Ta funkcjonalność będzie dostępna w przyszłych aktualizacjach.',
+        dismissible: true
       });
       return;
     }

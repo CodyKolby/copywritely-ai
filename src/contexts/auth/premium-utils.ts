@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client'
 import { toast } from 'sonner';
 
@@ -26,7 +25,9 @@ export const checkPremiumStatus = async (userId: string, showToast = false): Pro
         console.log('User has premium status according to database:', profile.is_premium);
         
         if (showToast) {
-          toast.success('Twoje konto ma status Premium!');
+          toast.success('Twoje konto ma status Premium!', {
+            dismissible: true
+          });
         }
         
         return true;
@@ -80,7 +81,9 @@ export const checkPremiumStatus = async (userId: string, showToast = false): Pro
     }
     
     if (isPremium && showToast) {
-      toast.success('Twoje konto ma status Premium!');
+      toast.success('Twoje konto ma status Premium!', {
+        dismissible: true
+      });
     }
     
     return isPremium;
@@ -153,7 +156,9 @@ export const checkPremiumStatusFallback = async (userId: string, showToast = fal
     console.log('Premium status from database fallback:', isPremium);
     
     if (isPremium && showToast) {
-      toast.success('Twoje konto ma status Premium!');
+      toast.success('Twoje konto ma status Premium!', {
+        dismissible: true
+      });
     }
     
     return isPremium;
@@ -162,3 +167,4 @@ export const checkPremiumStatusFallback = async (userId: string, showToast = fal
     return false;
   }
 }
+

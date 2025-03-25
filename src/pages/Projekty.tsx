@@ -64,7 +64,9 @@ const Projekty = () => {
       setProjects(data as Project[]);
     } catch (error) {
       console.error('Błąd podczas pobierania projektów:', error);
-      toast.error('Nie udało się pobrać projektów');
+      toast.error('Nie udało się pobrać projektów', {
+        dismissible: true
+      });
     } finally {
       setLoading(false);
     }
@@ -117,7 +119,9 @@ const Projekty = () => {
 
   const handleOpenProject = (projectId: string) => {
     console.log(`Otwieranie projektu: ${projectId}`);
-    toast.info('Funkcja edycji projektu będzie dostępna wkrótce');
+    toast.info('Funkcja edycji projektu będzie dostępna wkrótce', {
+      dismissible: true
+    });
   };
 
   return (
