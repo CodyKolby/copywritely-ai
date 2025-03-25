@@ -1,3 +1,4 @@
+
 import React, { useState, KeyboardEvent } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -10,6 +11,8 @@ import StepContainer from './target-audience-form/StepContainer';
 import NavigationControls from './target-audience-form/NavigationControls';
 import StepRenderer from './target-audience-form/StepRenderer';
 import { formSchema, FormValues, TargetAudienceFormProps } from './target-audience-form/types';
+import { validateStep } from './target-audience-form/validation-utils';
+import { submitTargetAudienceForm } from './target-audience-form/submission-utils';
 
 const TOTAL_STEPS = 13;
 
@@ -38,89 +41,7 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
 
   const goToNextStep = async () => {
     try {
-      let isValid = false;
-      
-      // Define validation logic based on current step
-      switch (currentStep) {
-        case 1:
-          isValid = await form.trigger('ageRange');
-          break;
-        case 2:
-          isValid = await form.trigger('gender');
-          break;
-        case 3:
-          // Validate all three competitor fields
-          isValid = await form.trigger('competitors');
-          // Additional check for each individual competitor field
-          const competitors = form.getValues('competitors');
-          if (competitors.some(comp => !comp || comp.trim() === '')) {
-            isValid = false;
-            form.setError('competitors', {
-              type: 'manual',
-              message: 'Proszę wypełnić wszystkie pola konkurentów'
-            });
-          }
-          break;
-        case 4:
-          isValid = await form.trigger('language');
-          break;
-        case 5:
-          isValid = await form.trigger('biography');
-          break;
-        case 6:
-          isValid = await form.trigger('beliefs');
-          break;
-        case 7:
-          // Validate all pain fields
-          isValid = await form.trigger('pains');
-          const pains = form.getValues('pains');
-          if (pains.some(pain => !pain || pain.trim() === '')) {
-            isValid = false;
-            form.setError('pains', {
-              type: 'manual',
-              message: 'Proszę wypełnić wszystkie pola problemów'
-            });
-          }
-          break;
-        case 8:
-          // Validate all desire fields
-          isValid = await form.trigger('desires');
-          const desires = form.getValues('desires');
-          if (desires.some(desire => !desire || desire.trim() === '')) {
-            isValid = false;
-            form.setError('desires', {
-              type: 'manual',
-              message: 'Proszę wypełnić wszystkie pola pragnień'
-            });
-          }
-          break;
-        case 9:
-          isValid = await form.trigger('mainOffer');
-          break;
-        case 10:
-          isValid = await form.trigger('offerDetails');
-          break;
-        case 11:
-          // Validate all benefit fields
-          isValid = await form.trigger('benefits');
-          const benefits = form.getValues('benefits');
-          if (benefits.some(benefit => !benefit || benefit.trim() === '')) {
-            isValid = false;
-            form.setError('benefits', {
-              type: 'manual',
-              message: 'Proszę wypełnić wszystkie pola korzyści'
-            });
-          }
-          break;
-        case 12:
-          isValid = await form.trigger('whyItWorks');
-          break;
-        case 13:
-          isValid = await form.trigger('experience');
-          break;
-        default:
-          break;
-      }
+      const isValid = await validateStep(currentStep, form);
 
       if (isValid) {
         if (currentStep < TOTAL_STEPS) {
@@ -149,9 +70,6 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
 
   const handleSubmit = async (data: FormValues) => {
     try {
-      // Auto-generate a name for the target audience if not provided
-      const audienceName = `Grupa docelowa - ${data.ageRange}, ${data.gender}`;
-      
       // Get current user
       const { data: userData, error: userError } = await supabase.auth.getUser();
       
@@ -169,40 +87,12 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
         return;
       }
       
-      // Insert data into Supabase
-      const { data: insertedData, error } = await supabase
-        .from('target_audiences')
-        .insert({
-          name: audienceName,
-          user_id: userId,
-          age_range: data.ageRange,
-          gender: data.gender,
-          competitors: data.competitors,
-          language: data.language,
-          biography: data.biography,
-          beliefs: data.beliefs,
-          pains: data.pains,
-          desires: data.desires,
-          main_offer: data.mainOffer,
-          offer_details: data.offerDetails,
-          benefits: data.benefits,
-          why_it_works: data.whyItWorks,
-          experience: data.experience
-        })
-        .select();
+      // Submit the form data using the utility function
+      const targetAudienceId = await submitTargetAudienceForm(data, userId);
       
-      if (error) {
-        console.error("Error saving to Supabase:", error);
-        toast.error('Wystąpił błąd podczas zapisywania danych');
-        return;
-      }
-      
-      console.log("Data saved to Supabase:", insertedData);
-      toast.success('Dane zostały zapisane');
-      
-      // Pass the created audience ID to the parent component
-      if (insertedData && insertedData.length > 0) {
-        onSubmit(data, insertedData[0].id);
+      // Call the onSubmit callback with the form data and the created audience ID
+      if (targetAudienceId) {
+        onSubmit(data, targetAudienceId);
       } else {
         onSubmit(data);
       }
