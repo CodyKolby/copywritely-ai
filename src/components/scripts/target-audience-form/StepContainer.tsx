@@ -15,10 +15,10 @@ interface StepContainerProps {
 const StepContainer = ({ currentStep, form, handleKeyDown, children }: StepContainerProps) => {
   return (
     <Form {...form}>
-      <form className="space-y-6" onKeyDown={handleKeyDown}>
+      <form className="space-y-6 relative" onKeyDown={handleKeyDown}>
         <div className="py-4">
           <Tabs value={currentStep.toString()}>
-            <TabsContent value={currentStep.toString()} className="mt-0">
+            <TabsContent value={currentStep.toString()} className="mt-0 pb-2">
               {children}
             </TabsContent>
           </Tabs>

@@ -22,7 +22,12 @@ const InfoTooltip = ({ text }: InfoTooltipProps) => (
           <span className="sr-only">Info</span>
         </Button>
       </TooltipTrigger>
-      <TooltipContent className="max-w-sm text-sm">
+      <TooltipContent 
+        side="top" 
+        align="center" 
+        className="max-w-xs w-auto text-sm p-3 break-words z-50"
+        sideOffset={5}
+      >
         {text}
       </TooltipContent>
     </Tooltip>
