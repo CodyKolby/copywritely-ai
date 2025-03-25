@@ -25,8 +25,10 @@ const InfoTooltip = ({ text }: InfoTooltipProps) => (
       <TooltipContent 
         side="top" 
         align="center" 
-        className="max-w-xs w-auto text-sm p-3 break-words z-50"
+        className="max-w-xs w-auto text-sm p-3 break-words"
         sideOffset={5}
+        avoidCollisions={false}
+        collisionPadding={20}
       >
         {text}
       </TooltipContent>
