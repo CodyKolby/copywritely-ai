@@ -3,6 +3,7 @@ import React, { useState, KeyboardEvent } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { toast } from 'sonner';
 
 // Import refactored components
 import StepContainer from './target-audience-form/StepContainer';
@@ -36,58 +37,43 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
   });
 
   const goToNextStep = async () => {
-    // Check validity of current step
-    let isValid = true;
+    // Define which field(s) to validate for each step
+    const stepValidations: Record<number, string[]> = {
+      1: ['ageRange'],
+      2: ['gender'],
+      3: ['competitors'],
+      4: ['language'],
+      5: ['biography'],
+      6: ['beliefs'],
+      7: ['pains'],
+      8: ['desires'],
+      9: ['mainOffer'],
+      10: ['offerDetails'],
+      11: ['benefits'],
+      12: ['whyItWorks'],
+      13: ['experience'],
+    };
 
-    switch (currentStep) {
-      case 1: // Age Range
-        isValid = await form.trigger('ageRange');
-        break;
-      case 2: // Gender
-        isValid = await form.trigger('gender');
-        break;
-      case 3: // Competitors
-        isValid = await form.trigger('competitors');
-        break;
-      case 4: // Language
-        isValid = await form.trigger('language');
-        break;
-      case 5: // Biography
-        isValid = await form.trigger('biography');
-        break;
-      case 6: // Beliefs
-        isValid = await form.trigger('beliefs');
-        break;
-      case 7: // Pains
-        isValid = await form.trigger('pains');
-        break;
-      case 8: // Desires
-        isValid = await form.trigger('desires');
-        break;
-      case 9: // Main Offer
-        isValid = await form.trigger('mainOffer');
-        break;
-      case 10: // Offer Details
-        isValid = await form.trigger('offerDetails');
-        break;
-      case 11: // Benefits
-        isValid = await form.trigger('benefits');
-        break;
-      case 12: // Why It Works
-        isValid = await form.trigger('whyItWorks');
-        break;
-      case 13: // Experience
-        isValid = await form.trigger('experience');
-        break;
-    }
-
-    if (isValid) {
-      if (currentStep < TOTAL_STEPS) {
-        setCurrentStep(currentStep + 1);
+    const fieldsToValidate = stepValidations[currentStep];
+    
+    try {
+      // Trigger validation for all fields in the current step
+      const isValid = await form.trigger(fieldsToValidate as any);
+      
+      if (isValid) {
+        if (currentStep < TOTAL_STEPS) {
+          setCurrentStep(currentStep + 1);
+        } else {
+          // Submit the form if we're on the last step
+          form.handleSubmit(handleSubmit)();
+        }
       } else {
-        // Submit the form if we're on the last step
-        form.handleSubmit(handleSubmit)();
+        // Show error toast if validation fails
+        toast.error('Proszę uzupełnić wszystkie wymagane pola');
       }
+    } catch (error) {
+      console.error("Validation error:", error);
+      toast.error('Wystąpił błąd podczas walidacji');
     }
   };
 
