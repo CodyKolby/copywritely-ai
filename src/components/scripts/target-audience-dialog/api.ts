@@ -4,7 +4,10 @@ import { toast } from 'sonner';
 import { TargetAudience } from './types';
 
 export const fetchExistingAudiences = async (userId: string): Promise<TargetAudience[]> => {
-  if (!userId) return [];
+  if (!userId || userId === 'test-user-id') {
+    console.log('Using empty or test user ID, returning empty array');
+    return [];
+  }
   
   try {
     const { data, error } = await supabase
@@ -27,6 +30,10 @@ export const fetchExistingAudiences = async (userId: string): Promise<TargetAudi
 };
 
 export const fetchTargetAudienceDetails = async (audienceId: string) => {
+  if (!audienceId) {
+    return null;
+  }
+  
   try {
     const { data, error } = await supabase
       .from('target_audiences')
