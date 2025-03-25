@@ -1,4 +1,3 @@
-
 import React, { useState, KeyboardEvent } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -200,7 +199,13 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
       
       console.log("Data saved to Supabase:", insertedData);
       toast.success('Dane zostały zapisane');
-      onSubmit(data);
+      
+      // Pass the created audience ID to the parent component
+      if (insertedData && insertedData.length > 0) {
+        onSubmit(data, insertedData[0].id);
+      } else {
+        onSubmit(data);
+      }
     } catch (error) {
       console.error("Form submission error:", error);
       toast.error('Wystąpił błąd podczas wysyłania formularza');
