@@ -50,11 +50,25 @@ export const createProfile = async (userId: string): Promise<Profile | null> => 
     
     const { email, user_metadata } = userData.user;
     
+    console.log('User metadata from Google:', user_metadata);
+    
+    // Extract full name from Google auth (could be in different fields)
+    const fullName = user_metadata?.full_name || 
+                    user_metadata?.name || 
+                    user_metadata?.user_name ||
+                    `${user_metadata?.given_name || ''} ${user_metadata?.family_name || ''}`.trim() ||
+                    '';
+    
+    // Extract avatar URL from Google auth
+    const avatarUrl = user_metadata?.avatar_url || 
+                     user_metadata?.picture ||
+                     '';
+    
     const newProfile = {
       id: userId,
       email: email,
-      full_name: user_metadata?.full_name || user_metadata?.name || '',
-      avatar_url: user_metadata?.avatar_url || '',
+      full_name: fullName,
+      avatar_url: avatarUrl,
       is_premium: false
     };
     
@@ -81,8 +95,8 @@ export const createProfile = async (userId: string): Promise<Profile | null> => 
         const params: CreateProfileParams = {
           user_id: userId,
           user_email: email || null, 
-          user_full_name: user_metadata?.full_name || user_metadata?.name || null,
-          user_avatar_url: user_metadata?.avatar_url || null
+          user_full_name: fullName || null,
+          user_avatar_url: avatarUrl || null
         };
         
         console.log('Attempting to create profile using RPC with data:', params);
