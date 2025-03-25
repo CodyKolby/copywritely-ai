@@ -153,12 +153,29 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
       // Auto-generate a name for the target audience if not provided
       const audienceName = `Grupa docelowa - ${data.ageRange}, ${data.gender}`;
       
+      // Get current user
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      
+      if (userError) {
+        console.error("Error getting user:", userError);
+        toast.error('Wystąpił błąd podczas identyfikacji użytkownika');
+        return;
+      }
+      
+      const userId = userData.user?.id;
+      
+      if (!userId) {
+        console.error("No user ID found");
+        toast.error('Nie znaleziono identyfikatora użytkownika');
+        return;
+      }
+      
       // Insert data into Supabase
       const { data: insertedData, error } = await supabase
         .from('target_audiences')
         .insert({
           name: audienceName,
-          user_id: supabase.auth.getUser().then(({ data }) => data.user?.id),
+          user_id: userId,
           age_range: data.ageRange,
           gender: data.gender,
           competitors: data.competitors,
