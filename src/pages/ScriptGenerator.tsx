@@ -7,7 +7,6 @@ import { ExclamationTriangleIcon } from '@radix-ui/react-icons';
 import { useAuth } from '@/contexts/auth/AuthContext';
 
 // Import components
-import { Button } from '@/components/ui/button';
 import ScriptTemplateGrid from '@/components/scripts/ScriptTemplateGrid';
 import TargetAudienceDialog from '@/components/scripts/TargetAudienceDialog';
 
@@ -17,7 +16,6 @@ import { scriptTemplates } from '@/data/scriptTemplates';
 const ScriptGenerator = () => {
   const { isPremium, user } = useAuth();
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [targetAudienceDialogOpen, setTargetAudienceDialogOpen] = useState(false);
   const [currentTemplateId, setCurrentTemplateId] = useState<string>('');
 
@@ -27,16 +25,11 @@ const ScriptGenerator = () => {
 
   const handleTemplateSelect = (templateId: string) => {
     // Check if template is "landing" which is marked as coming soon
-    if (templateId === 'landing') {
+    const selectedTemplate = scriptTemplates.find(template => template.id === templateId);
+    
+    if (selectedTemplate?.comingSoon) {
       toast.info('Wkrótce dostępne', {
         description: 'Ta funkcjonalność będzie dostępna w przyszłych aktualizacjach.'
-      });
-      return;
-    }
-    
-    if (!isPremium) {
-      toast.error('Nie posiadasz konta premium', {
-        description: 'Ta funkcjonalność jest dostępna tylko dla użytkowników premium.'
       });
       return;
     }
