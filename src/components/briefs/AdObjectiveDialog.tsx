@@ -61,7 +61,7 @@ const AdObjectiveDialog = ({ open, onOpenChange, onSubmit, isPremium }: AdObject
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Jaki cel reklama ma mieć?</DialogTitle>
+          <DialogTitle className="text-xl font-semibold">Jaki cel reklama ma mieć?</DialogTitle>
           <DialogDescription>
             Wybierz cel kampanii reklamowej.
           </DialogDescription>
@@ -107,9 +107,34 @@ const AdObjectiveDialog = ({ open, onOpenChange, onSubmit, isPremium }: AdObject
                       className="gap-3"
                     >
                       {adObjectives.map((objective) => (
-                        <div key={objective.id} className="flex items-center space-x-2">
-                          <RadioGroupItem value={objective.id} id={objective.id} />
-                          <Label htmlFor={objective.id} className="font-medium">{objective.title}</Label>
+                        <div 
+                          key={objective.id} 
+                          className={`flex items-center justify-between p-3 rounded-md cursor-pointer transition-colors ${
+                            field.value === objective.id 
+                              ? 'bg-copywrite-teal text-white' 
+                              : 'bg-copywrite-teal-light text-copywrite-teal hover:bg-copywrite-teal hover:text-white'
+                          }`}
+                        >
+                          <Label 
+                            htmlFor={objective.id} 
+                            className={`font-medium cursor-pointer ${field.value === objective.id ? 'text-white' : ''}`}
+                          >
+                            {objective.title}
+                          </Label>
+                          <RadioGroupItem 
+                            value={objective.id} 
+                            id={objective.id} 
+                            className="sr-only"
+                          />
+                          <div className={`h-5 w-5 rounded-full border flex items-center justify-center ${
+                            field.value === objective.id 
+                              ? 'border-white bg-white/20' 
+                              : 'border-copywrite-teal'
+                          }`}>
+                            {field.value === objective.id && (
+                              <div className="h-3 w-3 rounded-full bg-white" />
+                            )}
+                          </div>
                         </div>
                       ))}
                     </RadioGroup>
@@ -122,13 +147,14 @@ const AdObjectiveDialog = ({ open, onOpenChange, onSubmit, isPremium }: AdObject
                   type="button"
                   variant="outline"
                   onClick={() => onOpenChange(false)}
-                  className="rounded-full"
+                  className="rounded-full px-6"
                 >
                   Anuluj
                 </Button>
                 <Button 
                   type="submit" 
-                  className="bg-copywrite-teal hover:bg-copywrite-teal-dark transition-colors rounded-full"
+                  className="bg-copywrite-teal hover:bg-copywrite-teal-dark transition-colors rounded-full px-6"
+                  disabled={!adObjectiveForm.watch('objective')}
                 >
                   Dalej
                 </Button>

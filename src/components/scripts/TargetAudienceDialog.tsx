@@ -1,13 +1,13 @@
 
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import TargetAudienceForm from './TargetAudienceForm';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Checkbox } from '@/components/ui/checkbox';
+import { HelpCircle } from 'lucide-react';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { ExclamationTriangleIcon } from '@radix-ui/react-icons';
 
 interface TargetAudienceDialogProps {
   open: boolean;
@@ -123,62 +123,107 @@ const TargetAudienceDialog = ({
                 Wybierz grupę docelową dla której chcesz stworzyć skrypt
               </DialogTitle>
               <DialogDescription>
-                Jakiś tekst dotyczący tego okna, coś może tłumaczącego itd.
+                Wybierz jedną z istniejących grup docelowych lub stwórz nową, aby dostosować skrypt do Twoich potrzeb.
               </DialogDescription>
             </DialogHeader>
             
-            <div className="py-4">
-              {existingAudiences.length > 0 && (
-                <div className="mb-6 bg-red-500 rounded-lg p-4">
-                  <ScrollArea className="h-[200px] w-full">
-                    <div className="space-y-3">
-                      {existingAudiences.map((audience) => (
-                        <div 
-                          key={audience.id}
-                          className="flex items-center justify-between bg-blue-600 rounded-full p-4 text-white"
-                          onClick={() => {
-                            handleExistingAudienceSelect(audience.id);
-                            handleChoiceSelection('existing');
-                          }}
-                        >
-                          <span className="font-medium">{audience.name}</span>
-                          <div className="h-8 w-8 rounded-full bg-sky-300 flex items-center justify-center">
-                            {selectedAudienceId === audience.id && (
-                              <div className="h-4 w-4 rounded-full bg-white" />
-                            )}
+            {!isPremium ? (
+              <div className="py-4">
+                <Alert variant="destructive" className="mb-4">
+                  <ExclamationTriangleIcon className="h-4 w-4" />
+                  <AlertTitle>Premium feature</AlertTitle>
+                  <AlertDescription>
+                    Target audience creation is only available for premium users. Upgrade your account to access this feature.
+                  </AlertDescription>
+                </Alert>
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => onOpenChange(false)}
+                    className="rounded-full"
+                  >
+                    Anuluj
+                  </Button>
+                  <Button 
+                    onClick={() => window.location.href = '/pricing'} 
+                    className="bg-copywrite-teal hover:bg-copywrite-teal-dark transition-colors rounded-full"
+                  >
+                    View Pricing
+                  </Button>
+                </DialogFooter>
+              </div>
+            ) : (
+              <div className="py-4">
+                {existingAudiences.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="font-medium text-lg mb-3">Istniejące grupy docelowe</h3>
+                    <ScrollArea className="h-[200px] w-full rounded-md border">
+                      <div className="space-y-2 p-3">
+                        {existingAudiences.map((audience) => (
+                          <div 
+                            key={audience.id}
+                            className={`flex items-center justify-between rounded-md p-3 cursor-pointer transition-colors ${
+                              selectedAudienceId === audience.id 
+                                ? 'bg-copywrite-teal text-white' 
+                                : 'bg-copywrite-teal-light text-copywrite-teal hover:bg-copywrite-teal hover:text-white'
+                            }`}
+                            onClick={() => {
+                              handleExistingAudienceSelect(audience.id);
+                              handleChoiceSelection('existing');
+                            }}
+                          >
+                            <span className="font-medium">{audience.name}</span>
+                            <div className={`h-5 w-5 rounded-full border flex items-center justify-center ${
+                              selectedAudienceId === audience.id 
+                                ? 'border-white bg-white/20' 
+                                : 'border-copywrite-teal'
+                            }`}>
+                              {selectedAudienceId === audience.id && (
+                                <div className="h-3 w-3 rounded-full bg-white" />
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </div>
-              )}
-              
-              <div className="flex items-center space-x-3 mb-6">
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                )}
+                
                 <div 
-                  className="h-8 w-8 rounded-full bg-sky-300 flex items-center justify-center cursor-pointer"
+                  className={`flex items-center justify-between p-3 rounded-md cursor-pointer transition-colors mb-6 ${
+                    audienceChoice === 'new' 
+                      ? 'bg-copywrite-teal text-white' 
+                      : 'bg-copywrite-teal-light text-copywrite-teal hover:bg-copywrite-teal hover:text-white'
+                  }`}
                   onClick={() => handleChoiceSelection('new')}
                 >
-                  {audienceChoice === 'new' && (
-                    <div className="h-4 w-4 rounded-full bg-white" />
-                  )}
+                  <span className="font-medium">Stwórz nową grupę docelową</span>
+                  <div className={`h-5 w-5 rounded-full border flex items-center justify-center ${
+                    audienceChoice === 'new' 
+                      ? 'border-white bg-white/20' 
+                      : 'border-copywrite-teal'
+                  }`}>
+                    {audienceChoice === 'new' && (
+                      <div className="h-3 w-3 rounded-full bg-white" />
+                    )}
+                  </div>
                 </div>
-                <Label htmlFor="new" className="cursor-pointer text-white">Stwórz nową grupę docelową</Label>
+                
+                <DialogFooter className="mt-6">
+                  <Button variant="outline" onClick={handleCancel} className="rounded-full px-6">
+                    Anuluj
+                  </Button>
+                  <Button 
+                    onClick={handleContinue}
+                    disabled={!audienceChoice}
+                    className="bg-copywrite-teal hover:bg-copywrite-teal-dark text-white rounded-full px-6"
+                  >
+                    Dalej
+                  </Button>
+                </DialogFooter>
               </div>
-              
-              <div className="flex justify-between mt-8">
-                <Button variant="outline" onClick={handleCancel} className="rounded-full px-8 py-6">
-                  Anuluj
-                </Button>
-                <Button 
-                  onClick={handleContinue} 
-                  disabled={!audienceChoice}
-                  className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-8 py-6"
-                >
-                  Dalej
-                </Button>
-              </div>
-            </div>
+            )}
           </>
         ) : (
           <TargetAudienceForm 
