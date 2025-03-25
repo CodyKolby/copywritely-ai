@@ -71,6 +71,19 @@ const TargetAudienceDialog = ({
     }
   };
   
+  const handleCreateNewAudience = () => {
+    if (!isPremium) {
+      toast.error('Nie posiadasz konta premium', {
+        description: 'Ta funkcjonalność jest dostępna tylko dla użytkowników premium.'
+      });
+      onOpenChange(false);
+      return;
+    }
+    
+    setAudienceChoice('new');
+    setShowForm(true);
+  };
+  
   const handleFormSubmit = async (data: any) => {
     if (!isPremium) {
       toast.error('Nie posiadasz konta premium', {
@@ -190,24 +203,13 @@ const TargetAudienceDialog = ({
                   </div>
                 )}
                 
-                <div 
-                  className={`flex items-center justify-between p-3 rounded-md cursor-pointer transition-colors mb-6 ${
-                    audienceChoice === 'new' 
-                      ? 'bg-copywrite-teal text-white' 
-                      : 'bg-copywrite-teal-light text-copywrite-teal hover:bg-copywrite-teal hover:text-white'
-                  }`}
-                  onClick={() => handleChoiceSelection('new')}
-                >
-                  <span className="font-medium">Stwórz nową grupę docelową</span>
-                  <div className={`h-5 w-5 rounded-full border flex items-center justify-center ${
-                    audienceChoice === 'new' 
-                      ? 'border-white bg-white/20' 
-                      : 'border-copywrite-teal'
-                  }`}>
-                    {audienceChoice === 'new' && (
-                      <div className="h-3 w-3 rounded-full bg-white" />
-                    )}
-                  </div>
+                <div className="text-center mb-6">
+                  <button
+                    onClick={handleCreateNewAudience}
+                    className="text-copywrite-teal hover:text-copywrite-teal-dark font-medium underline transition-colors"
+                  >
+                    Stwórz nową grupę docelową
+                  </button>
                 </div>
                 
                 <DialogFooter className="mt-6">
