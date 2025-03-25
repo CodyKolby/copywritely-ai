@@ -37,29 +37,91 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
   });
 
   const goToNextStep = async () => {
-    // Define which field(s) to validate for each step
-    const stepValidations: Record<number, string[]> = {
-      1: ['ageRange'],
-      2: ['gender'],
-      3: ['competitors'],
-      4: ['language'],
-      5: ['biography'],
-      6: ['beliefs'],
-      7: ['pains'],
-      8: ['desires'],
-      9: ['mainOffer'],
-      10: ['offerDetails'],
-      11: ['benefits'],
-      12: ['whyItWorks'],
-      13: ['experience'],
-    };
-
-    const fieldsToValidate = stepValidations[currentStep];
-    
     try {
-      // Trigger validation for all fields in the current step
-      const isValid = await form.trigger(fieldsToValidate as any);
+      let isValid = false;
       
+      // Define validation logic based on current step
+      switch (currentStep) {
+        case 1:
+          isValid = await form.trigger('ageRange');
+          break;
+        case 2:
+          isValid = await form.trigger('gender');
+          break;
+        case 3:
+          // Validate all three competitor fields
+          isValid = await form.trigger('competitors');
+          // Additional check for each individual competitor field
+          const competitors = form.getValues('competitors');
+          if (competitors.some(comp => !comp || comp.trim() === '')) {
+            isValid = false;
+            form.setError('competitors', {
+              type: 'manual',
+              message: 'Proszę wypełnić wszystkie pola konkurentów'
+            });
+          }
+          break;
+        case 4:
+          isValid = await form.trigger('language');
+          break;
+        case 5:
+          isValid = await form.trigger('biography');
+          break;
+        case 6:
+          isValid = await form.trigger('beliefs');
+          break;
+        case 7:
+          // Validate all pain fields
+          isValid = await form.trigger('pains');
+          const pains = form.getValues('pains');
+          if (pains.some(pain => !pain || pain.trim() === '')) {
+            isValid = false;
+            form.setError('pains', {
+              type: 'manual',
+              message: 'Proszę wypełnić wszystkie pola problemów'
+            });
+          }
+          break;
+        case 8:
+          // Validate all desire fields
+          isValid = await form.trigger('desires');
+          const desires = form.getValues('desires');
+          if (desires.some(desire => !desire || desire.trim() === '')) {
+            isValid = false;
+            form.setError('desires', {
+              type: 'manual',
+              message: 'Proszę wypełnić wszystkie pola pragnień'
+            });
+          }
+          break;
+        case 9:
+          isValid = await form.trigger('mainOffer');
+          break;
+        case 10:
+          isValid = await form.trigger('offerDetails');
+          break;
+        case 11:
+          // Validate all benefit fields
+          isValid = await form.trigger('benefits');
+          const benefits = form.getValues('benefits');
+          if (benefits.some(benefit => !benefit || benefit.trim() === '')) {
+            isValid = false;
+            form.setError('benefits', {
+              type: 'manual',
+              message: 'Proszę wypełnić wszystkie pola korzyści'
+            });
+          }
+          break;
+        case 12:
+          isValid = await form.trigger('whyItWorks');
+          break;
+        case 13:
+          isValid = await form.trigger('experience');
+          break;
+        default:
+          break;
+      }
+
       if (isValid) {
         if (currentStep < TOTAL_STEPS) {
           setCurrentStep(currentStep + 1);
