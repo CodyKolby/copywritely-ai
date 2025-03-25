@@ -15,10 +15,10 @@ interface StepContainerProps {
 const StepContainer = ({ currentStep, form, handleKeyDown, children }: StepContainerProps) => {
   return (
     <Form {...form}>
-      <form className="space-y-6 relative overflow-visible" onKeyDown={handleKeyDown}>
-        <div className="py-4 overflow-visible">
+      <form className="space-y-6 relative" onKeyDown={handleKeyDown} style={{ overflow: 'visible' }}>
+        <div className="py-4" style={{ overflow: 'visible' }}>
           <Tabs value={currentStep.toString()}>
-            <TabsContent value={currentStep.toString()} className="mt-0 pb-2 overflow-visible">
+            <TabsContent value={currentStep.toString()} className="mt-0 pb-2" style={{ overflow: 'visible' }}>
               {children}
             </TabsContent>
           </Tabs>
