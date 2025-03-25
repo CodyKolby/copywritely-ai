@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import TargetAudienceForm from './TargetAudienceForm';
@@ -64,11 +63,6 @@ const TargetAudienceDialog = ({
         const audienceData = await fetchTargetAudienceDetails(selectedAudienceId);
         
         if (audienceData) {
-          toast.success('Wybrano grupę docelową', {
-            description: 'Twoja grupa docelowa została wybrana do generowania skryptu.'
-          });
-          
-          // Open the script generation dialog
           setShowScriptDialog(true);
         }
         
@@ -111,12 +105,8 @@ const TargetAudienceDialog = ({
 
     setIsLoading(true);
     try {
-      // The form component now handles saving to Supabase
-      toast.success('Zapisano dane grupy docelowej', {
-        description: 'Twoje dane zostały zapisane i zostaną wykorzystane do generowania skryptu.'
-      });
+      toast.success('Zapisano dane grupy docelowej');
       
-      // If we have a target audience ID, store it and open script dialog
       if (targetAudienceId) {
         setSelectedAudienceId(targetAudienceId);
         setShowScriptDialog(true);
@@ -143,7 +133,7 @@ const TargetAudienceDialog = ({
   
   const handleScriptDialogClose = () => {
     setShowScriptDialog(false);
-    onOpenChange(false); // Close the parent dialog as well
+    onOpenChange(false);
   };
 
   return (
@@ -173,7 +163,6 @@ const TargetAudienceDialog = ({
         </DialogContent>
       </Dialog>
       
-      {/* Script Generation Dialog */}
       <GeneratedScriptDialog
         open={showScriptDialog}
         onOpenChange={handleScriptDialogClose}

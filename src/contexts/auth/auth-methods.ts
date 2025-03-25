@@ -98,7 +98,7 @@ export const signOut = async () => {
     if (error instanceof Error) {
       toast.error('Błąd podczas wylogowywania', {
         description: error.message
-      });
+      })
     }
     
     // Force reload anyway
