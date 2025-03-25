@@ -17,6 +17,7 @@
     align-items: center !important;
     justify-content: center !important;
     transition: background-color 0.2s ease !important;
+    color: white !important;
   }
 
   [data-sonner-toast] [data-close-button]:hover {

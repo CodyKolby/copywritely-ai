@@ -64,7 +64,7 @@ const ScriptGenerator = () => {
             transition={{ duration: 0.5 }}
             className="mb-8"
           >
-            <Alert variant="destructive">
+            <Alert variant="destructive" className="rounded-md bg-red-600">
               <ExclamationTriangleIcon className="h-4 w-4" />
               <AlertTitle>Premium feature</AlertTitle>
               <AlertDescription>
