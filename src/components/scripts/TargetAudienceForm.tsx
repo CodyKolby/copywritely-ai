@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, KeyboardEvent, useEffect } from 'react';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, useWatch } from 'react-hook-form';
@@ -166,6 +166,14 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
 
   const handleSubmit = (data: FormValues) => {
     onSubmit(data);
+  };
+
+  // Handle Enter key press to navigate to the next step
+  const handleKeyDown = (e: KeyboardEvent<HTMLFormElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      goToNextStep();
+    }
   };
 
   const renderStepContent = () => {
@@ -519,7 +527,7 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
   return (
     <TooltipProvider>
       <Form {...form}>
-        <form className="space-y-6">
+        <form className="space-y-6" onKeyDown={handleKeyDown}>
           <div className="py-4">
             <Tabs value={currentStep.toString()}>
               <TabsContent value={currentStep.toString()} className="mt-0">
