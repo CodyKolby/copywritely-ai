@@ -16,7 +16,8 @@ export const sampleBriefTemplates: BriefTemplate[] = [
   { 
     id: 'landing',
     title: 'Landing Page',
-    description: 'Design compelling copy for conversion-focused landing pages.'
+    description: 'Wkrótce dostępne - Create compelling copy for conversion-focused landing pages.',
+    comingSoon: true
   },
   { 
     id: 'ad',

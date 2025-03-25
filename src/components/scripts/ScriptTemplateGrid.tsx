@@ -2,20 +2,14 @@
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { ScriptTemplate } from '@/data/scriptTemplates';
 
-export interface BriefTemplate {
-  id: string;
-  title: string;
-  description: string;
-  comingSoon?: boolean;
-}
-
-interface BriefTemplateGridProps {
-  templates: BriefTemplate[];
+interface ScriptTemplateGridProps {
+  templates: ScriptTemplate[];
   onSelectTemplate: (templateId: string) => void;
 }
 
-const BriefTemplateGrid = ({ templates, onSelectTemplate }: BriefTemplateGridProps) => {
+const ScriptTemplateGrid = ({ templates, onSelectTemplate }: ScriptTemplateGridProps) => {
   return (
     <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
       {templates.map((template, index) => (
@@ -40,7 +34,7 @@ const BriefTemplateGrid = ({ templates, onSelectTemplate }: BriefTemplateGridPro
             className={`w-full ${template.comingSoon ? 'bg-gray-300 hover:bg-gray-300 cursor-not-allowed' : 'bg-copywrite-teal hover:bg-copywrite-teal-dark'} transition-colors`}
             disabled={template.comingSoon}
           >
-            {template.comingSoon ? 'Wkrótce dostępne' : 'Generate Brief'}
+            {template.comingSoon ? 'Wkrótce dostępne' : 'Stwórz skrypt'}
           </Button>
         </motion.div>
       ))}
@@ -48,4 +42,4 @@ const BriefTemplateGrid = ({ templates, onSelectTemplate }: BriefTemplateGridPro
   );
 };
 
-export default BriefTemplateGrid;
+export default ScriptTemplateGrid;

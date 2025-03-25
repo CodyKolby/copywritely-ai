@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -34,6 +35,7 @@ const Navbar = () => {
   const navItems = [
     { path: '/', label: 'Home' },
     { path: '/brief-generator', label: 'Brief Generator' },
+    { path: '/script-generator', label: 'Script Generator' },
     { path: '/pricing', label: 'Pricing' },
     { path: '/about', label: 'About' },
   ];

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -33,6 +34,14 @@ const BriefGenerator = () => {
   }, []);
 
   const openGenerationDialog = (templateId: string) => {
+    // Check if template is "landing" which is marked as coming soon
+    if (templateId === 'landing') {
+      toast.info('Wkrótce dostępne', {
+        description: 'Ta funkcjonalność będzie dostępna w przyszłych aktualizacjach.'
+      });
+      return;
+    }
+    
     setCurrentTemplateId(templateId);
     setDialogOpen(true);
   };

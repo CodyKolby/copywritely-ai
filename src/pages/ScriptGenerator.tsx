@@ -1,0 +1,100 @@
+
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { toast } from 'sonner';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { ExclamationTriangleIcon } from '@radix-ui/react-icons';
+import { useAuth } from '@/contexts/auth/AuthContext';
+
+// Import components
+import { Button } from '@/components/ui/button';
+import ScriptTemplateGrid from '@/components/scripts/ScriptTemplateGrid';
+import TargetAudienceDialog from '@/components/scripts/TargetAudienceDialog';
+
+// Types and templates
+import { scriptTemplates } from '@/data/scriptTemplates';
+
+const ScriptGenerator = () => {
+  const { isPremium, user } = useAuth();
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [targetAudienceDialogOpen, setTargetAudienceDialogOpen] = useState(false);
+  const [currentTemplateId, setCurrentTemplateId] = useState<string>('');
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  const handleTemplateSelect = (templateId: string) => {
+    // Check if template is "landing" which is marked as coming soon
+    if (templateId === 'landing') {
+      toast.info('Wkrótce dostępne', {
+        description: 'Ta funkcjonalność będzie dostępna w przyszłych aktualizacjach.'
+      });
+      return;
+    }
+    
+    if (!isPremium) {
+      toast.error('Nie posiadasz konta premium', {
+        description: 'Ta funkcjonalność jest dostępna tylko dla użytkowników premium.'
+      });
+      return;
+    }
+    
+    setCurrentTemplateId(templateId);
+    setSelectedTemplate(templateId);
+    setTargetAudienceDialogOpen(true);
+  };
+
+  return (
+    <div className="min-h-screen pt-24 pb-16 px-6">
+      <div className="max-w-6xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="text-center mb-12"
+        >
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+            AI Script Generator
+          </h1>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            Create professional scripts for various marketing purposes. Select a template to get started.
+          </p>
+        </motion.div>
+
+        {!isPremium && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="mb-8"
+          >
+            <Alert variant="destructive">
+              <ExclamationTriangleIcon className="h-4 w-4" />
+              <AlertTitle>Premium feature</AlertTitle>
+              <AlertDescription>
+                Script generation is a premium feature. You'll be able to preview the templates, but generating scripts requires a premium account.
+              </AlertDescription>
+            </Alert>
+          </motion.div>
+        )}
+
+        <ScriptTemplateGrid 
+          templates={scriptTemplates}
+          onSelectTemplate={handleTemplateSelect}
+        />
+
+        <TargetAudienceDialog
+          open={targetAudienceDialogOpen}
+          onOpenChange={setTargetAudienceDialogOpen}
+          templateId={currentTemplateId}
+          userId={user?.id || ''}
+          isPremium={isPremium}
+        />
+      </div>
+    </div>
+  );
+};
+
+export default ScriptGenerator;

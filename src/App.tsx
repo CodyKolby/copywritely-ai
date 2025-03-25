@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,6 +8,7 @@ import { LazyMotion, domAnimation } from "framer-motion";
 import { AuthProvider } from "./contexts/auth/AuthContext";
 import Index from "./pages/Index";
 import BriefGenerator from "./pages/BriefGenerator";
+import ScriptGenerator from "./pages/ScriptGenerator";
 import CopyEditor from "./pages/CopyEditor";
 import About from "./pages/About";
 import Pricing from "./pages/Pricing";
@@ -32,6 +34,7 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/brief-generator" element={<BriefGenerator />} />
+                <Route path="/script-generator" element={<ScriptGenerator />} />
                 <Route path="/copy-editor" element={<CopyEditor />} />
                 <Route path="/copy-editor/:projectId" element={<CopyEditor />} />
                 <Route path="/about" element={<About />} />
