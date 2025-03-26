@@ -15,7 +15,7 @@ const StepLanguage = ({ form }: StepLanguageProps) => {
     <FormField
       control={form.control}
       name="language"
-      render={({ field }) => (
+      render={({ field, fieldState }) => (
         <FormItem>
           <div className="flex items-center">
             <FormLabel className="flex-1 text-lg font-medium">Specyficzny język używany przez twojego klienta</FormLabel>
@@ -25,10 +25,10 @@ const StepLanguage = ({ form }: StepLanguageProps) => {
             <Textarea 
               placeholder='np. "nie mam siły", "Czuję się wypalona", "Mam dość bycia pomijaną"' 
               {...field} 
-              className="mt-2"
+              className={`mt-2 ${fieldState.error ? "border-red-500" : ""}`}
             />
           </FormControl>
-          <FormMessage />
+          <FormMessage className="text-red-500" />
         </FormItem>
       )}
     />

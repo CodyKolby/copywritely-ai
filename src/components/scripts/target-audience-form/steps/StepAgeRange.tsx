@@ -15,16 +15,20 @@ const StepAgeRange = ({ form }: StepAgeRangeProps) => {
     <FormField
       control={form.control}
       name="ageRange"
-      render={({ field }) => (
+      render={({ field, fieldState }) => (
         <FormItem>
           <div className="flex items-center">
             <FormLabel className="flex-1 text-lg font-medium">Ile lat ma Twój idealny klient?</FormLabel>
             <InfoTooltip text="Określ przybliżony zakres wieku Twoich idealnych klientów." />
           </div>
           <FormControl>
-            <Input placeholder="np. 25-45" {...field} className="mt-2" />
+            <Input 
+              placeholder="np. 25-45" 
+              {...field} 
+              className={`mt-2 ${fieldState.error ? "border-red-500" : ""}`} 
+            />
           </FormControl>
-          <FormMessage />
+          <FormMessage className="text-red-500" />
         </FormItem>
       )}
     />

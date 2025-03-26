@@ -24,16 +24,17 @@ const StepCompetitors = ({ form }: StepCompetitorsProps) => {
             key={index}
             control={form.control}
             name={`competitors.${index}`}
-            render={({ field }) => (
+            render={({ field, fieldState }) => (
               <FormItem>
                 <FormLabel className="text-sm">Konkurent {index + 1}</FormLabel>
                 <FormControl>
                   <Textarea 
                     placeholder={`Co oferuje, problemy z produktami/usługami`} 
                     {...field} 
+                    className={fieldState.error ? "border-red-500" : ""}
                   />
                 </FormControl>
-                <FormMessage />
+                <FormMessage className="text-red-500" />
               </FormItem>
             )}
           />

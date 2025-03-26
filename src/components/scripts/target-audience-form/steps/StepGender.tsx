@@ -16,7 +16,7 @@ const StepGender = ({ form }: StepGenderProps) => {
     <FormField
       control={form.control}
       name="gender"
-      render={({ field }) => (
+      render={({ field, fieldState }) => (
         <FormItem className="space-y-3">
           <div className="flex items-center">
             <FormLabel className="flex-1 text-lg font-medium">Jakiej płci jest Twój idealny klient?</FormLabel>
@@ -42,7 +42,7 @@ const StepGender = ({ form }: StepGenderProps) => {
               </div>
             </RadioGroup>
           </FormControl>
-          <FormMessage />
+          <FormMessage className="text-red-500" />
         </FormItem>
       )}
     />

@@ -24,7 +24,7 @@ const StepDesires = ({ form }: StepDesiresProps) => {
             key={index}
             control={form.control}
             name={`desires.${index}`}
-            render={({ field }) => (
+            render={({ field, fieldState }) => (
               <FormItem>
                 <FormLabel className="text-sm">Pragnienie {index + 1}</FormLabel>
                 <FormControl>
@@ -35,9 +35,10 @@ const StepDesires = ({ form }: StepDesiresProps) => {
                       "Stały, przewidywalny napływ leadów"
                     } 
                     {...field} 
+                    className={fieldState.error ? "border-red-500" : ""}
                   />
                 </FormControl>
-                <FormMessage />
+                <FormMessage className="text-red-500" />
               </FormItem>
             )}
           />

@@ -15,7 +15,7 @@ const StepBeliefs = ({ form }: StepBeliefsProps) => {
     <FormField
       control={form.control}
       name="beliefs"
-      render={({ field }) => (
+      render={({ field, fieldState }) => (
         <FormItem>
           <div className="flex items-center">
             <FormLabel className="flex-1 text-lg font-medium">Przekonania do wdrożenia</FormLabel>
@@ -25,10 +25,10 @@ const StepBeliefs = ({ form }: StepBeliefsProps) => {
             <Textarea 
               placeholder='"Nie musisz być idealny, żeby zacząć", "Można budować dochodowy biznes bez rezygnowania z etatu"' 
               {...field} 
-              className="mt-2"
+              className={`mt-2 ${fieldState.error ? "border-red-500" : ""}`}
             />
           </FormControl>
-          <FormMessage />
+          <FormMessage className="text-red-500" />
         </FormItem>
       )}
     />

@@ -24,16 +24,17 @@ const StepPains = ({ form }: StepPainsProps) => {
             key={index}
             control={form.control}
             name={`pains.${index}`}
-            render={({ field }) => (
+            render={({ field, fieldState }) => (
               <FormItem>
                 <FormLabel className="text-sm">Problem {index + 1}</FormLabel>
                 <FormControl>
                   <Input 
                     placeholder={index === 0 ? "Brak klientów" : index === 1 ? "Niepewność finansowa" : "Niskie poczucie wartości"} 
                     {...field} 
+                    className={fieldState.error ? "border-red-500" : ""}
                   />
                 </FormControl>
-                <FormMessage />
+                <FormMessage className="text-red-500" />
               </FormItem>
             )}
           />

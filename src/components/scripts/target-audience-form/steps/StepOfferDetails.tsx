@@ -15,7 +15,7 @@ const StepOfferDetails = ({ form }: StepOfferDetailsProps) => {
     <FormField
       control={form.control}
       name="offerDetails"
-      render={({ field }) => (
+      render={({ field, fieldState }) => (
         <FormItem>
           <div className="flex items-center">
             <FormLabel className="flex-1 text-lg font-medium">Rozwiń, co dokładnie oferujesz?</FormLabel>
@@ -23,11 +23,11 @@ const StepOfferDetails = ({ form }: StepOfferDetailsProps) => {
           </div>
           <FormControl>
             <Textarea 
-              className="min-h-[150px] mt-2"
+              className={`min-h-[150px] mt-2 ${fieldState.error ? "border-red-500" : ""}`}
               {...field} 
             />
           </FormControl>
-          <FormMessage />
+          <FormMessage className="text-red-500" />
         </FormItem>
       )}
     />

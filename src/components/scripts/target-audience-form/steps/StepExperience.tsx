@@ -15,7 +15,7 @@ const StepExperience = ({ form }: StepExperienceProps) => {
     <FormField
       control={form.control}
       name="experience"
-      render={({ field }) => (
+      render={({ field, fieldState }) => (
         <FormItem>
           <div className="flex items-center">
             <FormLabel className="flex-1 text-lg font-medium">Jakie masz doświadczenie w tej branży?</FormLabel>
@@ -23,11 +23,11 @@ const StepExperience = ({ form }: StepExperienceProps) => {
           </div>
           <FormControl>
             <Textarea 
-              className="min-h-[150px] mt-2"
+              className={`min-h-[150px] mt-2 ${fieldState.error ? "border-red-500" : ""}`}
               {...field} 
             />
           </FormControl>
-          <FormMessage />
+          <FormMessage className="text-red-500" />
         </FormItem>
       )}
     />

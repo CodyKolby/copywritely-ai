@@ -24,7 +24,7 @@ const StepBenefits = ({ form }: StepBenefitsProps) => {
             key={index}
             control={form.control}
             name={`benefits.${index}`}
-            render={({ field }) => (
+            render={({ field, fieldState }) => (
               <FormItem>
                 <FormLabel className="text-sm">Korzyść {index + 1}</FormLabel>
                 <FormControl>
@@ -36,9 +36,10 @@ const StepBenefits = ({ form }: StepBenefitsProps) => {
                       "Otrzymasz natychmiastowe wsparcie w krytycznych momentach"
                     } 
                     {...field} 
+                    className={fieldState.error ? "border-red-500" : ""}
                   />
                 </FormControl>
-                <FormMessage />
+                <FormMessage className="text-red-500" />
               </FormItem>
             )}
           />

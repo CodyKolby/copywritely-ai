@@ -15,7 +15,7 @@ const StepMainOffer = ({ form }: StepMainOfferProps) => {
     <FormField
       control={form.control}
       name="mainOffer"
-      render={({ field }) => (
+      render={({ field, fieldState }) => (
         <FormItem>
           <div className="flex items-center">
             <FormLabel className="flex-1 text-lg font-medium">Jak brzmi Twoja główna oferta?</FormLabel>
@@ -25,10 +25,10 @@ const StepMainOffer = ({ form }: StepMainOfferProps) => {
             <Textarea 
               placeholder="Pomagam kobietom po 30. odzyskać energię i zbudować pewność siebie dzięki spersonalizowanemu planowi treningowemu." 
               {...field} 
-              className="mt-2"
+              className={`mt-2 ${fieldState.error ? "border-red-500" : ""}`}
             />
           </FormControl>
-          <FormMessage />
+          <FormMessage className="text-red-500" />
         </FormItem>
       )}
     />

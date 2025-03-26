@@ -15,7 +15,7 @@ const StepWhyItWorks = ({ form }: StepWhyItWorksProps) => {
     <FormField
       control={form.control}
       name="whyItWorks"
-      render={({ field }) => (
+      render={({ field, fieldState }) => (
         <FormItem>
           <div className="flex items-center">
             <FormLabel className="flex-1 text-lg font-medium">Dlaczego twój produkt działa tak dobrze?</FormLabel>
@@ -23,11 +23,11 @@ const StepWhyItWorks = ({ form }: StepWhyItWorksProps) => {
           </div>
           <FormControl>
             <Textarea 
-              className="min-h-[150px] mt-2"
+              className={`min-h-[150px] mt-2 ${fieldState.error ? "border-red-500" : ""}`}
               {...field} 
             />
           </FormControl>
-          <FormMessage />
+          <FormMessage className="text-red-500" />
         </FormItem>
       )}
     />
