@@ -50,10 +50,8 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
           // Submit the form if we're on the last step
           form.handleSubmit(handleSubmit)();
         }
-      } else {
-        // Show error toast if validation fails
-        toast.error('Proszę uzupełnić wszystkie wymagane pola');
       }
+      // Removed toast notification for validation errors - errors will show inline
     } catch (error) {
       console.error("Validation error:", error);
       toast.error('Wystąpił błąd podczas walidacji');
