@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -34,7 +33,6 @@ const BriefGenerator = () => {
   }, []);
 
   const openGenerationDialog = (templateId: string) => {
-    // Check if template is "landing" which is marked as coming soon
     if (templateId === 'landing') {
       toast.info('Wkrótce dostępne', {
         description: 'Ta funkcjonalność będzie dostępna w przyszłych aktualizacjach.',
@@ -160,10 +158,10 @@ const BriefGenerator = () => {
             transition={{ duration: 0.5 }}
             className="mb-8"
           >
-            <Alert variant="destructive">
-              <ExclamationTriangleIcon className="h-4 w-4" />
-              <AlertTitle className="text-gray-800 dark:text-white">Premium feature</AlertTitle>
-              <AlertDescription className="text-gray-800 dark:text-white">
+            <Alert variant="premium" className="rounded-none">
+              <ExclamationTriangleIcon className="h-5 w-5 text-white" />
+              <AlertTitle className="text-white text-xl font-semibold">Premium feature</AlertTitle>
+              <AlertDescription className="text-white">
                 Brief generation is a premium feature. You'll be able to preview the brief templates, but generating briefs requires a premium account.
               </AlertDescription>
             </Alert>

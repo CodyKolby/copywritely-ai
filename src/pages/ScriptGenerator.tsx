@@ -64,10 +64,10 @@ const ScriptGenerator = () => {
             transition={{ duration: 0.5 }}
             className="mb-8"
           >
-            <Alert variant="destructive" className="rounded-md bg-red-600">
-              <ExclamationTriangleIcon className="h-4 w-4" />
-              <AlertTitle>Premium feature</AlertTitle>
-              <AlertDescription>
+            <Alert variant="premium" className="rounded-none">
+              <ExclamationTriangleIcon className="h-5 w-5 text-white" />
+              <AlertTitle className="text-white text-xl font-semibold">Premium feature</AlertTitle>
+              <AlertDescription className="text-white">
                 Script generation is a premium feature. You'll be able to preview the templates, but generating scripts requires a premium account.
               </AlertDescription>
             </Alert>

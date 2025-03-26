@@ -1,4 +1,3 @@
-
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -55,10 +54,10 @@ const GenerationTypeDialog = ({ open, onOpenChange, onSubmit, isPremium }: Gener
         
         {!isPremium ? (
           <div className="py-4">
-            <Alert variant="destructive" className="mb-4">
-              <ExclamationTriangleIcon className="h-4 w-4" />
-              <AlertTitle className="text-gray-800 dark:text-white">Premium feature</AlertTitle>
-              <AlertDescription className="text-gray-800 dark:text-white">
+            <Alert variant="premium" className="mb-6">
+              <ExclamationTriangleIcon className="h-5 w-5 text-white" />
+              <AlertTitle className="text-white text-xl font-semibold">Premium feature</AlertTitle>
+              <AlertDescription className="text-white">
                 Brief generation is only available for premium users. Upgrade your account to access this feature.
               </AlertDescription>
             </Alert>
@@ -67,12 +66,13 @@ const GenerationTypeDialog = ({ open, onOpenChange, onSubmit, isPremium }: Gener
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
+                className="rounded-full border-2 font-medium"
               >
                 Cancel
               </Button>
               <Button 
                 onClick={() => window.location.href = '/pricing'} 
-                className="bg-copywrite-teal hover:bg-copywrite-teal-dark transition-colors"
+                className="bg-copywrite-teal hover:bg-copywrite-teal-dark transition-colors rounded-full font-medium"
               >
                 View Pricing
               </Button>
@@ -139,10 +139,11 @@ const GenerationTypeDialog = ({ open, onOpenChange, onSubmit, isPremium }: Gener
                   type="button"
                   variant="outline"
                   onClick={() => onOpenChange(false)}
+                  className="rounded-full border-2 font-medium"
                 >
                   Cancel
                 </Button>
-                <Button type="submit" className="bg-copywrite-teal hover:bg-copywrite-teal-dark transition-colors">
+                <Button type="submit" className="bg-copywrite-teal hover:bg-copywrite-teal-dark transition-colors rounded-full font-medium">
                   Generate Brief
                 </Button>
               </DialogFooter>

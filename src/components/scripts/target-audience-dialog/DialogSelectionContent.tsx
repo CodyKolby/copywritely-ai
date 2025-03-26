@@ -34,10 +34,10 @@ const DialogSelectionContent = ({
   return (
     <>
       <DialogHeader>
-        <DialogTitle className="text-xl font-semibold">
+        <DialogTitle className="text-2xl font-bold mb-2">
           Wybierz grupę docelową dla której chcesz stworzyć skrypt
         </DialogTitle>
-        <DialogDescription>
+        <DialogDescription className="text-base">
           Wybierz jedną z istniejących grup docelowych lub stwórz nową, aby dostosować skrypt do Twoich potrzeb.
         </DialogDescription>
       </DialogHeader>
@@ -56,13 +56,13 @@ const DialogSelectionContent = ({
           />
           
           <DialogFooter className="mt-6">
-            <Button variant="outline" onClick={handleCancel} className="rounded-full px-6">
+            <Button variant="outline" onClick={handleCancel} className="rounded-full border-2 font-medium px-6">
               Anuluj
             </Button>
             <Button 
               onClick={handleContinue}
               disabled={!audienceChoice}
-              className="bg-copywrite-teal hover:bg-copywrite-teal-dark text-white rounded-full px-6"
+              className="bg-copywrite-teal hover:bg-copywrite-teal-dark text-white rounded-full px-6 font-medium"
             >
               Dalej
             </Button>
