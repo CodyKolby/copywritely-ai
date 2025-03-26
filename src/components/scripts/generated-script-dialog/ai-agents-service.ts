@@ -42,25 +42,48 @@ export const generateHooksAndAngles = async (
       throw new Error('Nie znaleziono grupy docelowej');
     }
     
-    // Wywołanie funkcji Edge do generowania hooków i angles
-    const { data, error } = await supabase.functions.invoke('ai-agents/hook-angle-generator', {
-      body: {
-        targetAudience,
-        templateType: templateId,
-      },
-    });
+    // Wywołanie funkcji Edge do generowania hooków i angles - dodajemy retry logic
+    let attempts = 0;
+    const maxAttempts = 3;
+    let lastError = null;
     
-    if (error) {
-      console.error('Błąd generowania hooków:', error);
-      throw new Error(`Nie udało się wygenerować hooków: ${error.message}`);
+    while (attempts < maxAttempts) {
+      try {
+        const { data, error } = await supabase.functions.invoke('ai-agents/hook-angle-generator', {
+          body: {
+            targetAudience,
+            templateType: templateId,
+          },
+        });
+        
+        if (error) {
+          console.error(`Próba ${attempts + 1}/${maxAttempts}: Błąd generowania hooków:`, error);
+          lastError = error;
+          attempts++;
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Czekaj 1 sekundę przed ponowną próbą
+          continue;
+        }
+        
+        if (!data || !data.hooks) {
+          console.error(`Próba ${attempts + 1}/${maxAttempts}: Brak wygenerowanych hooków`);
+          lastError = new Error('Nie wygenerowano żadnych hooków');
+          attempts++;
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Czekaj 1 sekundę przed ponowną próbą
+          continue;
+        }
+        
+        return data as HooksResponse;
+      } catch (invokeError) {
+        console.error(`Próba ${attempts + 1}/${maxAttempts}: Wyjątek podczas wywoływania funkcji:`, invokeError);
+        lastError = invokeError;
+        attempts++;
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Czekaj 1 sekundę przed ponowną próbą
+      }
     }
     
-    if (!data || !data.hooks) {
-      console.error('Brak wygenerowanych hooków');
-      throw new Error('Nie wygenerowano żadnych hooków');
-    }
-    
-    return data as HooksResponse;
+    // Jeśli dotarliśmy tutaj, wszystkie próby zawiodły
+    console.error('Wszystkie próby generowania hooków zakończyły się niepowodzeniem:', lastError);
+    throw lastError || new Error('Nie udało się wygenerować hooków po wielu próbach');
   } catch (error) {
     console.error('Błąd generowania hooków i angles:', error);
     throw error;

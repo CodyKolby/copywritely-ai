@@ -1,13 +1,14 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
+// Poprawiona konfiguracja CORS headers - dodajemy wszystkie potrzebne nagłówki
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Max-Age': '86400',
 };
 
 // System prompt dla HookAndAngleGeneratorAI
@@ -62,10 +63,13 @@ Zwróć wynik w formacie JSON zawierającym 3-5 hooków z przypisanymi angle'ami
   ]
 }`;
 
-// Funkcja obsługująca requesty
+// Funkcja obsługująca requesty - przenosimy ją na początek pliku
 serve(async (req) => {
-  // Obsługa preflight CORS
+  console.log("Otrzymano zapytanie:", req.method);
+  
+  // Obsługa preflight CORS - zapewniamy prawidłowy status i nagłówki
   if (req.method === 'OPTIONS') {
+    console.log("Obsługa zapytania preflight OPTIONS");
     return new Response(null, { 
       status: 204, 
       headers: corsHeaders
@@ -73,10 +77,12 @@ serve(async (req) => {
   }
 
   try {
+    console.log("Przetwarzanie zapytania POST");
     // Parsowanie danych z zapytania
     const { targetAudience, templateType } = await req.json();
     
     if (!targetAudience) {
+      console.error("Brak danych o grupie docelowej");
       return new Response(
         JSON.stringify({ error: 'Brak danych o grupie docelowej' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
