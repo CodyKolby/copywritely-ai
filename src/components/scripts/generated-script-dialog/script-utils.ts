@@ -1,60 +1,45 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { generateHooksAndAngles, generateScriptContent, finalizeScript } from './ai-agents-service';
 
 /**
- * Generates a script based on the template ID and target audience data
+ * Generuje skrypt na podstawie ID szablonu i danych grupy docelowej,
+ * wykorzystując system agentów AI
  */
 export const generateScript = async (templateId: string, targetAudienceId: string): Promise<string> => {
   try {
-    console.log('Generating script for template:', templateId);
-    console.log('Target audience ID:', targetAudienceId);
+    console.log('Generowanie skryptu dla szablonu:', templateId);
+    console.log('ID grupy docelowej:', targetAudienceId);
     
-    // First, fetch the target audience data
-    const { data: targetAudience, error: audienceError } = await supabase
-      .from('target_audiences')
-      .select('*')
-      .eq('id', targetAudienceId)
-      .single();
+    // Krok 1: Generowanie hooków i angles przez pierwszego agenta AI
+    const hooksResponse = await generateHooksAndAngles(targetAudienceId, templateId);
+    console.log('Wygenerowane hooki i angles:', hooksResponse);
     
-    if (audienceError) {
-      console.error('Error fetching target audience:', audienceError);
-      throw new Error('Failed to fetch target audience data');
-    }
+    // Na razie, dla pierwszego etapu implementacji, zwracamy tylko wygenerowane hooki
+    // W przyszłości będziemy tutaj wywoływać kolejne agenty
     
-    if (!targetAudience) {
-      console.error('Target audience not found');
-      throw new Error('Target audience not found');
-    }
+    // Formatowanie wyniku do tekstu Markdown
+    let result = `# Hooki i angles wygenerowane dla szablonu: ${templateId}\n\n`;
     
-    // Call the Supabase Edge Function to generate the script
-    const { data, error } = await supabase.functions.invoke('generate-script', {
-      body: {
-        templateId,
-        targetAudience,
-      },
+    hooksResponse.hooks.forEach((item, index) => {
+      result += `## Hook ${index + 1} (typ: ${item.type})\n`;
+      result += `**${item.hook}**\n\n`;
+      result += `**Angle:** ${item.angle}\n\n`;
     });
     
-    if (error) {
-      console.error('Error generating script:', error);
-      throw new Error('Failed to generate script');
-    }
+    result += `\n*W kolejnych etapach implementacji, wybrane hooki będą wykorzystane do wygenerowania pełnego skryptu.*`;
     
-    if (!data || !data.script) {
-      console.error('No script generated');
-      throw new Error('No script was generated');
-    }
-    
-    return data.script;
+    return result;
   } catch (error) {
-    console.error('Script generation error:', error);
-    // Return a fallback script for now
+    console.error('Błąd generowania skryptu:', error);
+    // Zwracamy przykładowy skrypt w przypadku błędu
     return generateSampleScript(templateId);
   }
 };
 
 /**
- * Generates a sample script based on the template ID
- * This is a fallback in case the API call fails
+ * Generuje przykładowy skrypt na podstawie ID szablonu
+ * To jest funkcja zapasowa w przypadku błędu API
  */
 export const generateSampleScript = (templateId: string): string => {
   return `# Przykładowy skrypt dla szablonu: ${templateId}
