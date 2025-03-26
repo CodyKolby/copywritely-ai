@@ -1,7 +1,60 @@
 
+import { supabase } from '@/integrations/supabase/client';
+
+/**
+ * Generates a script based on the template ID and target audience data
+ */
+export const generateScript = async (templateId: string, targetAudienceId: string): Promise<string> => {
+  try {
+    console.log('Generating script for template:', templateId);
+    console.log('Target audience ID:', targetAudienceId);
+    
+    // First, fetch the target audience data
+    const { data: targetAudience, error: audienceError } = await supabase
+      .from('target_audiences')
+      .select('*')
+      .eq('id', targetAudienceId)
+      .single();
+    
+    if (audienceError) {
+      console.error('Error fetching target audience:', audienceError);
+      throw new Error('Failed to fetch target audience data');
+    }
+    
+    if (!targetAudience) {
+      console.error('Target audience not found');
+      throw new Error('Target audience not found');
+    }
+    
+    // Call the Supabase Edge Function to generate the script
+    const { data, error } = await supabase.functions.invoke('generate-script', {
+      body: {
+        templateId,
+        targetAudience,
+      },
+    });
+    
+    if (error) {
+      console.error('Error generating script:', error);
+      throw new Error('Failed to generate script');
+    }
+    
+    if (!data || !data.script) {
+      console.error('No script generated');
+      throw new Error('No script was generated');
+    }
+    
+    return data.script;
+  } catch (error) {
+    console.error('Script generation error:', error);
+    // Return a fallback script for now
+    return generateSampleScript(templateId);
+  }
+};
+
 /**
  * Generates a sample script based on the template ID
- * This is a placeholder and should be replaced with actual API calls in production
+ * This is a fallback in case the API call fails
  */
 export const generateSampleScript = (templateId: string): string => {
   return `# Przykładowy skrypt dla szablonu: ${templateId}

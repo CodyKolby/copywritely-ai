@@ -4,8 +4,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { FileText } from 'lucide-react';
 import LoadingState from './generated-script-dialog/LoadingState';
 import ScriptDisplay from './generated-script-dialog/ScriptDisplay';
-import { generateSampleScript } from './generated-script-dialog/script-utils';
+import { generateScript } from './generated-script-dialog/script-utils';
 import { GeneratedScriptDialogProps } from './generated-script-dialog/types';
+import { toast } from 'sonner';
 
 const GeneratedScriptDialog = ({
   open,
@@ -15,19 +16,27 @@ const GeneratedScriptDialog = ({
 }: GeneratedScriptDialogProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [generatedScript, setGeneratedScript] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open && targetAudienceId) {
-      // Symulacja ładowania danych - w przyszłości zastąp rzeczywistym API
       setIsLoading(true);
-      const timer = setTimeout(() => {
-        // Tymczasowo generujemy przykładowy skrypt
-        const sampleScript = generateSampleScript(templateId);
-        setGeneratedScript(sampleScript);
-        setIsLoading(false);
-      }, 3000); // 3 sekundy opóźnienia
+      setError(null);
       
-      return () => clearTimeout(timer);
+      generateScript(templateId, targetAudienceId)
+        .then(script => {
+          setGeneratedScript(script);
+          setIsLoading(false);
+        })
+        .catch(err => {
+          console.error('Error generating script:', err);
+          setError('Nie udało się wygenerować skryptu. Spróbuj ponownie później.');
+          toast.error('Błąd generowania skryptu', {
+            description: 'Wystąpił problem podczas tworzenia skryptu. Spróbuj ponownie później.',
+            dismissible: true
+          });
+          setIsLoading(false);
+        });
     }
   }, [open, targetAudienceId, templateId]);
 
@@ -47,6 +56,28 @@ const GeneratedScriptDialog = ({
 
         {isLoading ? (
           <LoadingState />
+        ) : error ? (
+          <div className="py-8 text-center">
+            <p className="text-red-500">{error}</p>
+            <button 
+              onClick={() => {
+                setIsLoading(true);
+                setError(null);
+                generateScript(templateId, targetAudienceId)
+                  .then(script => {
+                    setGeneratedScript(script);
+                    setIsLoading(false);
+                  })
+                  .catch(() => {
+                    setError('Nie udało się wygenerować skryptu. Spróbuj ponownie później.');
+                    setIsLoading(false);
+                  });
+              }}
+              className="mt-4 px-4 py-2 bg-copywrite-teal text-white rounded-md hover:bg-copywrite-teal-dark"
+            >
+              Spróbuj ponownie
+            </button>
+          </div>
         ) : (
           <ScriptDisplay script={generatedScript} />
         )}
