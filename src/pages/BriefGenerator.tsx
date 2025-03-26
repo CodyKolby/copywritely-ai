@@ -162,8 +162,8 @@ const BriefGenerator = () => {
           >
             <Alert variant="destructive">
               <ExclamationTriangleIcon className="h-4 w-4" />
-              <AlertTitle>Premium feature</AlertTitle>
-              <AlertDescription>
+              <AlertTitle className="text-gray-800 dark:text-white">Premium feature</AlertTitle>
+              <AlertDescription className="text-gray-800 dark:text-white">
                 Brief generation is a premium feature. You'll be able to preview the brief templates, but generating briefs requires a premium account.
               </AlertDescription>
             </Alert>

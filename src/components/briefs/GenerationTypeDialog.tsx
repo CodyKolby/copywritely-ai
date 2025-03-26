@@ -57,8 +57,8 @@ const GenerationTypeDialog = ({ open, onOpenChange, onSubmit, isPremium }: Gener
           <div className="py-4">
             <Alert variant="destructive" className="mb-4">
               <ExclamationTriangleIcon className="h-4 w-4" />
-              <AlertTitle>Premium feature</AlertTitle>
-              <AlertDescription>
+              <AlertTitle className="text-gray-800 dark:text-white">Premium feature</AlertTitle>
+              <AlertDescription className="text-gray-800 dark:text-white">
                 Brief generation is only available for premium users. Upgrade your account to access this feature.
               </AlertDescription>
             </Alert>
