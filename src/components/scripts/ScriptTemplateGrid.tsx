@@ -31,7 +31,7 @@ const ScriptTemplateGrid = ({ templates, onSelectTemplate }: ScriptTemplateGridP
           <p className="text-gray-600 mb-6 flex-grow">{template.description}</p>
           <Button 
             onClick={() => onSelectTemplate(template.id)}
-            className={`w-full ${template.comingSoon ? 'bg-gray-300 hover:bg-gray-300 cursor-not-allowed' : 'bg-copywrite-teal hover:bg-copywrite-teal-dark'} transition-colors`}
+            className={`w-full ${template.comingSoon ? 'bg-gray-300 hover:bg-gray-300 cursor-not-allowed' : 'bg-copywrite-teal hover:bg-copywrite-teal-dark text-white'} transition-colors`}
             disabled={template.comingSoon}
           >
             {template.comingSoon ? 'Wkrótce dostępne' : 'Stwórz skrypt'}

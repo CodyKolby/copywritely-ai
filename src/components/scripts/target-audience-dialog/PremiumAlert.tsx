@@ -29,7 +29,7 @@ const PremiumAlert = ({ onCancel }: PremiumAlertProps) => {
         </Button>
         <Button 
           onClick={() => window.location.href = '/pricing'} 
-          className="bg-copywrite-teal hover:bg-copywrite-teal-dark transition-colors rounded-full"
+          className="bg-copywrite-teal hover:bg-copywrite-teal-dark transition-colors rounded-full text-white"
         >
           View Pricing
         </Button>

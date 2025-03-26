@@ -49,7 +49,7 @@ const Navbar = () => {
     <header
       className={cn(
         'fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-6 md:px-10',
-        scrolled ? 'py-3 glass shadow-soft' : 'py-5'
+        scrolled ? 'py-3 bg-white shadow-soft' : 'py-5 bg-white'
       )}
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -125,7 +125,7 @@ const Navbar = () => {
             </>
           ) : (
             <Link to="/login">
-              <Button variant="default" className="bg-copywrite-teal hover:bg-copywrite-teal-dark flex items-center gap-2">
+              <Button variant="default" className="bg-copywrite-teal hover:bg-copywrite-teal-dark flex items-center gap-2 text-white">
                 <LogIn size={18} />
                 <span className="hidden sm:inline">Zaloguj</span>
               </Button>
