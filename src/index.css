@@ -2,3 +2,9 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  ::placeholder {
+    @apply text-[#8E9196] opacity-70;
+  }
+}

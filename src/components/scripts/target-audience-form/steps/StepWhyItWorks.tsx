@@ -23,6 +23,7 @@ const StepWhyItWorks = ({ form }: StepWhyItWorksProps) => {
           </div>
           <FormControl>
             <Textarea 
+              placeholder="Opisz unikalny mechanizm działania Twojego produktu/usługi"
               className={`min-h-[150px] mt-2 ${fieldState.error ? "border-red-500" : ""}`}
               {...field} 
             />

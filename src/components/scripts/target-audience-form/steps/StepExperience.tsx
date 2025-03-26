@@ -23,6 +23,7 @@ const StepExperience = ({ form }: StepExperienceProps) => {
           </div>
           <FormControl>
             <Textarea 
+              placeholder="Opisz swoje doświadczenie, lata praktyki, projekty, klientów i wyniki"
               className={`min-h-[150px] mt-2 ${fieldState.error ? "border-red-500" : ""}`}
               {...field} 
             />

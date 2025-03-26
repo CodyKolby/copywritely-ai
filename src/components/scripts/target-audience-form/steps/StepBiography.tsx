@@ -23,6 +23,7 @@ const StepBiography = ({ form }: StepBiographyProps) => {
           </div>
           <FormControl>
             <Textarea 
+              placeholder="Opisz życie swojego klienta przed i po skorzystaniu z Twojej oferty"
               className={`min-h-[150px] mt-2 ${fieldState.error ? "border-red-500" : ""}`}
               {...field} 
             />

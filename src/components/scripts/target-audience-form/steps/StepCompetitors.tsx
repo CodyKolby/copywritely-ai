@@ -29,7 +29,7 @@ const StepCompetitors = ({ form }: StepCompetitorsProps) => {
                 <FormLabel className="text-sm">Konkurent {index + 1}</FormLabel>
                 <FormControl>
                   <Textarea 
-                    placeholder={`Co oferuje, problemy z produktami/usługami`} 
+                    placeholder={`Nazwa konkurenta, co oferuje, problemy z jego produktami/usługami`} 
                     {...field} 
                     className={fieldState.error ? "border-red-500" : ""}
                   />

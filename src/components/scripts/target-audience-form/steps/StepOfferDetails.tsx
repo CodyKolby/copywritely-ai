@@ -23,6 +23,7 @@ const StepOfferDetails = ({ form }: StepOfferDetailsProps) => {
           </div>
           <FormControl>
             <Textarea 
+              placeholder="Opisz dokładnie swój produkt/usługę, przebieg współpracy, efekty"
               className={`min-h-[150px] mt-2 ${fieldState.error ? "border-red-500" : ""}`}
               {...field} 
             />
