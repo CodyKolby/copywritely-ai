@@ -102,6 +102,7 @@ export const generateScriptContent = async (
   try {
     console.log('Generowanie skryptu dla szablonu:', templateId);
     console.log('Wybrany hook:', selectedHook);
+    console.log('Wybrany angle:', selectedAngle);
     
     // Pobieranie danych grupy docelowej
     const { data: targetAudience, error: audienceError } = await supabase
@@ -115,23 +116,55 @@ export const generateScriptContent = async (
       throw new Error('Nie udało się pobrać danych grupy docelowej');
     }
     
-    // Wywołanie funkcji Edge do generowania skryptu (zostanie zaimplementowane później)
-    // Tutaj tylko szkielet na przyszłość
-    const { data, error } = await supabase.functions.invoke('ai-agents/script-generator', {
-      body: {
-        targetAudience,
-        templateType: templateId,
-        selectedHook,
-        selectedAngle
-      },
-    });
-    
-    if (error) {
-      console.error('Błąd generowania skryptu:', error);
-      throw new Error('Nie udało się wygenerować skryptu');
+    if (!targetAudience) {
+      console.error('Nie znaleziono grupy docelowej');
+      throw new Error('Nie znaleziono grupy docelowej');
     }
     
-    return "Ten agent zostanie zaimplementowany w następnym kroku.";
+    // Wywołanie funkcji Edge do generowania skryptu z retry logic
+    let attempts = 0;
+    const maxAttempts = 3;
+    let lastError = null;
+    
+    while (attempts < maxAttempts) {
+      try {
+        const { data, error } = await supabase.functions.invoke('ai-agents/script-generator', {
+          body: {
+            targetAudience,
+            templateType: templateId,
+            selectedHook,
+            selectedAngle
+          },
+        });
+        
+        if (error) {
+          console.error(`Próba ${attempts + 1}/${maxAttempts}: Błąd generowania skryptu:`, error);
+          lastError = error;
+          attempts++;
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Czekaj 1 sekundę przed ponowną próbą
+          continue;
+        }
+        
+        if (!data || !data.scriptContent) {
+          console.error(`Próba ${attempts + 1}/${maxAttempts}: Brak wygenerowanego skryptu`);
+          lastError = new Error('Nie wygenerowano skryptu');
+          attempts++;
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Czekaj 1 sekundę przed ponowną próbą
+          continue;
+        }
+        
+        return data.scriptContent;
+      } catch (invokeError) {
+        console.error(`Próba ${attempts + 1}/${maxAttempts}: Wyjątek podczas wywoływania funkcji:`, invokeError);
+        lastError = invokeError;
+        attempts++;
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Czekaj 1 sekundę przed ponowną próbą
+      }
+    }
+    
+    // Jeśli dotarliśmy tutaj, wszystkie próby zawiodły
+    console.error('Wszystkie próby generowania skryptu zakończyły się niepowodzeniem:', lastError);
+    throw lastError || new Error('Nie udało się wygenerować skryptu po wielu próbach');
   } catch (error) {
     console.error('Błąd generowania skryptu:', error);
     throw error;

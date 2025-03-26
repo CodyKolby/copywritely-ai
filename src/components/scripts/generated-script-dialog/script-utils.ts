@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { generateHooksAndAngles, generateScriptContent, finalizeScript } from './ai-agents-service';
+import { generateHooksAndAngles, generateScriptContent, finalizeScript, HookAndAngle } from './ai-agents-service';
 
 /**
  * Generuje skrypt na podstawie ID szablonu i danych grupy docelowej,
@@ -15,19 +15,39 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
     const hooksResponse = await generateHooksAndAngles(targetAudienceId, templateId);
     console.log('Wygenerowane hooki i angles:', hooksResponse);
     
-    // Na razie, dla pierwszego etapu implementacji, zwracamy tylko wygenerowane hooki
-    // W przyszłości będziemy tutaj wywoływać kolejne agenty
+    if (!hooksResponse.hooks || hooksResponse.hooks.length === 0) {
+      throw new Error('Nie wygenerowano żadnych hooków');
+    }
     
-    // Formatowanie wyniku do tekstu Markdown
-    let result = `# Hooki i angles wygenerowane dla szablonu: ${templateId}\n\n`;
+    // Wybieramy pierwszy hook i angle do generowania skryptu
+    // W przyszłości można dodać funkcję wyboru najlepszego hooka
+    const selectedHook = hooksResponse.hooks[0].hook;
+    const selectedAngle = hooksResponse.hooks[0].angle;
+    
+    // Krok 2: Generowanie głównej treści skryptu
+    const scriptContent = await generateScriptContent(targetAudienceId, templateId, selectedHook, selectedAngle);
+    console.log('Wygenerowana treść skryptu');
+    
+    // Formatowanie wyniku do tekstu Markdown z dodanymi hookami i angles
+    let result = `# Skrypt reklamowy dla szablonu: ${templateId}\n\n`;
+    
+    // Dodajemy wszystkie wygenerowane hooki
+    result += `## Wygenerowane hooki i angles\n\n`;
     
     hooksResponse.hooks.forEach((item, index) => {
-      result += `## Hook ${index + 1} (typ: ${item.type})\n`;
+      result += `### Hook ${index + 1} (typ: ${item.type})\n`;
       result += `**${item.hook}**\n\n`;
       result += `**Angle:** ${item.angle}\n\n`;
     });
     
-    result += `\n*W kolejnych etapach implementacji, wybrane hooki będą wykorzystane do wygenerowania pełnego skryptu.*`;
+    // Dodajemy treść główną skryptu
+    result += `## Treść główna\n\n`;
+    result += scriptContent;
+    
+    // Dodajemy informację o wybranym hooku
+    result += `\n\n## Użyty hook i angle do generowania treści\n\n`;
+    result += `**Hook:** ${selectedHook}\n\n`;
+    result += `**Angle:** ${selectedAngle}\n\n`;
     
     return result;
   } catch (error) {
