@@ -107,14 +107,14 @@ export const PricingCard = ({
           </div>
           
           <Button 
-            className="w-full mb-6 bg-copywrite-teal hover:bg-copywrite-teal-dark h-12 text-base relative"
+            className="w-full mb-6 bg-copywrite-teal hover:bg-copywrite-teal-dark h-12 text-base relative text-white"
             onClick={handleSubscribeClick}
             disabled={isLoading}
           >
             {isLoading ? (
               <div className="flex items-center justify-center w-full">
                 <div className="h-5 w-5 rounded-full border-2 border-t-transparent border-white animate-spin mr-2"></div>
-                <span>Ładowanie...</span>
+                <span className="text-white">Ładowanie...</span>
               </div>
             ) : (
               'Rozpocznij darmowy okres próbny'

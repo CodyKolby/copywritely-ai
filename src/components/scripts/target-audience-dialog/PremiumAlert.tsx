@@ -12,9 +12,9 @@ const PremiumAlert = ({ onCancel }: PremiumAlertProps) => {
   return (
     <div className="py-4">
       <Alert variant="destructive" className="mb-4 rounded-md bg-red-600">
-        <ExclamationTriangleIcon className="h-4 w-4" />
-        <AlertTitle>Premium feature</AlertTitle>
-        <AlertDescription>
+        <ExclamationTriangleIcon className="h-4 w-4 text-white" />
+        <AlertTitle className="text-white">Premium feature</AlertTitle>
+        <AlertDescription className="text-white">
           Target audience creation is only available for premium users. Upgrade your account to access this feature.
         </AlertDescription>
       </Alert>
