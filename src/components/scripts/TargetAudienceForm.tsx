@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client'; 
+import { useAuth } from '@/contexts/auth/AuthContext';
 
 // Import refactored components
 import StepContainer from './target-audience-form/StepContainer';
@@ -18,6 +18,7 @@ const TOTAL_STEPS = 13;
 
 const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormProps) => {
   const [currentStep, setCurrentStep] = useState(1);
+  const { user } = useAuth();
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -68,22 +69,13 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
 
   const handleSubmit = async (data: FormValues) => {
     try {
-      // Get current user
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      
-      if (userError) {
-        console.error("Error getting user:", userError);
-        toast.error('Wystąpił błąd podczas identyfikacji użytkownika');
+      if (!user) {
+        console.error("No user found in auth context");
+        toast.error('Nie jesteś zalogowany lub sesja wygasła');
         return;
       }
       
-      const userId = userData.user?.id;
-      
-      if (!userId) {
-        console.error("No user ID found");
-        toast.error('Nie znaleziono identyfikatora użytkownika');
-        return;
-      }
+      const userId = user.id;
       
       // Submit the form data using the utility function
       const targetAudienceId = await submitTargetAudienceForm(data, userId);
@@ -124,6 +116,7 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
         goToPreviousStep={goToPreviousStep}
         goToNextStep={goToNextStep}
         setCurrentStep={setCurrentStep}
+        isLastStep={currentStep === TOTAL_STEPS}
       />
     </TooltipProvider>
   );

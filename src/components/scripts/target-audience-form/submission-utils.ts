@@ -15,7 +15,7 @@ export const submitTargetAudienceForm = async (
 ): Promise<string | undefined> => {
   try {
     if (!userId) {
-      console.error("No user ID found");
+      console.error("No user ID provided");
       toast.error('Nie znaleziono identyfikatora użytkownika');
       return undefined;
     }

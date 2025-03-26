@@ -8,6 +8,7 @@ interface NavigationControlsProps {
   goToPreviousStep: () => void;
   goToNextStep: () => void;
   setCurrentStep: (step: number) => void;
+  isLastStep?: boolean;
 }
 
 const NavigationControls = ({
@@ -15,6 +16,7 @@ const NavigationControls = ({
   totalSteps,
   goToPreviousStep,
   goToNextStep,
+  isLastStep = false,
 }: NavigationControlsProps) => {
   return (
     <div className="space-y-4">
@@ -37,7 +39,7 @@ const NavigationControls = ({
           onClick={goToNextStep}
           className="bg-copywrite-teal hover:bg-copywrite-teal-dark text-white"
         >
-          {currentStep === totalSteps ? 'Zapisz i kontynuuj' : 'Następny krok'}
+          {isLastStep ? 'Zapisz i kontynuuj' : 'Następny krok'}
         </Button>
       </div>
     </div>
