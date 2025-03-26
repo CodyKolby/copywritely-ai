@@ -25,21 +25,32 @@ const StepGender = ({ form }: StepGenderProps) => {
           <FormControl>
             <RadioGroup
               onValueChange={field.onChange}
-              defaultValue={field.value}
+              value={field.value}
               className="space-y-3 mt-4"
             >
-              <div className="flex items-center space-x-2 rounded-md border p-3 cursor-pointer hover:bg-slate-50">
+              <label 
+                htmlFor="male" 
+                className={`flex items-center space-x-2 rounded-md border p-3 cursor-pointer hover:bg-slate-50 ${fieldState.error ? "border-red-500" : ""}`}
+              >
                 <RadioGroupItem value="male" id="male" />
                 <Label htmlFor="male" className="flex-1 cursor-pointer">Mężczyzna</Label>
-              </div>
-              <div className="flex items-center space-x-2 rounded-md border p-3 cursor-pointer hover:bg-slate-50">
+              </label>
+              
+              <label 
+                htmlFor="female" 
+                className={`flex items-center space-x-2 rounded-md border p-3 cursor-pointer hover:bg-slate-50 ${fieldState.error ? "border-red-500" : ""}`}
+              >
                 <RadioGroupItem value="female" id="female" />
                 <Label htmlFor="female" className="flex-1 cursor-pointer">Kobieta</Label>
-              </div>
-              <div className="flex items-center space-x-2 rounded-md border p-3 cursor-pointer hover:bg-slate-50">
+              </label>
+              
+              <label 
+                htmlFor="any" 
+                className={`flex items-center space-x-2 rounded-md border p-3 cursor-pointer hover:bg-slate-50 ${fieldState.error ? "border-red-500" : ""}`}
+              >
                 <RadioGroupItem value="any" id="any" />
                 <Label htmlFor="any" className="flex-1 cursor-pointer">Nie ma znaczenia</Label>
-              </div>
+              </label>
             </RadioGroup>
           </FormControl>
           <FormMessage className="text-red-500" />

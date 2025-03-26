@@ -23,7 +23,7 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
     resolver: zodResolver(formSchema),
     defaultValues: {
       ageRange: '',
-      gender: 'any',
+      gender: '',
       competitors: ['', '', ''],
       language: '',
       biography: '',
