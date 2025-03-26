@@ -52,7 +52,7 @@ export const generateHooksAndAngles = async (
     
     if (error) {
       console.error('Błąd generowania hooków:', error);
-      throw new Error('Nie udało się wygenerować hooków');
+      throw new Error(`Nie udało się wygenerować hooków: ${error.message}`);
     }
     
     if (!data || !data.hooks) {
