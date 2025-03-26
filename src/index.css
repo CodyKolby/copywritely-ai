@@ -2,30 +2,3 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@layer components {
-  /* Add custom styling for toast close button */
-  [data-sonner-toast] [data-close-button] {
-    @apply opacity-100 !important;
-    position: absolute !important;
-    top: 8px !important;
-    right: 8px !important;
-    background-color: rgba(255, 255, 255, 0.1) !important;
-    border-radius: 4px !important;
-    padding: 4px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    transition: background-color 0.2s ease !important;
-    color: white !important;
-  }
-
-  [data-sonner-toast] [data-close-button]:hover {
-    background-color: rgba(255, 255, 255, 0.2) !important;
-  }
-
-  [data-sonner-toast] [data-close-button] svg {
-    width: 16px !important;
-    height: 16px !important;
-  }
-}
