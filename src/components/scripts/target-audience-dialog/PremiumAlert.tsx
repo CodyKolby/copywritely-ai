@@ -11,7 +11,7 @@ interface PremiumAlertProps {
 const PremiumAlert = ({ onCancel }: PremiumAlertProps) => {
   return (
     <div className="py-4">
-      <Alert variant="destructive" className="mb-4 bg-red-600 rounded-md">
+      <Alert variant="destructive" className="mb-4 rounded-md bg-red-600">
         <ExclamationTriangleIcon className="h-4 w-4" />
         <AlertTitle>Premium feature</AlertTitle>
         <AlertDescription>
@@ -23,13 +23,13 @@ const PremiumAlert = ({ onCancel }: PremiumAlertProps) => {
           type="button"
           variant="outline"
           onClick={onCancel}
-          className="rounded-full text-white"
+          className="rounded-full"
         >
           Anuluj
         </Button>
         <Button 
           onClick={() => window.location.href = '/pricing'} 
-          className="bg-copywrite-teal hover:bg-copywrite-teal-dark transition-colors rounded-full text-white"
+          className="bg-copywrite-teal hover:bg-copywrite-teal-dark transition-colors rounded-full"
         >
           View Pricing
         </Button>
