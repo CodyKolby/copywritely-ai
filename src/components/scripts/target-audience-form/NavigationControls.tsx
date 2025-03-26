@@ -16,6 +16,7 @@ const NavigationControls = ({
   totalSteps,
   goToPreviousStep,
   goToNextStep,
+  setCurrentStep,
   isLastStep = false,
 }: NavigationControlsProps) => {
   return (
@@ -35,8 +36,8 @@ const NavigationControls = ({
         </div>
 
         <Button 
-          type="button" 
-          onClick={goToNextStep}
+          type={isLastStep ? "submit" : "button"} 
+          onClick={isLastStep ? undefined : goToNextStep}
           className="bg-copywrite-teal hover:bg-copywrite-teal-dark text-white"
         >
           {isLastStep ? 'Zapisz i kontynuuj' : 'Następny krok'}

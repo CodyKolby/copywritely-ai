@@ -20,6 +20,8 @@ export const submitTargetAudienceForm = async (
       return undefined;
     }
     
+    console.log("Submitting target audience form with user ID:", userId);
+    
     // Auto-generate a name for the target audience if not provided
     const audienceName = `Grupa docelowa - ${data.ageRange}, ${data.gender}`;
     

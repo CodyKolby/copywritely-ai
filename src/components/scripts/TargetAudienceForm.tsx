@@ -19,6 +19,7 @@ const TOTAL_STEPS = 13;
 const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormProps) => {
   const [currentStep, setCurrentStep] = useState(1);
   const { user } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -49,7 +50,7 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
           setCurrentStep(currentStep + 1);
         } else {
           // Submit the form if we're on the last step
-          form.handleSubmit(handleSubmit)();
+          await handleFormSubmission();
         }
       }
       // Removed toast notification for validation errors - errors will show inline
@@ -67,6 +68,21 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
     }
   };
 
+  const handleFormSubmission = async () => {
+    if (isSubmitting) return;
+    
+    try {
+      setIsSubmitting(true);
+      const data = form.getValues();
+      await handleSubmit(data);
+    } catch (error) {
+      console.error("Form submission error:", error);
+      toast.error('Wystąpił błąd podczas wysyłania formularza');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleSubmit = async (data: FormValues) => {
     try {
       if (!user) {
@@ -76,9 +92,12 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
       }
       
       const userId = user.id;
+      console.log("Submitting form with user ID:", userId);
       
       // Submit the form data using the utility function
       const targetAudienceId = await submitTargetAudienceForm(data, userId);
+      
+      console.log("Form submitted, target audience ID:", targetAudienceId);
       
       // Call the onSubmit callback with the form data and the created audience ID
       if (targetAudienceId) {
@@ -100,12 +119,17 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
     }
   };
 
+  const onFormSubmit = form.handleSubmit(async (data) => {
+    await handleSubmit(data);
+  });
+
   return (
     <TooltipProvider>
       <StepContainer 
         currentStep={currentStep} 
         form={form} 
         handleKeyDown={handleKeyDown}
+        onSubmit={onFormSubmit}
       >
         <StepRenderer currentStep={currentStep} form={form} />
       </StepContainer>
