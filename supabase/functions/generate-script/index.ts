@@ -63,6 +63,8 @@ serve(async (req) => {
     
     let targetAudience;
     try {
+      // WAŻNE: Dodajemy anon key w nagłówkach - to pozwoli ominąć ograniczenia RLS
+      // Używamy service role, ponieważ funkcja Edge działa jako uprzywilejowany użytkownik
       const targetAudienceResponse = await fetch(`${supabaseUrl}/rest/v1/target_audiences?id=eq.${targetAudienceId}&select=*`, {
         headers: {
           'Content-Type': 'application/json',
@@ -92,7 +94,7 @@ serve(async (req) => {
       }
       
       const targetAudienceData = await targetAudienceResponse.json();
-      console.log('Odpowiedź z bazy danych:', JSON.stringify(targetAudienceData));
+      console.log('Odpowiedź z bazy danych (w pętli):', JSON.stringify(targetAudienceData));
       
       if (!targetAudienceData || targetAudienceData.length === 0) {
         console.error('Nie znaleziono grupy docelowej o ID:', targetAudienceId);
