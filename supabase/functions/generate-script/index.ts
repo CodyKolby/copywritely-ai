@@ -3,6 +3,8 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+const supabaseUrl = Deno.env.get('SUPABASE_URL') || 'https://jorbqjareswzdrsmepbv.supabase.co';
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
 // Poprawna konfiguracja nagłówków CORS
 const corsHeaders = {
@@ -46,18 +48,27 @@ serve(async (req) => {
     console.log('Generowanie skryptu dla szablonu:', templateId);
     console.log('ID grupy docelowej:', targetAudienceId);
     
-    // Pobieranie danych grupy docelowej bezpośrednio przez fetch z Supabase API
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || 'https://jorbqjareswzdrsmepbv.supabase.co';
-    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpvcmJxamFyZXN3emRyc21lcGJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI1NTcyNjMsImV4cCI6MjA1ODEzMzI2M30.WtGgnQKLVD2ZuOq4qNrIfcmFc98U3Q6YLrCCRG_mrH4';
+    // Pobieranie danych grupy docelowej używając Service Role Key dla pełnych uprawnień
+    // Zmiana: Używamy service role key zamiast anon key, aby mieć dostęp niezależnie od RLS
+    const serviceKey = supabaseServiceKey || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
-    // Usuńmy parametr select=* który mógł powodować problemy
+    if (!serviceKey) {
+      console.error('Brak Service Role Key do autoryzacji bazy danych');
+      return new Response(
+        JSON.stringify({ 
+          error: 'Brak skonfigurowanego klucza Service Role',
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     const apiUrl = `${supabaseUrl}/rest/v1/target_audiences?id=eq.${targetAudienceId}`;
     console.log("Pobieranie danych grupy docelowej z URL:", apiUrl);
     
     const targetAudienceResponse = await fetch(apiUrl, {
       headers: {
-        'apikey': supabaseKey,
-        'Authorization': `Bearer ${supabaseKey}`,
+        'apikey': serviceKey,
+        'Authorization': `Bearer ${serviceKey}`,
         'Content-Type': 'application/json',
         'Prefer': 'return=representation'
       }
@@ -85,10 +96,29 @@ serve(async (req) => {
     }
     
     const targetAudienceData = await targetAudienceResponse.json();
-    console.log('Odpowiedź z bazy danych:', JSON.stringify(targetAudienceData));
+    console.log('Odpowiedź z bazy danych (status):', targetAudienceResponse.status);
+    console.log('Odpowiedź z bazy danych (headers):', Object.fromEntries(targetAudienceResponse.headers.entries()));
+    console.log('Odpowiedź z bazy danych (dane):', JSON.stringify(targetAudienceData));
     
     if (!targetAudienceData || targetAudienceData.length === 0) {
       console.error('Nie znaleziono grupy docelowej o ID:', targetAudienceId);
+      
+      // Dla celów diagnostycznych, spróbujmy sprawdzić czy w ogóle jakieś grupy docelowe istnieją
+      const checkAllUrl = `${supabaseUrl}/rest/v1/target_audiences?limit=1`;
+      console.log("Próba pobrania pierwszej grupy docelowej:", checkAllUrl);
+      
+      const checkResponse = await fetch(checkAllUrl, {
+        headers: {
+          'apikey': serviceKey,
+          'Authorization': `Bearer ${serviceKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (checkResponse.ok) {
+        const checkData = await checkResponse.json();
+        console.log('Przykładowe grupy docelowe w bazie:', JSON.stringify(checkData));
+      }
       
       // Zwracamy błąd zamiast generować przykładowy skrypt
       return new Response(
