@@ -18,7 +18,7 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
       try {
         console.log(`Próba ${attempts + 1}/${maxAttempts}: Wywołanie funkcji generate-script`);
         
-        // Poprawne wywołanie edge function z pełną nazwą
+        // Wywołanie edge function z pełną nazwą i sprawdzenie odpowiedzi
         const { data, error } = await supabase.functions.invoke('generate-script', {
           body: {
             templateId,
