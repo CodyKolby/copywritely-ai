@@ -10,40 +10,37 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
     console.log('Generowanie skryptu dla szablonu:', templateId);
     console.log('ID grupy docelowej:', targetAudienceId);
     
-    // Przechwyć błędy braku ID
+    // Walidacja danych wejściowych
     if (!targetAudienceId) {
       console.error('Brak ID grupy docelowej');
       toast.error('Brak identyfikatora grupy docelowej');
       throw new Error('Brak identyfikatora grupy docelowej');
     }
     
-    // Sprawdzenie, czy grupa docelowa istnieje przed próbą generowania skryptu
+    // Sprawdzenie czy grupa docelowa istnieje przed próbą generowania skryptu
     console.log('Sprawdzam czy grupa docelowa istnieje w bazie danych...');
     const { data: audienceData, error: checkError } = await supabase
       .from('target_audiences')
-      .select('*')
+      .select('id, name')
       .eq('id', targetAudienceId)
       .maybeSingle();
       
     if (checkError) {
       console.error('Błąd podczas sprawdzania grupy docelowej:', checkError);
       toast.error('Błąd podczas sprawdzania grupy docelowej');
-      throw new Error('Błąd podczas sprawdzania grupy docelowej');
+      throw new Error(`Błąd podczas sprawdzania grupy docelowej: ${checkError.message}`);
     }
     
     if (!audienceData) {
       console.error('Grupa docelowa nie istnieje w bazie danych. ID:', targetAudienceId);
       toast.error('Nie znaleziono grupy docelowej w bazie danych');
-      throw new Error('Grupa docelowa nie istnieje w bazie danych');
+      return generateSampleScript(templateId); // Używamy przykładowego skryptu jako fallback
     }
     
     console.log('Grupa docelowa znaleziona:', audienceData);
     console.log('Wywołuję edge function generate-script...');
     
     // Wywołanie Edge Function do generowania skryptu
-    console.log('📢 Wysyłam zapytanie do OpenAI przez Edge Function');
-    
-    // Użyj invoke zamiast bezpośredniego fetch
     const { data, error } = await supabase.functions.invoke('generate-script', {
       body: {
         templateId,
@@ -54,23 +51,22 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
     if (error) {
       console.error('Błąd podczas wywoływania funkcji generate-script:', error);
       toast.error('Błąd podczas generowania skryptu');
-      throw new Error(`Błąd podczas generowania skryptu: ${error.message}`);
+      return generateSampleScript(templateId); // Używamy przykładowego skryptu jako fallback
     }
     
-    console.log('📢 Dostałem odpowiedź z OpenAI przez Edge Function:', data);
+    console.log('Odpowiedź z edge function:', data);
     
     if (!data || !data.script) {
       console.error('Brak wygenerowanego skryptu w odpowiedzi');
       toast.error('Brak wygenerowanego skryptu w odpowiedzi');
-      throw new Error('Brak wygenerowanego skryptu w odpowiedzi');
+      return generateSampleScript(templateId); // Używamy przykładowego skryptu jako fallback
     }
     
     return data.script;
   } catch (error) {
     console.error('Błąd generowania skryptu:', error);
     toast.error('Błąd podczas generowania skryptu');
-    // Zamiast generować przykładowy skrypt, propagujemy błąd
-    throw error;
+    return generateSampleScript(templateId); // Używamy przykładowego skryptu jako fallback
   }
 };
 

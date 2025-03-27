@@ -1,12 +1,14 @@
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 
+// Configuration
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || 'https://jorbqjareswzdrsmepbv.supabase.co';
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-// Poprawna konfiguracja nagłówków CORS
+// CORS Headers
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -17,7 +19,7 @@ const corsHeaders = {
 serve(async (req) => {
   console.log("Otrzymano zapytanie do generate-script:", req.method, req.url);
   
-  // Obsługa preflight CORS
+  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     console.log("Obsługa zapytania preflight OPTIONS");
     return new Response(null, { 
@@ -29,14 +31,14 @@ serve(async (req) => {
   try {
     console.log("Przetwarzanie zapytania POST");
     
-    // Parsowanie danych z zapytania
+    // Parse request data
     const requestData = await req.json();
     const templateId = requestData.templateId;
     const targetAudienceId = requestData.targetAudienceId;
     
     console.log("Odebrane dane:", JSON.stringify({ templateId, targetAudienceId }));
     
-    // Walidacja danych wejściowych
+    // Validate input data
     if (!templateId || !targetAudienceId) {
       console.error("Brak wymaganych danych:", { templateId, targetAudienceId });
       return new Response(
@@ -48,11 +50,8 @@ serve(async (req) => {
     console.log('Generowanie skryptu dla szablonu:', templateId);
     console.log('ID grupy docelowej:', targetAudienceId);
     
-    // Pobieranie danych grupy docelowej używając Service Role Key dla pełnych uprawnień
-    // Zmiana: Używamy service role key zamiast anon key, aby mieć dostęp niezależnie od RLS
-    const serviceKey = supabaseServiceKey || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    
-    if (!serviceKey) {
+    // Validate Service Role Key
+    if (!supabaseServiceKey) {
       console.error('Brak Service Role Key do autoryzacji bazy danych');
       return new Response(
         JSON.stringify({ 
@@ -61,66 +60,43 @@ serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Initialize Supabase client with service role key
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    console.log("Inicjalizacja klienta Supabase z kluczem Service Role");
     
-    const apiUrl = `${supabaseUrl}/rest/v1/target_audiences?id=eq.${targetAudienceId}`;
-    console.log("Pobieranie danych grupy docelowej z URL:", apiUrl);
+    // Fetch target audience data using Supabase client
+    console.log("Pobieranie danych grupy docelowej z Supabase");
+    const { data: targetAudienceData, error: queryError } = await supabase
+      .from('target_audiences')
+      .select('*')
+      .eq('id', targetAudienceId)
+      .single();
     
-    const targetAudienceResponse = await fetch(apiUrl, {
-      headers: {
-        'apikey': serviceKey,
-        'Authorization': `Bearer ${serviceKey}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=representation'
-      }
-    });
-    
-    // Sprawdzanie odpowiedzi
-    if (!targetAudienceResponse.ok) {
-      const errorText = await targetAudienceResponse.text();
-      console.error('Błąd pobierania danych grupy docelowej:', {
-        status: targetAudienceResponse.status,
-        statusText: targetAudienceResponse.statusText,
-        body: errorText
-      });
-      
+    // Handle query errors
+    if (queryError) {
+      console.error('Błąd pobierania danych grupy docelowej:', queryError);
       return new Response(
         JSON.stringify({ 
           error: 'Nie udało się pobrać danych grupy docelowej', 
-          details: { 
-            status: targetAudienceResponse.status, 
-            message: errorText 
-          } 
+          details: queryError.message 
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
-    const targetAudienceData = await targetAudienceResponse.json();
-    console.log('Odpowiedź z bazy danych (status):', targetAudienceResponse.status);
-    console.log('Odpowiedź z bazy danych (headers):', Object.fromEntries(targetAudienceResponse.headers.entries()));
-    console.log('Odpowiedź z bazy danych (dane):', JSON.stringify(targetAudienceData));
-    
-    if (!targetAudienceData || targetAudienceData.length === 0) {
+    // Handle no data found
+    if (!targetAudienceData) {
       console.error('Nie znaleziono grupy docelowej o ID:', targetAudienceId);
       
-      // Dla celów diagnostycznych, spróbujmy sprawdzić czy w ogóle jakieś grupy docelowe istnieją
-      const checkAllUrl = `${supabaseUrl}/rest/v1/target_audiences?limit=1`;
-      console.log("Próba pobrania pierwszej grupy docelowej:", checkAllUrl);
+      // For debugging, check if any target audiences exist
+      const { data: debugData } = await supabase
+        .from('target_audiences')
+        .select('id, name')
+        .limit(5);
       
-      const checkResponse = await fetch(checkAllUrl, {
-        headers: {
-          'apikey': serviceKey,
-          'Authorization': `Bearer ${serviceKey}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      console.log("Dostępne grupy docelowe w bazie:", JSON.stringify(debugData || []));
       
-      if (checkResponse.ok) {
-        const checkData = await checkResponse.json();
-        console.log('Przykładowe grupy docelowe w bazie:', JSON.stringify(checkData));
-      }
-      
-      // Zwracamy błąd zamiast generować przykładowy skrypt
       return new Response(
         JSON.stringify({ 
           error: 'Nie znaleziono grupy docelowej',
@@ -130,12 +106,11 @@ serve(async (req) => {
       );
     }
     
-    const targetAudience = targetAudienceData[0];
-    console.log('Pobrano dane grupy docelowej:', targetAudience.name || 'Bez nazwy');
+    console.log('Pobrano dane grupy docelowej:', targetAudienceData.name || 'Bez nazwy');
     
-    // Sprawdzenie, czy mamy rzeczywiste dane zanim wywołamy OpenAI
-    if (!targetAudience.pains || !targetAudience.desires || !targetAudience.benefits) {
-      console.error('Brakuje wymaganych danych w grupie docelowej:', targetAudience);
+    // Verify required fields
+    if (!targetAudienceData.pains || !targetAudienceData.desires || !targetAudienceData.benefits) {
+      console.error('Brakuje wymaganych danych w grupie docelowej:', targetAudienceData);
       return new Response(
         JSON.stringify({ 
           error: 'Grupa docelowa nie zawiera wymaganych danych',
@@ -145,13 +120,13 @@ serve(async (req) => {
       );
     }
     
-    // Formatowanie danych grupy docelowej do prompta
-    const audienceDescription = formatAudienceDetails(targetAudience);
+    // Format audience data for prompt
+    const audienceDescription = formatAudienceDetails(targetAudienceData);
     
-    // Wybieranie odpowiedniego prompta systemowego
+    // Get appropriate system prompt
     const systemPrompt = getSystemPromptForTemplate(templateId);
     
-    // Sprawdzenie klucza OpenAI
+    // Validate OpenAI API key
     if (!openAIApiKey) {
       console.error('Brak klucza API OpenAI');
       
@@ -163,7 +138,7 @@ serve(async (req) => {
       );
     }
     
-    // Wywołanie API OpenAI
+    // Call OpenAI API
     console.log('📢 Wysyłam zapytanie do OpenAI');
     try {
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -198,7 +173,7 @@ serve(async (req) => {
         );
       }
 
-      // Parsowanie odpowiedzi
+      // Parse response
       const data = await response.json();
       console.log('📢 Dostałem odpowiedź z OpenAI:', {
         model: data.model,
@@ -237,23 +212,23 @@ serve(async (req) => {
   }
 });
 
-// Funkcja formatująca dane grupy docelowej
+// Function for formatting target audience data
 function formatAudienceDetails(audience) {
   if (!audience) return "Brak danych o grupie docelowej.";
   
   let details = "# Informacje o grupie docelowej\n\n";
   
-  // Podstawowe dane demograficzne
+  // Basic demographic data
   if (audience.age_range) details += `Wiek: ${audience.age_range}\n`;
   if (audience.gender) details += `Płeć: ${audience.gender}\n\n`;
   
-  // Główna oferta
+  // Main offer
   if (audience.main_offer) details += `## Główna oferta\n${audience.main_offer}\n\n`;
   
-  // Szczegóły oferty
+  // Offer details
   if (audience.offer_details) details += `## Szczegóły oferty\n${audience.offer_details}\n\n`;
   
-  // Problemy klientów
+  // Customer problems
   if (audience.pains && audience.pains.length > 0) {
     details += "## Problemy klientów\n";
     audience.pains.forEach((pain, index) => {
@@ -262,7 +237,7 @@ function formatAudienceDetails(audience) {
     details += "\n";
   }
   
-  // Pragnienia
+  // Desires
   if (audience.desires && audience.desires.length > 0) {
     details += "## Pragnienia klientów\n";
     audience.desires.forEach((desire, index) => {
@@ -271,7 +246,7 @@ function formatAudienceDetails(audience) {
     details += "\n";
   }
   
-  // Korzyści
+  // Benefits
   if (audience.benefits && audience.benefits.length > 0) {
     details += "## Korzyści produktu/usługi\n";
     audience.benefits.forEach((benefit, index) => {
@@ -280,16 +255,16 @@ function formatAudienceDetails(audience) {
     details += "\n";
   }
   
-  // Język klienta
+  // Customer language
   if (audience.language) details += `## Język klienta\n${audience.language}\n\n`;
   
-  // Przekonania
+  // Beliefs
   if (audience.beliefs) details += `## Przekonania do zbudowania\n${audience.beliefs}\n\n`;
   
-  // Biografia
+  // Biography
   if (audience.biography) details += `## Biografia klienta\n${audience.biography}\n\n`;
   
-  // Konkurencja
+  // Competition
   if (audience.competitors && audience.competitors.length > 0) {
     details += "## Konkurencja\n";
     audience.competitors.forEach((competitor, index) => {
@@ -298,16 +273,16 @@ function formatAudienceDetails(audience) {
     details += "\n";
   }
   
-  // Dlaczego to działa
+  // Why it works
   if (audience.why_it_works) details += `## Dlaczego produkt/usługa działa\n${audience.why_it_works}\n\n`;
   
-  // Doświadczenie
+  // Experience
   if (audience.experience) details += `## Doświadczenie sprzedawcy\n${audience.experience}\n\n`;
   
   return details;
 }
 
-// Funkcja wybierająca prompt systemowy dla danego szablonu
+// Function for selecting system prompt for a given template
 function getSystemPromptForTemplate(templateId) {
   const basePrompt = "Jesteś ekspertem copywritingu, specjalizującym się w tworzeniu skutecznych skryptów reklamowych. ";
   
