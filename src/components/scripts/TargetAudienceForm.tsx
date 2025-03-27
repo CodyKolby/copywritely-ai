@@ -1,10 +1,10 @@
-
 import React, { useState, KeyboardEvent } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/auth/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 // Import refactored components
 import StepContainer from './target-audience-form/StepContainer';
@@ -49,11 +49,9 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
         if (currentStep < TOTAL_STEPS) {
           setCurrentStep(currentStep + 1);
         } else {
-          // Submit the form if we're on the last step
           await handleFormSubmission();
         }
       }
-      // Removed toast notification for validation errors - errors will show inline
     } catch (error) {
       console.error("Validation error:", error);
       toast.error('Wystąpił błąd podczas walidacji');
@@ -95,22 +93,18 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
       const userId = user.id;
       console.log("Submitting form with user ID:", userId);
       
-      // Generujemy losową nazwę grupy docelowej, jeśli nie została podana
       const audienceName = `Grupa ${Math.floor(Math.random() * 1000) + 1}`;
       const formDataWithName = {
         ...data,
         name: audienceName
       };
       
-      // Submit the form data using the utility function
       console.log("Dane do zapisania w bazie:", formDataWithName);
       const targetAudienceId = await submitTargetAudienceForm(formDataWithName, userId);
       console.log("Form submitted, target audience ID:", targetAudienceId);
       
-      // Dodajemy małe opóźnienie przed wywołaniem onSubmit
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Sprawdzamy, czy rekord został faktycznie zapisany w bazie
       if (targetAudienceId) {
         const { data: checkData, error: checkError } = await supabase
           .from('target_audiences')
@@ -122,7 +116,6 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
           console.error("Verification failed, record not saved properly:", checkError);
           toast.error('Błąd podczas weryfikacji zapisu danych');
           
-          // Mimo błędu weryfikacji, próbujemy kontynuować
           onSubmit(formDataWithName, targetAudienceId);
         } else {
           console.log("Record verified in database:", checkData);
@@ -130,7 +123,6 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
           onSubmit(formDataWithName, targetAudienceId);
         }
       } else {
-        // Fallback dla braku ID
         toast.warning('Brak ID grupy docelowej, używam tymczasowego ID');
         const tempId = crypto.randomUUID();
         onSubmit(formDataWithName, tempId);
@@ -139,13 +131,11 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
       console.error("Form submission error:", error);
       toast.error('Wystąpił błąd podczas wysyłania formularza');
       
-      // Mimo błędu, próbujemy kontynuować z tymczasowym ID
       const tempId = crypto.randomUUID();
       onSubmit(data, tempId);
     }
   };
 
-  // Handle Enter key press to navigate to the next step
   const handleKeyDown = (e: KeyboardEvent<HTMLFormElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
