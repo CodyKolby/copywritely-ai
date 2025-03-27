@@ -15,7 +15,7 @@ const corsHeaders = {
 serve(async (req) => {
   console.log("Otrzymano zapytanie do generate-script:", req.method, req.url);
   
-  // Obsługa preflight CORS - bardzo ważne!
+  // Obsługa preflight CORS
   if (req.method === 'OPTIONS') {
     console.log("Obsługa zapytania preflight OPTIONS");
     return new Response(null, { 
@@ -27,21 +27,12 @@ serve(async (req) => {
   try {
     console.log("Przetwarzanie zapytania POST");
     
-    // Bezpieczne parsowanie danych z zapytania z kontrolą błędów
-    let templateId, targetAudienceId;
-    try {
-      const requestData = await req.json();
-      templateId = requestData.templateId;
-      targetAudienceId = requestData.targetAudienceId;
-      
-      console.log("Odebrane dane:", JSON.stringify({ templateId, targetAudienceId }));
-    } catch (parseError) {
-      console.error("Błąd parsowania JSON:", parseError);
-      return new Response(
-        JSON.stringify({ error: 'Nieprawidłowy format danych wejściowych', details: parseError.message }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // Parsowanie danych z zapytania
+    const requestData = await req.json();
+    const templateId = requestData.templateId;
+    const targetAudienceId = requestData.targetAudienceId;
+    
+    console.log("Odebrane dane:", JSON.stringify({ templateId, targetAudienceId }));
     
     // Walidacja danych wejściowych
     if (!templateId || !targetAudienceId) {
@@ -55,73 +46,63 @@ serve(async (req) => {
     console.log('Generowanie skryptu dla szablonu:', templateId);
     console.log('ID grupy docelowej:', targetAudienceId);
     
-    // Pobieranie danych grupy docelowej z Supabase
+    // Pobieranie danych grupy docelowej bezpośrednio przez fetch z Supabase API
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || 'https://jorbqjareswzdrsmepbv.supabase.co';
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpvcmJxamFyZXN3emRyc21lcGJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI1NTcyNjMsImV4cCI6MjA1ODEzMzI2M30.WtGgnQKLVD2ZuOq4qNrIfcmFc98U3Q6YLrCCRG_mrH4';
     
-    console.log("Pobieranie danych grupy docelowej z URL:", `${supabaseUrl}/rest/v1/target_audiences?id=eq.${targetAudienceId}&select=*`);
+    const apiUrl = `${supabaseUrl}/rest/v1/target_audiences?id=eq.${targetAudienceId}`;
+    console.log("Pobieranie danych grupy docelowej z URL:", apiUrl);
     
-    let targetAudience;
-    try {
-      // WAŻNE: Dodajemy anon key w nagłówkach - to pozwoli ominąć ograniczenia RLS
-      // Używamy service role, ponieważ funkcja Edge działa jako uprzywilejowany użytkownik
-      const targetAudienceResponse = await fetch(`${supabaseUrl}/rest/v1/target_audiences?id=eq.${targetAudienceId}&select=*`, {
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`
-        }
+    const targetAudienceResponse = await fetch(apiUrl, {
+      headers: {
+        'apikey': supabaseKey,
+        'Authorization': `Bearer ${supabaseKey}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      }
+    });
+    
+    // Sprawdzanie odpowiedzi
+    if (!targetAudienceResponse.ok) {
+      const errorText = await targetAudienceResponse.text();
+      console.error('Błąd pobierania danych grupy docelowej:', {
+        status: targetAudienceResponse.status,
+        statusText: targetAudienceResponse.statusText,
+        body: errorText
       });
       
-      if (!targetAudienceResponse.ok) {
-        const errorText = await targetAudienceResponse.text();
-        console.error('Błąd pobierania danych grupy docelowej:', {
-          status: targetAudienceResponse.status,
-          statusText: targetAudienceResponse.statusText,
-          body: errorText
-        });
-        
-        return new Response(
-          JSON.stringify({ 
-            error: 'Nie udało się pobrać danych grupy docelowej', 
-            details: { 
-              status: targetAudienceResponse.status, 
-              message: errorText 
-            } 
-          }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      
-      const targetAudienceData = await targetAudienceResponse.json();
-      console.log('Odpowiedź z bazy danych (w pętli):', JSON.stringify(targetAudienceData));
-      
-      if (!targetAudienceData || targetAudienceData.length === 0) {
-        console.error('Nie znaleziono grupy docelowej o ID:', targetAudienceId);
-        
-        return new Response(
-          JSON.stringify({ 
-            error: 'Nie znaleziono grupy docelowej',
-            details: { 
-              targetAudienceId,
-              message: 'Nie znaleziono rekordu w bazie danych',
-              hint: 'Upewnij się, że ID jest poprawne i rekord został zapisany przed wywołaniem funkcji'
-            } 
-          }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      
-      targetAudience = targetAudienceData[0];
-      console.log('Pobrano dane grupy docelowej:', targetAudience.name || 'Bez nazwy');
-    } catch (fetchError) {
-      console.error('Wyjątek podczas pobierania danych grupy docelowej:', fetchError);
-      
       return new Response(
-        JSON.stringify({ error: 'Błąd podczas pobierania danych grupy docelowej', details: fetchError.message }),
+        JSON.stringify({ 
+          error: 'Nie udało się pobrać danych grupy docelowej', 
+          details: { 
+            status: targetAudienceResponse.status, 
+            message: errorText 
+          } 
+        }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+    
+    const targetAudienceData = await targetAudienceResponse.json();
+    console.log('Odpowiedź z bazy danych:', JSON.stringify(targetAudienceData));
+    
+    if (!targetAudienceData || targetAudienceData.length === 0) {
+      console.error('Nie znaleziono grupy docelowej o ID:', targetAudienceId);
+      
+      // Generowanie przykładowego skryptu jako fallback
+      const sampleScript = generateSampleScript(templateId);
+      
+      return new Response(
+        JSON.stringify({ 
+          script: sampleScript,
+          warning: 'Wygenerowano przykładowy skrypt, ponieważ nie znaleziono grupy docelowej'
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    const targetAudience = targetAudienceData[0];
+    console.log('Pobrano dane grupy docelowej:', targetAudience.name || 'Bez nazwy');
     
     // Formatowanie danych grupy docelowej do prompta
     const audienceDescription = formatAudienceDetails(targetAudience);
@@ -129,20 +110,19 @@ serve(async (req) => {
     // Wybieranie odpowiedniego prompta systemowego
     const systemPrompt = getSystemPromptForTemplate(templateId);
     
-    // Logujemy dane wysyłane do OpenAI
-    console.log('Dane wysyłane do OpenAI:');
-    console.log('System prompt:', systemPrompt);
-    console.log('Audience description (długość):', audienceDescription.length);
-    
     // Sprawdzenie klucza OpenAI
     if (!openAIApiKey) {
-      console.error('Brak klucza API OpenAI. Sprawdź konfigurację funkcji Edge.');
+      console.error('Brak klucza API OpenAI');
+      
+      // Generowanie przykładowego skryptu jako fallback
+      const sampleScript = generateSampleScript(templateId);
+      
       return new Response(
         JSON.stringify({ 
-          error: 'Brak skonfigurowanego klucza API OpenAI',
-          details: 'Administrator musi ustawić OPENAI_API_KEY w konfiguracji funkcji Edge'
+          script: sampleScript,
+          warning: 'Wygenerowano przykładowy skrypt, ponieważ nie skonfigurowano klucza OpenAI'
         }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
@@ -156,7 +136,7 @@ serve(async (req) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini', // Używamy szybszego modelu
+          model: 'gpt-4o-mini',
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: audienceDescription }
@@ -172,9 +152,16 @@ serve(async (req) => {
           data: errorData
         });
         
+        // Generowanie przykładowego skryptu jako fallback
+        const sampleScript = generateSampleScript(templateId);
+        
         return new Response(
-          JSON.stringify({ error: 'Błąd generowania skryptu', details: errorData }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ 
+            script: sampleScript,
+            warning: 'Wygenerowano przykładowy skrypt z powodu błędu API OpenAI',
+            error: errorData
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
@@ -188,8 +175,6 @@ serve(async (req) => {
       
       const generatedScript = data.choices[0].message.content;
       
-      console.log('Skrypt został pomyślnie wygenerowany, długość:', generatedScript.length);
-      
       return new Response(
         JSON.stringify({ script: generatedScript }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -197,14 +182,13 @@ serve(async (req) => {
     } catch (openaiError) {
       console.error('Błąd podczas komunikacji z OpenAI:', openaiError);
       
-      // W przypadku błędu OpenAI, generujemy przykładowy skrypt
+      // Generowanie przykładowego skryptu jako fallback
       const sampleScript = generateSampleScript(templateId);
-      console.log('Wygenerowano przykładowy skrypt awaryjny');
       
       return new Response(
         JSON.stringify({ 
-          script: sampleScript, 
-          warning: 'Użyto przykładowego skryptu z powodu problemów z API OpenAI',
+          script: sampleScript,
+          warning: 'Wygenerowano przykładowy skrypt z powodu błędu komunikacji z OpenAI',
           error: openaiError.message
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -214,13 +198,16 @@ serve(async (req) => {
   } catch (error) {
     console.error('Nieobsłużony błąd w funkcji generate-script:', error);
     
+    // Generowanie przykładowego skryptu jako fallback
+    const sampleScript = generateSampleScript('generic');
+    
     return new Response(
       JSON.stringify({ 
-        error: 'Nieoczekiwany błąd podczas generowania skryptu', 
-        details: error.message,
-        stack: error.stack 
+        script: sampleScript,
+        warning: 'Wygenerowano przykładowy skrypt z powodu nieoczekiwanego błędu',
+        error: error.message
       }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });

@@ -17,10 +17,6 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
       return generateSampleScript(templateId);
     }
     
-    // Dodajemy opóźnienie przed wywołaniem funkcji, aby dać czas na zapis danych w bazie
-    console.log('Czekam 2 sekundy, aby upewnić się, że dane są zapisane w bazie...');
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
     // Sprawdzenie, czy grupa docelowa istnieje przed próbą generowania skryptu
     console.log('Sprawdzam czy grupa docelowa istnieje w bazie danych...');
     const { data: audienceData, error: checkError } = await supabase
@@ -49,6 +45,7 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
     // Wywołanie Edge Function do generowania skryptu
     console.log('📢 Wysyłam zapytanie do OpenAI przez Edge Function');
     
+    // Użyj invoke zamiast bezpośredniego fetch
     const { data, error } = await supabase.functions.invoke('generate-script', {
       body: {
         templateId,
@@ -77,20 +74,6 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
     // Zwracamy przykładowy skrypt w przypadku błędu
     return generateSampleScript(templateId);
   }
-};
-
-/**
- * Formatuje listę elementów do wyświetlenia w skrypcie
- */
-const formatListItems = (items: string[] = []): string => {
-  if (!items || items.length === 0) {
-    return "- Brak zdefiniowanych elementów";
-  }
-  
-  return items
-    .filter(item => item && item.trim() !== "")
-    .map((item, index) => `- ${item}`)
-    .join("\n") || "- Brak zdefiniowanych elementów";
 };
 
 /**
