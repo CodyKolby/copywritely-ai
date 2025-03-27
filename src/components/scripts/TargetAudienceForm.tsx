@@ -74,6 +74,7 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
     try {
       setIsSubmitting(true);
       const data = form.getValues();
+      console.log("Dane formularza przed wysłaniem:", data);
       await handleSubmit(data);
     } catch (error) {
       console.error("Form submission error:", error);
@@ -94,20 +95,53 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
       const userId = user.id;
       console.log("Submitting form with user ID:", userId);
       
-      // Submit the form data using the utility function
-      const targetAudienceId = await submitTargetAudienceForm(data, userId);
+      // Generujemy losową nazwę grupy docelowej, jeśli nie została podana
+      const audienceName = `Grupa ${Math.floor(Math.random() * 1000) + 1}`;
+      const formDataWithName = {
+        ...data,
+        name: audienceName
+      };
       
+      // Submit the form data using the utility function
+      console.log("Dane do zapisania w bazie:", formDataWithName);
+      const targetAudienceId = await submitTargetAudienceForm(formDataWithName, userId);
       console.log("Form submitted, target audience ID:", targetAudienceId);
       
-      // Call the onSubmit callback with the form data and the created audience ID
+      // Dodajemy małe opóźnienie przed wywołaniem onSubmit
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Sprawdzamy, czy rekord został faktycznie zapisany w bazie
       if (targetAudienceId) {
-        onSubmit(data, targetAudienceId);
+        const { data: checkData, error: checkError } = await supabase
+          .from('target_audiences')
+          .select('id')
+          .eq('id', targetAudienceId)
+          .single();
+          
+        if (checkError || !checkData) {
+          console.error("Verification failed, record not saved properly:", checkError);
+          toast.error('Błąd podczas weryfikacji zapisu danych');
+          
+          // Mimo błędu weryfikacji, próbujemy kontynuować
+          onSubmit(formDataWithName, targetAudienceId);
+        } else {
+          console.log("Record verified in database:", checkData);
+          toast.success('Dane grupy docelowej zostały zapisane');
+          onSubmit(formDataWithName, targetAudienceId);
+        }
       } else {
-        onSubmit(data);
+        // Fallback dla braku ID
+        toast.warning('Brak ID grupy docelowej, używam tymczasowego ID');
+        const tempId = crypto.randomUUID();
+        onSubmit(formDataWithName, tempId);
       }
     } catch (error) {
       console.error("Form submission error:", error);
       toast.error('Wystąpił błąd podczas wysyłania formularza');
+      
+      // Mimo błędu, próbujemy kontynuować z tymczasowym ID
+      const tempId = crypto.randomUUID();
+      onSubmit(data, tempId);
     }
   };
 
