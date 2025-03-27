@@ -14,7 +14,7 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
     if (!targetAudienceId) {
       console.error('Brak ID grupy docelowej');
       toast.error('Brak identyfikatora grupy docelowej');
-      return generateSampleScript(templateId);
+      throw new Error('Brak identyfikatora grupy docelowej');
     }
     
     // Sprawdzenie, czy grupa docelowa istnieje przed próbą generowania skryptu
@@ -34,9 +34,7 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
     if (!audienceData) {
       console.error('Grupa docelowa nie istnieje w bazie danych. ID:', targetAudienceId);
       toast.error('Nie znaleziono grupy docelowej w bazie danych');
-      
-      // Jeśli nie ma grupy docelowej, zwracamy przykładowy skrypt
-      return generateSampleScript(templateId);
+      throw new Error('Grupa docelowa nie istnieje w bazie danych');
     }
     
     console.log('Grupa docelowa znaleziona:', audienceData);
@@ -64,15 +62,15 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
     if (!data || !data.script) {
       console.error('Brak wygenerowanego skryptu w odpowiedzi');
       toast.error('Brak wygenerowanego skryptu w odpowiedzi');
-      return generateSampleScript(templateId);
+      throw new Error('Brak wygenerowanego skryptu w odpowiedzi');
     }
     
     return data.script;
   } catch (error) {
     console.error('Błąd generowania skryptu:', error);
     toast.error('Błąd podczas generowania skryptu');
-    // Zwracamy przykładowy skrypt w przypadku błędu
-    return generateSampleScript(templateId);
+    // Zamiast generować przykładowy skrypt, propagujemy błąd
+    throw error;
   }
 };
 

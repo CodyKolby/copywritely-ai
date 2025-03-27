@@ -89,20 +89,30 @@ serve(async (req) => {
     if (!targetAudienceData || targetAudienceData.length === 0) {
       console.error('Nie znaleziono grupy docelowej o ID:', targetAudienceId);
       
-      // Generowanie przykładowego skryptu jako fallback
-      const sampleScript = generateSampleScript(templateId);
-      
+      // Zwracamy błąd zamiast generować przykładowy skrypt
       return new Response(
         JSON.stringify({ 
-          script: sampleScript,
-          warning: 'Wygenerowano przykładowy skrypt, ponieważ nie znaleziono grupy docelowej'
+          error: 'Nie znaleziono grupy docelowej',
+          details: { targetAudienceId }
         }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
     const targetAudience = targetAudienceData[0];
     console.log('Pobrano dane grupy docelowej:', targetAudience.name || 'Bez nazwy');
+    
+    // Sprawdzenie, czy mamy rzeczywiste dane zanim wywołamy OpenAI
+    if (!targetAudience.pains || !targetAudience.desires || !targetAudience.benefits) {
+      console.error('Brakuje wymaganych danych w grupie docelowej:', targetAudience);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Grupa docelowa nie zawiera wymaganych danych',
+          details: { targetAudienceId, missing: 'Brakuje pains, desires lub benefits' }
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     
     // Formatowanie danych grupy docelowej do prompta
     const audienceDescription = formatAudienceDetails(targetAudience);
@@ -114,15 +124,11 @@ serve(async (req) => {
     if (!openAIApiKey) {
       console.error('Brak klucza API OpenAI');
       
-      // Generowanie przykładowego skryptu jako fallback
-      const sampleScript = generateSampleScript(templateId);
-      
       return new Response(
         JSON.stringify({ 
-          script: sampleScript,
-          warning: 'Wygenerowano przykładowy skrypt, ponieważ nie skonfigurowano klucza OpenAI'
+          error: 'Brak skonfigurowanego klucza OpenAI API',
         }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
@@ -152,16 +158,12 @@ serve(async (req) => {
           data: errorData
         });
         
-        // Generowanie przykładowego skryptu jako fallback
-        const sampleScript = generateSampleScript(templateId);
-        
         return new Response(
           JSON.stringify({ 
-            script: sampleScript,
-            warning: 'Wygenerowano przykładowy skrypt z powodu błędu API OpenAI',
-            error: errorData
+            error: 'Błąd API OpenAI',
+            details: errorData
           }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
@@ -182,32 +184,24 @@ serve(async (req) => {
     } catch (openaiError) {
       console.error('Błąd podczas komunikacji z OpenAI:', openaiError);
       
-      // Generowanie przykładowego skryptu jako fallback
-      const sampleScript = generateSampleScript(templateId);
-      
       return new Response(
         JSON.stringify({ 
-          script: sampleScript,
-          warning: 'Wygenerowano przykładowy skrypt z powodu błędu komunikacji z OpenAI',
-          error: openaiError.message
+          error: 'Błąd komunikacji z OpenAI',
+          details: openaiError.message
         }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
   } catch (error) {
     console.error('Nieobsłużony błąd w funkcji generate-script:', error);
     
-    // Generowanie przykładowego skryptu jako fallback
-    const sampleScript = generateSampleScript('generic');
-    
     return new Response(
       JSON.stringify({ 
-        script: sampleScript,
-        warning: 'Wygenerowano przykładowy skrypt z powodu nieoczekiwanego błędu',
-        error: error.message
+        error: 'Nieoczekiwany błąd',
+        details: error.message
       }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
@@ -317,32 +311,4 @@ function getSystemPromptForTemplate(templateId) {
         "podkreśla korzyści, zawiera dowód społeczny i kończy się jasnym wezwaniem do działania. " +
         "Skrypt powinien być przekonujący, konwersacyjny i dostosowany specjalnie do grupy docelowej.";
   }
-}
-
-// Funkcja generująca przykładowy skrypt (awaryjny w przypadku problemów z API)
-function generateSampleScript(templateId) {
-  return `# Przykładowy skrypt dla szablonu: ${templateId}
-
-## Wprowadzenie
-Witaj w naszym skrypcie przygotowanym specjalnie dla Twojej grupy docelowej!
-
-## Główne punkty
-1. Zacznij od nawiązania kontaktu z odbiorcą
-2. Przedstaw główne korzyści Twojej oferty
-3. Pokaż, jak Twój produkt rozwiązuje problemy odbiorcy
-4. Zaprezentuj case study lub historie sukcesu
-5. Zakończ mocnym wezwaniem do działania
-
-## Szczegółowy opis
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam in dui mauris. Vivamus hendrerit arcu sed erat molestie vehicula. Sed auctor neque eu tellus rhoncus ut eleifend nibh porttitor. Ut in nulla enim.
-
-## Przykładowe dialogi
-- "Czy zauważyłeś, że [problem] staje się coraz większym wyzwaniem?"
-- "Nasz produkt pozwala na [korzyść] bez konieczności [negatywny aspekt konkurencji]"
-- "W ciągu ostatnich 6 miesięcy pomogliśmy ponad 100 klientom osiągnąć [rezultat]"
-
-## Zakończenie
-Dziękujemy za skorzystanie z naszego generatora skryptów! Możesz teraz dostosować ten szkic do swoich potrzeb.
-
-UWAGA: To jest przykładowy skrypt wygenerowany z powodu błędu z OpenAI API.`;
 }
