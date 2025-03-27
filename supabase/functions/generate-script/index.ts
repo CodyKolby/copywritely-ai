@@ -26,11 +26,26 @@ serve(async (req) => {
 
   try {
     console.log("Przetwarzanie zapytania POST");
-    // Parsowanie danych z zapytania
-    const { templateId, targetAudienceId } = await req.json();
     
+    // Bezpieczne parsowanie danych z zapytania z kontrolą błędów
+    let templateId, targetAudienceId;
+    try {
+      const requestData = await req.json();
+      templateId = requestData.templateId;
+      targetAudienceId = requestData.targetAudienceId;
+      
+      console.log("Odebrane dane:", JSON.stringify({ templateId, targetAudienceId }));
+    } catch (parseError) {
+      console.error("Błąd parsowania JSON:", parseError);
+      return new Response(
+        JSON.stringify({ error: 'Nieprawidłowy format danych wejściowych', details: parseError.message }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Walidacja danych wejściowych
     if (!templateId || !targetAudienceId) {
-      console.error("Brak wymaganych danych");
+      console.error("Brak wymaganych danych:", { templateId, targetAudienceId });
       return new Response(
         JSON.stringify({ error: 'Brak wymaganych danych (templateId, targetAudienceId)' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -44,28 +59,61 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || 'https://jorbqjareswzdrsmepbv.supabase.co';
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpvcmJxamFyZXN3emRyc21lcGJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI1NTcyNjMsImV4cCI6MjA1ODEzMzI2M30.WtGgnQKLVD2ZuOq4qNrIfcmFc98U3Q6YLrCCRG_mrH4';
     
-    console.log("Pobieranie danych grupy docelowej");
-    const targetAudienceResponse = await fetch(`${supabaseUrl}/rest/v1/target_audiences?id=eq.${targetAudienceId}&select=*`, {
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': supabaseKey,
-        'Authorization': `Bearer ${supabaseKey}`
+    console.log("Pobieranie danych grupy docelowej z URL:", `${supabaseUrl}/rest/v1/target_audiences?id=eq.${targetAudienceId}&select=*`);
+    
+    let targetAudience;
+    try {
+      const targetAudienceResponse = await fetch(`${supabaseUrl}/rest/v1/target_audiences?id=eq.${targetAudienceId}&select=*`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`
+        }
+      });
+      
+      if (!targetAudienceResponse.ok) {
+        const errorText = await targetAudienceResponse.text();
+        console.error('Błąd pobierania danych grupy docelowej:', {
+          status: targetAudienceResponse.status,
+          statusText: targetAudienceResponse.statusText,
+          body: errorText
+        });
+        
+        return new Response(
+          JSON.stringify({ 
+            error: 'Nie udało się pobrać danych grupy docelowej', 
+            details: { 
+              status: targetAudienceResponse.status, 
+              message: errorText 
+            } 
+          }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
-    });
-    
-    if (!targetAudienceResponse.ok) {
-      console.error('Błąd pobierania danych grupy docelowej:', await targetAudienceResponse.text());
-      throw new Error('Nie udało się pobrać danych grupy docelowej');
+      
+      const targetAudienceData = await targetAudienceResponse.json();
+      console.log('Odpowiedź z bazy danych:', JSON.stringify(targetAudienceData));
+      
+      if (!targetAudienceData || targetAudienceData.length === 0) {
+        console.error('Nie znaleziono grupy docelowej o ID:', targetAudienceId);
+        
+        // Zamiast rzucać wyjątek, zwracamy odpowiedź z treścią błędu
+        return new Response(
+          JSON.stringify({ error: 'Nie znaleziono grupy docelowej' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      targetAudience = targetAudienceData[0];
+      console.log('Pobrano dane grupy docelowej:', targetAudience.name || 'Bez nazwy');
+    } catch (fetchError) {
+      console.error('Wyjątek podczas pobierania danych grupy docelowej:', fetchError);
+      
+      return new Response(
+        JSON.stringify({ error: 'Błąd podczas pobierania danych grupy docelowej', details: fetchError.message }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
-    
-    const targetAudienceData = await targetAudienceResponse.json();
-    if (!targetAudienceData || targetAudienceData.length === 0) {
-      console.error('Nie znaleziono grupy docelowej o ID:', targetAudienceId);
-      throw new Error('Nie znaleziono grupy docelowej');
-    }
-    
-    const targetAudience = targetAudienceData[0];
-    console.log('Pobrano dane grupy docelowej:', targetAudience.name || 'Bez nazwy');
     
     // Formatowanie danych grupy docelowej do prompta
     const audienceDescription = formatAudienceDetails(targetAudience);
@@ -73,48 +121,79 @@ serve(async (req) => {
     // Wybieranie odpowiedniego prompta systemowego
     const systemPrompt = getSystemPromptForTemplate(templateId);
     
+    // Logujemy dane wysyłane do OpenAI
+    console.log('Dane wysyłane do OpenAI:');
+    console.log('System prompt:', systemPrompt);
+    console.log('Audience description (długość):', audienceDescription.length);
+    
     // Wywołanie API OpenAI
     console.log('Wywołanie API OpenAI');
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini', // Używamy szybszego i tańszego modelu
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: audienceDescription }
-        ],
-        temperature: 0.7,
-      }),
-    });
+    try {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openAIApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini', // Używamy szybszego modelu
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: audienceDescription }
+          ],
+          temperature: 0.7,
+        }),
+      });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Błąd API OpenAI:', errorData);
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Błąd API OpenAI:', {
+          status: response.status,
+          data: errorData
+        });
+        
+        return new Response(
+          JSON.stringify({ error: 'Błąd generowania skryptu', details: errorData }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Parsowanie odpowiedzi
+      const data = await response.json();
+      const generatedScript = data.choices[0].message.content;
+      
+      console.log('Skrypt został pomyślnie wygenerowany, długość:', generatedScript.length);
+      
       return new Response(
-        JSON.stringify({ error: 'Błąd generowania skryptu', details: errorData }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ script: generatedScript }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } catch (openaiError) {
+      console.error('Błąd podczas komunikacji z OpenAI:', openaiError);
+      
+      // W przypadku błędu OpenAI, generujemy przykładowy skrypt
+      const sampleScript = generateSampleScript(templateId);
+      console.log('Wygenerowano przykładowy skrypt awaryjny');
+      
+      return new Response(
+        JSON.stringify({ 
+          script: sampleScript, 
+          warning: 'Użyto przykładowego skryptu z powodu problemów z API OpenAI',
+          error: openaiError.message
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    // Parsowanie odpowiedzi
-    const data = await response.json();
-    const generatedScript = data.choices[0].message.content;
-    
-    console.log('Skrypt został pomyślnie wygenerowany');
-    
-    return new Response(
-      JSON.stringify({ script: generatedScript }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
     
   } catch (error) {
-    console.error('Błąd w funkcji generate-script:', error);
+    console.error('Nieobsłużony błąd w funkcji generate-script:', error);
+    
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: 'Nieoczekiwany błąd podczas generowania skryptu', 
+        details: error.message,
+        stack: error.stack 
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
@@ -225,4 +304,30 @@ function getSystemPromptForTemplate(templateId) {
         "podkreśla korzyści, zawiera dowód społeczny i kończy się jasnym wezwaniem do działania. " +
         "Skrypt powinien być przekonujący, konwersacyjny i dostosowany specjalnie do grupy docelowej.";
   }
+}
+
+// Funkcja generująca przykładowy skrypt (awaryjny w przypadku problemów z API)
+function generateSampleScript(templateId) {
+  return `# Przykładowy skrypt dla szablonu: ${templateId}
+
+## Wprowadzenie
+Witaj w naszym skrypcie przygotowanym specjalnie dla Twojej grupy docelowej!
+
+## Główne punkty
+1. Zacznij od nawiązania kontaktu z odbiorcą
+2. Przedstaw główne korzyści Twojej oferty
+3. Pokaż, jak Twój produkt rozwiązuje problemy odbiorcy
+4. Zaprezentuj case study lub historie sukcesu
+5. Zakończ mocnym wezwaniem do działania
+
+## Szczegółowy opis
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam in dui mauris. Vivamus hendrerit arcu sed erat molestie vehicula. Sed auctor neque eu tellus rhoncus ut eleifend nibh porttitor. Ut in nulla enim.
+
+## Przykładowe dialogi
+- "Czy zauważyłeś, że [problem] staje się coraz większym wyzwaniem?"
+- "Nasz produkt pozwala na [korzyść] bez konieczności [negatywny aspekt konkurencji]"
+- "W ciągu ostatnich 6 miesięcy pomogliśmy ponad 100 klientom osiągnąć [rezultat]"
+
+## Zakończenie
+Dziękujemy za skorzystanie z naszego generatora skryptów! Możesz teraz dostosować ten szkic do swoich potrzeb.`;
 }

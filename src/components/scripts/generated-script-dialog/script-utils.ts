@@ -34,7 +34,7 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
         }
         
         if (!data || !data.script) {
-          console.error(`Próba ${attempts + 1}/${maxAttempts}: Brak wygenerowanego skryptu`);
+          console.error(`Próba ${attempts + 1}/${maxAttempts}: Brak wygenerowanego skryptu`, data);
           lastError = new Error('Nie wygenerowano skryptu');
           attempts++;
           await new Promise(resolve => setTimeout(resolve, 1000));
