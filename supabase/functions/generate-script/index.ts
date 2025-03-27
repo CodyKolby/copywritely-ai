@@ -97,9 +97,16 @@ serve(async (req) => {
       if (!targetAudienceData || targetAudienceData.length === 0) {
         console.error('Nie znaleziono grupy docelowej o ID:', targetAudienceId);
         
-        // Zamiast rzucać wyjątek, zwracamy odpowiedź z treścią błędu
+        // Zwracamy bardziej szczegółową odpowiedź z informacją o błędzie
         return new Response(
-          JSON.stringify({ error: 'Nie znaleziono grupy docelowej' }),
+          JSON.stringify({ 
+            error: 'Nie znaleziono grupy docelowej',
+            details: { 
+              targetAudienceId,
+              message: 'Nie znaleziono rekordu w bazie danych',
+              hint: 'Upewnij się, że ID jest poprawne i rekord został zapisany przed wywołaniem funkcji'
+            } 
+          }),
           { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }

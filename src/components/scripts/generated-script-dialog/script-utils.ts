@@ -1,5 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 /**
  * Generuje skrypt na podstawie ID szablonu i danych grupy docelowej
@@ -8,6 +9,26 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
   try {
     console.log('Generowanie skryptu dla szablonu:', templateId);
     console.log('ID grupy docelowej:', targetAudienceId);
+    
+    // Dodajemy małe opóźnienie przed wywołaniem funkcji, aby dać czas na zapis danych w bazie
+    console.log('Czekam 2 sekundy, aby upewnić się, że dane są zapisane w bazie...');
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Sprawdzenie, czy grupa docelowa istnieje przed próbą generowania skryptu
+    console.log('Sprawdzam czy grupa docelowa istnieje w bazie danych...');
+    const { data: audienceExists, error: checkError } = await supabase
+      .from('target_audiences')
+      .select('id')
+      .eq('id', targetAudienceId)
+      .single();
+      
+    if (checkError || !audienceExists) {
+      console.error('Grupa docelowa nie istnieje w bazie danych:', checkError);
+      toast.error('Nie znaleziono grupy docelowej w bazie danych');
+      throw new Error('Grupa docelowa nie istnieje');
+    }
+    
+    console.log('Grupa docelowa znaleziona, przystępuję do generowania skryptu');
     
     // Wywołanie funkcji generate-script z maksymalnie 3 próbami
     let attempts = 0;
@@ -18,8 +39,11 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
       try {
         console.log(`Próba ${attempts + 1}/${maxAttempts}: Wywołanie funkcji generate-script`);
         
-        // Wywołanie edge function z pełną nazwą i sprawdzenie odpowiedzi
-        const { data, error } = await supabase.functions.invoke('generate-script', {
+        // Wyraźnie wypisuję pełny URL do funkcji edge function
+        const functionName = 'generate-script';
+        console.log(`Wywołuję edge function: ${functionName}`);
+        
+        const { data, error } = await supabase.functions.invoke(functionName, {
           body: {
             templateId,
             targetAudienceId
