@@ -97,7 +97,6 @@ serve(async (req) => {
       if (!targetAudienceData || targetAudienceData.length === 0) {
         console.error('Nie znaleziono grupy docelowej o ID:', targetAudienceId);
         
-        // Zwracamy bardziej szczegółową odpowiedź z informacją o błędzie
         return new Response(
           JSON.stringify({ 
             error: 'Nie znaleziono grupy docelowej',
@@ -133,8 +132,20 @@ serve(async (req) => {
     console.log('System prompt:', systemPrompt);
     console.log('Audience description (długość):', audienceDescription.length);
     
+    // Sprawdzenie klucza OpenAI
+    if (!openAIApiKey) {
+      console.error('Brak klucza API OpenAI. Sprawdź konfigurację funkcji Edge.');
+      return new Response(
+        JSON.stringify({ 
+          error: 'Brak skonfigurowanego klucza API OpenAI',
+          details: 'Administrator musi ustawić OPENAI_API_KEY w konfiguracji funkcji Edge'
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     // Wywołanie API OpenAI
-    console.log('Wywołanie API OpenAI');
+    console.log('📢 Wysyłam zapytanie do OpenAI');
     try {
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -167,6 +178,12 @@ serve(async (req) => {
 
       // Parsowanie odpowiedzi
       const data = await response.json();
+      console.log('📢 Dostałem odpowiedź z OpenAI:', {
+        model: data.model,
+        usage: data.usage,
+        id: data.id
+      });
+      
       const generatedScript = data.choices[0].message.content;
       
       console.log('Skrypt został pomyślnie wygenerowany, długość:', generatedScript.length);
@@ -336,5 +353,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam in dui mauris. V
 - "W ciągu ostatnich 6 miesięcy pomogliśmy ponad 100 klientom osiągnąć [rezultat]"
 
 ## Zakończenie
-Dziękujemy za skorzystanie z naszego generatora skryptów! Możesz teraz dostosować ten szkic do swoich potrzeb.`;
+Dziękujemy za skorzystanie z naszego generatora skryptów! Możesz teraz dostosować ten szkic do swoich potrzeb.
+
+UWAGA: To jest przykładowy skrypt wygenerowany z powodu błędu z OpenAI API.`;
 }

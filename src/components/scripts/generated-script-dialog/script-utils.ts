@@ -18,8 +18,8 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
     }
     
     // Dodajemy opóźnienie przed wywołaniem funkcji, aby dać czas na zapis danych w bazie
-    console.log('Czekam 3 sekundy, aby upewnić się, że dane są zapisane w bazie...');
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    console.log('Czekam 2 sekundy, aby upewnić się, że dane są zapisane w bazie...');
+    await new Promise(resolve => setTimeout(resolve, 2000));
     
     // Sprawdzenie, czy grupa docelowa istnieje przed próbą generowania skryptu
     console.log('Sprawdzam czy grupa docelowa istnieje w bazie danych...');
@@ -44,97 +44,39 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
     }
     
     console.log('Grupa docelowa znaleziona:', audienceData);
-    console.log('Przystępuję do generowania skryptu');
+    console.log('Wywołuję edge function generate-script...');
     
-    // Bezpośrednie generowanie skryptu w oparciu o dane, bez odwoływania się do Edge Function
-    // Ta implementacja zapobiega problemom z wywoływaniem Edge Function
-    console.log('Generuję skrypt lokalnie zamiast wywoływać edge function');
+    // Wywołanie Edge Function do generowania skryptu
+    console.log('📢 Wysyłam zapytanie do OpenAI przez Edge Function');
     
-    // Tworzymy skrypt w oparciu o dane grupy docelowej
-    const script = generateLocalScript(templateId, audienceData);
+    const { data, error } = await supabase.functions.invoke('generate-script', {
+      body: {
+        templateId,
+        targetAudienceId,
+      },
+    });
     
-    console.log('Skrypt został pomyślnie wygenerowany');
-    return script;
+    if (error) {
+      console.error('Błąd podczas wywoływania funkcji generate-script:', error);
+      toast.error('Błąd podczas generowania skryptu');
+      throw new Error(`Błąd podczas generowania skryptu: ${error.message}`);
+    }
+    
+    console.log('📢 Dostałem odpowiedź z OpenAI przez Edge Function:', data);
+    
+    if (!data || !data.script) {
+      console.error('Brak wygenerowanego skryptu w odpowiedzi');
+      toast.error('Brak wygenerowanego skryptu w odpowiedzi');
+      return generateSampleScript(templateId);
+    }
+    
+    return data.script;
   } catch (error) {
     console.error('Błąd generowania skryptu:', error);
     toast.error('Błąd podczas generowania skryptu');
     // Zwracamy przykładowy skrypt w przypadku błędu
     return generateSampleScript(templateId);
   }
-};
-
-/**
- * Generuje skrypt lokalnie na podstawie danych grupy docelowej
- * Jest to tymczasowe rozwiązanie zamiast wywoływania edge function
- */
-const generateLocalScript = (templateId: string, audience: any): string => {
-  let scriptTitle = "";
-  
-  switch(templateId) {
-    case 'email':
-      scriptTitle = "Email Marketingowy";
-      break;
-    case 'social':
-      scriptTitle = "Post w Mediach Społecznościowych";
-      break;
-    case 'ad':
-      scriptTitle = "Reklama";
-      break;
-    default:
-      scriptTitle = "Skrypt Komunikacyjny";
-  }
-  
-  // Pobierz podstawowe dane grupy docelowej
-  const { 
-    age_range = "Nie określono", 
-    gender = "Nie określono",
-    main_offer = "Nie określono",
-    pains = [],
-    desires = [],
-    benefits = []
-  } = audience;
-  
-  // Stwórz podstawowe sekcje skryptu
-  let script = `# ${scriptTitle} dla grupy docelowej (${age_range}, ${gender})
-
-## Główna oferta
-${main_offer}
-
-## Problemy klienta
-${formatListItems(pains)}
-
-## Pragnienia klienta
-${formatListItems(desires)}
-
-## Korzyści
-${formatListItems(benefits)}
-
-## Przykładowe komunikaty
-`;
-
-  // Dodaj przykładowe komunikaty na podstawie problemów i korzyści
-  if (pains.length > 0 && benefits.length > 0) {
-    script += `- "Czy męczy Cię ${pains[0] || 'ten problem'}? Nasza oferta zapewnia ${benefits[0] || 'konkretne korzyści'}!"\n`;
-  }
-  
-  if (pains.length > 1 && benefits.length > 1) {
-    script += `- "Przestań się martwić o ${pains[1] || 'te trudności'}. Dzięki nam zyskasz ${benefits[1] || 'wartość'}!"\n`;
-  }
-  
-  script += `- "To rozwiązanie zostało stworzone specjalnie dla osób takich jak Ty!"\n`;
-  
-  // Dodaj wezwanie do działania
-  script += `\n## Wezwanie do działania
-- "Zamów teraz i otrzymaj specjalny bonus!"
-- "Nie czekaj - liczba miejsc jest ograniczona!"
-- "Dołącz już dziś i zacznij odczuwać rezultaty!"
-
----
-Ten skrypt został wygenerowany lokalnie w aplikacji na podstawie podanych danych grupy docelowej.
-Możesz go dostosować według własnych potrzeb.
-`;
-
-  return script;
 };
 
 /**
@@ -174,5 +116,7 @@ Witaj w naszym skrypcie przygotowanym specjalnie dla Twojej grupy docelowej!
 - "W ciągu ostatnich 6 miesięcy pomogliśmy ponad 100 klientom osiągnąć [rezultat]"
 
 ## Zakończenie
-Dziękujemy za skorzystanie z naszego generatora skryptów! Możesz teraz dostosować ten szkic do swoich potrzeb.`;
+Dziękujemy za skorzystanie z naszego generatora skryptów! Możesz teraz dostosować ten szkic do swoich potrzeb.
+
+UWAGA: To jest przykładowy skrypt wygenerowany z powodu błędu połączenia z API OpenAI.`;
 };
