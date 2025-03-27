@@ -9,19 +9,7 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
     console.log('Generowanie skryptu dla szablonu:', templateId);
     console.log('ID grupy docelowej:', targetAudienceId);
     
-    // Pobieranie danych grupy docelowej
-    const { data: targetAudience, error: audienceError } = await supabase
-      .from('target_audiences')
-      .select('*')
-      .eq('id', targetAudienceId)
-      .single();
-    
-    if (audienceError) {
-      console.error('Błąd pobierania danych grupy docelowej:', audienceError);
-      throw new Error('Nie udało się pobrać danych grupy docelowej');
-    }
-    
-    // Wywołanie funkcji generate-script
+    // Wywołanie funkcji generate-script z maksymalnie 3 próbami
     let attempts = 0;
     const maxAttempts = 3;
     let lastError = null;
@@ -33,7 +21,7 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
         const { data, error } = await supabase.functions.invoke('generate-script', {
           body: {
             templateId,
-            targetAudience
+            targetAudienceId
           },
         });
         

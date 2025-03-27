@@ -4,7 +4,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
-// Prawidłowa konfiguracja nagłówków CORS
+// Poprawna konfiguracja nagłówków CORS
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -13,7 +13,7 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  console.log("Otrzymano zapytanie do generate-script:", req.method);
+  console.log("Otrzymano zapytanie do generate-script:", req.method, req.url);
   
   // Obsługa preflight CORS - bardzo ważne!
   if (req.method === 'OPTIONS') {
@@ -27,18 +27,45 @@ serve(async (req) => {
   try {
     console.log("Przetwarzanie zapytania POST");
     // Parsowanie danych z zapytania
-    const { templateId, targetAudience } = await req.json();
+    const { templateId, targetAudienceId } = await req.json();
     
-    if (!templateId || !targetAudience) {
+    if (!templateId || !targetAudienceId) {
       console.error("Brak wymaganych danych");
       return new Response(
-        JSON.stringify({ error: 'Brak wymaganych danych (szablon, grupa docelowa)' }),
+        JSON.stringify({ error: 'Brak wymaganych danych (templateId, targetAudienceId)' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     console.log('Generowanie skryptu dla szablonu:', templateId);
-    console.log('Dane grupy docelowej otrzymane');
+    console.log('ID grupy docelowej:', targetAudienceId);
+    
+    // Pobieranie danych grupy docelowej z Supabase
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || 'https://jorbqjareswzdrsmepbv.supabase.co';
+    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpvcmJxamFyZXN3emRyc21lcGJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI1NTcyNjMsImV4cCI6MjA1ODEzMzI2M30.WtGgnQKLVD2ZuOq4qNrIfcmFc98U3Q6YLrCCRG_mrH4';
+    
+    console.log("Pobieranie danych grupy docelowej");
+    const targetAudienceResponse = await fetch(`${supabaseUrl}/rest/v1/target_audiences?id=eq.${targetAudienceId}&select=*`, {
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': supabaseKey,
+        'Authorization': `Bearer ${supabaseKey}`
+      }
+    });
+    
+    if (!targetAudienceResponse.ok) {
+      console.error('Błąd pobierania danych grupy docelowej:', await targetAudienceResponse.text());
+      throw new Error('Nie udało się pobrać danych grupy docelowej');
+    }
+    
+    const targetAudienceData = await targetAudienceResponse.json();
+    if (!targetAudienceData || targetAudienceData.length === 0) {
+      console.error('Nie znaleziono grupy docelowej o ID:', targetAudienceId);
+      throw new Error('Nie znaleziono grupy docelowej');
+    }
+    
+    const targetAudience = targetAudienceData[0];
+    console.log('Pobrano dane grupy docelowej:', targetAudience.name || 'Bez nazwy');
     
     // Formatowanie danych grupy docelowej do prompta
     const audienceDescription = formatAudienceDetails(targetAudience);
