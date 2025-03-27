@@ -4,44 +4,50 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
+// Prawidłowa konfiguracja nagłówków CORS
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Max-Age': '86400',
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
+  console.log("Otrzymano zapytanie do generate-script:", req.method);
+  
+  // Obsługa preflight CORS - bardzo ważne!
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    console.log("Obsługa zapytania preflight OPTIONS");
+    return new Response(null, { 
+      status: 204, 
+      headers: corsHeaders 
+    });
   }
 
   try {
+    console.log("Przetwarzanie zapytania POST");
+    // Parsowanie danych z zapytania
     const { templateId, targetAudience } = await req.json();
     
     if (!templateId || !targetAudience) {
+      console.error("Brak wymaganych danych");
       return new Response(
-        JSON.stringify({ error: 'Template ID and target audience are required' }),
+        JSON.stringify({ error: 'Brak wymaganych danych (szablon, grupa docelowa)' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Generating script for template:', templateId);
-    console.log('Target audience data:', targetAudience);
-
-    // Format audience data for the prompt
-    const audienceDetails = formatAudienceDetails(targetAudience);
+    console.log('Generowanie skryptu dla szablonu:', templateId);
+    console.log('Dane grupy docelowej otrzymane');
     
-    // Select the appropriate system prompt based on template type
+    // Formatowanie danych grupy docelowej do prompta
+    const audienceDescription = formatAudienceDetails(targetAudience);
+    
+    // Wybieranie odpowiedniego prompta systemowego
     const systemPrompt = getSystemPromptForTemplate(templateId);
     
-    // Create the prompt for OpenAI
-    const messages = [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: audienceDetails }
-    ];
-
-    console.log('Sending request to OpenAI');
-    
+    // Wywołanie API OpenAI
+    console.log('Wywołanie API OpenAI');
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -49,32 +55,37 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: messages,
+        model: 'gpt-4o-mini', // Używamy szybszego i tańszego modelu
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: audienceDescription }
+        ],
         temperature: 0.7,
       }),
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error('OpenAI API error:', errorData);
+      console.error('Błąd API OpenAI:', errorData);
       return new Response(
-        JSON.stringify({ error: 'Error generating script', details: errorData }),
+        JSON.stringify({ error: 'Błąd generowania skryptu', details: errorData }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    // Parsowanie odpowiedzi
     const data = await response.json();
     const generatedScript = data.choices[0].message.content;
-
-    console.log('Script generated successfully');
+    
+    console.log('Skrypt został pomyślnie wygenerowany');
     
     return new Response(
       JSON.stringify({ script: generatedScript }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
+    
   } catch (error) {
-    console.error('Error in generate-script function:', error);
+    console.error('Błąd w funkcji generate-script:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -82,108 +93,109 @@ serve(async (req) => {
   }
 });
 
-// Helper functions
+// Funkcja formatująca dane grupy docelowej
 function formatAudienceDetails(audience) {
-  if (!audience) return "No target audience details provided.";
+  if (!audience) return "Brak danych o grupie docelowej.";
   
-  let details = "# Target Audience Information\n\n";
+  let details = "# Informacje o grupie docelowej\n\n";
   
-  // Basic demographics
-  if (audience.age_range) details += `Age Range: ${audience.age_range}\n`;
-  if (audience.gender) details += `Gender: ${audience.gender}\n\n`;
+  // Podstawowe dane demograficzne
+  if (audience.age_range) details += `Wiek: ${audience.age_range}\n`;
+  if (audience.gender) details += `Płeć: ${audience.gender}\n\n`;
   
-  // Main offer
-  if (audience.main_offer) details += `## Main Offer\n${audience.main_offer}\n\n`;
+  // Główna oferta
+  if (audience.main_offer) details += `## Główna oferta\n${audience.main_offer}\n\n`;
   
-  // Offer details
-  if (audience.offer_details) details += `## Offer Details\n${audience.offer_details}\n\n`;
+  // Szczegóły oferty
+  if (audience.offer_details) details += `## Szczegóły oferty\n${audience.offer_details}\n\n`;
   
-  // Pains
+  // Problemy klientów
   if (audience.pains && audience.pains.length > 0) {
-    details += "## Customer Pains/Problems\n";
+    details += "## Problemy klientów\n";
     audience.pains.forEach((pain, index) => {
       if (pain) details += `${index + 1}. ${pain}\n`;
     });
     details += "\n";
   }
   
-  // Desires
+  // Pragnienia
   if (audience.desires && audience.desires.length > 0) {
-    details += "## Customer Desires\n";
+    details += "## Pragnienia klientów\n";
     audience.desires.forEach((desire, index) => {
       if (desire) details += `${index + 1}. ${desire}\n`;
     });
     details += "\n";
   }
   
-  // Benefits
+  // Korzyści
   if (audience.benefits && audience.benefits.length > 0) {
-    details += "## Product/Service Benefits\n";
+    details += "## Korzyści produktu/usługi\n";
     audience.benefits.forEach((benefit, index) => {
       if (benefit) details += `${index + 1}. ${benefit}\n`;
     });
     details += "\n";
   }
   
-  // Language
-  if (audience.language) details += `## Customer Language\n${audience.language}\n\n`;
+  // Język klienta
+  if (audience.language) details += `## Język klienta\n${audience.language}\n\n`;
   
-  // Beliefs
-  if (audience.beliefs) details += `## Beliefs to Establish\n${audience.beliefs}\n\n`;
+  // Przekonania
+  if (audience.beliefs) details += `## Przekonania do zbudowania\n${audience.beliefs}\n\n`;
   
-  // Biography
-  if (audience.biography) details += `## Customer Biography\n${audience.biography}\n\n`;
+  // Biografia
+  if (audience.biography) details += `## Biografia klienta\n${audience.biography}\n\n`;
   
-  // Competitors
+  // Konkurencja
   if (audience.competitors && audience.competitors.length > 0) {
-    details += "## Competitors\n";
+    details += "## Konkurencja\n";
     audience.competitors.forEach((competitor, index) => {
       if (competitor) details += `${index + 1}. ${competitor}\n`;
     });
     details += "\n";
   }
   
-  // Why it works
-  if (audience.why_it_works) details += `## Why Product/Service Works\n${audience.why_it_works}\n\n`;
+  // Dlaczego to działa
+  if (audience.why_it_works) details += `## Dlaczego produkt/usługa działa\n${audience.why_it_works}\n\n`;
   
-  // Experience
-  if (audience.experience) details += `## Seller Experience\n${audience.experience}\n\n`;
+  // Doświadczenie
+  if (audience.experience) details += `## Doświadczenie sprzedawcy\n${audience.experience}\n\n`;
   
   return details;
 }
 
+// Funkcja wybierająca prompt systemowy dla danego szablonu
 function getSystemPromptForTemplate(templateId) {
-  const basePrompt = "You are an expert copywriter specialized in creating compelling marketing scripts. ";
+  const basePrompt = "Jesteś ekspertem copywritingu, specjalizującym się w tworzeniu skutecznych skryptów reklamowych. ";
   
   switch(templateId) {
     case 'email':
       return basePrompt + 
-        "Create a persuasive marketing email script that will convert leads into customers. " +
-        "Structure the email with a compelling subject line, engaging opening, clear value proposition, " +
-        "social proof, strong call-to-action, and professional signature. " +
-        "Focus on benefits rather than features and maintain a conversational tone. " +
-        "Format the output with clear sections including Subject Line, Preview Text, and Body Content. " +
-        "The script should be between 300-500 words.";
+        "Stwórz przekonujący skrypt emaila marketingowego, który będzie konwertował leady w klientów. " +
+        "Struktura emaila powinna zawierać przyciągający uwagę temat, angażujący wstęp, jasne przedstawienie korzyści, " +
+        "dowód społeczny, silne wezwanie do działania i profesjonalną stopkę. " +
+        "Skup się na korzyściach, a nie na cechach produktu i zachowaj konwersacyjny ton. " +
+        "Format wyjściowy powinien zawierać wyraźne sekcje, w tym Temat, Tekst podglądu i Treść główną. " +
+        "Skrypt powinien mieć od 300 do 500 słów.";
     
     case 'social':
       return basePrompt + 
-        "Create engaging social media post scripts optimized for the target audience. " +
-        "Each post should have a hook, value proposition, and clear call-to-action. " +
-        "Provide 3 variations for different platforms (Facebook, Instagram, LinkedIn) " +
-        "with appropriate hashtags and formatting. Keep posts concise - Instagram/Facebook " +
-        "around 125 words, LinkedIn around 200 words. Include emoji suggestions where appropriate.";
+        "Stwórz angażujące skrypty postów w mediach społecznościowych, zoptymalizowane dla docelowej grupy odbiorców. " +
+        "Każdy post powinien mieć hook, przedstawienie wartości i jasne wezwanie do działania. " +
+        "Przygotuj 3 warianty dla różnych platform (Facebook, Instagram, LinkedIn) " +
+        "z odpowiednimi hashtagami i formatowaniem. Posty powinny być zwięzłe - dla Instagrama/Facebooka " +
+        "około 125 słów, dla LinkedIn około 200 słów. Dodaj sugestie emoji tam, gdzie to stosowne.";
     
     case 'ad':
       return basePrompt + 
-        "Create a high-converting digital advertisement script with attention-grabbing headlines, " +
-        "compelling body copy, and strong call-to-action. The ad should address customer pain points " +
-        "and highlight key benefits. Provide 3 headline options, 2 body copy variations, and 2 CTA options. " +
-        "Keep the copy concise and impactful, with headlines under 10 words and body copy under 50 words.";
+        "Stwórz skrypt reklamy cyfrowej o wysokiej konwersji z przyciągającymi uwagę nagłówkami, " +
+        "przekonującą treścią i silnym wezwaniem do działania. Reklama powinna odnosić się do bólu klienta " +
+        "i podkreślać kluczowe korzyści. Podaj 3 opcje nagłówków, 2 warianty treści i 2 opcje CTA. " +
+        "Treść powinna być zwięzła i wywierać wpływ, z nagłówkami do 10 słów i treścią do 50 słów.";
     
     default:
       return basePrompt + 
-        "Create a well-structured marketing script that addresses customer pain points, " +
-        "highlights benefits, includes social proof, and ends with a clear call-to-action. " +
-        "The script should be persuasive, conversational, and tailored specifically to the target audience.";
+        "Stwórz dobrze ustrukturyzowany skrypt marketingowy, który odnosi się do bólu klienta, " +
+        "podkreśla korzyści, zawiera dowód społeczny i kończy się jasnym wezwaniem do działania. " +
+        "Skrypt powinien być przekonujący, konwersacyjny i dostosowany specjalnie do grupy docelowej.";
   }
 }

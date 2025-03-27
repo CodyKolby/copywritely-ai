@@ -1,55 +1,71 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { generateHooksAndAngles, generateScriptContent, finalizeScript, HookAndAngle } from './ai-agents-service';
 
 /**
- * Generuje skrypt na podstawie ID szablonu i danych grupy docelowej,
- * wykorzystując system agentów AI
+ * Generuje skrypt na podstawie ID szablonu i danych grupy docelowej
  */
 export const generateScript = async (templateId: string, targetAudienceId: string): Promise<string> => {
   try {
     console.log('Generowanie skryptu dla szablonu:', templateId);
     console.log('ID grupy docelowej:', targetAudienceId);
     
-    // Krok 1: Generowanie hooków i angles przez pierwszego agenta AI
-    const hooksResponse = await generateHooksAndAngles(targetAudienceId, templateId);
-    console.log('Wygenerowane hooki i angles:', hooksResponse);
+    // Pobieranie danych grupy docelowej
+    const { data: targetAudience, error: audienceError } = await supabase
+      .from('target_audiences')
+      .select('*')
+      .eq('id', targetAudienceId)
+      .single();
     
-    if (!hooksResponse.hooks || hooksResponse.hooks.length === 0) {
-      throw new Error('Nie wygenerowano żadnych hooków');
+    if (audienceError) {
+      console.error('Błąd pobierania danych grupy docelowej:', audienceError);
+      throw new Error('Nie udało się pobrać danych grupy docelowej');
     }
     
-    // Wybieramy pierwszy hook i angle do generowania skryptu
-    // W przyszłości można dodać funkcję wyboru najlepszego hooka
-    const selectedHook = hooksResponse.hooks[0].hook;
-    const selectedAngle = hooksResponse.hooks[0].angle;
+    // Wywołanie funkcji generate-script
+    let attempts = 0;
+    const maxAttempts = 3;
+    let lastError = null;
     
-    // Krok 2: Generowanie głównej treści skryptu
-    const scriptContent = await generateScriptContent(targetAudienceId, templateId, selectedHook, selectedAngle);
-    console.log('Wygenerowana treść skryptu');
+    while (attempts < maxAttempts) {
+      try {
+        console.log(`Próba ${attempts + 1}/${maxAttempts}: Wywołanie funkcji generate-script`);
+        
+        const { data, error } = await supabase.functions.invoke('generate-script', {
+          body: {
+            templateId,
+            targetAudience
+          },
+        });
+        
+        if (error) {
+          console.error(`Próba ${attempts + 1}/${maxAttempts}: Błąd generowania skryptu:`, error);
+          lastError = error;
+          attempts++;
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Czekaj 1 sekundę przed ponowną próbą
+          continue;
+        }
+        
+        if (!data || !data.script) {
+          console.error(`Próba ${attempts + 1}/${maxAttempts}: Brak wygenerowanego skryptu`);
+          lastError = new Error('Nie wygenerowano skryptu');
+          attempts++;
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          continue;
+        }
+        
+        console.log('Skrypt został pomyślnie wygenerowany');
+        return data.script;
+      } catch (invokeError) {
+        console.error(`Próba ${attempts + 1}/${maxAttempts}: Wyjątek podczas wywoływania funkcji:`, invokeError);
+        lastError = invokeError;
+        attempts++;
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
     
-    // Formatowanie wyniku do tekstu Markdown z dodanymi hookami i angles
-    let result = `# Skrypt reklamowy dla szablonu: ${templateId}\n\n`;
-    
-    // Dodajemy wszystkie wygenerowane hooki
-    result += `## Wygenerowane hooki i angles\n\n`;
-    
-    hooksResponse.hooks.forEach((item, index) => {
-      result += `### Hook ${index + 1} (typ: ${item.type})\n`;
-      result += `**${item.hook}**\n\n`;
-      result += `**Angle:** ${item.angle}\n\n`;
-    });
-    
-    // Dodajemy treść główną skryptu
-    result += `## Treść główna\n\n`;
-    result += scriptContent;
-    
-    // Dodajemy informację o wybranym hooku
-    result += `\n\n## Użyty hook i angle do generowania treści\n\n`;
-    result += `**Hook:** ${selectedHook}\n\n`;
-    result += `**Angle:** ${selectedAngle}\n\n`;
-    
-    return result;
+    // Jeśli wszystkie próby zawiodły, rzucamy wyjątek
+    console.error('Wszystkie próby generowania skryptu zakończyły się niepowodzeniem:', lastError);
+    throw lastError || new Error('Nie udało się wygenerować skryptu po wielu próbach');
   } catch (error) {
     console.error('Błąd generowania skryptu:', error);
     // Zwracamy przykładowy skrypt w przypadku błędu
