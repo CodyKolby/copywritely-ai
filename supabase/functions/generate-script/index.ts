@@ -345,9 +345,10 @@ ZASADY TWORZENIA HOOKA:
 7. **Mów zawsze do jednej osoby.**  
    Nie pisz: „kobiety po 30-tce…", tylko: „jeśli jesteś kobietą po 30-tce…".
 
-8. **Jeden hook = jedno pełne zdanie. Max 30 słów.**  
-   ❌ Nie używaj myślników (–), średników ani struktur typu „zdanie–zdanie".  
-   ✅ Możesz używać przecinków, ale tylko jeśli rytm zdania jest naturalny. Hook musi być płynny, rytmiczny i brzmieć jak jedna myśl.
+8. **Jeden hook = jedno płynne zdanie. Max 30 słów.**  
+   ❌ Zero myślników (–), średników, przecinków rozbijających zdanie na dwie oddzielne myśli.  
+   ❌ Nie łącz dwóch niepasujących myśli w jednym zdaniu („czujesz się zagubiona – czas to zmienić").  
+   ✅ Hook musi mieć jeden logiczny tor i rytm. Zdanie ma się czytać naturalnie, bez przeskoków.
 
 9. **Pisz prostym językiem – tak, by zrozumiał to nawet 5-latek.**  
    Unikaj trudnych słów, metafor, abstrakcji i poetyckich porównań.  
@@ -358,7 +359,9 @@ ZASADY TWORZENIA HOOKA:
     Hook nie może brzmieć jak zakończenie spotu reklamowego, motto motywacyjne ani „złota myśl".  
     ❌ Unikaj zwrotów typu: „to czas, by…", „od teraz wszystko się zmienia", „czas działać".  
     ❌ Nie pisz hooków, które wyglądają jak hasło na kubek lub pod zdjęcie z Instagrama.  
-    ✅ Hook ma otwierać temat, nie go zamykać.
+    ✅ Hook ma otwierać temat, nie go zamykać.  
+    👇 Nie kończ hooka pustym sloganem: „czas na nową drogę", „poczuj się jak księżniczka", „odkryj siebie na nowo".  
+    Druga część zdania musi mieć konkretny sens, rytm i pogłębiać emocję, a nie ją rozmywać. Nie może brzmieć jak hasło reklamowe oderwane od sytuacji klienta.
 
 11. **Unikaj korpomowy i lania wody.**  
     Hook ma być ludzki, szczery, emocjonalny. Żadnych słów w stylu „transformacja", „autentyczna ekspresja" ani „bogini" – chyba że padają wprost z ankiety.
@@ -378,6 +381,11 @@ ZASADY TWORZENIA HOOKA:
 
 15. **Styl hooka zależy od tonu klienta.**  
     Jeśli klient lubi bezpośredni styl (np. śledzi Andrew Tate'a), możesz być mocniejszy. Jeśli preferuje ciepło i łagodność – dopasuj styl do jej/jego energii.
+
+16. **Trafiaj precyzyjnie – nie pisz hooków, które pasują do każdego.**  
+    Unikaj ogólników, które można odnieść do wszystkich („czujesz się zagubiona?", „chcesz być szczęśliwa?").  
+    Hook musi sprawiać, że osoba z danej grupy (np. kobieta po 30, kobieta po porodzie, ambitna singielka, przedsiębiorczyni itd.) **poczuje się wywołana po imieniu**.  
+    ✅ Używaj konstrukcji typu: „jeśli jesteś kobietą, która…", „jeśli jesteś mamą i…", „jeśli masz 35 lat i…".
 
 ---
 
