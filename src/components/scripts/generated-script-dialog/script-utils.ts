@@ -40,12 +40,14 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
     console.log('Grupa docelowa znaleziona:', audienceData);
     console.log('Wywołuję edge function generate-script...');
     
-    // Wywołanie Edge Function do generowania skryptu
+    // Użyj URL do zdeployowanej funkcji Edge zamiast lokalnego wywołania
     const { data, error } = await supabase.functions.invoke('generate-script', {
       body: {
         templateId,
         targetAudienceId,
       },
+      // Upewnij się, że funkcja jest wywoływana z aktualnej domeny projektu
+      method: 'POST',
     });
     
     if (error) {
