@@ -34,8 +34,9 @@ serve(async (req) => {
     const requestData = await req.json();
     const templateId = requestData.templateId;
     const targetAudienceId = requestData.targetAudienceId;
+    const debugInfo = requestData.debugInfo !== false; // Domyślnie true
     
-    console.log("Odebrane dane:", JSON.stringify({ templateId, targetAudienceId }));
+    console.log("Odebrane dane:", JSON.stringify({ templateId, targetAudienceId, debugInfo }));
     
     // Validate input data
     if (!templateId || !targetAudienceId) {
@@ -190,8 +191,30 @@ serve(async (req) => {
       
       const generatedScript = data.choices[0].message.content;
       
+      // Dodajemy dane debugowania do odpowiedzi
+      const responseData = {
+        script: generatedScript
+      };
+      
+      // Dodajemy dane debug, jeśli flaga jest ustawiona
+      if (debugInfo) {
+        responseData['debug'] = {
+          systemPrompt: systemPrompt,
+          userPrompt: audienceDescription,
+          fullPrompt: {
+            model: 'gpt-4o-mini',
+            messages: messages,
+            temperature: 0.7
+          },
+          response: {
+            model: data.model,
+            usage: data.usage
+          }
+        };
+      }
+      
       return new Response(
-        JSON.stringify({ script: generatedScript }),
+        JSON.stringify(responseData),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     } catch (openaiError) {

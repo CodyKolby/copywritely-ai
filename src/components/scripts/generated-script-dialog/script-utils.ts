@@ -14,7 +14,7 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
   try {
     console.log('Generowanie skryptu dla szablonu:', templateId);
     console.log('ID grupy docelowej:', targetAudienceId);
-    console.log('v1.3.0 - Z dodanymi szczegółowymi logami - URL produkcyjny:', EDGE_FUNCTION_URL);
+    console.log('v1.4.0 - Z dodanymi logami promptów w przeglądarce - URL produkcyjny:', EDGE_FUNCTION_URL);
     
     // Walidacja danych wejściowych
     if (!targetAudienceId) {
@@ -77,6 +77,19 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
     // Parsujemy odpowiedź
     const data = await response.json();
     console.log('Odpowiedź z edge function:', data);
+    
+    // Wyświetlamy w konsoli przeglądarki pełny prompt wysłany do OpenAI
+    if (data && data.debug) {
+      console.log('🔍 PEŁNE DANE WYSŁANE DO OPENAI:');
+      console.log('====== SYSTEM PROMPT ======');
+      console.log(data.debug.systemPrompt);
+      console.log('====== USER PROMPT (Dane o grupie docelowej) ======');
+      console.log(data.debug.userPrompt);
+      console.log('====== PEŁNA STRUKTURA WIADOMOŚCI ======');
+      console.log(data.debug.fullPrompt);
+    } else {
+      console.warn('Brak danych debug w odpowiedzi - dodaj debugInfo: true w Edge Function');
+    }
     
     if (!data || !data.script) {
       console.error('Brak wygenerowanego skryptu w odpowiedzi');
