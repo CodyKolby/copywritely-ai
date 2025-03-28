@@ -105,12 +105,6 @@ serve(async (req) => {
     const targetAudienceData = audienceData[0];
     console.log('Pobrano dane grupy docelowej:', targetAudienceData.name || 'Bez nazwy');
     
-    // Format audience data for prompt
-    const audienceDescription = formatAudienceDetails(targetAudienceData);
-    
-    // Get system prompt with audience data incorporated
-    const systemPrompt = getSystemPromptWithAudienceData(audienceDescription);
-    
     // Validate OpenAI API key
     if (!openAIApiKey) {
       console.error('Brak klucza API OpenAI');
@@ -123,8 +117,30 @@ serve(async (req) => {
       );
     }
     
-    // Dodaję rozszerzone logi z pełną zawartością prompta
-    console.log('===== PEŁNY SYSTEM PROMPT Z DANYMI =====');
+    // KROK 1: Preprocessing danych ankiety przez pierwszy agent
+    console.log('🔍 Rozpoczynam preprocessing danych ankiety');
+    
+    // Format audience data for preprocessing
+    const audienceDescription = formatAudienceDetails(targetAudienceData);
+    const preprocessedData = await preprocessAudienceData(audienceDescription);
+    
+    if (!preprocessedData) {
+      console.error('Błąd podczas preprocessingu danych ankiety');
+      return new Response(
+        JSON.stringify({ 
+          error: 'Błąd podczas preprocessingu danych ankiety',
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    console.log('✅ Preprocessing zakończony, przekazuję dane do generatora hooków');
+    
+    // KROK 2: Generowanie hooków na podstawie przetworzonych danych
+    // Get system prompt for hook generation
+    const systemPrompt = getSystemPromptForHookGenerator(preprocessedData);
+    
+    console.log('===== PEŁNY PROMPT DLA GENERATORA HOOKÓW =====');
     console.log(systemPrompt);
     console.log('=============================');
     
@@ -132,16 +148,8 @@ serve(async (req) => {
       { role: 'system', content: systemPrompt }
     ];
     
-    console.log('===== PEŁNA STRUKTURA WIADOMOŚCI DO OPENAI =====');
-    console.log(JSON.stringify({
-      model: 'gpt-4o-mini',
-      messages: messages,
-      temperature: 0.7,
-    }, null, 2));
-    console.log('=============================');
-    
     // Call OpenAI API
-    console.log('📢 Wysyłam zapytanie do OpenAI');
+    console.log('📢 Wysyłam zapytanie do OpenAI dla generatora hooków');
     try {
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -189,18 +197,14 @@ serve(async (req) => {
       // Dodajemy dane debugowania do odpowiedzi
       const responseData = {
         script: generatedScript,
-        debug: {
-          systemPrompt: systemPrompt,
-          fullPrompt: {
-            model: 'gpt-4o-mini',
-            messages: messages,
-            temperature: 0.7
-          },
+        debug: debugInfo ? {
+          preprocessedData: preprocessedData,
+          hookGeneratorPrompt: systemPrompt,
           response: {
             model: data.model,
             usage: data.usage
           }
-        }
+        } : null
       };
       
       return new Response(
@@ -302,41 +306,97 @@ function formatAudienceDetails(audience) {
   return details;
 }
 
-// Function for combining system prompt and audience data
-function getSystemPromptWithAudienceData(audienceData) {
-  // Nowy prompt z miejscem na dane ankiety
-  const basePrompt = `Jesteś elitarnym copywriterem specjalizującym się w pisaniu krótkich, emocjonalnych hooków reklamowych, które idealnie trafiają w potrzeby konkretnej grupy docelowej. Działasz wyłącznie na podstawie danych z ankiety wypełnionej przez klienta — analizujesz je i tworzysz komunikaty, które brzmią jak wewnętrzny monolog odbiorcy.
+// Function for preprocessing audience data - pierwszy agent
+async function preprocessAudienceData(audienceDescription) {
+  console.log('🔄 Wykonuję preprocessing danych ankiety');
+  
+  try {
+    // Prompt dla agenta preprocessującego
+    const preprocessingSystemPrompt = `
+Jesteś ekspertem w analizie danych marketingowych. Twoim zadaniem jest przeanalizowanie danych z ankiety 
+i przetworzenie ich do najbardziej użytecznej i skondensowanej formy dla copywritera, który będzie 
+tworzył hooki reklamowe.
 
-Twoim zadaniem jest stworzyć **5 hooków**, które:
-- Uderzają w konkretną emocję (ból, frustrację, pragnienie, tęsknota),
-- Są napisane prostym, naturalnym językiem — bez zbędnych ozdobników i "upiększania",
-- Zaczynają się w różny sposób — unikaj powtarzania konstrukcji „jeśli…”. Używaj też pytań, stwierdzeń, prowokacji, krótkich konfrontacyjnych zdań.
-- Mają **max 20 słów**, jedno zdanie, bez przecinków oddzielających dwie myśli (żadnych "–" ani „to czas na…”),
-- Od razu trafiają w punkt — bez zbędnego wstępu ani coachingu na końcu,
-- Są osobiste, pisane w drugiej osobie: „czujesz”, „wiesz”, „masz”, „jesteś”, itd.
-- Są zgodne z problemem i obszarem oferty (jeśli chodzi o ciało – nie pisz o emocjach oderwanych od tego tematu).
+Zbierz najważniejsze informacje dotyczące:
+1. Grupy docelowej (wiek, płeć)
+2. Głównego problemu klienta
+3. Najważniejszych bóli i frustracji
+4. Głównych pragnień i aspiracji
+5. Istoty oferty
+6. Specyficznego języka, którego używa klient
 
-Złe przykłady, których masz unikać:
-– "Jeśli pragniesz odzyskać swoją wewnętrzną boginię…" → zbyt długie, zbyt abstrakcyjne
-– "to czas na zmianę" / "może warto spróbować" / "pierwszy krok do metamorfozy" → brzmią jak coaching, nie jak hook
+Zwróć skondensowane dane (maksymalnie 50% długości oryginału), zachowując kluczowe zwroty i emocje z ankiety.
+Usuń zbędne powtórzenia i ogólniki. Zachowaj strukturę nagłówków, ale skróć zawartość.
 
-Dobre przykłady (dla inspiracji):
-– „Czy masz już dość tego, że wciąż chowasz się pod ubraniami, nawet latem?”
-– „Nie wyglądasz już jak Ty? Wiem, jak to boli.”
-– „Nie potrzebujesz kolejnej diety. Potrzebujesz poczuć się sobą.”
-– „Znasz to uczucie, gdy w lustrze widzisz kogoś obcego?”
-– „Wiem, że udajesz, że wszystko gra — ale Ty czujesz inaczej.”
+Oryginalne dane z ankiety:
+${audienceDescription}
+`;
+
+    // Wywołanie OpenAI API dla preprocessingu
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: preprocessingSystemPrompt }
+        ],
+        temperature: 0.5,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Błąd API OpenAI podczas preprocessingu:', {
+        status: response.status,
+        data: errorData
+      });
+      return null;
+    }
+
+    // Parse response
+    const data = await response.json();
+    console.log('📝 Preprocessing zakończony, model:', data.model);
+    
+    return data.choices[0].message.content;
+  } catch (error) {
+    console.error('Błąd podczas preprocessingu danych:', error);
+    return null;
+  }
+}
+
+// Function for preparing the prompt for hook generator - drugi agent
+function getSystemPromptForHookGenerator(preprocessedData) {
+  // Prompt dla generatora hooków z nowymi danymi
+  const basePrompt = `Jesteś elitarnym copywriterem specjalizującym się w pisaniu emocjonalnych hooków reklamowych perfekcyjnie dopasowanych do oferty i grupy docelowej. Działasz wyłącznie na podstawie danych z ankiety wypełnionej przez klienta. Nie tworzysz ogólników, nie wymyślasz nic od siebie — analizujesz dane i przekładasz je na język, który odbiorca mógłby sam wypowiedzieć w myślach.
+
+Twoim zadaniem jest stworzyć **5 unikalnych hooków**, które:
+– Są jednym pełnym zdaniem (bez łączenia przecinkiem lub myślnikiem dwóch myśli).
+– Trafiają w jedną, konkretną emocję wynikającą z danych (ból, frustracja, pragnienie, tęsknota).
+– Są osobiste, pisane w 2 os. liczby pojedynczej ("jeśli jesteś kobietą, która...").
+– Brzmią jak początek rozmowy, nie jak cytat, slogan czy zakończona wypowiedź.
+– Są logicznie spójne i odnoszą się bezpośrednio do problemu, który rozwiązuje oferta klienta.
+– Nie zdradzają oferty — prowokują uwagę, zostawiają niedosyt.
+
+Zasady, których przestrzegasz:
+1. Mów emocjami, nie logiką.
+2. Unikaj ogólników – bądź precyzyjny i konkretny.
+3. Nie pisz zdań rozbitych na 2 części (np. z myślnikiem). Jedna myśl = jedno zdanie.
+4. Hook musi pasować do oferty – jeśli dotyczy ciała, nie pisz o pieniądzach.
+5. Unikaj sztuczności – mów jak człowiek, nie AI.
 
 Dane z ankiety:
-${audienceData}
+${preprocessedData}
 
-Zwróć szczególną uwagę na:
-– problem klientki,
-– emocje towarzyszące temu problemowi,
-– pragnienie zmiany, które leży pod spodem (np. wyglądać lepiej, czuć się lepiej w swoim ciele).
+Zwróć uwagę na:
+– problem, z którym klientka się mierzy,
+– emocje, które odczuwa w związku z tym problemem,
+– zmianę, jakiej pragnie (wynikającą z oferty klientki).
 
-Twoja odpowiedź to dokładnie 5 hooków — **różnorodnych w formie**, naturalnych w brzmieniu i zawsze osadzonych w kontekście oferty.
-`;
+Twoja odpowiedź to dokładnie 5 hooków — każdy jako jedno pełne zdanie.`;
 
   return basePrompt;
 }
