@@ -320,72 +320,77 @@ ZASADY TWORZENIA HOOKA:
 
 2. **Forma otwarcia: pełne pytanie lub jednozdaniowa teza.**  
    Najczęściej:  
-   - „Czy masz już dość…?"  
-   - „Jeśli jesteś… i…"  
-   - „Przestań wierzyć w…",  
-   - „Jeśli dalej myślisz, że…"  
-   ❌ Unikaj: „co, jeśli…", „wyobraź sobie…", „zastanawiałeś się…", „to nie przypadek…", „wiem, co czujesz…"
+   - „Czy masz już dość…?”  
+   - „Jeśli jesteś… i…”  
+   - „Przestań wierzyć w…”,  
+   - „Jeśli dalej myślisz, że…”  
+   ❌ Unikaj: „co, jeśli…”, „wyobraź sobie…”, „zastanawiałeś się…”, „to nie przypadek…”, „wiem, co czujesz…”
 
 3. **Hook jest pośredni – nie zdradzaj oferty ani produktu.**  
-   Masz tylko zaintrygować i sprawić, że odbiorca pomyśli: „To dokładnie o mnie!". Nie pisz o rozwiązaniu.
+   Masz tylko zaintrygować i sprawić, że odbiorca pomyśli: „To dokładnie o mnie!”. Nie pisz o rozwiązaniu.
 
 4. **Używaj dokładnego języka z ankiety.**  
-   Nie zamieniaj słów klienta na synonimy. Wplataj konkretne zwroty, emocje i potoczne frazy. Jeśli klient mówi: „czuję się, jakby coś mnie blokowało" – użyj dokładnie tego.
+   Nie zamieniaj słów klienta na synonimy. Wplataj konkretne zwroty, emocje i potoczne frazy. Jeśli klient mówi: „czuję się, jakby coś mnie blokowało” – użyj dokładnie tego.
 
 5. **Brzmi jak wewnętrzna myśl klienta.**  
    Hook powinien brzmieć jak coś, co klient mógłby powiedzieć bliskiej osobie albo pomyśleć w samotności o 23:41.
 
-6. **Unikaj zaczynania „w połowie zdania".**  
-   Nie zaczynaj od: „Codziennie budzisz się…", „Ciągłe zmęczenie…", „Brak motywacji…".  
+6. **Unikaj zaczynania „w połowie zdania”.**  
+   Nie zaczynaj od: „Codziennie budzisz się…”, „Ciągłe zmęczenie…”, „Brak motywacji…”.  
    Zacznij jak od pierwszego zdania rozmowy – z pełnym podmiotem. Przykłady poprawnych startów:  
-   - „Czy masz dość tego, że…"  
-   - „Jeśli jesteś kobietą po 30…"  
-   - „Przestań wierzyć, że…"
+   - „Czy masz dość tego, że…”  
+   - „Jeśli jesteś kobietą po 30…”  
+   - „Przestań wierzyć, że…”
 
 7. **Mów zawsze do jednej osoby.**  
-   Nie pisz: „kobiety po 30-tce…", tylko: „jeśli jesteś kobietą po 30-tce…".
+   Nie pisz: „kobiety po 30-tce…”, tylko: „jeśli jesteś kobietą po 30-tce…”.
 
-8. **Jeden hook = jedno płynne zdanie. Max 30 słów.**  
-   ❌ Zero myślników (–), średników, przecinków rozbijających zdanie na dwie oddzielne myśli.  
-   ❌ Nie łącz dwóch niepasujących myśli w jednym zdaniu („czujesz się zagubiona – czas to zmienić").  
-   ✅ Hook musi mieć jeden logiczny tor i rytm. Zdanie ma się czytać naturalnie, bez przeskoków.
+8. **Jeden hook = jedno pełne zdanie. Max 30 słów.**  
+   ❌ **Nigdy nie używaj myślników (–)**, średników ani struktur typu „pierwsza część – druga część”.  
+   ❌ Nie twórz hooków, które mają dwie różne myśli połączone przecinkiem lub „to czas, by…”.  
+   ✅ Zdanie ma mieć jedną myśl i jeden kierunek. Jeśli coś brzmi jak dwa zdania w jednym – to źle.
 
 9. **Pisz prostym językiem – tak, by zrozumiał to nawet 5-latek.**  
    Unikaj trudnych słów, metafor, abstrakcji i poetyckich porównań.  
-   ❌ Nie używaj fraz typu: „ciało jak obce terytorium", „otul siebie miłością", „wewnętrzne światło", „niezdefiniowany ciężar".  
+   ❌ Nie używaj fraz typu: „ciało jak obce terytorium”, „otul siebie miłością”, „wewnętrzne światło”, „niezdefiniowany ciężar”.  
    ✅ Hook ma być krótki, jasny i zrozumiały – tak, żeby każdy wiedział, o co chodzi bez zastanawiania się.
 
 10. **Hook to początek rozmowy, nie slogan.**  
-    Hook nie może brzmieć jak zakończenie spotu reklamowego, motto motywacyjne ani „złota myśl".  
-    ❌ Unikaj zwrotów typu: „to czas, by…", „od teraz wszystko się zmienia", „czas działać".  
+    Hook nie może brzmieć jak zakończenie spotu reklamowego, motto motywacyjne ani „złota myśl”.  
+    ❌ Unikaj zwrotów typu: „to czas, by…”, „od teraz wszystko się zmienia”, „czas działać”.  
     ❌ Nie pisz hooków, które wyglądają jak hasło na kubek lub pod zdjęcie z Instagrama.  
     ✅ Hook ma otwierać temat, nie go zamykać.  
-    👇 Nie kończ hooka pustym sloganem: „czas na nową drogę", „poczuj się jak księżniczka", „odkryj siebie na nowo".  
-    Druga część zdania musi mieć konkretny sens, rytm i pogłębiać emocję, a nie ją rozmywać. Nie może brzmieć jak hasło reklamowe oderwane od sytuacji klienta.
+    👇 Nie kończ hooka ogólnym hasłem w stylu „poczuj się jak księżniczka”, „czas na zmianę”, „czas odzyskać kontrolę”, „jesteś tego warta”.  
+    Zakończenie hooka powinno **podkręcać emocję**, nie ją rozmywać.
 
 11. **Unikaj korpomowy i lania wody.**  
-    Hook ma być ludzki, szczery, emocjonalny. Żadnych słów w stylu „transformacja", „autentyczna ekspresja" ani „bogini" – chyba że padają wprost z ankiety.
+    Hook ma być ludzki, szczery, emocjonalny. Żadnych słów w stylu „transformacja”, „autentyczna ekspresja” ani „bogini” – chyba że padają wprost z ankiety.
 
-12. **Wzmacniaj hooki za pomocą "Świętej Czwórki" emocji:**
-    - **Nowość / Jedyność** – „Pierwszy raz możesz…"  
-    - **Łatwość / Dostępność** – „Wreszcie coś, co nie wymaga…"  
-    - **Bezpieczeństwo / Przewidywalność** – „Jeśli boisz się kolejnego zawodu…"  
-    - **Wielkość / Szybkość** – „Zobaczysz efekty szybciej niż…"  
+12. **Wzmacniaj hooki za pomocą “Świętej Czwórki” emocji:**
+    - **Nowość / Jedyność** – „Pierwszy raz możesz…”  
+    - **Łatwość / Dostępność** – „Wreszcie coś, co nie wymaga…”  
+    - **Bezpieczeństwo / Przewidywalność** – „Jeśli boisz się kolejnego zawodu…”  
+    - **Wielkość / Szybkość** – „Zobaczysz efekty szybciej niż…”  
     (To nie musi być napisane wprost – wystarczy, że to *czuć* w emocji hooka)
 
 13. **Nie używaj utartych haseł i generycznych sformułowań.**  
-    Unikaj fraz typu „brak spełnienia", „niskie poczucie własnej wartości". Pisz konkretnie: „czujesz się winna, kiedy chcesz odpocząć", „boisz się powiedzieć, co naprawdę myślisz".
+    Unikaj fraz typu „brak spełnienia”, „niskie poczucie własnej wartości”. Pisz konkretnie: „czujesz się winna, kiedy chcesz odpocząć”, „boisz się powiedzieć, co naprawdę myślisz”.
 
-14. **Jeśli hook zawiera pytanie, zadbaj o to, by klient pomyślał: „Kurwa, tak."**  
+14. **Jeśli hook zawiera pytanie, zadbaj o to, by klient pomyślał: „Kurwa, tak.”**  
     Hooki nie mogą być ogólne. Mają wywoływać zgodę wewnętrzną i rezonans z emocją tu i teraz.
 
 15. **Styl hooka zależy od tonu klienta.**  
-    Jeśli klient lubi bezpośredni styl (np. śledzi Andrew Tate'a), możesz być mocniejszy. Jeśli preferuje ciepło i łagodność – dopasuj styl do jej/jego energii.
+    Jeśli klient lubi bezpośredni styl (np. śledzi Andrew Tate’a), możesz być mocniejszy. Jeśli preferuje ciepło i łagodność – dopasuj styl do jej/jego energii.
 
 16. **Trafiaj precyzyjnie – nie pisz hooków, które pasują do każdego.**  
-    Unikaj ogólników, które można odnieść do wszystkich („czujesz się zagubiona?", „chcesz być szczęśliwa?").  
+    Unikaj ogólników, które można odnieść do wszystkich („czujesz się zagubiona?”, „chcesz być szczęśliwa?”).  
     Hook musi sprawiać, że osoba z danej grupy (np. kobieta po 30, kobieta po porodzie, ambitna singielka, przedsiębiorczyni itd.) **poczuje się wywołana po imieniu**.  
-    ✅ Używaj konstrukcji typu: „jeśli jesteś kobietą, która…", „jeśli jesteś mamą i…", „jeśli masz 35 lat i…".
+    ✅ Używaj konstrukcji typu: „jeśli jesteś kobietą, która…”, „jeśli jesteś mamą i…”, „jeśli masz 35 lat i…”.
+
+17. **Temat hooka musi być spójny z ofertą klienta.**  
+    Nawet jeśli hook jest pośredni – musi nakierowywać odbiorcę na temat reklamy.  
+    ❌ Nie pisz hooków o wyglądzie, jeśli oferta dotyczy np. energii i zdrowia psychicznego.  
+    ✅ Najpierw zrozum, na czym polega oferta i jakiego rodzaju zmianę obiecuje. Potem dobieraj pain pointy, które prowadzą w tym kierunku.
 
 ---
 
@@ -397,10 +402,10 @@ Zanim stworzysz hooki, dokładnie przeanalizuj dane z ankiety. Najważniejsze po
    – dopasuj styl komunikacji do wieku klienta: luźniejszy dla młodszych, bardziej stonowany i dojrzały dla starszych.
 
 2. **Płeć**  
-   – używaj właściwych końcówek i form gramatycznych, np. „jeśli jesteś kobietą…", a nie „kobiety często…".
+   – używaj właściwych końcówek i form gramatycznych, np. „jeśli jesteś kobietą…”, a nie „kobiety często…”.
 
 3. **Specyficzny język**  
-   – jeśli klient używa charakterystycznych zwrotów lub słów (np. „czuję, że coś mnie blokuje") – wpleć je w hooki, gdy to możliwe.
+   – jeśli klient używa charakterystycznych zwrotów lub słów (np. „czuję, że coś mnie blokuje”) – wpleć je w hooki, gdy to możliwe.
 
 4. **Biografia klienta / dzień codzienny**  
    – zrozum, w jakich sytuacjach i emocjach żyje na co dzień. Dzięki temu hook może brzmieć jak jego własna myśl.
@@ -414,7 +419,7 @@ WYOBRAŹ SOBIE SYTUACJĘ:
 
 Przed napisaniem każdego hooka, **wejdź w skórę idealnego klienta (z ankiety)**.  
 Co musi usłyszeć, żeby pomyśleć:  
-**„O rany… to ja."**  
+**„O rany… to ja.”**  
 I nie przewinąć tej reklamy?`;
 }
 
