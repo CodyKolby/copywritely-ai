@@ -33,7 +33,7 @@ const Index = () => {
     <div className="min-h-screen flex flex-col">
       {/* Version Indicator - Only for testing purposes */}
       <div className="fixed bottom-2 right-2 z-50 bg-copywrite-teal text-white text-xs px-2 py-1 rounded-md opacity-70">
-        v1.0.4 - Direct Edge URL
+        v1.0.5 - Direct Edge URL fixed
       </div>
       
       {/* Hero Section */}

@@ -13,7 +13,7 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
   try {
     console.log('Generowanie skryptu dla szablonu:', templateId);
     console.log('ID grupy docelowej:', targetAudienceId);
-    console.log('v1.0.4 - Direct Edge URL - copility.com');
+    console.log('v1.0.5 - Direct Edge URL fixed - copility.com');
     
     // Walidacja danych wejściowych
     if (!targetAudienceId) {
@@ -46,13 +46,14 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
     console.log('Wywołuję bezpośrednio Edge function z URL:', EDGE_FUNCTION_URL);
     
     // Używamy bezpośredniego wywołania funkcji Edge poprzez fetch z pełnym URL
-    const session = supabase.auth.getSession();
+    const session = await supabase.auth.getSession();
     const response = await fetch(EDGE_FUNCTION_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${(await session).data.session?.access_token || ''}`,
-        'apikey': supabase.supabaseKey
+        'Authorization': `Bearer ${session.data.session?.access_token || ''}`,
+        // Używamy publicznego klucza z env zamiast chronionej właściwości
+        'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || ''
       },
       body: JSON.stringify({
         templateId,
