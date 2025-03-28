@@ -31,6 +31,11 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
+      {/* Version Indicator - Only for testing purposes */}
+      <div className="fixed bottom-2 right-2 z-50 bg-copywrite-teal text-white text-xs px-2 py-1 rounded-md opacity-70">
+        v1.0.3 - Edge Deploy
+      </div>
+      
       {/* Hero Section */}
       <section className="pt-32 pb-20 px-6">
         <div className="max-w-6xl mx-auto">

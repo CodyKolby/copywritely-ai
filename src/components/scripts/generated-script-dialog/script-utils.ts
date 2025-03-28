@@ -9,6 +9,7 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
   try {
     console.log('Generowanie skryptu dla szablonu:', templateId);
     console.log('ID grupy docelowej:', targetAudienceId);
+    console.log('v1.0.3 - Edge Deploy - copility.com');
     
     // Walidacja danych wejściowych
     if (!targetAudienceId) {
