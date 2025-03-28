@@ -1,7 +1,6 @@
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 
 // Configuration
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
@@ -61,41 +60,37 @@ serve(async (req) => {
       );
     }
 
-    // Initialize Supabase client with service role key
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    console.log("Inicjalizacja klienta Supabase z kluczem Service Role");
+    // Fetch target audience data directly from database using fetch
+    console.log("Pobieranie danych grupy docelowej z URL:", `${supabaseUrl}/rest/v1/target_audiences?id=eq.${targetAudienceId}`);
     
-    // Fetch target audience data using Supabase client
-    console.log("Pobieranie danych grupy docelowej z Supabase");
-    const { data: targetAudienceData, error: queryError } = await supabase
-      .from('target_audiences')
-      .select('*')
-      .eq('id', targetAudienceId)
-      .single();
+    const dbResponse = await fetch(
+      `${supabaseUrl}/rest/v1/target_audiences?id=eq.${targetAudienceId}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${supabaseServiceKey}`,
+          'apikey': supabaseServiceKey,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
     
-    // Handle query errors
-    if (queryError) {
-      console.error('Błąd pobierania danych grupy docelowej:', queryError);
+    if (!dbResponse.ok) {
+      console.error('Błąd zapytania do bazy danych:', dbResponse.status);
       return new Response(
         JSON.stringify({ 
-          error: 'Nie udało się pobrać danych grupy docelowej', 
-          details: queryError.message 
+          error: 'Błąd zapytania do bazy danych', 
+          status: dbResponse.status 
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
-    // Handle no data found
-    if (!targetAudienceData) {
+    const audienceData = await dbResponse.json();
+    console.log("Odpowiedź z bazy danych:", JSON.stringify(audienceData));
+    
+    // Check if audience exists
+    if (!audienceData || audienceData.length === 0) {
       console.error('Nie znaleziono grupy docelowej o ID:', targetAudienceId);
-      
-      // For debugging, check if any target audiences exist
-      const { data: debugData } = await supabase
-        .from('target_audiences')
-        .select('id, name')
-        .limit(5);
-      
-      console.log("Dostępne grupy docelowe w bazie:", JSON.stringify(debugData || []));
       
       return new Response(
         JSON.stringify({ 
@@ -106,19 +101,8 @@ serve(async (req) => {
       );
     }
     
+    const targetAudienceData = audienceData[0];
     console.log('Pobrano dane grupy docelowej:', targetAudienceData.name || 'Bez nazwy');
-    
-    // Verify required fields
-    if (!targetAudienceData.pains || !targetAudienceData.desires || !targetAudienceData.benefits) {
-      console.error('Brakuje wymaganych danych w grupie docelowej:', targetAudienceData);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Grupa docelowa nie zawiera wymaganych danych',
-          details: { targetAudienceId, missing: 'Brakuje pains, desires lub benefits' }
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
     
     // Format audience data for prompt
     const audienceDescription = formatAudienceDetails(targetAudienceData);

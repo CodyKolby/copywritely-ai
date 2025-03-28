@@ -2,9 +2,10 @@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-// Stały URL do zdeployowanej funkcji Edge
+// Configuration for the Edge Function
 const SUPABASE_PROJECT_ID = 'jorbqjareswzdrsmepbv';
 const EDGE_FUNCTION_URL = `https://${SUPABASE_PROJECT_ID}.supabase.co/functions/v1/generate-script`;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 /**
  * Generuje skrypt na podstawie ID szablonu i danych grupy docelowej
@@ -13,7 +14,7 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
   try {
     console.log('Generowanie skryptu dla szablonu:', templateId);
     console.log('ID grupy docelowej:', targetAudienceId);
-    console.log('v1.0.5 - Direct Edge URL fixed - copility.com');
+    console.log('v1.1.0 - Pełna przebudowa wywołania funkcji - copility.com');
     
     // Walidacja danych wejściowych
     if (!targetAudienceId) {
@@ -43,17 +44,21 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
     }
     
     console.log('Grupa docelowa znaleziona:', audienceData);
-    console.log('Wywołuję bezpośrednio Edge function z URL:', EDGE_FUNCTION_URL);
     
-    // Używamy bezpośredniego wywołania funkcji Edge poprzez fetch z pełnym URL
-    const session = await supabase.auth.getSession();
+    // Pobieramy token autoryzacyjny z sesji
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token || '';
+    
+    console.log('Wywołuję funkcję Edge przez bezpośredni HTTP request:', EDGE_FUNCTION_URL);
+    console.log('Authorization token dostępny:', accessToken ? 'Tak' : 'Nie');
+    
+    // Wykonujemy bezpośrednie zapytanie HTTP do Edge Function
     const response = await fetch(EDGE_FUNCTION_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.data.session?.access_token || ''}`,
-        // Używamy publicznego klucza z env zamiast chronionej właściwości
-        'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+        'Authorization': `Bearer ${accessToken}`,
+        'apikey': SUPABASE_ANON_KEY
       },
       body: JSON.stringify({
         templateId,
@@ -61,27 +66,29 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
       }),
     });
     
+    // Sprawdzamy status odpowiedzi
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('Błąd podczas wywoływania Edge function:', response.status, errorData);
+      const errorText = await response.text();
+      console.error('Błąd podczas wywoływania Edge function:', response.status, errorText);
       toast.error('Błąd podczas generowania skryptu');
-      return generateSampleScript(templateId); // Używamy przykładowego skryptu jako fallback
+      return generateSampleScript(templateId);
     }
     
+    // Parsujemy odpowiedź
     const data = await response.json();
     console.log('Odpowiedź z edge function:', data);
     
     if (!data || !data.script) {
       console.error('Brak wygenerowanego skryptu w odpowiedzi');
       toast.error('Brak wygenerowanego skryptu w odpowiedzi');
-      return generateSampleScript(templateId); // Używamy przykładowego skryptu jako fallback
+      return generateSampleScript(templateId);
     }
     
     return data.script;
   } catch (error) {
     console.error('Błąd generowania skryptu:', error);
     toast.error('Błąd podczas generowania skryptu');
-    return generateSampleScript(templateId); // Używamy przykładowego skryptu jako fallback
+    return generateSampleScript(templateId);
   }
 };
 
