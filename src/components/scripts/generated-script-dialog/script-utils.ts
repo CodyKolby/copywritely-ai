@@ -2,6 +2,10 @@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+// Stały URL do zdeployowanej funkcji Edge
+const SUPABASE_PROJECT_ID = 'jorbqjareswzdrsmepbv';
+const EDGE_FUNCTION_URL = `https://${SUPABASE_PROJECT_ID}.supabase.co/functions/v1/generate-script`;
+
 /**
  * Generuje skrypt na podstawie ID szablonu i danych grupy docelowej
  */
@@ -9,7 +13,7 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
   try {
     console.log('Generowanie skryptu dla szablonu:', templateId);
     console.log('ID grupy docelowej:', targetAudienceId);
-    console.log('v1.0.3 - Edge Deploy - copility.com');
+    console.log('v1.0.4 - Direct Edge URL - copility.com');
     
     // Walidacja danych wejściowych
     if (!targetAudienceId) {
@@ -39,24 +43,31 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
     }
     
     console.log('Grupa docelowa znaleziona:', audienceData);
-    console.log('Wywołuję edge function generate-script...');
+    console.log('Wywołuję bezpośrednio Edge function z URL:', EDGE_FUNCTION_URL);
     
-    // Użyj URL do zdeployowanej funkcji Edge zamiast lokalnego wywołania
-    const { data, error } = await supabase.functions.invoke('generate-script', {
-      body: {
+    // Używamy bezpośredniego wywołania funkcji Edge poprzez fetch z pełnym URL
+    const session = supabase.auth.getSession();
+    const response = await fetch(EDGE_FUNCTION_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${(await session).data.session?.access_token || ''}`,
+        'apikey': supabase.supabaseKey
+      },
+      body: JSON.stringify({
         templateId,
         targetAudienceId,
-      },
-      // Upewnij się, że funkcja jest wywoływana z aktualnej domeny projektu
-      method: 'POST',
+      }),
     });
     
-    if (error) {
-      console.error('Błąd podczas wywoływania funkcji generate-script:', error);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Błąd podczas wywoływania Edge function:', response.status, errorData);
       toast.error('Błąd podczas generowania skryptu');
       return generateSampleScript(templateId); // Używamy przykładowego skryptu jako fallback
     }
     
+    const data = await response.json();
     console.log('Odpowiedź z edge function:', data);
     
     if (!data || !data.script) {
