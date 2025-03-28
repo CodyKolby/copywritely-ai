@@ -25,5 +25,5 @@ enabled = true
 enabled = true
 
 [functions]
+[functions.serve]
 enabled = true
-
