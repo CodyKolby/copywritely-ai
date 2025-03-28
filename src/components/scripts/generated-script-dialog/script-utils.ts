@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 
 // Configuration for the Edge Function
 const SUPABASE_PROJECT_ID = 'jorbqjareswzdrsmepbv';
-const EDGE_FUNCTION_URL = `https://${SUPABASE_PROJECT_ID}.supabase.co/functions/v1/generate-script`;
+const EDGE_FUNCTION_URL = `https://${SUPABASE_PROJECT_ID}.functions.supabase.co/generate-script`;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 /**
@@ -14,7 +14,7 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
   try {
     console.log('Generowanie skryptu dla szablonu:', templateId);
     console.log('ID grupy docelowej:', targetAudienceId);
-    console.log('v1.1.0 - Pełna przebudowa wywołania funkcji - copility.com');
+    console.log('v1.2.0 - Pełna przebudowa wywołania funkcji - URL produkcyjny:', EDGE_FUNCTION_URL);
     
     // Walidacja danych wejściowych
     if (!targetAudienceId) {
@@ -49,7 +49,7 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
     const { data: sessionData } = await supabase.auth.getSession();
     const accessToken = sessionData.session?.access_token || '';
     
-    console.log('Wywołuję funkcję Edge przez bezpośredni HTTP request:', EDGE_FUNCTION_URL);
+    console.log('Wywołuję funkcję Edge przez bezpośredni HTTP request na URL PRODUKCYJNY:', EDGE_FUNCTION_URL);
     console.log('Authorization token dostępny:', accessToken ? 'Tak' : 'Nie');
     
     // Wykonujemy bezpośrednie zapytanie HTTP do Edge Function
