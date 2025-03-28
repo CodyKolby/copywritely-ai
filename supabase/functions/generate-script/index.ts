@@ -193,12 +193,8 @@ serve(async (req) => {
       
       // Dodajemy dane debugowania do odpowiedzi
       const responseData = {
-        script: generatedScript
-      };
-      
-      // Dodajemy dane debug, jeśli flaga jest ustawiona
-      if (debugInfo) {
-        responseData['debug'] = {
+        script: generatedScript,
+        debug: {
           systemPrompt: systemPrompt,
           userPrompt: audienceDescription,
           fullPrompt: {
@@ -210,8 +206,8 @@ serve(async (req) => {
             model: data.model,
             usage: data.usage
           }
-        };
-      }
+        }
+      };
       
       return new Response(
         JSON.stringify(responseData),

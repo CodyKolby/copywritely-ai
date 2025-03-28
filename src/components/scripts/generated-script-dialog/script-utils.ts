@@ -14,7 +14,7 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
   try {
     console.log('Generowanie skryptu dla szablonu:', templateId);
     console.log('ID grupy docelowej:', targetAudienceId);
-    console.log('v1.5.0 - Dodane proste console.logi dla danych wysyłanych do OpenAI');
+    console.log('v1.6.0 - Naprawiony bug z debugInfo - zapewnienie wyświetlania wszystkich danych prompta');
     
     // Walidacja danych wejściowych
     if (!targetAudienceId) {
@@ -63,6 +63,7 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
       body: JSON.stringify({
         templateId,
         targetAudienceId,
+        debugInfo: true // Zawsze ustawione na true aby otrzymać dane debug
       }),
     });
     
@@ -80,15 +81,21 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
     
     // Wyświetlamy w konsoli przeglądarki pełny prompt wysłany do OpenAI
     if (data && data.debug) {
-      console.log('🔍 PEŁNE DANE WYSŁANE DO OPENAI:');
-      console.log('====== SYSTEM PROMPT ======');
+      console.log('%c 🔍 PEŁNE DANE WYSŁANE DO OPENAI:', 'background: #3498db; color: white; font-size: 12px; font-weight: bold; padding: 2px 5px; border-radius: 2px;');
+      
+      console.log('%c ====== SYSTEM PROMPT ======', 'background: #2ecc71; color: white; font-weight: bold;');
       console.log(data.debug.systemPrompt);
-      console.log('====== USER PROMPT (Dane o grupie docelowej) ======');
+      
+      console.log('%c ====== USER PROMPT (Dane o grupie docelowej) ======', 'background: #e74c3c; color: white; font-weight: bold;');
       console.log(data.debug.userPrompt);
-      console.log('====== PEŁNA STRUKTURA WIADOMOŚCI ======');
+      
+      console.log('%c ====== PEŁNA STRUKTURA WIADOMOŚCI ======', 'background: #9b59b6; color: white; font-weight: bold;');
       console.log(data.debug.fullPrompt);
+      
+      console.log('%c ====== ODPOWIEDŹ OPENAI ======', 'background: #f39c12; color: white; font-weight: bold;');
+      console.log(data.debug.response);
     } else {
-      console.warn('Brak danych debug w odpowiedzi - dodaj debugInfo: true w Edge Function');
+      console.warn('Brak danych debug w odpowiedzi - sprawdź czy parametr debugInfo: true jest przekazywany w żądaniu');
     }
     
     if (!data || !data.script) {
