@@ -25,4 +25,5 @@ enabled = true
 enabled = true
 
 [functions]
-# Remove the problematic 'serve' entry that's causing the error
+# No problematic entries here
+
