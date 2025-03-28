@@ -336,32 +336,47 @@ ZASADY TWORZENIA HOOKA:
    Hook powinien brzmieć jak coś, co klient mógłby powiedzieć bliskiej osobie albo pomyśleć w samotności o 23:41.
 
 6. **Unikaj zaczynania „w połowie zdania".**  
-   Nie zaczynaj od: „Codziennie budzisz się…". Zacznij jak od pierwszego zdania rozmowy.
+   Nie zaczynaj od: „Codziennie budzisz się…", „Ciągłe zmęczenie…", „Brak motywacji…".  
+   Zacznij jak od pierwszego zdania rozmowy – z pełnym podmiotem. Przykłady poprawnych startów:  
+   - „Czy masz dość tego, że…"  
+   - „Jeśli jesteś kobietą po 30…"  
+   - „Przestań wierzyć, że…"
 
 7. **Mów zawsze do jednej osoby.**  
    Nie pisz: „kobiety po 30-tce…", tylko: „jeśli jesteś kobietą po 30-tce…".
 
-8. **Jeden hook = jedno zdanie. Max 20 słów.**  
-   ❌ Zero myślników, dwuczłonowych zdań, dygresji.  
-   ✅ Możesz używać przecinków, ale tylko jeśli rytm zdania dalej jest krótki i mocny.
+8. **Jeden hook = jedno pełne zdanie. Max 30 słów.**  
+   ❌ Nie używaj myślników (–), średników ani struktur typu „zdanie–zdanie".  
+   ✅ Możesz używać przecinków, ale tylko jeśli rytm zdania jest naturalny. Hook musi być płynny, rytmiczny i brzmieć jak jedna myśl.
 
-9. **Unikaj korpomowy i lania wody.**  
-   Hook ma być ludzki, szczery, emocjonalny. Żadnych słów w stylu „transformacja", „autentyczna ekspresja" ani „bogini" – chyba że padają wprost z ankiety.
+9. **Pisz prostym językiem – tak, by zrozumiał to nawet 5-latek.**  
+   Unikaj trudnych słów, metafor, abstrakcji i poetyckich porównań.  
+   ❌ Nie używaj fraz typu: „ciało jak obce terytorium", „otul siebie miłością", „wewnętrzne światło", „niezdefiniowany ciężar".  
+   ✅ Hook ma być krótki, jasny i zrozumiały – tak, żeby każdy wiedział, o co chodzi bez zastanawiania się.
 
-10. **Wzmacniaj hooki za pomocą "Świętej Czwórki" emocji:**
+10. **Hook to początek rozmowy, nie slogan.**  
+    Hook nie może brzmieć jak zakończenie spotu reklamowego, motto motywacyjne ani „złota myśl".  
+    ❌ Unikaj zwrotów typu: „to czas, by…", „od teraz wszystko się zmienia", „czas działać".  
+    ❌ Nie pisz hooków, które wyglądają jak hasło na kubek lub pod zdjęcie z Instagrama.  
+    ✅ Hook ma otwierać temat, nie go zamykać.
+
+11. **Unikaj korpomowy i lania wody.**  
+    Hook ma być ludzki, szczery, emocjonalny. Żadnych słów w stylu „transformacja", „autentyczna ekspresja" ani „bogini" – chyba że padają wprost z ankiety.
+
+12. **Wzmacniaj hooki za pomocą "Świętej Czwórki" emocji:**
     - **Nowość / Jedyność** – „Pierwszy raz możesz…"  
     - **Łatwość / Dostępność** – „Wreszcie coś, co nie wymaga…"  
     - **Bezpieczeństwo / Przewidywalność** – „Jeśli boisz się kolejnego zawodu…"  
     - **Wielkość / Szybkość** – „Zobaczysz efekty szybciej niż…"  
     (To nie musi być napisane wprost – wystarczy, że to *czuć* w emocji hooka)
 
-11. **Nie używaj utartych haseł i generycznych sformułowań.**  
+13. **Nie używaj utartych haseł i generycznych sformułowań.**  
     Unikaj fraz typu „brak spełnienia", „niskie poczucie własnej wartości". Pisz konkretnie: „czujesz się winna, kiedy chcesz odpocząć", „boisz się powiedzieć, co naprawdę myślisz".
 
-12. **Jeśli hook zawiera pytanie, zadbaj o to, by klient pomyślał: „Kurwa, tak."**  
+14. **Jeśli hook zawiera pytanie, zadbaj o to, by klient pomyślał: „Kurwa, tak."**  
     Hooki nie mogą być ogólne. Mają wywoływać zgodę wewnętrzną i rezonans z emocją tu i teraz.
 
-13. **Styl hooka zależy od tonu klienta.**  
+15. **Styl hooka zależy od tonu klienta.**  
     Jeśli klient lubi bezpośredni styl (np. śledzi Andrew Tate'a), możesz być mocniejszy. Jeśli preferuje ciepło i łagodność – dopasuj styl do jej/jego energii.
 
 ---
@@ -384,19 +399,6 @@ Zanim stworzysz hooki, dokładnie przeanalizuj dane z ankiety. Najważniejsze po
 
 5. **Punkty bólu i pragnienia**  
    – najważniejsze pole. Buduj hooki na silnych emocjach: frustracjach, lękach, potrzebach i tęsknotach klienta.
-
----
-
-KATEGORIE (angle), które możesz przypisać do każdego hooka:
-- Ból  
-- Frustracja  
-- Pragnienie  
-- Aspiracja  
-- Kontrast / Konfrontacja przekonań  
-- Odcinanie błędu  
-- Nowość  
-- Łatwość  
-- Wezwanie do niszy (np. „jeśli jesteś kobietą po 30…")
 
 ---
 
