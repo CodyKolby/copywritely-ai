@@ -345,10 +345,12 @@ ZASADY TWORZENIA HOOKA:
 7. **Mów zawsze do jednej osoby.**  
    Nie pisz: „kobiety po 30-tce…”, tylko: „jeśli jesteś kobietą po 30-tce…”.
 
-8. **Jeden hook = jedno pełne zdanie. Max 30 słów.**  
-   ❌ **Nigdy nie używaj myślników (–)**, średników ani struktur typu „pierwsza część – druga część”.  
-   ❌ Nie twórz hooków, które mają dwie różne myśli połączone przecinkiem lub „to czas, by…”.  
-   ✅ Zdanie ma mieć jedną myśl i jeden kierunek. Jeśli coś brzmi jak dwa zdania w jednym – to źle.
+8. **Jeden hook = jedno pełne, płynne zdanie. Max 30 słów.**  
+   ❌ **Nigdy nie używaj myślników (–)**, średników, dwóch przecinków ani struktur typu „pierwsza część – druga część”.  
+   ❌ Nie pisz dwóch różnych myśli połączonych w jednym zdaniu. Jeśli można zdanie rozdzielić na dwa osobne komunikaty – to znaczy, że hook jest źle napisany.  
+   ❌ Nie twórz konstrukcji typu: „Jeśli czujesz X, to czas na Y” – to brzmi jak hasło kończące reklamę.  
+   ✅ Zdanie ma mieć **jedną emocję, jeden tor myślowy i jeden kierunek**.  
+   ✅ Całość musi się czytać **naturalnie i rytmicznie**, jak jedna wewnętrzna myśl klienta, bez przeskoków.
 
 9. **Pisz prostym językiem – tak, by zrozumiał to nawet 5-latek.**  
    Unikaj trudnych słów, metafor, abstrakcji i poetyckich porównań.  
@@ -360,8 +362,12 @@ ZASADY TWORZENIA HOOKA:
     ❌ Unikaj zwrotów typu: „to czas, by…”, „od teraz wszystko się zmienia”, „czas działać”.  
     ❌ Nie pisz hooków, które wyglądają jak hasło na kubek lub pod zdjęcie z Instagrama.  
     ✅ Hook ma otwierać temat, nie go zamykać.  
-    👇 Nie kończ hooka ogólnym hasłem w stylu „poczuj się jak księżniczka”, „czas na zmianę”, „czas odzyskać kontrolę”, „jesteś tego warta”.  
-    Zakończenie hooka powinno **podkręcać emocję**, nie ją rozmywać.
+    👇 Nie kończ hooka ogólnym hasłem w stylu:  
+    - „poczuj się jak księżniczka”  
+    - „czas na prawdziwą zmianę”  
+    - „to może być moment, by to zmienić”  
+    - „jesteś tego warta”  
+    ✅ Zakończenie hooka powinno **podkręcać emocję** i **zostawiać przestrzeń na rozwinięcie**, zamiast je zamykać.
 
 11. **Unikaj korpomowy i lania wody.**  
     Hook ma być ludzki, szczery, emocjonalny. Żadnych słów w stylu „transformacja”, „autentyczna ekspresja” ani „bogini” – chyba że padają wprost z ankiety.
@@ -391,6 +397,14 @@ ZASADY TWORZENIA HOOKA:
     Nawet jeśli hook jest pośredni – musi nakierowywać odbiorcę na temat reklamy.  
     ❌ Nie pisz hooków o wyglądzie, jeśli oferta dotyczy np. energii i zdrowia psychicznego.  
     ✅ Najpierw zrozum, na czym polega oferta i jakiego rodzaju zmianę obiecuje. Potem dobieraj pain pointy, które prowadzą w tym kierunku.
+
+18. **Gramatyka musi być naturalna i poprawna – jakby mówił to realny człowiek.**  
+    ❌ Unikaj sztucznych lub pokracznych konstrukcji, typu:  
+    - „Czy masz dość czuć się…”  
+    - „To może być moment, aby to zmienić.”  
+    - „Czas, abyś zaczęła… i…”  
+    ✅ Hook ma brzmieć jak **wewnętrzny monolog klienta**, a nie jak przetłumaczone zdanie z angielskiego.  
+    ✅ Unikaj zbitek czasowników. Zawsze czytaj hook tak, jakbyś wypowiadał go komuś na głos.
 
 ---
 
