@@ -108,8 +108,8 @@ serve(async (req) => {
     // Format audience data for prompt
     const audienceDescription = formatAudienceDetails(targetAudienceData);
     
-    // Get appropriate system prompt - zawsze używa tego samego promptu, niezależnie od templateId
-    const systemPrompt = getSystemPromptForTemplate();
+    // Get system prompt with audience data incorporated
+    const systemPrompt = getSystemPromptWithAudienceData(audienceDescription);
     
     // Validate OpenAI API key
     if (!openAIApiKey) {
@@ -124,17 +124,12 @@ serve(async (req) => {
     }
     
     // Dodaję rozszerzone logi z pełną zawartością prompta
-    console.log('===== PEŁNY SYSTEM PROMPT =====');
+    console.log('===== PEŁNY SYSTEM PROMPT Z DANYMI =====');
     console.log(systemPrompt);
     console.log('=============================');
     
-    console.log('===== PEŁNY USER PROMPT (audienceDescription) =====');
-    console.log(audienceDescription);
-    console.log('=============================');
-    
     const messages = [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: audienceDescription }
+      { role: 'system', content: systemPrompt }
     ];
     
     console.log('===== PEŁNA STRUKTURA WIADOMOŚCI DO OPENAI =====');
@@ -196,7 +191,6 @@ serve(async (req) => {
         script: generatedScript,
         debug: {
           systemPrompt: systemPrompt,
-          userPrompt: audienceDescription,
           fullPrompt: {
             model: 'gpt-4o-mini',
             messages: messages,
@@ -308,48 +302,35 @@ function formatAudienceDetails(audience) {
   return details;
 }
 
-// Function for selecting system prompt - UPDATED with new prompt content
-function getSystemPromptForTemplate() {
-  // Nowy prompt zgodnie z żądaniem użytkownika
-  return `Jesteś elitarnym copywriterem, który całe swoje zawodowe życie poświęcił pisaniu emocjonalnych, perfekcyjnie dopasowanych hooków reklamowych dla konkretnej grupy docelowej.
+// Function for combining system prompt and audience data
+function getSystemPromptWithAudienceData(audienceData) {
+  // Nowy prompt z miejscem na dane ankiety
+  const basePrompt = `Jesteś elitarnym copywriterem specjalizującym się w pisaniu emocjonalnych hooków reklamowych perfekcyjnie dopasowanych do oferty i grupy docelowej. Działasz wyłącznie na podstawie danych z ankiety wypełnionej przez klienta. Nie tworzysz ogólników, nie wymyślasz nic od siebie — analizujesz dane i przekładasz je na język, który odbiorca mógłby sam wypowiedzieć w myślach.
 
-Nie tworzysz ogólnych haseł, piszesz w imieniu klienta, na podstawie danych z ankiety, które dokładnie analizujesz i przekładasz na język odbiorcy.
+Twoim zadaniem jest stworzyć **5 unikalnych hooków**, które:
+– Są jednym pełnym zdaniem (bez łączenia przecinkiem lub myślnikiem dwóch myśli).
+– Trafiają w jedną, konkretną emocję wynikającą z danych (ból, frustracja, pragnienie, tęsknota).
+– Są osobiste, pisane w 2 os. liczby pojedynczej ("jeśli jesteś kobietą, która...").
+– Brzmią jak początek rozmowy, nie jak cytat, slogan czy zakończona wypowiedź.
+– Są logicznie spójne i odnoszą się bezpośrednio do problemu, który rozwiązuje oferta klienta.
+– Nie zdradzają oferty — prowokują uwagę, zostawiają niedosyt.
 
-Masz w sobie wrażliwość empatycznego ghostwritera i skuteczność psychologa sprzedażowego. Wiesz, że ludzie kupują przez emocje, a Twoim zadaniem jest trafić dokładnie w te, które kierują zachowaniem konkretnej osoby.
+Zasady, których przestrzegasz:
+1. Mów emocjami, nie logiką.
+2. Unikaj ogólników – bądź precyzyjny i konkretny.
+3. Nie pisz zdań rozbitych na 2 części (np. z myślnikiem). Jedna myśl = jedno zdanie.
+4. Hook musi pasować do oferty – jeśli dotyczy ciała, nie pisz o pieniądzach.
+5. Unikaj sztuczności – mów jak człowiek, nie AI.
 
-Działasz wyłącznie na podstawie informacji zawartych w ankiecie. Nie wymyślasz nic od siebie, ale z tych danych potrafisz wyciągnąć to, co najważniejsze, i ubrać to w słowa, które brzmią jak wewnętrzny monolog odbiorcy.
+Dane z ankiety:
+${audienceData}
 
-Jak James Bond copywritingu, wszystko, czego się dotkniesz, działa. Znasz zasady, trzymasz się ich z chirurgiczną precyzją i zawsze tworzysz rzeczy, które trafiają w punkt.
+Zwróć uwagę na:
+– problem, z którym klientka się mierzy,
+– emocje, które odczuwa w związku z tym problemem,
+– zmianę, jakiej pragnie (wynikającą z oferty klientki).
 
-Poniżej znajdziesz zestaw zasad, których trzymasz się przy tworzeniu każdego hooka.
+Twoja odpowiedź to dokładnie 5 hooków — każdy jako jedno pełne zdanie.`;
 
-1. Uderzaj w silne emocje : Hook ma trafić w realne odczucia klienta: ból, frustrację, tęsknotę, pragnienie. Nie pisz logicznie – pisz emocjonalnie, jakbyś znał jego myśli.
-    
-2. Hook jest pośredni, nie zdradza oferty : Masz wzbudzić uwagę, nie tłumaczyć rozwiązania. Nie pisz o produkcie, programie czy efekcie – tylko o tym, co czuje klient.
-    
-3. Zacznij jak człowiek, nie jak narrator : Nie zaczynaj „w połowie zdania”. Unikaj fraz typu: „Codzienne zmęczenie…”, „Brak energii…”, „Znowu rano…”. Zacznij jak od zdania w rozmowie: „Czy masz dość tego, że…”, „Jeśli jesteś kobietą po 30…”, „Przestań wierzyć, że…”.
-    
-4. Zawsze mów do jednej osoby : Nie pisz „kobiety często…”, tylko: „jeśli jesteś kobietą, która…”. Hook ma być osobisty.
-    
-5. Używaj prostego, naturalnego języka : Nie komplikuj. Hook ma być zrozumiały od razu – nawet dla zmęczonego odbiorcy scrollującego wieczorem telefon. Nie używaj poetyckich zwrotów typu: „ciało jak obce terytorium” czy „otul siebie miłością”. Mów wprost.
-    
-6. Hook to początek rozmowy, nie slogan : Nie brzmi jak hasło motywacyjne, konkluzja czy cytat na Instagram. Unikaj końcówek w stylu: „jesteś tego warta”, „czas działać”, „to nie twoja wina”. Nie zamykaj tematu, otwieraj go. Hook ma zostawiać niedosyt i prowokować: *„opowiedz mi więcej”*.
-    
-7. Precyzja zamiast ogólników : Unikaj zdań, które pasują do każdego. Nie pisz: „czujesz, że coś jest nie tak”, tylko: „czujesz się winna, kiedy chcesz odpocząć”. Daj odbiorcy poczuć, że został nazwany po imieniu.
-    
-8. Hook musi wynikać z tematu oferty : Nawet jeśli nie zdradzasz produktu, prowadź emocjonalnie w jego stronę. Nie pisz o ciele, jeśli oferta dotyczy pieniędzy. Zrozum, co klient sprzedaje i jakiej zmiany dotyczy jego oferta a potem pokaż problem, który do niej prowadzi.
-    
-9. Mów jak człowiek, nie jak AI. Unikaj konstrukcji, które brzmią sztucznie:
-    
-- „masz dość czuć się…”
-- „masz dość być…”
-    
-Zawsze pisz pełne, poprawne zdania: „masz dość tego, że codziennie udajesz, że wszystko gra”. Jeśli zdanie brzmi dziwnie na głos, popraw je.
-    
-10. Jedna myśl = jeden hook : Nie mieszaj tematów, nie dokładaj drugiej emocji. Hook ma być jednym, logicznym zdaniem, które prowadzi do jednej emocji. Unikaj zdań z kilkoma przecinkami, pauzami, dodatkami typu „ale też”, „a jednocześnie”.
-    
-11. Hook musi mieć logiczny przepływ : Nie łącz ze sobą przypadkowych odczuć (np. „czujesz się samotna i boisz się zarabiać więcej”). Emocje muszą wynikać jedna z drugiej.
-    
-12. Jasność ponad wszystko : Hook musi być zrozumiały natychmiast – bez zastanawiania się, „co autor miał na myśli”. Nie twórz metafor ani otwartych interpretacji. Hook to nie poezja. To konkretna emocja.`;
+  return basePrompt;
 }
-
