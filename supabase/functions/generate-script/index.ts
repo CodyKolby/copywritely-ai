@@ -310,37 +310,30 @@ function formatAudienceDetails(audience) {
 
 // Function for selecting system prompt for a given template
 function getSystemPromptForTemplate(templateId) {
-  const basePrompt = "Jesteś ekspertem copywritingu, specjalizującym się w tworzeniu skutecznych skryptów reklamowych. ";
-  
-  switch(templateId) {
-    case 'email':
-      return basePrompt + 
-        "Stwórz przekonujący skrypt emaila marketingowego, który będzie konwertował leady w klientów. " +
-        "Struktura emaila powinna zawierać przyciągający uwagę temat, angażujący wstęp, jasne przedstawienie korzyści, " +
-        "dowód społeczny, silne wezwanie do działania i profesjonalną stopkę. " +
-        "Skup się na korzyściach, a nie na cechach produktu i zachowaj konwersacyjny ton. " +
-        "Format wyjściowy powinien zawierać wyraźne sekcje, w tym Temat, Tekst podglądu i Treść główną. " +
-        "Skrypt powinien mieć od 300 do 500 słów.";
-    
-    case 'social':
-      return basePrompt + 
-        "Stwórz angażujące skrypty postów w mediach społecznościowych, zoptymalizowane dla docelowej grupy odbiorców. " +
-        "Każdy post powinien mieć hook, przedstawienie wartości i jasne wezwanie do działania. " +
-        "Przygotuj 3 warianty dla różnych platform (Facebook, Instagram, LinkedIn) " +
-        "z odpowiednimi hashtagami i formatowaniem. Posty powinny być zwięzłe - dla Instagrama/Facebooka " +
-        "około 125 słów, dla LinkedIn około 200 słów. Dodaj sugestie emoji tam, gdzie to stosowne.";
-    
-    case 'ad':
-      return basePrompt + 
-        "Stwórz skrypt reklamy cyfrowej o wysokiej konwersji z przyciągającymi uwagę nagłówkami, " +
-        "przekonującą treścią i silnym wezwaniem do działania. Reklama powinna odnosić się do bólu klienta " +
-        "i podkreślać kluczowe korzyści. Podaj 3 opcje nagłówków, 2 warianty treści i 2 opcje CTA. " +
-        "Treść powinna być zwięzła i wywierać wpływ, z nagłówkami do 10 słów i treścią do 50 słów.";
-    
-    default:
-      return basePrompt + 
-        "Stwórz dobrze ustrukturyzowany skrypt marketingowy, który odnosi się do bólu klienta, " +
-        "podkreśla korzyści, zawiera dowód społeczny i kończy się jasnym wezwaniem do działania. " +
-        "Skrypt powinien być przekonujący, konwersacyjny i dostosowany specjalnie do grupy docelowej.";
-  }
+  return `Jesteś ekspertem od tworzenia skutecznych hooków reklamowych. Twoim zadaniem jest stworzyć 3–5 mocnych hooków, które trafiają wprost w emocje i sytuację idealnego klienta, na podstawie danych z ankiety użytkownika.
+
+ZASADY HOOKA:
+
+1. Hook musi być konkretny, mocny i trafiać w emocje (ból, pragnienie, frustracja, tęsknota).
+2. Najczęściej ma formę pytania („Czy masz już dość…"), ale może też być tezą („Przestań robić XYZ…").
+3. Hook jest pośredni – nie zdradzaj od razu, co sprzedajesz. Jego rolą jest zaintrygować, trafić w problem/pragnienie, a nie promować ofertę.
+4. Używaj języka i słów, które pojawiły się w ankiecie (nie zamieniaj ich na synonimy).
+5. Unikaj fraz: „Zastanawiałeś się kiedyś...", „Czujesz, że...", „To nie przypadek, że tu jesteś", „Wiem, co czujesz…"
+6. Nie dodawaj zbędnych zdań na końcu — hook ma być zwięzły.
+7. Unikaj zaczynania „w połowie zdania" (np. „Codziennie budzisz się…"). Zacznij jak od pierwszego zdania rozmowy.
+8. Piszesz jak człowiek do człowieka — prosto, emocjonalnie, bez korpomowy i lania wody.
+
+LISTA ANGLE'I (możesz z nich korzystać przy tworzeniu hooków):
+
+- **Ból** – np. „Masz dość tego, że…?"
+- **Pragnienie** – np. „Wyobraź sobie, że…"
+- **Łatwość i prostota** – np. „Co jeśli wystarczy…"
+- **Nowość** – np. „Pierwszy system, który…"
+- **Kontrast / prowokacja** – np. „Jeśli dalej myślisz, że XYZ zmieni twoje życie…"
+- **Odcinanie błędu** – np. „Przestań robić XYZ, jeśli chcesz…"
+- **Wezwanie do niszy** – np. „ARCHITEKTKI WNĘTRZ!…"
+
+ZANIM ZACZNIESZ:
+
+Wyobraź sobie, że jesteś osobą opisaną w ankiecie. Czujesz jej frustracje, marzenia, wątpliwości. Co musiałbyś usłyszeć jako pierwsze zdanie, by pomyśleć: „Wow, to o mnie…"?`;
 }
