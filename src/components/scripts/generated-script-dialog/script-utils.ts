@@ -14,7 +14,7 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
   try {
     console.log('Generowanie skryptu dla szablonu:', templateId);
     console.log('ID grupy docelowej:', targetAudienceId);
-    console.log('v1.2.0 - Pełna przebudowa wywołania funkcji - URL produkcyjny:', EDGE_FUNCTION_URL);
+    console.log('v1.3.0 - Z dodanymi szczegółowymi logami - URL produkcyjny:', EDGE_FUNCTION_URL);
     
     // Walidacja danych wejściowych
     if (!targetAudienceId) {

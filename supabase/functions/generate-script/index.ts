@@ -122,6 +122,28 @@ serve(async (req) => {
       );
     }
     
+    // Dodaję rozszerzone logi z pełną zawartością prompta
+    console.log('===== PEŁNY SYSTEM PROMPT =====');
+    console.log(systemPrompt);
+    console.log('=============================');
+    
+    console.log('===== PEŁNY USER PROMPT (audienceDescription) =====');
+    console.log(audienceDescription);
+    console.log('=============================');
+    
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: audienceDescription }
+    ];
+    
+    console.log('===== PEŁNA STRUKTURA WIADOMOŚCI DO OPENAI =====');
+    console.log(JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: messages,
+      temperature: 0.7,
+    }, null, 2));
+    console.log('=============================');
+    
     // Call OpenAI API
     console.log('📢 Wysyłam zapytanie do OpenAI');
     try {
@@ -133,10 +155,7 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           model: 'gpt-4o-mini',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: audienceDescription }
-          ],
+          messages: messages,
           temperature: 0.7,
         }),
       });
@@ -164,6 +183,10 @@ serve(async (req) => {
         usage: data.usage,
         id: data.id
       });
+      
+      console.log('===== PEŁNA ODPOWIEDŹ Z OPENAI =====');
+      console.log(JSON.stringify(data, null, 2));
+      console.log('=============================');
       
       const generatedScript = data.choices[0].message.content;
       
