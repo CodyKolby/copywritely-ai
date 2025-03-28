@@ -108,8 +108,8 @@ serve(async (req) => {
     // Format audience data for prompt
     const audienceDescription = formatAudienceDetails(targetAudienceData);
     
-    // Get appropriate system prompt
-    const systemPrompt = getSystemPromptForTemplate(templateId);
+    // Get appropriate system prompt - zawsze używa tego samego promptu, niezależnie od templateId
+    const systemPrompt = getSystemPromptForTemplate();
     
     // Validate OpenAI API key
     if (!openAIApiKey) {
@@ -308,8 +308,9 @@ function formatAudienceDetails(audience) {
   return details;
 }
 
-// Function for selecting system prompt for a given template
-function getSystemPromptForTemplate(templateId) {
+// Function for selecting system prompt - UPDATED to always return the specific hook creation prompt
+function getSystemPromptForTemplate() {
+  // Zawsze zwraca ten sam prompt niezależnie od templateId
   return `Jesteś ekspertem od tworzenia skutecznych hooków reklamowych. Twoim zadaniem jest stworzyć 3–5 mocnych hooków, które trafiają wprost w emocje i sytuację idealnego klienta, na podstawie danych z ankiety użytkownika.
 
 ZASADY HOOKA:
