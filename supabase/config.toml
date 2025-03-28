@@ -25,5 +25,4 @@ enabled = true
 enabled = true
 
 [functions]
-[functions.serve]
-enabled = true
+# Remove the problematic 'serve' entry that's causing the error
