@@ -14,7 +14,7 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
   try {
     console.log('Generowanie skryptu dla szablonu:', templateId);
     console.log('ID grupy docelowej:', targetAudienceId);
-    console.log('v1.4.0 - Z dodanymi logami promptów w przeglądarce - URL produkcyjny:', EDGE_FUNCTION_URL);
+    console.log('v1.5.0 - Dodane proste console.logi dla danych wysyłanych do OpenAI');
     
     // Walidacja danych wejściowych
     if (!targetAudienceId) {
