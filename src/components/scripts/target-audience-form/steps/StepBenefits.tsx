@@ -33,7 +33,8 @@ const StepBenefits = ({ form }: StepBenefitsProps) => {
                       index === 0 ? "Otrzymasz indywidualny plan działania" : 
                       index === 1 ? "Unikniesz kosztownych błędów" : 
                       index === 2 ? "Zbudujesz portfolio realnych projektów" :
-                      "Otrzymasz natychmiastowe wsparcie w krytycznych momentach"
+                      index === 3 ? "Otrzymasz natychmiastowe wsparcie w krytycznych momentach" :
+                      "Zapanujesz i ograniczysz swój stres"
                     } 
                     {...field} 
                     className={fieldState.error ? "border-red-500" : ""}

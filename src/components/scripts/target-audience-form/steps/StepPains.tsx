@@ -29,7 +29,13 @@ const StepPains = ({ form }: StepPainsProps) => {
                 <FormLabel className="text-sm">Problem {index + 1}</FormLabel>
                 <FormControl>
                   <Input 
-                    placeholder={index === 0 ? "Brak klientów" : index === 1 ? "Niepewność finansowa" : "Niskie poczucie wartości"} 
+                    placeholder={
+                      index === 0 ? "Brak klientów" : 
+                      index === 1 ? "Niepewność finansowa" : 
+                      index === 2 ? "Niskie poczucie wartości" :
+                      index === 3 ? "Problemy jelitowe po większości posiłków" :
+                      "Brak czasu na gotowanie"
+                    } 
                     {...field} 
                     className={fieldState.error ? "border-red-500" : ""}
                   />

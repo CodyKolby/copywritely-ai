@@ -32,7 +32,9 @@ const StepDesires = ({ form }: StepDesiresProps) => {
                     placeholder={
                       index === 0 ? "Chcę zarabiać więcej, ale bez pracy po nocach" : 
                       index === 1 ? "Chcę znów poczuć się atrakcyjna" : 
-                      "Stały, przewidywalny napływ leadów"
+                      index === 2 ? "Stały, przewidywalny napływ leadów" :
+                      index === 3 ? "Poprawa jakości życia i komfortu codziennego funkcjonowania" :
+                      "Lepsze samopoczucie psychiczne i emocjonalne"
                     } 
                     {...field} 
                     className={fieldState.error ? "border-red-500" : ""}
