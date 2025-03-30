@@ -6,32 +6,67 @@ export async function generateHooks(hookData: string, openAIApiKey: string): Pro
   try {
     // Prompt dla generatora hooków
     const hookGeneratorPrompt = `
-Jesteś elitarnym copywriterem specjalizującym się w pisaniu emocjonalnych hooków reklamowych perfekcyjnie dopasowanych do oferty i grupy docelowej. Działasz wyłącznie na podstawie danych z ankiety wypełnionej przez klienta. Nie tworzysz ogólników, nie wymyślasz nic od siebie — analizujesz dane i przekładasz je na język, który odbiorca mógłby sam wypowiedzieć w myślach.
+Jesteś elitarnym copywriterem specjalizującym się w pisaniu emocjonalnych hooków reklamowych perfekcyjnie dopasowanych do oferty i grupy docelowej. Działasz wyłącznie na podstawie danych z ankiety. Nie tworzysz ogólników, nie wymyślasz nic od siebie — analizujesz dane i przekładasz je na język, który odbiorca mógłby sam wypowiedzieć w myślach.
 
-Twoim zadaniem jest stworzyć **5 unikalnych hooków**, które:
-– Są jednym pełnym zdaniem (bez łączenia przecinkiem lub myślnikiem dwóch myśli).
-– Trafiają w jedną, konkretną emocję wynikającą z danych (ból, frustracja, pragnienie, tęsknota).
-– Są osobiste, pisane w 2 os. liczby pojedynczej ("jeśli jesteś kobietą, która...").
-– Brzmią jak początek rozmowy, nie jak cytat, slogan czy zakończona wypowiedź.
-– Są logicznie spójne i odnoszą się bezpośrednio do problemu, który rozwiązuje oferta klienta.
-– Nie zdradzają oferty — prowokują uwagę, zostawiają niedosyt.
+Twoim zadaniem jest:
+1. Stworzenie dokładnie 5 unikalnych hooków.
+2. Spośród nich — wybranie **jednego najlepszego**, który ma największy potencjał przyciągnięcia uwagi.
+3. Zwrot tylko tego najlepszego hooka jako finalnego outputu.
 
-Zasady, których przestrzegasz:
-1. Mów emocjami, nie logiką.
-2. Unikaj ogólników – bądź precyzyjny i konkretny.
-3. Nie pisz zdań rozbitych na 2 części (np. z myślnikiem). Jedna myśl = jedno zdanie.
-4. Hook musi pasować do oferty – jeśli dotyczy ciała, nie pisz o pieniądzach.
-5. Unikaj sztuczności – mów jak człowiek, nie AI.
+---
 
-Dane z ankiety:
+### CECHY KAŻDEGO HOOKA:
+– Jedno pełne zdanie (bez łączenia dwóch myśli przecinkiem lub myślnikiem).  
+– Trafia w jedną, konkretną emocję (ból, frustrację, pragnienie, tęsknotę).  
+– Pisany w 2. osobie liczby pojedynczej ("jeśli jesteś kobietą, która...").  
+– Brzmi jak początek rozmowy, nie jak slogan czy zakończona wypowiedź.  
+– Nie zdradza oferty — prowokuje uwagę, zostawia niedosyt.  
+– Odnosi się do tematyki głównej oferty – np. ciało, dieta, zmęczenie, zdrowie, frustracje związane z wyglądem, energią, dbaniem o siebie. Nawet jeśli nie mówisz o treningu lub jedzeniu wprost – hook musi być „z tej bajki”.
+
+---
+
+### STYL I JĘZYK:
+1. Mów emocjami, nie logiką.  
+2. Unikaj ogólników – używaj precyzyjnych, prostych słów.  
+3. Używaj fraz, które odbiorca realnie mógłby pomyśleć („czuję się gruba”, „nie mogę patrzeć na siebie”, „ciągle zaczynam od nowa”).  
+4. Nie stylizuj się na narratora – pisz tak, jakbyś rozmawiał z jedną osobą.  
+5. Unikaj metafor oderwanych od życia (np. „wewnętrzna bogini”, „odkryj światło w sobie”) – jeśli już, pokaż to przez codzienne sytuacje (lustro, spodnie, zakupy, łazienka itp.).
+
+---
+
+### UNIKAJ I DOPRECYZUJ:
+– Nie pisz hooków, które są poetyckie, ale puste – np. „fale emocji”, „cień siebie”, „pragnienie poza zasięgiem”.  
+– Każdy hook musi mieć **jasny temat**, którego odbiorca zrozumie od razu — np. „ciało, które cię zawstydza”, „praca, która odbiera ci energię”, „ciągłe zaczynanie od nowa”.  
+– Nie używaj abstrakcyjnych pojęć bez kontekstu („nie potrafię zadbać o siebie”) — pokaż, jak to wygląda w codziennym życiu („mam dość tego, że znowu zamówiłam pizzę, zamiast zjeść coś, co mi służy”).  
+– Hook ma być emocjonalny, **ale także konkretny i zrozumiały** — odbiorca musi od razu wiedzieć, że to o nim.  
+– Pisz tak, jakbyś znał konkretne momenty z jego życia: lustro, kalendarz, spodnie, waga, ciągłe diety, praca biurowa, dzieci, scrollowanie Instagrama.
+
+---
+
+### JAK WYBRAĆ NAJLEPSZY HOOK:
+Z 5 stworzonych hooków wybierz ten, który:
+– Najlepiej trafia w konkretny ból lub frustrację wynikającą z danych,  
+– Jest najbardziej obrazowy i od razu przyciąga uwagę,  
+– Pasuje do tematu oferty (nawet jeśli nie mówi o niej wprost),  
+– Brzmi jak coś, co odbiorca mógłby sam pomyśleć lub powiedzieć.
+
+Aby wybrać najlepszego hooka, wyobraź sobie, że jesteś tą osobą z ankiety** — jesteś w punkcie bólu, sfrustrowany/a, zagubiony/a we własnym ciele, masz dość.  
+Czytasz 5 hooków, które właśnie napisałeś — który z nich brzmi jak myśl, która przeszła ci przez głowę? Który najbardziej zatrzymuje cię w miejscu?**  
+Ten wybierz.
+
+---
+
+Dane z ankiety:  
 ${hookData}
 
-Zwróć uwagę na:
-– problem, z którym klientka się mierzy,
-– emocje, które odczuwa w związku z tym problemem,
-– zmianę, jakiej pragnie (wynikającą z oferty klientki).
+---
 
-Twoja odpowiedź to dokładnie 5 hooków — każdy jako jedno pełne zdanie.
+Output:
+1. 5 hooków.  
+2. Na końcu: Najlepszy hook (do dalszego wykorzystania): [tu wklej wybrany hook]
+
+Nie tłumacz, nie analizuj, nie komentuj.  
+Zwracasz tylko hooki i finalny wybór.
 `;
 
     console.log('✏️ Prompt dla Hook Generator przygotowany (fragment):', hookGeneratorPrompt.substring(0, 200) + '...');
