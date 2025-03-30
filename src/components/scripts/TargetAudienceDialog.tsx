@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import TargetAudienceForm from './TargetAudienceForm';
@@ -120,6 +121,7 @@ const TargetAudienceDialog = ({
       
       if (targetAudienceId) {
         setSelectedAudienceId(targetAudienceId);
+        // Move directly to goal dialog instead of script dialog
         setShowGoalDialog(true);
       }
     } catch (error) {

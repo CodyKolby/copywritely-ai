@@ -15,7 +15,7 @@ import { formSchema, FormValues, TargetAudienceFormProps } from './target-audien
 import { validateStep } from './target-audience-form/validation-utils';
 import { submitTargetAudienceForm } from './target-audience-form/submission-utils';
 
-const TOTAL_STEPS = 14;
+const TOTAL_STEPS = 13;
 
 const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormProps) => {
   const [currentStep, setCurrentStep] = useState(1);
