@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 
 // Configuration for the Edge Function
 const SUPABASE_PROJECT_ID = 'jorbqjareswzdrsmepbv';
-const EDGE_FUNCTION_URL = `https://${SUPABASE_PROJECT_ID}.functions.supabase.co/generate-script`;
+const EDGE_FUNCTION_URL = `https://${SUPABASE_PROJECT_ID}.supabase.co/functions/v1/generate-script`;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 /**
@@ -14,7 +14,7 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
   try {
     console.log('Generowanie skryptu dla szablonu:', templateId);
     console.log('ID grupy docelowej:', targetAudienceId);
-    console.log('v1.7.0 - Dodano rozszerzone logowanie dla łatwiejszego debugowania');
+    console.log('v1.8.0 - Zmodyfikowana metoda wywołania funkcji Edge do bezpośredniego użycia supabase.functions.invoke');
     
     // Walidacja danych wejściowych
     if (!targetAudienceId) {
@@ -45,48 +45,26 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
     
     console.log('Grupa docelowa znaleziona:', audienceData);
     
-    // Pobieramy token autoryzacyjny z sesji
-    const { data: sessionData } = await supabase.auth.getSession();
-    const accessToken = sessionData.session?.access_token || '';
-    
-    console.log('Wywołuję funkcję Edge przez bezpośredni HTTP request na URL:', EDGE_FUNCTION_URL);
-    console.log('Authorization token dostępny:', accessToken ? 'Tak' : 'Nie');
-    
-    // Wykonujemy bezpośrednie zapytanie HTTP do Edge Function
+    // Używamy invoke zamiast bezpośredniego fetch do wywołania funkcji Edge
     console.time('Czas generowania skryptu');
-    console.log('Wysyłam request do edge function z parametrami:', {
-      templateId,
-      targetAudienceId,
-      debugInfo: true
-    });
+    console.log('Wywołuję funkcję Edge przez supabase.functions.invoke');
     
-    const response = await fetch(EDGE_FUNCTION_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}`,
-        'apikey': SUPABASE_ANON_KEY
-      },
-      body: JSON.stringify({
+    const { data, error } = await supabase.functions.invoke('generate-script', {
+      body: {
         templateId,
         targetAudienceId,
         debugInfo: true // Zawsze ustawione na true aby otrzymać dane debug
-      }),
+      }
     });
     
     console.timeEnd('Czas generowania skryptu');
     
-    // Sprawdzamy status odpowiedzi
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Błąd podczas wywoływania Edge function:', response.status, errorText);
+    // Sprawdzamy błędy
+    if (error) {
+      console.error('Błąd podczas wywoływania Edge function:', error);
       toast.error('Błąd podczas generowania skryptu');
       return generateSampleScript(templateId);
     }
-    
-    // Parsujemy odpowiedź
-    const data = await response.json();
-    console.log('Odpowiedź z edge function otrzymana, status OK');
     
     // Wyświetlamy w konsoli przeglądarki pełne dane debugowania
     if (data && data.debug) {
