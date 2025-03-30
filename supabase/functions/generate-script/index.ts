@@ -117,14 +117,14 @@ serve(async (req) => {
       );
     }
     
-    // KROK 1: Preprocessing danych ankiety przez pierwszy agent
+    // KROK 1: Data Preprocessing - pierwszy agent przetwarza dane ankiety
     console.log('🔍 Rozpoczynam preprocessing danych ankiety');
     
     // Format audience data for preprocessing
     const audienceDescription = formatAudienceDetails(targetAudienceData);
-    const preprocessedData = await preprocessAudienceData(audienceDescription);
+    const processedData = await preprocessAudienceData(audienceDescription);
     
-    if (!preprocessedData) {
+    if (!processedData) {
       console.error('Błąd podczas preprocessingu danych ankiety');
       return new Response(
         JSON.stringify({ 
@@ -134,94 +134,50 @@ serve(async (req) => {
       );
     }
     
-    console.log('✅ Preprocessing zakończony, przekazuję dane do generatora hooków');
+    // Extract HOOK DATA section from processed data
+    const hookData = extractHookData(processedData);
+    const scriptData = extractScriptData(processedData);
     
-    // KROK 2: Generowanie hooków na podstawie przetworzonych danych
-    // Get system prompt for hook generation
-    const systemPrompt = getSystemPromptForHookGenerator(preprocessedData);
-    
-    console.log('===== PEŁNY PROMPT DLA GENERATORA HOOKÓW =====');
-    console.log(systemPrompt);
-    console.log('=============================');
-    
-    const messages = [
-      { role: 'system', content: systemPrompt }
-    ];
-    
-    // Call OpenAI API
-    console.log('📢 Wysyłam zapytanie do OpenAI dla generatora hooków');
-    try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openAIApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: messages,
-          temperature: 0.7,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Błąd API OpenAI:', {
-          status: response.status,
-          data: errorData
-        });
-        
-        return new Response(
-          JSON.stringify({ 
-            error: 'Błąd API OpenAI',
-            details: errorData
-          }),
-          { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      // Parse response
-      const data = await response.json();
-      console.log('📢 Dostałem odpowiedź z OpenAI:', {
-        model: data.model,
-        usage: data.usage,
-        id: data.id
-      });
-      
-      console.log('===== PEŁNA ODPOWIEDŹ Z OPENAI =====');
-      console.log(JSON.stringify(data, null, 2));
-      console.log('=============================');
-      
-      const generatedScript = data.choices[0].message.content;
-      
-      // Dodajemy dane debugowania do odpowiedzi
-      const responseData = {
-        script: generatedScript,
-        debug: debugInfo ? {
-          preprocessedData: preprocessedData,
-          hookGeneratorPrompt: systemPrompt,
-          response: {
-            model: data.model,
-            usage: data.usage
-          }
-        } : null
-      };
-      
-      return new Response(
-        JSON.stringify(responseData),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    } catch (openaiError) {
-      console.error('Błąd podczas komunikacji z OpenAI:', openaiError);
-      
+    if (!hookData) {
+      console.error('Błąd podczas ekstrakcji danych dla generatora hooków');
       return new Response(
         JSON.stringify({ 
-          error: 'Błąd komunikacji z OpenAI',
-          details: openaiError.message
+          error: 'Błąd podczas ekstrakcji danych dla generatora hooków',
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+    
+    console.log('✅ Preprocessing zakończony, przekazuję dane do generatora hooków');
+    
+    // KROK 2: Generowanie hooków na podstawie przetworzonych danych
+    const generatedHooks = await generateHooks(hookData);
+    
+    if (!generatedHooks) {
+      console.error('Błąd podczas generowania hooków');
+      return new Response(
+        JSON.stringify({ 
+          error: 'Błąd podczas generowania hooków',
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Przygotowanie odpowiedzi
+    const responseData = {
+      script: generatedHooks,
+      debug: debugInfo ? {
+        originalData: audienceDescription,
+        processedData: processedData,
+        hookData: hookData,
+        scriptData: scriptData
+      } : null
+    };
+    
+    return new Response(
+      JSON.stringify(responseData),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
     
   } catch (error) {
     console.error('Nieobsłużony błąd w funkcji generate-script:', error);
@@ -306,33 +262,59 @@ function formatAudienceDetails(audience) {
   return details;
 }
 
-// Function for preprocessing audience data - pierwszy agent
+// Function for preprocessing audience data - Agent 1: Data Processor
 async function preprocessAudienceData(audienceDescription) {
-  console.log('🔄 Wykonuję preprocessing danych ankiety');
+  console.log('🔄 Wykonuję preprocessing danych ankiety przez Data Processing Agent');
   
   try {
-    // Prompt dla agenta preprocessującego
-    const preprocessingSystemPrompt = `
-Jesteś ekspertem w analizie danych marketingowych. Twoim zadaniem jest przeanalizowanie danych z ankiety 
-i przetworzenie ich do najbardziej użytecznej i skondensowanej formy dla copywritera, który będzie 
-tworzył hooki reklamowe.
+    // Prompt dla agenta przetwarzającego dane
+    const dataProcessingPrompt = `
+Jesteś specjalistą od przetwarzania danych marketingowych. Na podstawie danych z ankiety masz za zadanie przygotować 2 zestawy informacji: dla Hook & Angle Generatora oraz Script Buildera.
 
-Zbierz najważniejsze informacje dotyczące:
-1. Grupy docelowej (wiek, płeć)
-2. Głównego problemu klienta
-3. Najważniejszych bóli i frustracji
-4. Głównych pragnień i aspiracji
-5. Istoty oferty
-6. Specyficznego języka, którego używa klient
+Zasady:
+– Nie tworzysz treści marketingowych.  
+– Usuwasz powtórzenia, pomijasz nieistotne szczegóły (np. pory dnia, dygresje).  
+– Zachowujesz autentyczny język odbiorcy (frazy, cytaty).  
+– Grupujesz dane logicznie i przejrzyście.  
+– Styl: zwięźle, konkretnie, z myślą o dalszym przetwarzaniu przez inne agenty.
 
-Zwróć skondensowane dane (maksymalnie 50% długości oryginału), zachowując kluczowe zwroty i emocje z ankiety.
-Usuń zbędne powtórzenia i ogólniki. Zachowaj strukturę nagłówków, ale skróć zawartość.
+---
+
+## HOOK DATA
+
+1. Główna oferta (1–2 zdania)  
+2. Grupa docelowa (np. osoby 25–45 lat)  
+3. Problemy (emocjonalne, cielesne, psychiczne)  
+4. Pragnienia (życzenia, zmiany, efekty)  
+5. Styl językowy odbiorcy – krótki, emocjonalny, z elementem zmęczenia lub buntu + cytaty i frazy  
+6. Biografia odbiorcy – skrót: obecna sytuacja, błędne koła, kluczowe emocje  
+7. Przekonania do zbudowania lub złamania (tylko komunikacyjnie użyteczne)
+
+---
+
+## SCRIPT DATA
+
+1. Główna oferta (co, dla kogo, z jakim efektem)  
+2. Elementy oferty (co konkretnie zawiera program)  
+3. Główne korzyści (fizyczne, psychiczne, życiowe)  
+4. Dlaczego działa (unikalność podejścia, doświadczenie twórcy, przewagi)  
+5. Problemy i pragnienia – pogrupowane:
+   – Problemy fizyczne  
+   – Problemy emocjonalne  
+   – Pragnienia ciała  
+   – Pragnienia życia  
+6. Biografia odbiorcy – kluczowe schematy, stan psychofizyczny, typowe błędy  
+7. Styl językowy odbiorcy – cytaty, słownictwo, sposób mówienia o sobie  
+8. Konkurencja – krótka analiza + typowe błędy konkurentów  
+9. Doświadczenie twórcy – tylko to, co buduje zaufanie
+
+📤 Output: tylko te 2 sekcje (HOOK DATA, SCRIPT DATA) — jasno oddzielone, z podpunktami.
 
 Oryginalne dane z ankiety:
 ${audienceDescription}
 `;
 
-    // Wywołanie OpenAI API dla preprocessingu
+    // Wywołanie OpenAI API dla Data Processing Agent
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -342,7 +324,7 @@ ${audienceDescription}
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
-          { role: 'system', content: preprocessingSystemPrompt }
+          { role: 'system', content: dataProcessingPrompt }
         ],
         temperature: 0.5,
       }),
@@ -359,19 +341,70 @@ ${audienceDescription}
 
     // Parse response
     const data = await response.json();
-    console.log('📝 Preprocessing zakończony, model:', data.model);
+    console.log('📝 Data Processing Agent zakończył pracę, model:', data.model);
     
     return data.choices[0].message.content;
   } catch (error) {
-    console.error('Błąd podczas preprocessingu danych:', error);
+    console.error('Błąd podczas przetwarzania danych:', error);
     return null;
   }
 }
 
-// Function for preparing the prompt for hook generator - drugi agent
-function getSystemPromptForHookGenerator(preprocessedData) {
-  // Prompt dla generatora hooków z nowymi danymi
-  const basePrompt = `Jesteś elitarnym copywriterem specjalizującym się w pisaniu emocjonalnych hooków reklamowych perfekcyjnie dopasowanych do oferty i grupy docelowej. Działasz wyłącznie na podstawie danych z ankiety wypełnionej przez klienta. Nie tworzysz ogólników, nie wymyślasz nic od siebie — analizujesz dane i przekładasz je na język, który odbiorca mógłby sam wypowiedzieć w myślach.
+// Extract HOOK DATA from processed data
+function extractHookData(processedData) {
+  try {
+    // Find HOOK DATA section
+    const hookDataStartIndex = processedData.indexOf('## HOOK DATA');
+    if (hookDataStartIndex === -1) {
+      return null;
+    }
+    
+    // Find SCRIPT DATA section that comes after HOOK DATA
+    const scriptDataStartIndex = processedData.indexOf('## SCRIPT DATA', hookDataStartIndex);
+    
+    // Extract HOOK DATA section
+    const hookDataSection = scriptDataStartIndex !== -1 
+      ? processedData.substring(hookDataStartIndex, scriptDataStartIndex).trim()
+      : processedData.substring(hookDataStartIndex).trim();
+    
+    console.log('Wyekstrahowano dane dla Hook Generatora');
+    
+    return hookDataSection;
+  } catch (error) {
+    console.error('Błąd podczas ekstrakcji HOOK DATA:', error);
+    return null;
+  }
+}
+
+// Extract SCRIPT DATA from processed data (for future use)
+function extractScriptData(processedData) {
+  try {
+    // Find SCRIPT DATA section
+    const scriptDataStartIndex = processedData.indexOf('## SCRIPT DATA');
+    if (scriptDataStartIndex === -1) {
+      return null;
+    }
+    
+    // Extract SCRIPT DATA section
+    const scriptDataSection = processedData.substring(scriptDataStartIndex).trim();
+    
+    console.log('Wyekstrahowano dane dla Script Buildera');
+    
+    return scriptDataSection;
+  } catch (error) {
+    console.error('Błąd podczas ekstrakcji SCRIPT DATA:', error);
+    return null;
+  }
+}
+
+// Agent 2: Hook Generator
+async function generateHooks(hookData) {
+  console.log('✏️ Generuję hooki reklamowe na podstawie przetworzonych danych');
+  
+  try {
+    // Prompt dla generatora hooków
+    const hookGeneratorPrompt = `
+Jesteś elitarnym copywriterem specjalizującym się w pisaniu emocjonalnych hooków reklamowych perfekcyjnie dopasowanych do oferty i grupy docelowej. Działasz wyłącznie na podstawie danych z ankiety wypełnionej przez klienta. Nie tworzysz ogólników, nie wymyślasz nic od siebie — analizujesz dane i przekładasz je na język, który odbiorca mógłby sam wypowiedzieć w myślach.
 
 Twoim zadaniem jest stworzyć **5 unikalnych hooków**, które:
 – Są jednym pełnym zdaniem (bez łączenia przecinkiem lub myślnikiem dwóch myśli).
@@ -389,14 +422,48 @@ Zasady, których przestrzegasz:
 5. Unikaj sztuczności – mów jak człowiek, nie AI.
 
 Dane z ankiety:
-${preprocessedData}
+${hookData}
 
 Zwróć uwagę na:
 – problem, z którym klientka się mierzy,
 – emocje, które odczuwa w związku z tym problemem,
 – zmianę, jakiej pragnie (wynikającą z oferty klientki).
 
-Twoja odpowiedź to dokładnie 5 hooków — każdy jako jedno pełne zdanie.`;
+Twoja odpowiedź to dokładnie 5 hooków — każdy jako jedno pełne zdanie.
+`;
 
-  return basePrompt;
+    // Wywołanie OpenAI API dla Hook Generator
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: hookGeneratorPrompt }
+        ],
+        temperature: 0.7,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Błąd API OpenAI podczas generowania hooków:', {
+        status: response.status,
+        data: errorData
+      });
+      return null;
+    }
+
+    // Parse response
+    const data = await response.json();
+    console.log('✅ Generator hooków zakończył pracę, model:', data.model);
+    
+    return data.choices[0].message.content;
+  } catch (error) {
+    console.error('Błąd podczas generowania hooków:', error);
+    return null;
+  }
 }
