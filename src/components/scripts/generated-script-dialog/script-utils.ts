@@ -14,7 +14,7 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
   try {
     console.log('Generowanie skryptu dla szablonu:', templateId);
     console.log('ID grupy docelowej:', targetAudienceId);
-    console.log('v1.6.0 - Naprawiony bug z debugInfo - zapewnienie wyświetlania wszystkich danych prompta');
+    console.log('v1.7.0 - Dodano rozszerzone logowanie dla łatwiejszego debugowania');
     
     // Walidacja danych wejściowych
     if (!targetAudienceId) {
@@ -49,10 +49,17 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
     const { data: sessionData } = await supabase.auth.getSession();
     const accessToken = sessionData.session?.access_token || '';
     
-    console.log('Wywołuję funkcję Edge przez bezpośredni HTTP request na URL PRODUKCYJNY:', EDGE_FUNCTION_URL);
+    console.log('Wywołuję funkcję Edge przez bezpośredni HTTP request na URL:', EDGE_FUNCTION_URL);
     console.log('Authorization token dostępny:', accessToken ? 'Tak' : 'Nie');
     
     // Wykonujemy bezpośrednie zapytanie HTTP do Edge Function
+    console.time('Czas generowania skryptu');
+    console.log('Wysyłam request do edge function z parametrami:', {
+      templateId,
+      targetAudienceId,
+      debugInfo: true
+    });
+    
     const response = await fetch(EDGE_FUNCTION_URL, {
       method: 'POST',
       headers: {
@@ -67,6 +74,8 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
       }),
     });
     
+    console.timeEnd('Czas generowania skryptu');
+    
     // Sprawdzamy status odpowiedzi
     if (!response.ok) {
       const errorText = await response.text();
@@ -77,23 +86,29 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
     
     // Parsujemy odpowiedź
     const data = await response.json();
-    console.log('Odpowiedź z edge function:', data);
+    console.log('Odpowiedź z edge function otrzymana, status OK');
     
-    // Wyświetlamy w konsoli przeglądarki pełny prompt wysłany do OpenAI
+    // Wyświetlamy w konsoli przeglądarki pełne dane debugowania
     if (data && data.debug) {
-      console.log('%c 🔍 PEŁNE DANE WYSŁANE DO OPENAI:', 'background: #3498db; color: white; font-size: 12px; font-weight: bold; padding: 2px 5px; border-radius: 2px;');
+      console.group('🔍 DEBUG INFORMACJE:');
       
-      console.log('%c ====== SYSTEM PROMPT ======', 'background: #2ecc71; color: white; font-weight: bold;');
-      console.log(data.debug.systemPrompt);
+      console.group('📋 ORYGINALNE DANE Z ANKIETY:');
+      console.log(data.debug.originalData);
+      console.groupEnd();
       
-      console.log('%c ====== USER PROMPT (Dane o grupie docelowej) ======', 'background: #e74c3c; color: white; font-weight: bold;');
-      console.log(data.debug.userPrompt);
+      console.group('📝 DANE PO PRZETWORZENIU PRZEZ DATA PROCESSING AGENT:');
+      console.log(data.debug.processedData);
+      console.groupEnd();
       
-      console.log('%c ====== PEŁNA STRUKTURA WIADOMOŚCI ======', 'background: #9b59b6; color: white; font-weight: bold;');
-      console.log(data.debug.fullPrompt);
+      console.group('🔍 WYEKSTRAHOWANE HOOK DATA:');
+      console.log(data.debug.hookData);
+      console.groupEnd();
       
-      console.log('%c ====== ODPOWIEDŹ OPENAI ======', 'background: #f39c12; color: white; font-weight: bold;');
-      console.log(data.debug.response);
+      console.group('🔍 WYEKSTRAHOWANE SCRIPT DATA:');
+      console.log(data.debug.scriptData);
+      console.groupEnd();
+      
+      console.groupEnd();
     } else {
       console.warn('Brak danych debug w odpowiedzi - sprawdź czy parametr debugInfo: true jest przekazywany w żądaniu');
     }
@@ -104,6 +119,7 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
       return generateSampleScript(templateId);
     }
     
+    console.log('✅ Skrypt został pomyślnie wygenerowany');
     return data.script;
   } catch (error) {
     console.error('Błąd generowania skryptu:', error);

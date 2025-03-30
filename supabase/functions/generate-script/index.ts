@@ -122,6 +122,8 @@ serve(async (req) => {
     
     // Format audience data for preprocessing
     const audienceDescription = formatAudienceDetails(targetAudienceData);
+    console.log('📋 Przygotowane dane dla agenta przetwarzającego:', audienceDescription);
+    
     const processedData = await preprocessAudienceData(audienceDescription);
     
     if (!processedData) {
@@ -134,9 +136,18 @@ serve(async (req) => {
       );
     }
     
+    console.log('📝 Dane po przetworzeniu przez Data Processing Agent:');
+    console.log(processedData);
+    
     // Extract HOOK DATA section from processed data
     const hookData = extractHookData(processedData);
     const scriptData = extractScriptData(processedData);
+    
+    console.log('🔍 Wyekstrahowane HOOK DATA:');
+    console.log(hookData);
+    
+    console.log('🔍 Wyekstrahowane SCRIPT DATA:');
+    console.log(scriptData);
     
     if (!hookData) {
       console.error('Błąd podczas ekstrakcji danych dla generatora hooków');
@@ -151,6 +162,7 @@ serve(async (req) => {
     console.log('✅ Preprocessing zakończony, przekazuję dane do generatora hooków');
     
     // KROK 2: Generowanie hooków na podstawie przetworzonych danych
+    console.log('🖋️ Przygotowuję prompt dla generatora hooków z danymi:', hookData.substring(0, 100) + '...');
     const generatedHooks = await generateHooks(hookData);
     
     if (!generatedHooks) {
@@ -163,6 +175,9 @@ serve(async (req) => {
       );
     }
     
+    console.log('✅ Wygenerowane hooki:');
+    console.log(generatedHooks);
+    
     // Przygotowanie odpowiedzi
     const responseData = {
       script: generatedHooks,
@@ -173,6 +188,8 @@ serve(async (req) => {
         scriptData: scriptData
       } : null
     };
+    
+    console.log('🚀 Wysyłam odpowiedź do klienta');
     
     return new Response(
       JSON.stringify(responseData),
@@ -259,6 +276,7 @@ function formatAudienceDetails(audience) {
   // Experience
   if (audience.experience) details += `## Doświadczenie sprzedawcy\n${audience.experience}\n\n`;
   
+  console.log('📝 Sformatowane dane grupy docelowej przygotowane do analizy:', details.substring(0, 200) + '...');
   return details;
 }
 
@@ -314,7 +332,10 @@ Oryginalne dane z ankiety:
 ${audienceDescription}
 `;
 
+    console.log('🔄 Prompt dla Data Processing Agent przygotowany:', dataProcessingPrompt.substring(0, 200) + '...');
+
     // Wywołanie OpenAI API dla Data Processing Agent
+    console.log('🔄 Wywołuję OpenAI API dla Data Processing Agent...');
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -342,6 +363,7 @@ ${audienceDescription}
     // Parse response
     const data = await response.json();
     console.log('📝 Data Processing Agent zakończył pracę, model:', data.model);
+    console.log('📝 Odpowiedź Data Processing Agent (fragment):', data.choices[0].message.content.substring(0, 200) + '...');
     
     return data.choices[0].message.content;
   } catch (error) {
@@ -356,6 +378,7 @@ function extractHookData(processedData) {
     // Find HOOK DATA section
     const hookDataStartIndex = processedData.indexOf('## HOOK DATA');
     if (hookDataStartIndex === -1) {
+      console.error('Nie znaleziono sekcji HOOK DATA w przetworzonych danych');
       return null;
     }
     
@@ -367,7 +390,7 @@ function extractHookData(processedData) {
       ? processedData.substring(hookDataStartIndex, scriptDataStartIndex).trim()
       : processedData.substring(hookDataStartIndex).trim();
     
-    console.log('Wyekstrahowano dane dla Hook Generatora');
+    console.log('Wyekstrahowano dane dla Hook Generatora (fragment):', hookDataSection.substring(0, 150) + '...');
     
     return hookDataSection;
   } catch (error) {
@@ -382,13 +405,14 @@ function extractScriptData(processedData) {
     // Find SCRIPT DATA section
     const scriptDataStartIndex = processedData.indexOf('## SCRIPT DATA');
     if (scriptDataStartIndex === -1) {
+      console.error('Nie znaleziono sekcji SCRIPT DATA w przetworzonych danych');
       return null;
     }
     
     // Extract SCRIPT DATA section
     const scriptDataSection = processedData.substring(scriptDataStartIndex).trim();
     
-    console.log('Wyekstrahowano dane dla Script Buildera');
+    console.log('Wyekstrahowano dane dla Script Buildera (fragment):', scriptDataSection.substring(0, 150) + '...');
     
     return scriptDataSection;
   } catch (error) {
@@ -432,7 +456,10 @@ Zwróć uwagę na:
 Twoja odpowiedź to dokładnie 5 hooków — każdy jako jedno pełne zdanie.
 `;
 
+    console.log('✏️ Prompt dla Hook Generator przygotowany (fragment):', hookGeneratorPrompt.substring(0, 200) + '...');
+
     // Wywołanie OpenAI API dla Hook Generator
+    console.log('✏️ Wywołuję OpenAI API dla Hook Generator...');
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -460,6 +487,7 @@ Twoja odpowiedź to dokładnie 5 hooków — każdy jako jedno pełne zdanie.
     // Parse response
     const data = await response.json();
     console.log('✅ Generator hooków zakończył pracę, model:', data.model);
+    console.log('✅ Wygenerowane hooki:', data.choices[0].message.content);
     
     return data.choices[0].message.content;
   } catch (error) {
