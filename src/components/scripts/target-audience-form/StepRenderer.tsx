@@ -17,6 +17,7 @@ import StepOfferDetails from './steps/StepOfferDetails';
 import StepBenefits from './steps/StepBenefits';
 import StepWhyItWorks from './steps/StepWhyItWorks';
 import StepExperience from './steps/StepExperience';
+import StepAdvertisingGoal from './steps/StepAdvertisingGoal';
 
 interface StepRendererProps {
   currentStep: number;
@@ -51,6 +52,8 @@ const StepRenderer = ({ currentStep, form }: StepRendererProps) => {
       return <StepWhyItWorks form={form} />;
     case 13:
       return <StepExperience form={form} />;
+    case 14:
+      return <StepAdvertisingGoal form={form} />;
     default:
       return null;
   }

@@ -15,6 +15,7 @@ export const formSchema = z.object({
   benefits: z.array(z.string().min(1, { message: "Proszę wypełnić to pole" })),
   whyItWorks: z.string().min(10, { message: "Proszę wyjaśnić dlaczego produkt działa" }),
   experience: z.string().min(10, { message: "Proszę podać więcej szczegółów o doświadczeniu" }),
+  advertisingGoal: z.string().min(10, { message: "Proszę opisać cel reklamy" }),
 });
 
 export type FormValues = z.infer<typeof formSchema>;

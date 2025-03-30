@@ -1,3 +1,4 @@
+
 import React, { useState, KeyboardEvent } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -14,7 +15,7 @@ import { formSchema, FormValues, TargetAudienceFormProps } from './target-audien
 import { validateStep } from './target-audience-form/validation-utils';
 import { submitTargetAudienceForm } from './target-audience-form/submission-utils';
 
-const TOTAL_STEPS = 13;
+const TOTAL_STEPS = 14;
 
 const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormProps) => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -37,6 +38,7 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
       benefits: ['', '', '', '', ''],
       whyItWorks: '',
       experience: '',
+      advertisingGoal: '',
     },
     mode: 'onChange',
   });
