@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { InfoCircle } from 'lucide-react';
+import { HelpCircle } from 'lucide-react';
 
 interface AdvertisingGoalDialogProps {
   onSubmit: (goal: string) => void;
@@ -52,7 +52,7 @@ const AdvertisingGoalDialog = ({ onSubmit, onBack, onCancel }: AdvertisingGoalDi
                 <FormLabel className="flex items-center gap-2">
                   Cel reklamy
                   <div className="cursor-help text-gray-500 hover:text-gray-700" title="Opisz jaki cel chciałbyś osiągnąć przy pomocy tej reklamy">
-                    <InfoCircle size={16} />
+                    <HelpCircle size={16} />
                   </div>
                 </FormLabel>
                 <FormControl>
