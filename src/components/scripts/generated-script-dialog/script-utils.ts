@@ -5,18 +5,20 @@ import { GenerateScriptResponse } from './ai-agents-service';
 /**
  * Wersja utylity do generowania skryptów
  */
-export const SCRIPT_UTILS_VERSION = '1.8.2';
+export const SCRIPT_UTILS_VERSION = '1.9.0';
 
 /**
  * Generuje skrypt na podstawie szablonu i grupy docelowej
  */
 export async function generateScript(
   templateId: string,
-  targetAudienceId: string
+  targetAudienceId: string,
+  advertisingGoal: string = ''
 ): Promise<GenerateScriptResponse> {
   console.log(`[script-utils v${SCRIPT_UTILS_VERSION}] Generowanie skryptu`, {
     templateId,
     targetAudienceId,
+    advertisingGoal,
   });
 
   try {
@@ -25,6 +27,7 @@ export async function generateScript(
       body: {
         templateId,
         targetAudienceId,
+        advertisingGoal,
         debugInfo: true
       },
     });

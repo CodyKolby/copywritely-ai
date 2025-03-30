@@ -14,6 +14,7 @@ const GeneratedScriptDialog = ({
   onOpenChange,
   targetAudienceId,
   templateId,
+  advertisingGoal = '',
 }: GeneratedScriptDialogProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [generatedScript, setGeneratedScript] = useState<string>('');
@@ -32,6 +33,7 @@ const GeneratedScriptDialog = ({
       
       try {
         console.log("Weryfikacja ID grupy docelowej:", targetAudienceId);
+        console.log("Cel reklamy:", advertisingGoal);
         
         // Sprawdzamy, czy grupa docelowa istnieje w bazie
         const { data: audience, error: fetchError } = await supabase
@@ -53,7 +55,7 @@ const GeneratedScriptDialog = ({
           if (isMounted) setVerifiedAudienceId(fallbackId);
           
           // Generujemy skrypt lokalnie
-          const result = await generateScript(templateId, fallbackId);
+          const result = await generateScript(templateId, fallbackId, advertisingGoal);
           if (isMounted) {
             setGeneratedScript(result.script);
             setBestHook(result.bestHook || '');
@@ -64,7 +66,7 @@ const GeneratedScriptDialog = ({
           if (isMounted) setVerifiedAudienceId(audience.id);
           
           // Generujemy skrypt
-          const result = await generateScript(templateId, audience.id);
+          const result = await generateScript(templateId, audience.id, advertisingGoal);
           if (isMounted) {
             setGeneratedScript(result.script);
             setBestHook(result.bestHook || '');
@@ -89,14 +91,14 @@ const GeneratedScriptDialog = ({
     return () => {
       isMounted = false;
     };
-  }, [open, targetAudienceId, templateId]);
+  }, [open, targetAudienceId, templateId, advertisingGoal]);
 
   const handleRetry = async () => {
     setIsLoading(true);
     setError(null);
     
     try {
-      const result = await generateScript(templateId, verifiedAudienceId || targetAudienceId);
+      const result = await generateScript(templateId, verifiedAudienceId || targetAudienceId, advertisingGoal);
       setGeneratedScript(result.script);
       setBestHook(result.bestHook || '');
       setIsLoading(false);

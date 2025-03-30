@@ -30,9 +30,10 @@ serve(async (req) => {
     const requestData = await req.json();
     const templateId = requestData.templateId;
     const targetAudienceId = requestData.targetAudienceId;
+    const advertisingGoal = requestData.advertisingGoal || '';
     const debugInfo = requestData.debugInfo !== false; // Domyślnie true
     
-    console.log("Odebrane dane:", JSON.stringify({ templateId, targetAudienceId, debugInfo }));
+    console.log("Odebrane dane:", JSON.stringify({ templateId, targetAudienceId, advertisingGoal, debugInfo }));
     
     // Validate input data
     if (!templateId || !targetAudienceId) {
@@ -45,6 +46,7 @@ serve(async (req) => {
 
     console.log('Generowanie skryptu dla szablonu:', templateId);
     console.log('ID grupy docelowej:', targetAudienceId);
+    console.log('Cel reklamy:', advertisingGoal);
     
     // Validate Service Role Key
     if (!supabaseServiceKey) {
@@ -99,6 +101,11 @@ serve(async (req) => {
     }
     
     const targetAudienceData = audienceData[0];
+    // Add the advertising goal to the audience data
+    if (advertisingGoal) {
+      targetAudienceData.advertisingGoal = advertisingGoal;
+    }
+    
     console.log('Pobrano dane grupy docelowej:', targetAudienceData.name || 'Bez nazwy');
     
     // Validate OpenAI API key
@@ -184,7 +191,8 @@ serve(async (req) => {
         originalData: audienceDescription,
         processedData: processedData,
         hookData: hookData,
-        scriptData: scriptData
+        scriptData: scriptData,
+        advertisingGoal: advertisingGoal
       } : null
     };
     

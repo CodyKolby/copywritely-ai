@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import TargetAudienceForm from './TargetAudienceForm';
@@ -7,6 +6,7 @@ import { toast } from 'sonner';
 import { TargetAudienceDialogProps } from './target-audience-dialog/types';
 import { fetchExistingAudiences, fetchTargetAudienceDetails } from './target-audience-dialog/api';
 import DialogSelectionContent from './target-audience-dialog/DialogSelectionContent';
+import AdvertisingGoalDialog from './AdvertisingGoalDialog';
 
 const TargetAudienceDialog = ({
   open,
@@ -21,13 +21,15 @@ const TargetAudienceDialog = ({
   const [selectedAudienceId, setSelectedAudienceId] = useState<string | null>(null);
   const [existingAudiences, setExistingAudiences] = useState([]);
   const [showScriptDialog, setShowScriptDialog] = useState(false);
-  
+  const [showGoalDialog, setShowGoalDialog] = useState(false);
+  const [advertisingGoal, setAdvertisingGoal] = useState<string>('');
+
   useEffect(() => {
     if (open && userId) {
       loadExistingAudiences();
     }
   }, [open, userId]);
-  
+
   const loadExistingAudiences = async () => {
     if (!userId) return;
     
@@ -36,18 +38,18 @@ const TargetAudienceDialog = ({
     setExistingAudiences(audiences);
     setIsLoading(false);
   };
-  
+
   const handleChoiceSelection = (choice: string) => {
     setAudienceChoice(choice);
     if (choice === 'new') {
       setSelectedAudienceId(null);
     }
   };
-  
+
   const handleExistingAudienceSelect = (audienceId: string) => {
     setSelectedAudienceId(audienceId);
   };
-  
+
   const handleContinue = async () => {
     if (!isPremium) {
       toast.error('Nie posiadasz konta premium', {
@@ -65,7 +67,7 @@ const TargetAudienceDialog = ({
         const audienceData = await fetchTargetAudienceDetails(selectedAudienceId);
         
         if (audienceData) {
-          setShowScriptDialog(true);
+          setShowGoalDialog(true);
         }
         
       } catch (error) {
@@ -85,7 +87,7 @@ const TargetAudienceDialog = ({
       });
     }
   };
-  
+
   const handleCreateNewAudience = () => {
     if (!isPremium) {
       toast.error('Nie posiadasz konta premium', {
@@ -99,7 +101,7 @@ const TargetAudienceDialog = ({
     setAudienceChoice('new');
     setShowForm(true);
   };
-  
+
   const handleFormSubmit = async (data: any, targetAudienceId?: string) => {
     if (!isPremium) {
       toast.error('Nie posiadasz konta premium', {
@@ -118,7 +120,7 @@ const TargetAudienceDialog = ({
       
       if (targetAudienceId) {
         setSelectedAudienceId(targetAudienceId);
-        setShowScriptDialog(true);
+        setShowGoalDialog(true);
       }
     } catch (error) {
       console.error('Error submitting form:', error);
@@ -140,7 +142,23 @@ const TargetAudienceDialog = ({
   const handleCancel = () => {
     onOpenChange(false);
   };
-  
+
+  const handleGoalSubmit = (goal: string) => {
+    setAdvertisingGoal(goal);
+    setShowGoalDialog(false);
+    setShowScriptDialog(true);
+  };
+
+  const handleGoalBack = () => {
+    setShowGoalDialog(false);
+    if (showForm) {
+      setShowForm(true);
+    } else {
+      setSelectedAudienceId(null);
+      setAudienceChoice(null);
+    }
+  };
+
   const handleScriptDialogClose = () => {
     setShowScriptDialog(false);
     onOpenChange(false);
@@ -150,7 +168,7 @@ const TargetAudienceDialog = ({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
-          {!showForm ? (
+          {!showForm && !showGoalDialog ? (
             <DialogSelectionContent
               isPremium={isPremium}
               isLoading={isLoading}
@@ -162,6 +180,12 @@ const TargetAudienceDialog = ({
               handleCreateNewAudience={handleCreateNewAudience}
               handleContinue={handleContinue}
               handleCancel={handleCancel}
+            />
+          ) : showGoalDialog ? (
+            <AdvertisingGoalDialog 
+              onSubmit={handleGoalSubmit}
+              onBack={handleGoalBack}
+              onCancel={handleCancel}
             />
           ) : (
             <TargetAudienceForm 
@@ -178,6 +202,7 @@ const TargetAudienceDialog = ({
         onOpenChange={handleScriptDialogClose}
         targetAudienceId={selectedAudienceId || ''}
         templateId={templateId}
+        advertisingGoal={advertisingGoal}
       />
     </>
   );
