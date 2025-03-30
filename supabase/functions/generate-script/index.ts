@@ -287,46 +287,93 @@ async function preprocessAudienceData(audienceDescription) {
   try {
     // Prompt dla agenta przetwarzającego dane
     const dataProcessingPrompt = `
-Jesteś specjalistą od przetwarzania danych marketingowych. Na podstawie danych z ankiety masz za zadanie przygotować 2 zestawy informacji: dla Hook & Angle Generatora oraz Script Buildera.
+Jesteś specjalistą od przetwarzania danych marketingowych. Twoim zadaniem jest przetworzenie danych z ankiety na dwa konkretne zestawy: HOOK DATA i SCRIPT DATA.
 
-Zasady:
-– Nie tworzysz treści marketingowych.  
-– Usuwasz powtórzenia, pomijasz nieistotne szczegóły (np. pory dnia, dygresje).  
-– Zachowujesz autentyczny język odbiorcy (frazy, cytaty).  
-– Grupujesz dane logicznie i przejrzyście.  
-– Styl: zwięźle, konkretnie, z myślą o dalszym przetwarzaniu przez inne agenty.
+ZASADY:
+– Nie twórz treści marketingowych.  
+– Usuwaj powtórzenia i nieistotne dygresje.  
+– Zachowuj autentyczny język odbiorcy: cytaty, słowa-klucze, styl wypowiedzi.  
+– Każdy punkt ma zawierać minimum 3–5 przykładów.  
+– Jeśli coś jest tylko hasłem – dodaj 1 zdanie wyjaśnienia.  
+– Dane będą używane przez inne AI — zadbaj o precyzję i kompletność.
 
 ---
 
 ## HOOK DATA
 
-1. Główna oferta (1–2 zdania)  
-2. Grupa docelowa (np. osoby 25–45 lat)  
-3. Problemy (emocjonalne, cielesne, psychiczne)  
-4. Pragnienia (życzenia, zmiany, efekty)  
-5. Styl językowy odbiorcy – krótki, emocjonalny, z elementem zmęczenia lub buntu + cytaty i frazy  
-6. Biografia odbiorcy – skrót: obecna sytuacja, błędne koła, kluczowe emocje  
-7. Przekonania do zbudowania lub złamania (tylko komunikacyjnie użyteczne)
+1. Główna oferta: 
+1–2 zdania opisujące co, dla kogo, z jakim efektem.  
+
+2. Grupa docelowa: 
+Wiek, płeć, typ osoby, sposób życia (np. “kobiety 25–45 lat, z niską samooceną i problemami hormonalnymi”).  
+
+3. Problemy odbiorcy: 
+Wypisz **minimum 5 problemów** w formacie:  
+[Nazwa problemu] – [krótkie zdanie wyjaśniające, jak ten problem wygląda u odbiorcy]
+
+Np.:
+– Niska samoocena – odbiorca nie wierzy w siebie i unika kontaktów społecznych.  
+– Zmęczenie – mimo snu i odpoczynku czuje brak energii i motywacji.  
+– Zaburzenia hormonalne – nie rozumie, co się dzieje z jego ciałem i nastrojami.
+
+4. Pragnienia odbiorcy: 
+→ Wypisz **minimum 5 pragnień** w formacie:  
+– [Nazwa pragnienia] – [krótkie zdanie opisujące, jak odbiorca chce się czuć lub co osiągnąć]
+
+Np.:
+– Poczucie kobiecości – chce znów czuć się atrakcyjna, lekka i pewna siebie.  
+– Spokój – marzy o wewnętrznej równowadze bez ciągłego napięcia i stresu.  
+– Zdrowe ciało – chce mieć więcej energii i nie odczuwać ciągłego zmęczenia.   
+
+5. Styl językowy odbiorcy (min. 5 fraz + ton):
+Wypisz najczęstsze cytaty i sposób mówienia.  
+Opisz ton: np. emocjonalny, zmęczony, buntowniczy.  
+
+6. Biografia odbiorcy (3–5 zdań):
+Kim jest, z jakiego punktu startuje, co przeżyła, co próbowała.  
+
+7. Przekonania do zbudowania lub złamania (min. 3):  
+Wypisz jako komunikaty, np. “Dieta to nie kara, tylko forma troski o siebie”.
 
 ---
 
 ## SCRIPT DATA
 
-1. Główna oferta (co, dla kogo, z jakim efektem)  
-2. Elementy oferty (co konkretnie zawiera program)  
-3. Główne korzyści (fizyczne, psychiczne, życiowe)  
-4. Dlaczego działa (unikalność podejścia, doświadczenie twórcy, przewagi)  
-5. Problemy i pragnienia – pogrupowane:
-   – Problemy fizyczne  
-   – Problemy emocjonalne  
-   – Pragnienia ciała  
-   – Pragnienia życia  
-6. Biografia odbiorcy – kluczowe schematy, stan psychofizyczny, typowe błędy  
-7. Styl językowy odbiorcy – cytaty, słownictwo, sposób mówienia o sobie  
-8. Konkurencja – krótka analiza + typowe błędy konkurentów  
-9. Doświadczenie twórcy – tylko to, co buduje zaufanie
+1. Główna oferta:  
+1–2 zdania: co, dla kogo, z jakim efektem.
 
-📤 Output: tylko te 2 sekcje (HOOK DATA, SCRIPT DATA) — jasno oddzielone, z podpunktami.
+2. Elementy oferty:  
+Wypisz min. 5 punktów w poniższym formacie:  
+– [Nazwa elementu] – [krótkie wyjaśnienie, co to daje odbiorcy]  
+Np.:  
+– Plan treningowy – dopasowany do stylu życia i możliwości odbiorcy, bez presji.
+
+3. Główne korzyści (min. 5): 
+Rozbij na fizyczne, psychiczne, życiowe.
+
+4. Dlaczego działa (min. 3 konkretne powody): 
+Co wyróżnia ofertę, co wpływa na skuteczność, co daje zaufanie.
+
+5. Problemy i pragnienia (rozbij wg kategorii, min. 3 w każdej):  
+– Problemy fizyczne – [opis]  
+– Problemy emocjonalne – [opis]  
+– Pragnienia ciała – [opis]  
+– Pragnienia życia – [opis]
+
+6. Biografia odbiorcy (3–5 zdań):
+Kim jest, co ją frustruje, co próbowała, co nie działało.
+
+7. Styl językowy odbiorcy (min. 5 fraz/cytatów):  
+Wypisz dokładne cytaty i typowe słownictwo.
+
+8. Konkurencja (2–3 zdania):
+Główne różnice + typowe błędy konkurencji.
+
+9. Doświadczenie twórcy (2–3 zdania):  
+Co daje zaufanie, co pokazuje, że ta osoba wie, co robi.
+---
+Output: tylko (HOOK DATA) i (SCRIPT DATA), w tej kolejności.  
+Pisz w punktach, bez lania wody, bez opinii, bez streszczania za bardzo.
 
 Oryginalne dane z ankiety:
 ${audienceDescription}
