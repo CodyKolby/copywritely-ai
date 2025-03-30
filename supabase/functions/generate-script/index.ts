@@ -159,9 +159,9 @@ serve(async (req) => {
     
     // KROK 2: Generowanie hooków na podstawie przetworzonych danych
     console.log('🖋️ Przygotowuję prompt dla generatora hooków z danymi:', hookData.substring(0, 100) + '...');
-    const generatedHooks = await generateHooks(hookData, openAIApiKey);
+    const hooksResult = await generateHooks(hookData, openAIApiKey);
     
-    if (!generatedHooks) {
+    if (!hooksResult) {
       console.error('Błąd podczas generowania hooków');
       return new Response(
         JSON.stringify({ 
@@ -172,11 +172,14 @@ serve(async (req) => {
     }
     
     console.log('✅ Wygenerowane hooki:');
-    console.log(generatedHooks);
+    console.log(hooksResult.allHooks);
+    console.log('✅ Najlepszy hook:');
+    console.log(hooksResult.bestHook);
     
     // Przygotowanie odpowiedzi
     const responseData = {
-      script: generatedHooks,
+      script: hooksResult.allHooks,
+      bestHook: hooksResult.bestHook,
       debug: debugInfo ? {
         originalData: audienceDescription,
         processedData: processedData,

@@ -17,6 +17,7 @@ const GeneratedScriptDialog = ({
 }: GeneratedScriptDialogProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [generatedScript, setGeneratedScript] = useState<string>('');
+  const [bestHook, setBestHook] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [verifiedAudienceId, setVerifiedAudienceId] = useState<string | null>(null);
 
@@ -52,9 +53,10 @@ const GeneratedScriptDialog = ({
           if (isMounted) setVerifiedAudienceId(fallbackId);
           
           // Generujemy skrypt lokalnie
-          const script = await generateScript(templateId, fallbackId);
+          const result = await generateScript(templateId, fallbackId);
           if (isMounted) {
-            setGeneratedScript(script);
+            setGeneratedScript(result.script);
+            setBestHook(result.bestHook || '');
             setIsLoading(false);
           }
         } else {
@@ -62,9 +64,10 @@ const GeneratedScriptDialog = ({
           if (isMounted) setVerifiedAudienceId(audience.id);
           
           // Generujemy skrypt
-          const script = await generateScript(templateId, audience.id);
+          const result = await generateScript(templateId, audience.id);
           if (isMounted) {
-            setGeneratedScript(script);
+            setGeneratedScript(result.script);
+            setBestHook(result.bestHook || '');
             setIsLoading(false);
           }
         }
@@ -93,8 +96,9 @@ const GeneratedScriptDialog = ({
     setError(null);
     
     try {
-      const script = await generateScript(templateId, verifiedAudienceId || targetAudienceId);
-      setGeneratedScript(script);
+      const result = await generateScript(templateId, verifiedAudienceId || targetAudienceId);
+      setGeneratedScript(result.script);
+      setBestHook(result.bestHook || '');
       setIsLoading(false);
     } catch (err) {
       console.error('Error during retry:', err);
@@ -130,7 +134,7 @@ const GeneratedScriptDialog = ({
             </button>
           </div>
         ) : (
-          <ScriptDisplay script={generatedScript} />
+          <ScriptDisplay script={generatedScript} bestHook={bestHook} />
         )}
       </DialogContent>
     </Dialog>

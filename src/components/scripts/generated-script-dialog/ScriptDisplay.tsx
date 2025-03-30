@@ -3,14 +3,15 @@ import React from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Copy, Download } from 'lucide-react';
+import { Copy, Download, Star } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ScriptDisplayProps {
   script: string;
+  bestHook?: string;
 }
 
-const ScriptDisplay = ({ script }: ScriptDisplayProps) => {
+const ScriptDisplay = ({ script, bestHook }: ScriptDisplayProps) => {
   const handleCopyToClipboard = () => {
     navigator.clipboard.writeText(script);
     toast.success('Skrypt skopiowany do schowka');
@@ -27,13 +28,40 @@ const ScriptDisplay = ({ script }: ScriptDisplayProps) => {
     toast.success('Skrypt pobrany');
   };
 
+  // Format the display to highlight the best hook if provided
+  const formattedScript = React.useMemo(() => {
+    if (!bestHook) {
+      return script;
+    }
+
+    // Append the best hook at the end if it's not already there
+    let result = script;
+    
+    // Only append if the bestHook isn't already present in the formatted output
+    if (!result.includes('Najlepszy hook:') && !result.includes('Najlepszy hook (do dalszego wykorzystania):')) {
+      result += `\n\nNajlepszy hook: ${bestHook}`;
+    }
+    
+    return result;
+  }, [script, bestHook]);
+
   return (
     <div className="py-4">
       <ScrollArea className="h-[400px] rounded-md border p-4 bg-slate-50">
         <pre className="whitespace-pre-wrap font-mono text-sm">
-          {script}
+          {formattedScript}
         </pre>
       </ScrollArea>
+      
+      {bestHook && (
+        <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md flex items-start gap-2">
+          <Star className="h-5 w-5 text-yellow-500 mt-0.5 flex-shrink-0" />
+          <div>
+            <p className="font-medium text-sm text-yellow-800">Najlepszy hook:</p>
+            <p className="text-yellow-900">{bestHook}</p>
+          </div>
+        </div>
+      )}
       
       <DialogFooter className="mt-6 flex justify-between sm:justify-end gap-4">
         <Button 

@@ -1,6 +1,6 @@
 
 // Agent 2: Hook Generator
-export async function generateHooks(hookData: string, openAIApiKey: string): Promise<string | null> {
+export async function generateHooks(hookData: string, openAIApiKey: string): Promise<{ allHooks: string; bestHook: string } | null> {
   console.log('✏️ Generuję hooki reklamowe na podstawie przetworzonych danych');
   
   try {
@@ -21,23 +21,23 @@ Twoim zadaniem jest:
 – Pisany w 2. osobie liczby pojedynczej ("jeśli jesteś kobietą, która...").  
 – Brzmi jak początek rozmowy, nie jak slogan czy zakończona wypowiedź.  
 – Nie zdradza oferty — prowokuje uwagę, zostawia niedosyt.  
-– Odnosi się do tematyki głównej oferty – np. ciało, dieta, zmęczenie, zdrowie, frustracje związane z wyglądem, energią, dbaniem o siebie. Nawet jeśli nie mówisz o treningu lub jedzeniu wprost – hook musi być „z tej bajki”.
+– Odnosi się do tematyki głównej oferty – np. ciało, dieta, zmęczenie, zdrowie, frustracje związane z wyglądem, energią, dbaniem o siebie. Nawet jeśli nie mówisz o treningu lub jedzeniu wprost – hook musi być „z tej bajki".
 
 ---
 
 ### STYL I JĘZYK:
 1. Mów emocjami, nie logiką.  
 2. Unikaj ogólników – używaj precyzyjnych, prostych słów.  
-3. Używaj fraz, które odbiorca realnie mógłby pomyśleć („czuję się gruba”, „nie mogę patrzeć na siebie”, „ciągle zaczynam od nowa”).  
+3. Używaj fraz, które odbiorca realnie mógłby pomyśleć („czuję się gruba", „nie mogę patrzeć na siebie", „ciągle zaczynam od nowa").  
 4. Nie stylizuj się na narratora – pisz tak, jakbyś rozmawiał z jedną osobą.  
-5. Unikaj metafor oderwanych od życia (np. „wewnętrzna bogini”, „odkryj światło w sobie”) – jeśli już, pokaż to przez codzienne sytuacje (lustro, spodnie, zakupy, łazienka itp.).
+5. Unikaj metafor oderwanych od życia (np. „wewnętrzna bogini", „odkryj światło w sobie") – jeśli już, pokaż to przez codzienne sytuacje (lustro, spodnie, zakupy, łazienka itp.).
 
 ---
 
 ### UNIKAJ I DOPRECYZUJ:
-– Nie pisz hooków, które są poetyckie, ale puste – np. „fale emocji”, „cień siebie”, „pragnienie poza zasięgiem”.  
-– Każdy hook musi mieć **jasny temat**, którego odbiorca zrozumie od razu — np. „ciało, które cię zawstydza”, „praca, która odbiera ci energię”, „ciągłe zaczynanie od nowa”.  
-– Nie używaj abstrakcyjnych pojęć bez kontekstu („nie potrafię zadbać o siebie”) — pokaż, jak to wygląda w codziennym życiu („mam dość tego, że znowu zamówiłam pizzę, zamiast zjeść coś, co mi służy”).  
+– Nie pisz hooków, które są poetyckie, ale puste – np. „fale emocji", „cień siebie", „pragnienie poza zasięgiem".  
+– Każdy hook musi mieć **jasny temat**, którego odbiorca zrozumie od razu — np. „ciało, które cię zawstydza", „praca, która odbiera ci energię", „ciągłe zaczynanie od nowa".  
+– Nie używaj abstrakcyjnych pojęć bez kontekstu („nie potrafię zadbać o siebie") — pokaż, jak to wygląda w codziennym życiu („mam dość tego, że znowu zamówiłam pizzę, zamiast zjeść coś, co mi służy").  
 – Hook ma być emocjonalny, **ale także konkretny i zrozumiały** — odbiorca musi od razu wiedzieć, że to o nim.  
 – Pisz tak, jakbyś znał konkretne momenty z jego życia: lustro, kalendarz, spodnie, waga, ciągłe diety, praca biurowa, dzieci, scrollowanie Instagrama.
 
@@ -100,9 +100,39 @@ Zwracasz tylko hooki i finalny wybór.
     // Parse response
     const data = await response.json();
     console.log('✅ Generator hooków zakończył pracę, model:', data.model);
-    console.log('✅ Wygenerowane hooki:', data.choices[0].message.content);
     
-    return data.choices[0].message.content;
+    const content = data.choices[0].message.content;
+    console.log('✅ Wygenerowane hooki:', content);
+    
+    // Extract the best hook using regex - look for the pattern after "Najlepszy hook (do dalszego wykorzystania):"
+    let bestHook = '';
+    const bestHookMatch = content.match(/Najlepszy hook \(do dalszego wykorzystania\): (.+?)(?:\n|$)/);
+    
+    if (bestHookMatch && bestHookMatch[1]) {
+      bestHook = bestHookMatch[1].trim();
+      console.log('✅ Wyekstrahowany najlepszy hook:', bestHook);
+    } else {
+      // Fallback - if we can't extract it with the expected format, 
+      // try to get the last line that might contain the best hook
+      const lines = content.split('\n').filter(line => line.trim().length > 0);
+      if (lines.length > 0) {
+        const lastLine = lines[lines.length - 1].trim();
+        if (lastLine.includes('Najlepszy hook')) {
+          bestHook = lastLine.replace(/Najlepszy hook.*?:/, '').trim();
+          console.log('✅ Wyekstrahowany najlepszy hook (alternatywna metoda):', bestHook);
+        }
+      }
+      
+      // If we still can't find it, just note that we couldn't extract it properly
+      if (!bestHook) {
+        console.warn('⚠️ Nie udało się wyekstrahować najlepszego hooka, sprawdź format odpowiedzi.');
+      }
+    }
+    
+    return {
+      allHooks: content,
+      bestHook: bestHook
+    };
   } catch (error) {
     console.error('Błąd podczas generowania hooków:', error);
     return null;
