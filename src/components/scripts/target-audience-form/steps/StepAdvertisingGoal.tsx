@@ -25,7 +25,7 @@ const StepAdvertisingGoal = ({ form }: StepAdvertisingGoalProps) => {
           <FormItem>
             <FormLabel className="flex items-center gap-1.5">
               Cel reklamy
-              <InfoTooltip content="Opisz jaki cel chciałbyś osiągnąć przy pomocy tej reklamy" />
+              <InfoTooltip text="Opisz jaki cel chciałbyś osiągnąć przy pomocy tej reklamy" />
             </FormLabel>
             <FormControl>
               <Textarea
