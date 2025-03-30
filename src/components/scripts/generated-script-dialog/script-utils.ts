@@ -14,7 +14,7 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
   try {
     console.log('Generowanie skryptu dla szablonu:', templateId);
     console.log('ID grupy docelowej:', targetAudienceId);
-    console.log('v1.8.0 - Zmodyfikowana metoda wywołania funkcji Edge do bezpośredniego użycia supabase.functions.invoke');
+    console.log('v1.8.1 - Dodano lepszą obsługę błędów i debugowanie');
     
     // Walidacja danych wejściowych
     if (!targetAudienceId) {
@@ -49,12 +49,17 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
     console.time('Czas generowania skryptu');
     console.log('Wywołuję funkcję Edge przez supabase.functions.invoke');
     
+    // Dodanie dodatkowych informacji debugowania
+    const requestPayload = {
+      templateId,
+      targetAudienceId,
+      debugInfo: true // Zawsze ustawione na true aby otrzymać dane debug
+    };
+    
+    console.log('Payload dla funkcji Edge:', JSON.stringify(requestPayload));
+    
     const { data, error } = await supabase.functions.invoke('generate-script', {
-      body: {
-        templateId,
-        targetAudienceId,
-        debugInfo: true // Zawsze ustawione na true aby otrzymać dane debug
-      }
+      body: requestPayload
     });
     
     console.timeEnd('Czas generowania skryptu');
@@ -62,6 +67,7 @@ export const generateScript = async (templateId: string, targetAudienceId: strin
     // Sprawdzamy błędy
     if (error) {
       console.error('Błąd podczas wywoływania Edge function:', error);
+      console.error('Szczegóły błędu:', JSON.stringify(error, null, 2));
       toast.error('Błąd podczas generowania skryptu');
       return generateSampleScript(templateId);
     }

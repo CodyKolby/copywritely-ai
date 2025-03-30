@@ -305,7 +305,7 @@ ZASADY:
 1–2 zdania opisujące co, dla kogo, z jakim efektem.  
 
 2. Grupa docelowa: 
-Wiek, płeć, typ osoby, sposób życia (np. “kobiety 25–45 lat, z niską samooceną i problemami hormonalnymi”).  
+Wiek, płeć, typ osoby, sposób życia (np. "kobiety 25–45 lat, z niską samooceną i problemami hormonalnymi").  
 
 3. Problemy odbiorcy: 
 Wypisz **minimum 5 problemów** w formacie:  
@@ -333,7 +333,7 @@ Opisz ton: np. emocjonalny, zmęczony, buntowniczy.
 Kim jest, z jakiego punktu startuje, co przeżyła, co próbowała.  
 
 7. Przekonania do zbudowania lub złamania (min. 3):  
-Wypisz jako komunikaty, np. “Dieta to nie kara, tylko forma troski o siebie”.
+Wypisz jako komunikaty, np. "Dieta to nie kara, tylko forma troski o siebie".
 
 ---
 
