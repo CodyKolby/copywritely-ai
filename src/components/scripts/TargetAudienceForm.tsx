@@ -51,7 +51,13 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
         if (currentStep < TOTAL_STEPS) {
           setCurrentStep(currentStep + 1);
         } else {
-          await handleFormSubmission();
+          // Validate all fields before submission
+          const allValid = await form.trigger();
+          if (allValid) {
+            await handleFormSubmission();
+          } else {
+            toast.error('Proszę poprawić błędy w formularzu');
+          }
         }
       }
     } catch (error) {
