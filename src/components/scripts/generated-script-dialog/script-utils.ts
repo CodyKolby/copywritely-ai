@@ -5,7 +5,7 @@ import { GenerateScriptResponse } from './ai-agents-service';
 /**
  * Wersja utylity do generowania skryptów
  */
-export const SCRIPT_UTILS_VERSION = '1.13.0';
+export const SCRIPT_UTILS_VERSION = '1.13.1';
 
 /**
  * Generuje skrypt na podstawie szablonu i grupy docelowej

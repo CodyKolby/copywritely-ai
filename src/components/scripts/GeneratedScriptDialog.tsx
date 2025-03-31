@@ -25,6 +25,7 @@ const GeneratedScriptDialog = ({
   const [error, setError] = useState<string | null>(null);
   const [verifiedAudienceId, setVerifiedAudienceId] = useState<string | null>(null);
   const [generationCount, setGenerationCount] = useState<number>(0);
+  const [isGeneratingNewScript, setIsGeneratingNewScript] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -69,6 +70,7 @@ const GeneratedScriptDialog = ({
             setTotalHooks(result.totalHooks || 0);
             setIsLoading(false);
             setGenerationCount(prevCount => prevCount + 1);
+            setIsGeneratingNewScript(false);
           }
         } else {
           console.log("Grupa docelowa zweryfikowana:", audience.id);
@@ -84,6 +86,7 @@ const GeneratedScriptDialog = ({
             setTotalHooks(result.totalHooks || 0);
             setIsLoading(false);
             setGenerationCount(prevCount => prevCount + 1);
+            setIsGeneratingNewScript(false);
           }
         }
       } catch (err) {
@@ -95,16 +98,19 @@ const GeneratedScriptDialog = ({
             dismissible: true
           });
           setIsLoading(false);
+          setIsGeneratingNewScript(false);
         }
       }
     };
     
-    verifyAndGenerateScript();
+    if (open && (isLoading || isGeneratingNewScript)) {
+      verifyAndGenerateScript();
+    }
     
     return () => {
       isMounted = false;
     };
-  }, [open, targetAudienceId, templateId, advertisingGoal, currentHookIndex]);
+  }, [open, targetAudienceId, templateId, advertisingGoal, currentHookIndex, isGeneratingNewScript, generationCount]);
 
   const handleRetry = async () => {
     setIsLoading(true);
@@ -129,7 +135,7 @@ const GeneratedScriptDialog = ({
   const handleGenerateWithNextHook = () => {
     if (currentHookIndex + 1 < totalHooks) {
       setCurrentHookIndex(currentHookIndex + 1);
-      setIsLoading(true);
+      setIsGeneratingNewScript(true);
       console.log(`Generuję nowy skrypt z hookiem o indeksie ${currentHookIndex + 1}`);
     } else {
       toast.info('Wykorzystano już wszystkie dostępne hooki');
@@ -147,7 +153,7 @@ const GeneratedScriptDialog = ({
           <DialogDescription>
             Oto skrypt wygenerowany na podstawie informacji o Twojej grupie docelowej.
             Możesz go skopiować lub pobrać do dalszej edycji.
-            {currentHookIndex + 1 < totalHooks && !isLoading && (
+            {currentHookIndex + 1 < totalHooks && !isLoading && !isGeneratingNewScript && (
               <span className="block mt-1 text-copywrite-teal">
                 Nie pasuje? Wygeneruj nowy skrypt z innym hookiem startowym.
               </span>
@@ -155,7 +161,7 @@ const GeneratedScriptDialog = ({
           </DialogDescription>
         </DialogHeader>
 
-        {isLoading ? (
+        {isLoading || isGeneratingNewScript ? (
           <LoadingState />
         ) : error ? (
           <div className="py-8 text-center">
@@ -181,6 +187,7 @@ const GeneratedScriptDialog = ({
                 <button 
                   onClick={handleGenerateWithNextHook}
                   className="px-4 py-2 bg-copywrite-teal text-white rounded-md hover:bg-copywrite-teal-dark flex items-center gap-2"
+                  disabled={isGeneratingNewScript}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
