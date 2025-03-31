@@ -10,7 +10,7 @@ interface Project {
   status: 'Draft' | 'Completed' | 'Reviewed';
   created_at: string;
   updated_at: string;
-  type: 'brief' | 'script';
+  type?: 'brief' | 'script';
   title_auto_generated?: boolean;
 }
 
@@ -58,7 +58,9 @@ export const useProjects = (userId: string | undefined) => {
       const processedData = (data as RawProject[]).map(project => ({
         ...project,
         // Set a default 'script' type if type is missing
-        type: project.type || 'script'
+        type: project.type || 'script',
+        // Ensure title_auto_generated is defined
+        title_auto_generated: project.title_auto_generated || false
       }));
       
       setProjects(processedData);
@@ -74,7 +76,12 @@ export const useProjects = (userId: string | undefined) => {
   };
 
   useEffect(() => {
-    fetchProjects();
+    if (userId) {
+      fetchProjects();
+    } else {
+      setLoading(false);
+      setProjects([]);
+    }
   }, [userId]);
 
   const handleOpenProject = (projectId: string) => {

@@ -23,6 +23,7 @@ export const useScriptGeneration = (
   const [isSaving, setIsSaving] = useState(false);
   const [projectSaved, setProjectSaved] = useState(false);
   const [projectId, setProjectId] = useState<string | null>(null);
+  const [saveAttempted, setSaveAttempted] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -34,6 +35,7 @@ export const useScriptGeneration = (
       setError(null);
       setProjectSaved(false);
       setProjectId(null);
+      setSaveAttempted(false);
       
       try {
         console.log("Weryfikacja ID grupy docelowej:", targetAudienceId);
@@ -85,11 +87,19 @@ export const useScriptGeneration = (
   }, [open, targetAudienceId, templateId, advertisingGoal, currentHookIndex, isGeneratingNewScript, generationCount, verifiedAudienceId, userId]);
 
   const saveScriptToProject = async (scriptContent: string, hookText: string, uid: string) => {
-    if (!scriptContent || isSaving || projectSaved) return;
+    if (!scriptContent || isSaving || projectSaved || saveAttempted) return;
     
+    setSaveAttempted(true);
     setIsSaving(true);
     
     try {
+      console.log('Przygotowanie zapisu skryptu:', {
+        contentLength: scriptContent.length,
+        hookLength: hookText.length,
+        templateId,
+        userId: uid
+      });
+
       const result = await saveScriptAsProject(
         scriptContent,
         hookText,
@@ -98,6 +108,7 @@ export const useScriptGeneration = (
       );
       
       if (result && result.id) {
+        console.log('Skrypt zapisany pomyślnie:', result);
         setProjectSaved(true);
         setProjectId(result.id);
         toast.success('Skrypt zapisany', {
@@ -106,6 +117,8 @@ export const useScriptGeneration = (
         });
       } else {
         console.error('Niepoprawna odpowiedź po zapisie:', result);
+        setProjectSaved(false);
+        setProjectId(null);
         toast.error('Nie udało się zapisać skryptu', {
           description: 'Spróbuj ponownie później.',
           dismissible: true
@@ -113,6 +126,8 @@ export const useScriptGeneration = (
       }
     } catch (error: any) {
       console.error('Błąd zapisywania projektu:', error);
+      setProjectSaved(false);
+      setProjectId(null);
       toast.error('Nie udało się zapisać skryptu', {
         description: error?.message || 'Wystąpił błąd podczas zapisywania projektu.',
         dismissible: true

@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 /**
  * Wersja utylity do generowania skryptów
  */
-export const SCRIPT_UTILS_VERSION = '1.14.0';
+export const SCRIPT_UTILS_VERSION = '1.15.0';
 
 /**
  * Generuje skrypt na podstawie szablonu i grupy docelowej
@@ -77,6 +77,8 @@ export async function saveScriptAsProject(
   user_id: string
 ): Promise<{id: string, title: string} | null> {
   try {
+    console.log('[script-utils] Rozpoczęcie zapisywania skryptu...');
+    
     if (!user_id || !script) {
       console.error('[script-utils] Nie można zapisać skryptu: brak id użytkownika lub treści skryptu');
       return null;
@@ -87,10 +89,12 @@ export async function saveScriptAsProject(
     
     console.log('[script-utils] Zapisywanie skryptu jako projekt...', {
       userId: user_id,
-      title
+      title,
+      contentLength: script.length
     });
     
     const id = uuidv4();
+    const type = 'script';
     
     const { data, error } = await supabase
       .from('projects')
@@ -100,7 +104,7 @@ export async function saveScriptAsProject(
         title,
         content: script,
         status: 'Completed',
-        type: 'script',
+        type, // Dodajemy pole type
         title_auto_generated: true
       })
       .select('id, title')

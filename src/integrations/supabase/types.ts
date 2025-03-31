@@ -55,6 +55,7 @@ export type Database = {
           id: string
           status: Database["public"]["Enums"]["project_status"]
           title: string
+          title_auto_generated: boolean | null
           updated_at: string
           user_id: string
         }
@@ -64,6 +65,7 @@ export type Database = {
           id?: string
           status?: Database["public"]["Enums"]["project_status"]
           title: string
+          title_auto_generated?: boolean | null
           updated_at?: string
           user_id: string
         }
@@ -73,6 +75,7 @@ export type Database = {
           id?: string
           status?: Database["public"]["Enums"]["project_status"]
           title?: string
+          title_auto_generated?: boolean | null
           updated_at?: string
           user_id?: string
         }
