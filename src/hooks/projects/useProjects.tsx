@@ -10,7 +10,7 @@ interface Project {
   status: 'Draft' | 'Completed' | 'Reviewed';
   created_at: string;
   updated_at: string;
-  type?: 'brief' | 'script';
+  type: 'brief' | 'script'; // Changed from optional to required
   title_auto_generated?: boolean;
 }
 
