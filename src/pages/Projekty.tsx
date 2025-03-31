@@ -77,8 +77,15 @@ const Projekty = () => {
         throw error;
       }
       
-      setProjects(data as Project[]);
-      console.log('Pobrano projekty:', data);
+      // Handle the case where the 'type' field may not exist in some records
+      const processedData = data.map(project => ({
+        ...project,
+        // Set a default 'script' type if type is missing
+        type: project.type || 'script'
+      })) as Project[];
+      
+      setProjects(processedData);
+      console.log('Pobrano projekty:', processedData);
     } catch (error) {
       console.error('Błąd podczas pobierania projektów:', error);
       toast.error('Nie udało się pobrać projektów', {
