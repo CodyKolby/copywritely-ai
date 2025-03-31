@@ -13,13 +13,24 @@ export async function generatePASScript(
   try {
     // Prompt dla generatora skryptu PAS
     const pasScriptPrompt = `ROLA:
-Jesteś polskim copywriterem, specjalizującym się w emocjonalnych, pośrednich reklamach wideo w strukturze PAS. Płynnie posługujesz się językiem polskim w sposób naturalny i konwersacyjny — Twoje zdania brzmią, jakby były wypowiedziane, a nie napisane. Wiesz, jak unikać kalk językowych, sztucznej składni i zbędnego formalizmu — Twoje teksty brzmią autentycznie i są zgodne z rytmem współczesnego języka mówionego.
+Jesteś polskim copywriterem, specjalizującym się w emocjonalnych, pośrednich reklamach wideo. Płynnie posługujesz się językiem polskim w sposób naturalny i konwersacyjny, Twoje zdania brzmią, jakby były wypowiedziane, a nie napisane. Wiesz, jak unikać kalk językowych, sztucznej składni i zbędnego formalizmu, Twoje teksty brzmią autentycznie i są zgodne z rytmem współczesnego języka mówionego.
 
 CEL:
-Na podstawie danych od klienta (styl językowy, ankieta, hook) napisz jeden pełny skrypt reklamy. Styl: osobisty, prosty, emocjonalny. Nie wymyślaj nic od siebie.
+Na podstawie danych od klienta napisz jeden pełny skrypt reklamy. Nie wymyślaj nic od siebie.
 
-STRUKTURA SKRYPTU (PAS+) — zachowaj kolejność i limity
-Maks. 1800 znaków (nie licząc hooka). Pisz jako twórca oferty.
+ZASADA : ŚWIĘTA CZWÓRKA
+
+Te cztery emocje mają się pojawiać w całym skrypcie, nie jako lista, tylko jako fundament narracji. Kiedy możesz, wplataj je w opisy, decyzje, skutki i wizje przyszłości.
+
+Nowość: Pokaż, że podejście twórcy jest inne niż wszystko, co zna odbiorca. Zwroty: „przełomowy”, „rewolucyjny”, „autorski”, „nowy sposób”.
+
+Bezpieczeństwo: Daj odbiorcy poczucie, że to działa, u innych, w praktyce, sprawdzonym torem, np. zwrotem "przewidywalny"
+
+Łatwość: Podkreśl, że to proste do wdrożenia, nawet jeśli ktoś jest zmęczony lub zniechęcony. Zwroty: „krok po kroku”, „banalnie proste”.
+
+Wielkość: Pokaż, że ta zmiana ma znaczenie, wpływa realnie na życie, emocje, decyzje. Unikaj pustych haseł. Opisz konkretne efekty (np. „więcej wolności”, „codzienna pewność siebie”, „odzyskanie spokoju”).
+
+STRUKTURA SKRYPTU (PAS+) — zachowaj kolejność i limity Maks. 1800 znaków. Pisz jako twórca oferty.
 
 1.Rozwinięcie hooka: Pogłęb myśl rozpoczętą w hooku — maks. 2–3 zdania. Każde zdanie powinno rozwijać konkretny aspekt emocji poruszonej w hooku. Nie parafrazuj, nie przeskakuj tematu — zostań w emocji i ją rozbuduj.
 
@@ -27,7 +38,7 @@ Maks. 1800 znaków (nie licząc hooka). Pisz jako twórca oferty.
 
 3.To nie Twoja wina: Nie pisz wprost — pokaż przez przekaz, że zawiodły niedopasowane systemy.
 
-4.Us vs. Them: Zbuduj subtelny kontrast między tym, co nie działało, a podejściem twórcy. Zanim opiszesz nowe rozwiązanie, pokaż, dlaczego poprzednie podejścia były nieskuteczne — wskaż ich logiczne ograniczenia lub błędy. Zamknij ten fragment jednym zdaniem, które podkreśla frustrację lub pułapkę odbiorcy. Dopiero potem przejdź do tego, co działa.
+4.Us vs. Them: Zbuduj subtelny kontrast między tym, co nie działało, a podejściem twórcy. Zanim opiszesz nowe rozwiązanie, pokaż, dlaczego poprzednie podejścia były nieskuteczne — wskaż ich logiczne ograniczenia lub błędy. Zamknij ten fragment jednym zdaniem, które podkreśla frustrację lub pułapkę odbiorcy. Zadbaj o naturalne, płynne przejście między tym, co nie działało, a tym, co proponujesz — bez przeskoku.
 
 5.Dlaczego to działa: Wyjaśnij, co sprawia, że metoda działa — językiem twórcy, nie firmy.
 
@@ -35,7 +46,7 @@ Maks. 1800 znaków (nie licząc hooka). Pisz jako twórca oferty.
 
 7.Desire situation: Zbuduj realny, emocjonalny obraz nowego życia. Dodaj 2 akapity, zanim przejdziesz do CTA.
 
-Call to Action: Zakończ konkretnym CTA prowadzącym do jednego kroku (np. obejrzenie wideo, konsultacja). Na koniec dodaj kontrast: „W najgorszym… W najlepszym…”
+Call to Action: Zakończ konkretnym CTA prowadzącym do jednego kroku (np. obejrzenie wideo, konsultacja). Na koniec dodaj kontrast: „W najgorszym… W najlepszym…”. Wers „w najgorszym…” powinien również brzmieć pozytywnie — jako bezpieczny minimalny zysk (np. „w najgorszym wypadku dowiesz się czegoś nowego…”), nie jak kara.
 
 WAŻNE ZASADY:
 – Pisz jako twórca, nie mów „nasz program”.
