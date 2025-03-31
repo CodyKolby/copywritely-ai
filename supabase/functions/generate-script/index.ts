@@ -5,6 +5,7 @@ import { corsHeaders } from "./modules/cors.ts";
 import { formatAudienceDetails } from "./modules/formatter.ts";
 import { preprocessAudienceData, extractHookData, extractScriptData } from "./modules/preprocessor.ts";
 import { generateHooks } from "./modules/hook-generator.ts";
+import { generatePASScript } from "./modules/pas-script-generator.ts";
 
 // Configuration
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
@@ -185,9 +186,36 @@ serve(async (req) => {
     console.log('✅ Struktura reklamy:');
     console.log(hooksResult.adStructure);
     
+    // KROK 3: W zależności od struktury reklamy, generujemy odpowiedni skrypt
+    let generatedScript = '';
+    
+    if (hooksResult.adStructure === 'PAS') {
+      console.log('🖋️ Struktura reklamy: PAS - generuję skrypt PAS');
+      
+      // Generuj skrypt PAS
+      const pasScript = await generatePASScript(
+        hooksResult.bestHook,
+        advertisingGoal,
+        scriptData || '',
+        openAIApiKey
+      );
+      
+      if (!pasScript) {
+        console.error('Błąd podczas generowania skryptu PAS');
+        // Fallback - używamy ogólnych hooków
+        generatedScript = hooksResult.allHooks;
+      } else {
+        generatedScript = pasScript;
+      }
+    } else {
+      // Dla AIDA lub gdy struktura nie jest określona, używamy wygenerowanych hooków
+      console.log('🖋️ Struktura reklamy:', hooksResult.adStructure || 'nieokreślona', '- używam wygenerowanych hooków');
+      generatedScript = hooksResult.allHooks;
+    }
+    
     // Przygotowanie odpowiedzi
     const responseData = {
-      script: hooksResult.allHooks,
+      script: generatedScript,
       bestHook: hooksResult.bestHook,
       adStructure: hooksResult.adStructure || '',
       debug: debugInfo ? {

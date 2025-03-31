@@ -1,8 +1,9 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Copy, Download, CheckCircle2 } from 'lucide-react';
+import { Copy, Download, CheckCircle2, Info } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface ScriptDisplayProps {
   script: string;
@@ -33,6 +34,17 @@ const ScriptDisplay = ({ script, bestHook, adStructure = '' }: ScriptDisplayProp
     document.body.removeChild(element);
   };
 
+  const getAdStructureDescription = () => {
+    if (adStructure === 'PAS') {
+      return 'Problem → Agitation → Solution';
+    } else if (adStructure === 'AIDA') {
+      return 'Attention → Interest → Desire → Action';
+    }
+    return '';
+  };
+
+  const adStructureDescription = getAdStructureDescription();
+
   return (
     <div className="space-y-6">
       {bestHook && (
@@ -43,9 +55,21 @@ const ScriptDisplay = ({ script, bestHook, adStructure = '' }: ScriptDisplayProp
           {adStructure && (
             <div className="mt-3 flex items-center">
               <span className="text-sm font-medium mr-2">Zalecana struktura reklamy:</span>
-              <Badge variant="outline" className="bg-copywrite-teal/20 text-copywrite-teal border-copywrite-teal/30">
-                {adStructure}
-              </Badge>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge variant="outline" className="bg-copywrite-teal/20 text-copywrite-teal border-copywrite-teal/30 flex items-center gap-1">
+                      {adStructure}
+                      {adStructureDescription && <Info size={12} />}
+                    </Badge>
+                  </TooltipTrigger>
+                  {adStructureDescription && (
+                    <TooltipContent>
+                      <p>{adStructureDescription}</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
             </div>
           )}
         </div>
