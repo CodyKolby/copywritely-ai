@@ -53,6 +53,19 @@ interface Project {
   title_auto_generated?: boolean;
 }
 
+// Define a type for the raw data returned from Supabase
+interface RawProject {
+  id: string;
+  title: string;
+  content: string;
+  status: 'Draft' | 'Completed' | 'Reviewed';
+  created_at: string;
+  updated_at: string;
+  user_id: string;
+  type?: 'brief' | 'script'; // Make type optional as it might not exist in older records
+  title_auto_generated?: boolean;
+}
+
 const Projekty = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<string>('all');
@@ -78,11 +91,11 @@ const Projekty = () => {
       }
       
       // Handle the case where the 'type' field may not exist in some records
-      const processedData = data.map(project => ({
+      const processedData = (data as RawProject[]).map(project => ({
         ...project,
         // Set a default 'script' type if type is missing
         type: project.type || 'script'
-      })) as Project[];
+      }));
       
       setProjects(processedData);
       console.log('Pobrano projekty:', processedData);
@@ -191,6 +204,10 @@ const Projekty = () => {
       setSelectedProjectId(null);
     }
   };
+
+  useEffect(() => {
+    fetchProjects();
+  }, [user]);
 
   return (
     <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
