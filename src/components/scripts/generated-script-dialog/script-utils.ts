@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 /**
  * Wersja utylity do generowania skryptów
  */
-export const SCRIPT_UTILS_VERSION = '1.13.1';
+export const SCRIPT_UTILS_VERSION = '1.13.2';
 
 /**
  * Generuje skrypt na podstawie szablonu i grupy docelowej
@@ -166,4 +166,3 @@ function generateTitleFromScript(
   
   return `${scriptType}: "${scriptFragment}"`;
 }
-

@@ -96,7 +96,7 @@ export const useScriptGeneration = (
         uid
       );
       
-      if (savedProject) {
+      if (savedProject && savedProject.id) {
         setProjectSaved(true);
         setProjectId(savedProject.id);
         toast.success('Skrypt zapisany', {
@@ -104,6 +104,7 @@ export const useScriptGeneration = (
           dismissible: true
         });
       } else {
+        console.error('Niepoprawna odpowiedź po zapisie:', savedProject);
         toast.error('Nie udało się zapisać skryptu', {
           description: 'Spróbuj ponownie później.',
           dismissible: true

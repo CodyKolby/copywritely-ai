@@ -34,7 +34,10 @@ export const useProjects = (userId: string | undefined) => {
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
   const fetchProjects = async () => {
-    if (!userId) return;
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
     
     try {
       setLoading(true);
@@ -42,6 +45,7 @@ export const useProjects = (userId: string | undefined) => {
       const { data, error } = await supabase
         .from('projects')
         .select('*')
+        .eq('user_id', userId)
         .order('updated_at', { ascending: false });
       
       if (error) {

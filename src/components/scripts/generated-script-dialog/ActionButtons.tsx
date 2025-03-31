@@ -28,7 +28,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
     <div className="flex flex-wrap items-center justify-between gap-4 mt-6">
       <div className="text-sm text-gray-500">
         {isSaving && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 text-gray-600">
             <Loader2 className="h-4 w-4 animate-spin" />
             <span>Zapisywanie...</span>
           </div>
