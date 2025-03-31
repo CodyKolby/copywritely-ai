@@ -91,12 +91,12 @@ Poniżej dodaj JEDNO SŁOWO określające strukturę reklamy: "PAS" lub "AIDA".`
     
     if (adStructureMatch && adStructureMatch[1]) {
       adStructure = adStructureMatch[1].trim();
+      console.log('✅ Wyekstrahowana struktura reklamy:', adStructure);
     } else {
       // Fallback to PAS if no structure is explicitly mentioned
       adStructure = 'PAS';
+      console.log('⚠️ Nie znaleziono struktury reklamy, używam domyślnej: PAS');
     }
-    
-    console.log('✅ Wyekstrahowana struktura reklamy:', adStructure);
     
     return {
       allHooks: hooksText,

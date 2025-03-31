@@ -16,7 +16,9 @@ const ScriptDisplay = ({ script, bestHook, adStructure = '' }: ScriptDisplayProp
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(script);
+      // Łączymy hook i skrypt w jeden tekst do kopiowania
+      const fullScript = `${bestHook}\n\n${script}`;
+      await navigator.clipboard.writeText(fullScript);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
@@ -25,8 +27,10 @@ const ScriptDisplay = ({ script, bestHook, adStructure = '' }: ScriptDisplayProp
   };
 
   const handleDownload = () => {
+    // Łączymy hook i skrypt w jeden tekst do pobrania
+    const fullScript = `${bestHook}\n\n${script}`;
     const element = document.createElement('a');
-    const file = new Blob([script], { type: 'text/plain' });
+    const file = new Blob([fullScript], { type: 'text/plain' });
     element.href = URL.createObjectURL(file);
     element.download = 'wygenerowany-skrypt.txt';
     document.body.appendChild(element);
@@ -45,38 +49,36 @@ const ScriptDisplay = ({ script, bestHook, adStructure = '' }: ScriptDisplayProp
 
   const adStructureDescription = getAdStructureDescription();
 
+  // Łączymy hook i skrypt do wyświetlenia
+  const fullScriptDisplay = `${bestHook}\n\n${script}`;
+
   return (
     <div className="space-y-6">
-      {bestHook && (
+      {adStructure && (
         <div className="bg-copywrite-teal/10 p-4 rounded-md border border-copywrite-teal/20">
-          <h3 className="font-medium text-copywrite-teal mb-2">Najlepszy Hook:</h3>
-          <p className="text-lg italic">{bestHook}</p>
-          
-          {adStructure && (
-            <div className="mt-3 flex items-center">
-              <span className="text-sm font-medium mr-2">Zalecana struktura reklamy:</span>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Badge variant="outline" className="bg-copywrite-teal/20 text-copywrite-teal border-copywrite-teal/30 flex items-center gap-1">
-                      {adStructure}
-                      {adStructureDescription && <Info size={12} />}
-                    </Badge>
-                  </TooltipTrigger>
-                  {adStructureDescription && (
-                    <TooltipContent>
-                      <p>{adStructureDescription}</p>
-                    </TooltipContent>
-                  )}
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-          )}
+          <h3 className="font-medium text-copywrite-teal mb-2">Struktura reklamy:</h3>
+          <div className="flex items-center">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge variant="outline" className="bg-copywrite-teal/20 text-copywrite-teal border-copywrite-teal/30 flex items-center gap-1">
+                    {adStructure}
+                    {adStructureDescription && <Info size={12} />}
+                  </Badge>
+                </TooltipTrigger>
+                {adStructureDescription && (
+                  <TooltipContent>
+                    <p>{adStructureDescription}</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </div>
       )}
 
       <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-[50vh] overflow-y-auto">
-        <pre className="whitespace-pre-wrap text-sm">{script}</pre>
+        <pre className="whitespace-pre-wrap text-sm">{fullScriptDisplay}</pre>
       </div>
 
       <div className="flex justify-end space-x-3">
