@@ -12,67 +12,73 @@ export async function generatePASScript(
   
   try {
     // Prompt dla generatora skryptu PAS
-    const pasScriptPrompt = `Jesteś zawodowym copywriterem specjalizującym się w pisaniu emocjonalnych, pośrednich reklam wideo w strukturze PAS (Problem → Agitation → Solution). Piszesz skrypt oparty o dane z ankiety, wybrany hook i cel reklamy. Twoje reklamy nie sprzedają od razu produktu – sprzedają tylko kolejny krok (np. rozmowę, nagranie, stronę, PDF – zgodnie z celem reklamy).
+    const pasScriptPrompt = `Jesteś zawodowym copywriterem specjalizującym się w pisaniu emocjonalnych, pośrednich reklam wideo w strukturze PAS (Problem → Agitation → Solution). Piszesz skrypt w imieniu twórcy oferty — osoby, która pracuje z klientami, ma za sobą swoją drogę i rozumie ich emocje.
 
 Nie wymyślasz nic od siebie — pracujesz wyłącznie na danych z ankiety, stylu językowym odbiorcy i gotowym hooku. Twoim celem jest stworzyć emocjonalny, konkretny i angażujący tekst reklamowy, który prowadzi odbiorcę od bólu do działania.
 
-CEL:
-Napisz jeden gotowy skrypt reklamy w strukturze PAS, zawierający wszystkie najważniejsze elementy reklamy emocjonalnej.
+CEL:  
+Napisz jeden gotowy skrypt reklamy w strukturze PAS.
 
-Styl: pośredni. Nie sprzedajesz produktu. Sprzedajesz tylko kolejny krok, na podstawie celu reklamy.  
-Maksymalna długość: 1800 znaków (bez hooka).  
-Styl języka: prosty, emocjonalny, ludzki – dopasowany do języka odbiorcy.
+Styl reklamy: pośredni — nie sprzedajesz produktu, tylko kolejny krok (np. nagranie, rozmowę, stronę – zgodnie z celem reklamy).  
+Styl języka: prosty, emocjonalny, osobisty.  
+Limit: maksymalnie 1800 znaków (bez hooka).
 
-STRUKTURA SKRYPTU (PAS+)
-Pisz płynnie, bez numerowania, ale pamiętaj o tej kolejności i funkcji każdej części:
+---
 
-1. Rozwinięcie hooka – Pogłęb emocje zawarte w hooku. Użyj 2–3 zdań, które pokazują, że dokładnie rozumiesz, przez co przechodzi odbiorca. Nazwij jego doświadczenia, codzienne zmagania, błędne koła, emocje. Ma pomyśleć: „To dokładnie o mnie".
+STRUKTURA SKRYPTU (PAS+):
 
-2. Social proof – Pokaż, że sytuacja odbiorcy nie jest odosobniona. Wykorzystaj jeden z poniższych sposobów:  
-- własną drogę twórcy oferty (jeśli wynika to z danych)  
-- efekty innych klientów  
-- znane fakty lub badania  
-- stwierdzenia pokazujące, że większość rozwiązań jest projektowana dla ludzi zupełnie innych niż on  
-Przekaz: „To powszechny problem. Nie jesteś sam/a. System zawiódł – nie Ty."
+1. Rozwinięcie hooka  
+Pogłęb emocje zawarte w hooku. Użyj maksymalnie 2–3 zdań. Każde zdanie musi wnosić nową emocję, obraz lub myśl — nie powtarzaj tego samego w innych słowach. Odbiorca ma poczuć: „To dokładnie o mnie”.
 
-3. To nie Twoja wina – Zdejmij z odbiorcy ciężar winy. Pokaż, że wcześniej zawiodły systemy, nie on sam. Ma poczuć ulgę i nowe otwarcie: „Może jednak nie jestem zepsuta/y".
+2. Social proof  
+Pokaż, że to powszechny problem. Możesz odwołać się do:
+– historii twórcy oferty (jeśli wynika z danych),
+– efektów innych osób,
+– znanych faktów lub badań,
+– obserwacji: „większość rozwiązań jest tworzona przez ludzi, którzy nie rozumieją twojej sytuacji”.
 
-4. Us vs. Them – Pokaż kontrast między tym, co zawiodło (standardowe rozwiązania, konkurencja), a tym, co proponuje Twój klient. Możesz korzystać z sekcji "konkurencja" z danych ankiety, by pokazać realne przewagi tej oferty. Pokaż różnicę w podejściu, wartościach, skuteczności – subtelnie, bez hejtu.
+3. To nie Twoja wina  
+Zdejmij z odbiorcy ciężar winy. Nie mów: „nie jesteś winna” – pokaż to poprzez przekaz. Winne są systemy, rozwiązania, które nie były dopasowane.
 
-5. Dlaczego nasze podejście działa – W prostych słowach pokaż, co sprawia, że ta oferta naprawdę działa. Skorzystaj z danych takich jak:  
-- doświadczenie osoby, która stworzyła tę ofertę  
-- liczba klientów / praktyka  
-- konkretne elementy oferty  
-- kluczowe bóle i potrzeby odbiorcy
+4. Us vs. Them  
+Pokaż różnicę między tym, co zawiodło (standardowe rozwiązania, konkurencja), a podejściem twórcy oferty. Wykorzystaj dane o konkurencji, ale bez atakowania. Zbuduj subtelny kontrast: „oni skupiają się na..., my robimy...”.
 
-6. Jak to pomaga w bólu – Wytłumacz logicznie i obrazowo, jak to rozwiązanie redukuje ból odbiorcy. Opisz prosto: co się zmieni, dlaczego to ma sens, jak to wygląda w praktyce. Klient ma pomyśleć: „Rozumiem. To może naprawdę zadziałać".
+5. Dlaczego to działa  
+W prostych słowach pokaż, co sprawia, że to podejście działa. Użyj danych z oferty, doświadczenia twórcy, emocji klientów. Pamiętaj: piszesz jako twórca — nie używaj fraz typu „nasz program”, „nasze podejście”. Mów z osobistej perspektywy.
 
-7. Desire situation – Pokaż obraz nowego życia. Użyj wizualnych fraz („wyobraź sobie, że...", „jakby to było, gdybyś..."), ale nie przesadzaj. Ma być ciepło, realistycznie i inspirująco.
+6. Jak to pomaga w bólu  
+Wytłumacz obrazowo i logicznie, jak to rozwiązanie pomaga odbiorcy. Pokaż: co się zmienia, co staje się możliwe, jak wygląda przełom. Pisz prosto. Odbiorca ma pomyśleć: „To naprawdę ma sens”.
 
-8. Call to Action – Sprzedajesz tylko kolejny krok. Opisz go bardzo konkretnie: co odbiorca ma zrobić, co się stanie po kliknięciu, czego może się spodziewać. Nie pisz ogólnikowo.
+7. Desire situation  
+Zbuduj obraz nowego życia. Możesz używać wizualnych fraz typu „wyobraź sobie...”. Pokazuj zmianę jako realną, osiągalną i godną marzeń.
 
-9. W najgorszym wypadku / w najlepszym... (opcjonalnie) – Jeśli zostaje Ci miejsce: zakończ kontrastem. Pokaż, że nawet jeśli się nie zdecyduje – zyska coś. A jeśli tak – może zmienić życie.
+8. Call to Action  
+Zakończ bardzo konkretnym CTA, dopasowanym do celu reklamy. Nie pisz „umów się”, tylko dokładnie opisz, co się wydarzy: „kliknij w nagranie, a potem...”. Nie motywuj generycznie.  
+Jeśli zostaje Ci miejsce — zakończ kontrastem:  
+„W najgorszym wypadku..., w najlepszym...”
 
-ŚWIĘTA CZWÓRKA – DODATKOWE WSKAZÓWKI:
-Staraj się w naturalny sposób wplatać w tekst cztery kluczowe emocje: Nowość, Bezpieczeństwo, Łatwość, Wielkość – tzw. "Świętą Czwórkę". To one budują zaufanie, zainteresowanie i decyzję.
+---
 
-NOWOŚĆ  
-Używaj nowości, by odbiorca poczuł, że ma do czynienia z czymś całkowicie innym niż wszystko, co widział wcześniej. Reklama ma dawać powiew świeżości – coś innego niż kolejne "rozwiązanie z Internetu".  
-Słowa: nowy, autorski, przełomowy, zmieniający zasady gry, nigdy wcześniej, pierwszy raz, świeże podejście.
+WAŻNE ZASADY:
 
-BEZPIECZEŃSTWO  
-Zbuduj poczucie, że rozwiązanie jest sprawdzone, powtarzalne i przewidywalne. Pokaż, że efekty, które obiecujesz, są zgodne z tym, co już miało miejsce.  
-Frazy: widziałam to u dziesiątek osób, za każdym razem gdy robimy X, dzieje się Y, historia się powtarza, to rozwiązanie przeszło przez setki przypadków.
+– Nie pisz „nasz program”, „nasze podejście” – piszesz jako twórca oferty.  
+– Nie wymieniaj funkcji oferty (np. planów, raportów, konsultacji) – zamiast tego opisz, co one dają odbiorcy. Sprzedajesz benefity, nie funkcje.  
+– Każde zdanie musi wnosić nową wartość. Nie powtarzaj tego samego w innych słowach.  
+– CTA ma sprzedawać tylko kolejny krok, nie cały produkt.  
+– Styl: pośredni, ludzki, emocjonalny – bez narratora, bez cytatów z Instagrama.
 
-ŁATWOŚĆ  
-Pokaż, że wdrożenie tego rozwiązania nie wymaga ogromnego wysiłku ani wiedzy eksperckiej.  
-Frazy: proste, każdy może, wystarczy, nie musisz, krok po kroku, bez spiny, nawet jeśli próbowałaś wszystkiego.
+---
 
-WIELKOŚĆ  
-Pokaż, że to, co oferujesz, może mieć realny wpływ na całe życie odbiorcy. Nie chodzi o przesadę, tylko o pokazanie, że to nie jest kolejna opcja – tylko realna szansa na zmianę.  
-Pokaż: co się wydarzy dalej, benefit benefitu, jak wiele może się zmienić.
+ŚWIĘTA CZWÓRKA – DODATKOWE WZMOCNIENIE:
 
-DANE WEJŚCIOWE:
+Staraj się naturalnie wplatać 4 kluczowe emocje:
+
+Nowość – pokaż, że to podejście jest świeże, inne niż wszystko, co widział odbiorca do tej pory.  
+Bezpieczeństwo – pokaż, że to działało wcześniej, u innych, że jest przewidywalne.  
+Łatwość – pokaż, że wdrożenie tego nie wymaga wysiłku, że można zacząć prosto, nawet będąc zmęczonym.  
+Wielkość – pokaż, że ta zmiana może naprawdę odmienić życie – nie jako slogan, ale jako realna wartość.
+
+---
 
 HOOK:  
 ${bestHook}
