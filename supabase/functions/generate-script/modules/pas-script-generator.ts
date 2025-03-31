@@ -28,23 +28,19 @@ Limit: maksymalnie 1800 znaków (bez hooka).
 STRUKTURA SKRYPTU (PAS+):
 
 1. Rozwinięcie hooka  
-Pogłęb emocje zawarte w hooku. Użyj maksymalnie 2–3 zdań. Każde zdanie musi wnosić nową emocję, obraz lub myśl — nie powtarzaj tego samego w innych słowach. Odbiorca ma poczuć: „To dokładnie o mnie”.
+Pogłęb emocje — maks. 2–3 zdania. Każde wnosi nową emocję lub myśl. Nie parafrazuj, nie powtarzaj.
 
 2. Social proof  
-Pokaż, że to powszechny problem. Możesz odwołać się do:
-– historii twórcy oferty (jeśli wynika z danych),
-– efektów innych osób,
-– znanych faktów lub badań,
-– obserwacji: „większość rozwiązań jest tworzona przez ludzi, którzy nie rozumieją twojej sytuacji”.
+Pokaż, że to powszechny problem. Możesz użyć historii twórcy lub klientów, obserwacji, znanych faktów.
 
 3. To nie Twoja wina  
-Zdejmij z odbiorcy ciężar winy. Nie mów: „nie jesteś winna” – pokaż to poprzez przekaz. Winne są systemy, rozwiązania, które nie były dopasowane.
+Zdejmij z odbiorcy ciężar winy. Nie pisz wprost, pokaż przez przekaz, że zawiodły niedopasowane systemy.
 
 4. Us vs. Them  
-Pokaż różnicę między tym, co zawiodło (standardowe rozwiązania, konkurencja), a podejściem twórcy oferty. Wykorzystaj dane o konkurencji, ale bez atakowania. Zbuduj subtelny kontrast: „oni skupiają się na..., my robimy...”.
+Pokaż różnicę między tym, co zawiodło (standardowe rozwiązania, konkurencja), a podejściem twórcy oferty. Wykorzystaj dane o konkurencji, ale bez atakowania.
 
 5. Dlaczego to działa  
-W prostych słowach pokaż, co sprawia, że to podejście działa. Użyj danych z oferty, doświadczenia twórcy, emocji klientów. Pamiętaj: piszesz jako twórca — nie używaj fraz typu „nasz program”, „nasze podejście”. Mów z osobistej perspektywy.
+Wyjaśnij, co sprawia, że metoda działa — językiem twórcy, nie firmy.
 
 6. Jak to pomaga w bólu  
 Wytłumacz obrazowo i logicznie, jak to rozwiązanie pomaga odbiorcy. Pokaż: co się zmienia, co staje się możliwe, jak wygląda przełom. Pisz prosto. Odbiorca ma pomyśleć: „To naprawdę ma sens”.
@@ -60,12 +56,26 @@ Jeśli zostaje Ci miejsce — zakończ kontrastem:
 ---
 
 WAŻNE ZASADY:
+– Pisz jako twórca, nie mów „nasz program”.– Nie wymieniaj funkcji — pokazuj, co dają odbiorcy.
+– Nie powtarzaj emocji i myśli w różnych słowach.
+– Nie pisz cytatów, nie stosuj narratora.
+– Styl: prosty, prawdziwy, emocjonalny.
 
-– Nie pisz „nasz program”, „nasze podejście” – piszesz jako twórca oferty.  
-– Nie wymieniaj funkcji oferty (np. planów, raportów, konsultacji) – zamiast tego opisz, co one dają odbiorcy. Sprzedajesz benefity, nie funkcje.  
-– Każde zdanie musi wnosić nową wartość. Nie powtarzaj tego samego w innych słowach.  
-– CTA ma sprzedawać tylko kolejny krok, nie cały produkt.  
-– Styl: pośredni, ludzki, emocjonalny – bez narratora, bez cytatów z Instagrama.
+Pisz skrypty tak, jakbyś rozmawiał/a z jedną osobą — empatycznie, bez patosu, bez mentorskiego tonu. Nie użyj fraz motywacyjnych, ogólników, wielkich metafor ani haseł rodem z coachingu.
+
+Oto jak to ma brzmieć:
+
+Prawdziwie i ludzko. Tak, jakby twórca znał ból odbiorcy z własnego doświadczenia, nie z teorii.
+
+Obrazowo. Użyj codziennych scen z życia, które każdy może poczuć. Zamiast „odzyskasz kontrolę”, napisz: „znów zjesz coś bez liczenia kalorii i nie poczujesz winy”.
+
+Emocjonalnie, ale subtelnie. Unikaj dramatyzowania. Jedno mocne zdanie działa lepiej niż trzy przekombinowane.
+
+W rytmie. Dobrze brzmiące zdania to te, które mają flow. Nie rób bloków tekstu — użyj pauz, powtórzeń z sensem, kontrastu.
+
+Bezpośrednio, ale z czułością. Nie oceniaj. Nie mów: „wiesz, że coś jest nie tak” — raczej: „czujesz, że coś się zmieniło”.
+
+Taki styl ma być Twoim domyślnym stylem pisania reklam PAS.Nie rób „ładnych” tekstów. Rób prawdziwe.
 
 ---
 
@@ -73,9 +83,9 @@ WAŻNE ZASADY:
 
 Staraj się naturalnie wplatać 4 kluczowe emocje:
 
-Nowość – pokaż, że to podejście jest świeże, inne niż wszystko, co widział odbiorca do tej pory.  
+Nowość – Żeby to podkreślić używaj słów : "Przełomowy", "Rewolucyjny", "Nowy", itd.
 Bezpieczeństwo – pokaż, że to działało wcześniej, u innych, że jest przewidywalne.  
-Łatwość – pokaż, że wdrożenie tego nie wymaga wysiłku, że można zacząć prosto, nawet będąc zmęczonym.  
+Łatwość – Żeby to podkreślić używaj słów : "krok po kroku", "każdy ...", "przewidywalny", itd.
 Wielkość – pokaż, że ta zmiana może naprawdę odmienić życie – nie jako slogan, ale jako realna wartość.
 
 ---
