@@ -5,7 +5,7 @@ import { GenerateScriptResponse } from './ai-agents-service';
 /**
  * Wersja utylity do generowania skryptów
  */
-export const SCRIPT_UTILS_VERSION = '1.12.0';
+export const SCRIPT_UTILS_VERSION = '1.13.0';
 
 /**
  * Generuje skrypt na podstawie szablonu i grupy docelowej
@@ -13,12 +13,14 @@ export const SCRIPT_UTILS_VERSION = '1.12.0';
 export async function generateScript(
   templateId: string,
   targetAudienceId: string,
-  advertisingGoal: string = ''
+  advertisingGoal: string = '',
+  hookIndex: number = 0
 ): Promise<GenerateScriptResponse> {
   console.log(`[script-utils v${SCRIPT_UTILS_VERSION}] Generowanie skryptu`, {
     templateId,
     targetAudienceId,
     advertisingGoal,
+    hookIndex
   });
 
   try {
@@ -28,6 +30,7 @@ export async function generateScript(
         templateId,
         targetAudienceId,
         advertisingGoal,
+        hookIndex,
         debugInfo: true
       },
     });
@@ -45,20 +48,15 @@ export async function generateScript(
     const response = data as GenerateScriptResponse;
     
     console.log(`[script-utils v${SCRIPT_UTILS_VERSION}] Skrypt wygenerowany pomyślnie`);
-    console.log(`[script-utils v${SCRIPT_UTILS_VERSION}] Najlepszy hook:`, response.bestHook || '(brak)');
-    
-    // Sprawdzamy, czy otrzymaliśmy zredagowany skrypt
-    if (response.debug?.rawScript) {
-      console.log(`[script-utils v${SCRIPT_UTILS_VERSION}] Otrzymano zredagowany skrypt`);
-      console.log(`[script-utils v${SCRIPT_UTILS_VERSION}] Oryginalny skrypt (fragment):`, 
-        response.debug.rawScript.substring(0, 100) + '...');
-      console.log(`[script-utils v${SCRIPT_UTILS_VERSION}] Zredagowany skrypt (fragment):`, 
-        response.script.substring(0, 100) + '...');
-    }
+    console.log(`[script-utils v${SCRIPT_UTILS_VERSION}] Wybrany hook (indeks ${hookIndex}):`, response.bestHook || '(brak)');
+    console.log(`[script-utils v${SCRIPT_UTILS_VERSION}] Liczba dostępnych hooków:`, response.allHooks?.length || 0);
     
     return {
       script: response.script || '',
       bestHook: response.bestHook || '',
+      allHooks: response.allHooks || [],
+      currentHookIndex: response.currentHookIndex || 0,
+      totalHooks: response.totalHooks || 0,
       debug: response.debug
     };
   } catch (error) {

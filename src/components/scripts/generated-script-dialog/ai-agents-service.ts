@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 /**
@@ -19,13 +20,15 @@ export interface HooksResponse {
 export interface GenerateScriptResponse {
   script: string;
   bestHook: string;
+  allHooks?: string[];
+  currentHookIndex?: number;
+  totalHooks?: number;
   debug?: {
     originalData: string;
     processedData: string;
     hookData: string;
     scriptData: string;
     advertisingGoal?: string;
-    rawScript?: string; // Dodajemy pole na oryginalny skrypt (przed redakcją)
   };
 }
 
@@ -192,11 +195,13 @@ export const generateScriptContent = async (
  */
 export const generateBasicScript = async (
   targetAudienceId: string,
-  templateId: string
+  templateId: string,
+  hookIndex: number = 0
 ): Promise<GenerateScriptResponse> => {
   try {
     console.log('Generowanie podstawowego skryptu dla:', templateId);
     console.log('ID grupy docelowej:', targetAudienceId);
+    console.log('Używam hooka o indeksie:', hookIndex);
     
     // Wywołanie funkcji Edge do generowania podstawowego skryptu z retry logic
     let attempts = 0;
@@ -209,6 +214,7 @@ export const generateBasicScript = async (
           body: {
             targetAudienceId,
             templateId,
+            hookIndex,
             debugInfo: true
           },
         });

@@ -1,18 +1,27 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Copy, Download, CheckCircle2, Info, Sparkles } from 'lucide-react';
+import { Copy, Download, CheckCircle2, Info } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface ScriptDisplayProps {
   script: string;
   bestHook: string;
+  hookIndex?: number;
+  totalHooks?: number;
   adStructure?: string;
   rawScript?: string;
 }
 
-const ScriptDisplay = ({ script, bestHook, adStructure = '', rawScript }: ScriptDisplayProps) => {
+const ScriptDisplay = ({ 
+  script, 
+  bestHook, 
+  hookIndex = 0, 
+  totalHooks = 0, 
+  adStructure = 'PAS', 
+  rawScript 
+}: ScriptDisplayProps) => {
   const [copied, setCopied] = useState(false);
   const [showRaw, setShowRaw] = useState(false);
 
@@ -43,20 +52,13 @@ const ScriptDisplay = ({ script, bestHook, adStructure = '', rawScript }: Script
   const getAdStructureDescription = () => {
     if (adStructure === 'PAS') {
       return 'Problem → Agitation → Solution';
-    } else if (adStructure === 'AIDA') {
-      return 'Attention → Interest → Desire → Action';
     }
     return '';
-  };
-
-  const toggleRawScript = () => {
-    setShowRaw(!showRaw);
   };
 
   const adStructureDescription = getAdStructureDescription();
 
   // Łączymy hook i skrypt do wyświetlenia
-  const fullScriptDisplay = `${bestHook}\n\n${showRaw && rawScript ? rawScript : script}`;
   const displayScript = showRaw && rawScript ? rawScript : script;
 
   return (
@@ -64,17 +66,6 @@ const ScriptDisplay = ({ script, bestHook, adStructure = '', rawScript }: Script
       <div className="bg-copywrite-teal/10 p-4 rounded-md border border-copywrite-teal/20">
         <div className="flex items-center justify-between mb-2">
           <h3 className="font-medium text-copywrite-teal">Szczegóły skryptu:</h3>
-          {rawScript && (
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="text-xs flex items-center gap-1" 
-              onClick={toggleRawScript}
-            >
-              <Sparkles className="h-3 w-3" />
-              {showRaw ? 'Pokaż wersję zredagowaną' : 'Pokaż wersję oryginalną'}
-            </Button>
-          )}
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           {adStructure && (
@@ -95,10 +86,9 @@ const ScriptDisplay = ({ script, bestHook, adStructure = '', rawScript }: Script
             </TooltipProvider>
           )}
           
-          {rawScript && (
-            <Badge variant="outline" className="bg-purple-100 text-purple-700 border-purple-300 flex items-center gap-1">
-              <Sparkles className="h-3 w-3" />
-              {showRaw ? 'Wersja oryginalna' : 'Wersja zredagowana'}
+          {totalHooks > 0 && (
+            <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300">
+              Hook {hookIndex + 1} z {totalHooks}
             </Badge>
           )}
         </div>

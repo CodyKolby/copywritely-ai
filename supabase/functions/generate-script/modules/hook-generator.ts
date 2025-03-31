@@ -1,6 +1,6 @@
 
 // Function for generating hooks based on processed audience data
-export async function generateHooks(hookData: string, openAIApiKey: string): Promise<{ allHooks: string; bestHook: string } | null> {
+export async function generateHooks(hookData: string, openAIApiKey: string): Promise<{ allHooks: string; rankedHooks: string[] } | null> {
   console.log('✏️ Generuję hooki reklamowe na podstawie przetworzonych danych');
   
   try {
@@ -9,8 +9,8 @@ export async function generateHooks(hookData: string, openAIApiKey: string): Pro
 
 Twoim zadaniem jest:
 1. Stworzenie dokładnie 5 unikalnych hooków.
-2. Spośród nich — wybranie **jednego najlepszego**, który ma największy potencjał przyciągnięcia uwagi.
-3. Zwrot tylko tego najlepszego hooka jako finalnego outputu.
+2. Uszeregowanie ich od najlepszego (1) do najgorszego (5).
+3. Zwrot wszystkich hooków z ich rankingiem.
 
 ---
 
@@ -34,29 +34,28 @@ Twoim zadaniem jest:
 ### STYL I JĘZYK:
 1. Mów emocjami, nie logiką.  
 2. Unikaj ogólników – używaj precyzyjnych, prostych słów.  
-3. Używaj fraz, które odbiorca realnie mógłby pomyśleć („mam tego dość”, „ciągle zaczynam od nowa”, „to znowu nie działa”).  
+3. Używaj fraz, które odbiorca realnie mógłby pomyśleć („mam tego dość", „ciągle zaczynam od nowa", „to znowu nie działa").  
 4. Nie stylizuj się na narratora – pisz tak, jakbyś mówił do jednej osoby.  
-5. Unikaj pustych metafor i coachingu („odkryj swoją moc”, „poczuj swoje światło”) — zamiast tego opisuj konkretne sytuacje, które wynikają z danych z ankiety.
+5. Unikaj pustych metafor i coachingu („odkryj swoją moc", „poczuj swoje światło") — zamiast tego opisuj konkretne sytuacje, które wynikają z danych z ankiety.
 
 ---
 
 ### UNIKAJ I DOPRECYZUJ:
 – Hook nie może być zbyt ogólny ani oderwany od rzeczywistości — musi być **jasne, czego konkretnie dotyczy**: pracy, relacji, ciała, pieniędzy, codziennych frustracji lub marzeń, które wiążą się z ofertą.  
 – Jeśli nie da się zrozumieć, jaki problem porusza hook — przepisz go.  
-– Unikaj pustych haseł, które brzmią „ładnie”, ale nic nie mówią.  
+– Unikaj pustych haseł, które brzmią „ładnie", ale nic nie mówią.  
 – Pomyśl: **czy osoba, która faktycznie ma ten problem, poczuje się tu rozpoznana?** Jeśli nie — odrzuć ten hook.
 
 ---
 
-### JAK WYBRAĆ NAJLEPSZY HOOK:
-Z 5 stworzonych hooków wybierz ten, który:
-– Najlepiej trafia w konkretny ból lub frustrację opisany w danych,  
-– Jest najbardziej obrazowy i przyciąga uwagę,  
-– Porusza temat spójny z ofertą (na podstawie sekcji: oferta, problemy, pragnienia, korzyści),  
-– Brzmi jak coś, co odbiorca mógłby sam pomyśleć lub powiedzieć.
+### JAK OCENIAĆ HOOKI:
+Uszereguj 5 stworzonych hooków od najlepszego (1) do najgorszego (5), kierując się tymi kryteriami:
+– Najlepszym jest hook, który najlepiej trafia w konkretny ból lub frustrację opisany w danych.  
+– Drugim w kolejności ten, który jest najbardziej obrazowy i przyciągający uwagę.  
+– Kolejne hooki szereguj według spójności z ofertą i autentyczności.  
+– Najniżej oceń hook, który jest najbardziej ogólny lub najmniej emocjonalny.
 
-**Wyobraź sobie, że jesteś osobą opisaną w danych z ankiety. Masz realny problem, który chcesz w końcu rozwiązać. Czytasz 5 hooków. Który z nich brzmi jak Twoja myśl — i jednocześnie odnosi się do tematu, który naprawdę Cię dotyczy?**  
-Ten wybierz.
+**Wyobraź sobie, że jesteś osobą opisaną w danych z ankiety. Masz realny problem, który chcesz w końcu rozwiązać. Czytasz 5 hooków. Który z nich brzmi jak Twoja myśl — i jednocześnie odnosi się do tematu, który naprawdę Cię dotyczy? Ten umieść najwyżej.**
 
 ---
 
@@ -66,12 +65,17 @@ ${hookData}
 ---
 
 📤 Output:
-1. 5 hooków (ponumerowanych).  
-2. Na końcu:  
-**Najlepszy hook (do dalszego wykorzystania):** [tu wklej wybrany hook]
+Zwróć 5 ponumerowanych hooków, od najlepszego (1) do najgorszego (5).
+Format:
+
+1. [Najlepszy hook]
+2. [Drugi najlepszy hook]
+3. [Trzeci hook]
+4. [Czwarty hook]
+5. [Piąty hook]
 
 Nie tłumacz, nie analizuj, nie komentuj.  
-Zwracasz tylko hooki i finalny wybór.
+Zwracasz tylko ponumerowane hooki.
 `;
 
     console.log('✏️ Prompt dla Hook Generator przygotowany (fragment):', hookGeneratorPrompt.substring(0, 150) + '...');
@@ -104,27 +108,26 @@ Zwracasz tylko hooki i finalny wybór.
     console.log('✅ Generator hooków zakończył pracę, model:', data.model);
     
     const hooksText = data.choices[0].message.content;
-    console.log('✅ Wygenerowane hooki:', hooksText);
+    console.log('✅ Wygenerowane hooki z rankingiem:', hooksText);
     
-    // Extract the best hook from the text
-    const bestHookMatch = hooksText.match(/Najlepszy hook \(do dalszego wykorzystania\): (.*?)(?:\n|$)/);
-    let bestHook = '';
+    // Extract the ranked hooks from the text
+    const rankedHooks: string[] = [];
     
-    if (bestHookMatch && bestHookMatch[1]) {
-      bestHook = bestHookMatch[1].trim();
-    } else {
-      // Fallback: if no explicit best hook, use the first one
-      const firstHookMatch = hooksText.match(/1\.\s*(.*?)(?:\n|$)/);
-      if (firstHookMatch && firstHookMatch[1]) {
-        bestHook = firstHookMatch[1].trim();
+    // Extract hooks using regex to match lines that start with a number followed by a period
+    const hookRegex = /^\d+\.\s+(.+)$/gm;
+    let match;
+    
+    while ((match = hookRegex.exec(hooksText)) !== null) {
+      if (match[1]) {
+        rankedHooks.push(match[1].trim());
       }
     }
     
-    console.log('✅ Wyekstrahowany najlepszy hook:', bestHook);
+    console.log('✅ Wyekstrahowane hooki w kolejności rankingu:', rankedHooks);
     
     return {
       allHooks: hooksText,
-      bestHook: bestHook
+      rankedHooks: rankedHooks
     };
   } catch (error) {
     console.error('Błąd podczas generowania hooków:', error);

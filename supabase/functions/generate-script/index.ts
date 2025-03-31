@@ -6,7 +6,6 @@ import { formatAudienceDetails } from "./modules/formatter.ts";
 import { preprocessAudienceData, extractHookData, extractScriptData } from "./modules/preprocessor.ts";
 import { generateHooks } from "./modules/hook-generator.ts";
 import { generatePASScript } from "./modules/pas-script-generator.ts";
-import { editPASScript } from "./modules/pas-script-editor.ts";
 
 // Configuration
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
@@ -34,8 +33,15 @@ serve(async (req) => {
     const targetAudienceId = requestData.targetAudienceId;
     const advertisingGoal = requestData.advertisingGoal || '';
     const debugInfo = requestData.debugInfo !== false; // Domyślnie true
+    const hookIndex = requestData.hookIndex || 0; // Indeks hooka, domyślnie 0 (najlepszy hook)
     
-    console.log("Odebrane dane:", JSON.stringify({ templateId, targetAudienceId, advertisingGoal, debugInfo }));
+    console.log("Odebrane dane:", JSON.stringify({ 
+      templateId, 
+      targetAudienceId, 
+      advertisingGoal, 
+      debugInfo,
+      hookIndex
+    }));
     
     // Validate input data
     if (!templateId || !targetAudienceId) {
@@ -49,6 +55,7 @@ serve(async (req) => {
     console.log('Generowanie skryptu dla szablonu:', templateId);
     console.log('ID grupy docelowej:', targetAudienceId);
     console.log('Cel reklamy:', advertisingGoal);
+    console.log('Używam hooka o indeksie:', hookIndex);
     
     // Validate Service Role Key
     if (!supabaseServiceKey) {
@@ -180,20 +187,31 @@ serve(async (req) => {
       );
     }
     
-    console.log('✅ Wygenerowane hooki:');
+    console.log('✅ Wygenerowane hooki z rankingiem:');
     console.log(hooksResult.allHooks);
-    console.log('✅ Najlepszy hook:');
-    console.log(hooksResult.bestHook);
+    
+    // Sprawdź, czy mamy dostępny hook o żądanym indeksie
+    if (hookIndex >= hooksResult.rankedHooks.length) {
+      console.error(`Brak hooka o indeksie ${hookIndex}, maksymalny indeks to ${hooksResult.rankedHooks.length - 1}`);
+      return new Response(
+        JSON.stringify({ 
+          error: `Brak hooka o indeksie ${hookIndex}`,
+          availableHooks: hooksResult.rankedHooks.length,
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Wybierz hook na podstawie indeksu
+    const selectedHook = hooksResult.rankedHooks[hookIndex];
+    console.log(`✅ Wybrany hook (indeks ${hookIndex}):`, selectedHook);
     
     // KROK 3: Generujemy skrypt PAS
-    let generatedScript = '';
-    let finalScript = '';
-    
-    console.log('🖋️ Generuję skrypt PAS');
+    console.log('🖋️ Generuję skrypt PAS na podstawie wybranego hooka');
     
     // Generuj skrypt PAS
     const pasScript = await generatePASScript(
-      hooksResult.bestHook,
+      selectedHook,
       advertisingGoal,
       scriptData || '',
       openAIApiKey
@@ -201,41 +219,29 @@ serve(async (req) => {
     
     if (!pasScript) {
       console.error('Błąd podczas generowania skryptu PAS');
-      // Fallback - używamy ogólnych hooków
-      generatedScript = hooksResult.allHooks;
-      finalScript = generatedScript;
-    } else {
-      generatedScript = pasScript;
-      
-      // KROK 4: Redakcja skryptu PAS
-      console.log('🖋️ Redakcja skryptu PAS przez Redaktora PAS');
-      const editedPASScript = await editPASScript(
-        generatedScript,
-        advertisingGoal,
-        openAIApiKey
+      return new Response(
+        JSON.stringify({ 
+          error: 'Błąd podczas generowania skryptu PAS',
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
-      
-      if (!editedPASScript) {
-        console.error('Błąd podczas redakcji skryptu PAS');
-        // Fallback - używamy nieredagowanego skryptu PAS
-        finalScript = generatedScript;
-      } else {
-        finalScript = editedPASScript;
-        console.log('✅ Skrypt PAS po redakcji (fragment):', finalScript.substring(0, 150) + '...');
-      }
     }
+    
+    console.log('✅ Skrypt PAS wygenerowany (fragment):', pasScript.substring(0, 150) + '...');
     
     // Przygotowanie odpowiedzi
     const responseData = {
-      script: finalScript,
-      bestHook: hooksResult.bestHook,
+      script: pasScript,
+      bestHook: selectedHook,
+      allHooks: hooksResult.rankedHooks, // Przekazujemy wszystkie hooki, aby klient mógł wybrać następny
+      currentHookIndex: hookIndex,
+      totalHooks: hooksResult.rankedHooks.length,
       debug: debugInfo ? {
         originalData: audienceDescription,
         processedData: processedData,
         hookData: hookData,
         scriptData: scriptData,
         advertisingGoal: advertisingGoal,
-        rawScript: generatedScript, // Dodajemy surowy skrypt (przed redakcją)
       } : null
     };
     
