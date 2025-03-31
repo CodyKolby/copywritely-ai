@@ -1,4 +1,3 @@
-
 import { useEffect } from 'react';
 import { useAuth } from '@/contexts/auth/AuthContext';
 
@@ -16,7 +15,8 @@ import { sampleBriefTemplates } from '@/data/briefTemplates';
 import { useBriefGenerator } from '@/components/briefs/useBriefGenerator';
 
 const BriefGenerator = () => {
-  const { isPremium } = useAuth();
+  const { isPremium, profile } = useAuth();
+  
   const {
     selectedTemplate,
     generatedBrief,
@@ -29,8 +29,9 @@ const BriefGenerator = () => {
     handleGenerationTypeSubmit,
     handleAdObjectiveSubmit,
     resetBrief,
-    saveBriefAsProject,
-    projectSaved
+    projectSaved,
+    projectId,
+    handleViewProject
   } = useBriefGenerator(isPremium);
 
   useEffect(() => {
@@ -41,38 +42,38 @@ const BriefGenerator = () => {
     <div className="min-h-screen pt-24 pb-16 px-6">
       <div className="max-w-6xl mx-auto">
         <BriefGeneratorHeader />
-
+        
         {!isPremium && <PremiumFeatureAlert />}
-
+        
         {!selectedTemplate ? (
           <BriefTemplateGrid 
             templates={sampleBriefTemplates}
             onSelectTemplate={openGenerationDialog}
           />
         ) : (
-          <GeneratedBriefDisplay
+          <GeneratedBriefDisplay 
             isLoading={isLoading}
             generatedBrief={generatedBrief}
             onResetBrief={resetBrief}
-            saveBriefAsProject={saveBriefAsProject}
             projectSaved={projectSaved}
+            projectId={projectId}
+            onViewProject={handleViewProject}
           />
         )}
 
-        <NextStepsCard />
-
+        <NextStepsCard isPremium={isPremium} />
+        
         <GenerationTypeDialog
           open={dialogOpen}
           onOpenChange={setDialogOpen}
           onSubmit={handleGenerationTypeSubmit}
           isPremium={isPremium}
         />
-
+        
         <AdObjectiveDialog
           open={adObjectiveDialogOpen}
           onOpenChange={setAdObjectiveDialogOpen}
           onSubmit={handleAdObjectiveSubmit}
-          isPremium={isPremium}
         />
       </div>
     </div>

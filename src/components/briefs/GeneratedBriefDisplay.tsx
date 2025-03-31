@@ -3,37 +3,25 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import BriefCard, { Brief } from '@/components/BriefCard';
-import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 interface GeneratedBriefDisplayProps {
   isLoading: boolean;
   generatedBrief: Brief | null;
   onResetBrief: () => void;
-  saveBriefAsProject?: (brief: Brief) => Promise<void>;
   projectSaved?: boolean;
+  projectId?: string | null;
+  onViewProject?: () => void;
 }
 
 const GeneratedBriefDisplay = ({ 
   isLoading, 
   generatedBrief, 
   onResetBrief,
-  saveBriefAsProject,
-  projectSaved = false
-}: GeneratedBriefDisplayProps) => {
-  const [isSaving, setIsSaving] = useState(false);
-  
-  const handleSave = async () => {
-    if (!generatedBrief || !saveBriefAsProject) return;
-    
-    setIsSaving(true);
-    try {
-      await saveBriefAsProject(generatedBrief);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-  
+  projectSaved = false,
+  projectId = null,
+  onViewProject
+}: GeneratedBriefDisplayProps) => {  
   return (
     <div className="mb-12">
       <div className="flex justify-between items-center mb-8">
@@ -41,29 +29,13 @@ const GeneratedBriefDisplay = ({
           Twój wygenerowany brief
         </h2>
         <div className="flex gap-2">
-          {saveBriefAsProject && !projectSaved && (
+          {projectSaved && projectId && onViewProject && (
             <Button
-              onClick={handleSave}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-              disabled={isSaving || projectSaved}
+              onClick={onViewProject}
+              className="bg-copywrite-teal hover:bg-copywrite-teal-dark text-white"
             >
-              {isSaving ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Zapisywanie...
-                </>
-              ) : (
-                "Zapisz w projektach"
-              )}
-            </Button>
-          )}
-          
-          {saveBriefAsProject && projectSaved && (
-            <Button
-              disabled
-              className="bg-gray-200 text-gray-600 cursor-not-allowed"
-            >
-              Zapisano
+              Zobacz w projektach
+              <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           )}
           

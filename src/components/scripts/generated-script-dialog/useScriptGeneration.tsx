@@ -22,6 +22,7 @@ export const useScriptGeneration = (
   const [isGeneratingNewScript, setIsGeneratingNewScript] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [projectSaved, setProjectSaved] = useState(false);
+  const [projectId, setProjectId] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -53,6 +54,11 @@ export const useScriptGeneration = (
           setIsLoading(false);
           setGenerationCount(prevCount => prevCount + 1);
           setIsGeneratingNewScript(false);
+          
+          // Automatycznie zapisz skrypt po wygenerowaniu
+          if (userId && result.script) {
+            saveScriptToProject(result.script, result.bestHook || '', userId);
+          }
         }
       } catch (err) {
         console.error('Error during script generation:', err);
@@ -75,25 +81,26 @@ export const useScriptGeneration = (
     return () => {
       isMounted = false;
     };
-  }, [open, targetAudienceId, templateId, advertisingGoal, currentHookIndex, isGeneratingNewScript, generationCount, verifiedAudienceId]);
+  }, [open, targetAudienceId, templateId, advertisingGoal, currentHookIndex, isGeneratingNewScript, generationCount, verifiedAudienceId, userId]);
 
-  const handleSaveProject = async () => {
-    if (!userId || !generatedScript || isSaving || projectSaved) return;
+  const saveScriptToProject = async (scriptContent: string, hookText: string, uid: string) => {
+    if (!scriptContent || isSaving || projectSaved) return;
     
     setIsSaving(true);
     
     try {
       const savedProject = await saveScriptAsProject(
-        generatedScript,
-        currentHook,
+        scriptContent,
+        hookText,
         templateId,
-        userId
+        uid
       );
       
       if (savedProject) {
         setProjectSaved(true);
+        setProjectId(savedProject.id);
         toast.success('Skrypt zapisany', {
-          description: 'Skrypt został zapisany w Twoich projektach.',
+          description: 'Skrypt został automatycznie zapisany w Twoich projektach.',
           dismissible: true
         });
       } else {
@@ -127,6 +134,11 @@ export const useScriptGeneration = (
       setTotalHooks(result.totalHooks || 0);
       setIsLoading(false);
       setGenerationCount(prevCount => prevCount + 1);
+      
+      // Automatycznie zapisz skrypt po ponownym wygenerowaniu
+      if (userId && result.script) {
+        saveScriptToProject(result.script, result.bestHook || '', userId);
+      }
     } catch (err) {
       console.error('Error during retry:', err);
       setError('Nie udało się wygenerować skryptu. Spróbuj ponownie później.');
@@ -145,6 +157,12 @@ export const useScriptGeneration = (
     }
   };
 
+  const handleViewProject = () => {
+    if (projectId) {
+      window.location.href = `/copy-editor/${projectId}`;
+    }
+  };
+
   return {
     isLoading,
     generatedScript,
@@ -156,8 +174,9 @@ export const useScriptGeneration = (
     isGeneratingNewScript,
     isSaving,
     projectSaved,
-    handleSaveProject,
+    projectId,
     handleRetry,
-    handleGenerateWithNextHook
+    handleGenerateWithNextHook,
+    handleViewProject
   };
 };

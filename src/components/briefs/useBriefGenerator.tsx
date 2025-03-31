@@ -22,6 +22,7 @@ export const useBriefGenerator = (isPremium: boolean) => {
   const [guidanceText, setGuidanceText] = useState<string>('');
   const [selectedAdObjective, setSelectedAdObjective] = useState<string>('');
   const [projectSaved, setProjectSaved] = useState(false);
+  const [projectId, setProjectId] = useState<string | null>(null);
 
   const openGenerationDialog = (templateId: string) => {
     if (templateId === 'landing') {
@@ -97,11 +98,12 @@ ${brief.additionalInfo.map(info => `- ${info}`).join('\n')}
       `.trim();
       
       const title = `Brief: ${brief.title}`;
+      const id = uuidv4();
       
       const { data, error } = await supabase
         .from('projects')
         .insert({
-          id: uuidv4(),
+          id: id,
           user_id: user.id,
           title: title,
           content: briefContent,
@@ -119,17 +121,21 @@ ${brief.additionalInfo.map(info => `- ${info}`).join('\n')}
       
       console.log('Brief zapisany pomyślnie jako projekt:', data);
       setProjectSaved(true);
+      setProjectId(id);
       
       toast.success('Brief zapisany', {
-        description: 'Brief został zapisany w Twoich projektach.',
+        description: 'Brief został automatycznie zapisany w Twoich projektach.',
         dismissible: true
       });
+
+      return id;
     } catch (error) {
       console.error('Błąd podczas zapisywania briefu:', error);
       toast.error('Nie udało się zapisać briefu', {
         description: 'Wystąpił błąd podczas zapisywania projektu.',
         dismissible: true
       });
+      return null;
     }
   };
 
@@ -145,11 +151,17 @@ ${brief.additionalInfo.map(info => `- ${info}`).join('\n')}
     }
     
     setTimeout(() => {
-      setGeneratedBrief(sampleBriefs[templateId]);
+      const brief = sampleBriefs[templateId];
+      setGeneratedBrief(brief);
       setIsLoading(false);
       toast.success('Brief wygenerowany pomyślnie!', {
         dismissible: true
       });
+      
+      // Automatycznie zapisz brief jako projekt
+      if (user && brief) {
+        saveBriefAsProject(brief);
+      }
     }, 1500);
   };
 
@@ -178,6 +190,11 @@ ${brief.additionalInfo.map(info => `- ${info}`).join('\n')}
       toast.success('Brief wygenerowany pomyślnie!', {
         dismissible: true
       });
+      
+      // Automatycznie zapisz brief jako projekt
+      if (user && modifiedBrief) {
+        saveBriefAsProject(modifiedBrief);
+      }
     }, 1500);
   };
 
@@ -186,6 +203,13 @@ ${brief.additionalInfo.map(info => `- ${info}`).join('\n')}
     setGeneratedBrief(null);
     setSelectedAdObjective('');
     setProjectSaved(false);
+    setProjectId(null);
+  };
+
+  const handleViewProject = () => {
+    if (projectId) {
+      window.location.href = `/projekty`;
+    }
   };
 
   return {
@@ -200,7 +224,8 @@ ${brief.additionalInfo.map(info => `- ${info}`).join('\n')}
     handleGenerationTypeSubmit,
     handleAdObjectiveSubmit,
     resetBrief,
-    saveBriefAsProject,
-    projectSaved
+    projectSaved,
+    projectId,
+    handleViewProject
   };
 };

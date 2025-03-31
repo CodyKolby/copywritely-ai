@@ -29,9 +29,10 @@ const GeneratedScriptDialog = ({
     isGeneratingNewScript,
     isSaving,
     projectSaved,
-    handleSaveProject,
+    projectId,
     handleRetry,
-    handleGenerateWithNextHook
+    handleGenerateWithNextHook,
+    handleViewProject
   } = useScriptGeneration(open, targetAudienceId, templateId, advertisingGoal, user?.id);
 
   return (
@@ -60,10 +61,11 @@ const GeneratedScriptDialog = ({
             <ActionButtons 
               isSaving={isSaving}
               projectSaved={projectSaved}
-              onSave={handleSaveProject}
+              projectId={projectId}
               currentHookIndex={currentHookIndex}
               totalHooks={totalHooks}
               onGenerateNew={handleGenerateWithNextHook}
+              onViewProject={handleViewProject}
               isGeneratingNewScript={isGeneratingNewScript}
             />
           </>
