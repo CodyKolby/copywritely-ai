@@ -3,7 +3,11 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 
-const NextStepsCard = () => {
+interface NextStepsCardProps {
+  isPremium?: boolean;
+}
+
+const NextStepsCard = ({ isPremium }: NextStepsCardProps) => {
   return (
     <motion.div
       initial={{ opacity: 0 }}
