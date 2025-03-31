@@ -46,10 +46,12 @@ export async function generateScript(
     
     console.log(`[script-utils v${SCRIPT_UTILS_VERSION}] Skrypt wygenerowany pomyślnie`);
     console.log(`[script-utils v${SCRIPT_UTILS_VERSION}] Najlepszy hook:`, response.bestHook || '(brak)');
+    console.log(`[script-utils v${SCRIPT_UTILS_VERSION}] Struktura reklamy:`, response.adStructure || '(brak)');
     
     return {
       script: response.script || '',
       bestHook: response.bestHook || '',
+      adStructure: response.adStructure || '',
       debug: response.debug
     };
   } catch (error) {

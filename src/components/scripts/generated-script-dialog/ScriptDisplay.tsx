@@ -1,85 +1,79 @@
 
-import React from 'react';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { DialogFooter } from '@/components/ui/dialog';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Copy, Download, Star } from 'lucide-react';
-import { toast } from 'sonner';
+import { Copy, Download, CheckCircle2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface ScriptDisplayProps {
   script: string;
-  bestHook?: string;
+  bestHook: string;
+  adStructure?: string;
 }
 
-const ScriptDisplay = ({ script, bestHook }: ScriptDisplayProps) => {
-  const handleCopyToClipboard = () => {
-    navigator.clipboard.writeText(script);
-    toast.success('Skrypt skopiowany do schowka');
+const ScriptDisplay = ({ script, bestHook, adStructure = '' }: ScriptDisplayProps) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(script);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
   };
 
   const handleDownload = () => {
     const element = document.createElement('a');
-    const file = new Blob([script], {type: 'text/plain'});
+    const file = new Blob([script], { type: 'text/plain' });
     element.href = URL.createObjectURL(file);
-    element.download = `skrypt-${new Date().toISOString().slice(0, 10)}.txt`;
+    element.download = 'wygenerowany-skrypt.txt';
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
-    toast.success('Skrypt pobrany');
   };
 
-  // Format the display to highlight the best hook if provided
-  const formattedScript = React.useMemo(() => {
-    if (!bestHook) {
-      return script;
-    }
-
-    // Append the best hook at the end if it's not already there
-    let result = script;
-    
-    // Only append if the bestHook isn't already present in the formatted output
-    if (!result.includes('Najlepszy hook:') && !result.includes('Najlepszy hook (do dalszego wykorzystania):')) {
-      result += `\n\nNajlepszy hook: ${bestHook}`;
-    }
-    
-    return result;
-  }, [script, bestHook]);
-
   return (
-    <div className="py-4">
-      <ScrollArea className="h-[400px] rounded-md border p-4 bg-slate-50">
-        <pre className="whitespace-pre-wrap font-mono text-sm">
-          {formattedScript}
-        </pre>
-      </ScrollArea>
-      
+    <div className="space-y-6">
       {bestHook && (
-        <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md flex items-start gap-2">
-          <Star className="h-5 w-5 text-yellow-500 mt-0.5 flex-shrink-0" />
-          <div>
-            <p className="font-medium text-sm text-yellow-800">Najlepszy hook:</p>
-            <p className="text-yellow-900">{bestHook}</p>
-          </div>
+        <div className="bg-copywrite-teal/10 p-4 rounded-md border border-copywrite-teal/20">
+          <h3 className="font-medium text-copywrite-teal mb-2">Najlepszy Hook:</h3>
+          <p className="text-lg italic">{bestHook}</p>
+          
+          {adStructure && (
+            <div className="mt-3 flex items-center">
+              <span className="text-sm font-medium mr-2">Zalecana struktura reklamy:</span>
+              <Badge variant="outline" className="bg-copywrite-teal/20 text-copywrite-teal border-copywrite-teal/30">
+                {adStructure}
+              </Badge>
+            </div>
+          )}
         </div>
       )}
-      
-      <DialogFooter className="mt-6 flex justify-between sm:justify-end gap-4">
-        <Button 
-          variant="outline" 
-          className="flex items-center gap-2" 
-          onClick={handleCopyToClipboard}
-        >
-          <Copy className="h-4 w-4" />
-          Kopiuj do schowka
+
+      <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-[50vh] overflow-y-auto">
+        <pre className="whitespace-pre-wrap text-sm">{script}</pre>
+      </div>
+
+      <div className="flex justify-end space-x-3">
+        <Button variant="outline" onClick={handleCopy} className="flex items-center gap-2">
+          {copied ? (
+            <>
+              <CheckCircle2 className="h-4 w-4" />
+              Skopiowano
+            </>
+          ) : (
+            <>
+              <Copy className="h-4 w-4" />
+              Kopiuj
+            </>
+          )}
         </Button>
-        <Button 
-          className="bg-copywrite-teal hover:bg-copywrite-teal-dark flex items-center gap-2"
-          onClick={handleDownload}
-        >
+        <Button variant="default" onClick={handleDownload} className="flex items-center gap-2">
           <Download className="h-4 w-4" />
-          Pobierz skrypt
+          Pobierz
         </Button>
-      </DialogFooter>
+      </div>
     </div>
   );
 };

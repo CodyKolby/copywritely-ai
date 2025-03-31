@@ -182,11 +182,14 @@ serve(async (req) => {
     console.log(hooksResult.allHooks);
     console.log('✅ Najlepszy hook:');
     console.log(hooksResult.bestHook);
+    console.log('✅ Struktura reklamy:');
+    console.log(hooksResult.adStructure);
     
     // Przygotowanie odpowiedzi
     const responseData = {
       script: hooksResult.allHooks,
       bestHook: hooksResult.bestHook,
+      adStructure: hooksResult.adStructure || '',
       debug: debugInfo ? {
         originalData: audienceDescription,
         processedData: processedData,

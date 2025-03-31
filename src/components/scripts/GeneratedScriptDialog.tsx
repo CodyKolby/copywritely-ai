@@ -19,6 +19,7 @@ const GeneratedScriptDialog = ({
   const [isLoading, setIsLoading] = useState(true);
   const [generatedScript, setGeneratedScript] = useState<string>('');
   const [bestHook, setBestHook] = useState<string>('');
+  const [adStructure, setAdStructure] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [verifiedAudienceId, setVerifiedAudienceId] = useState<string | null>(null);
 
@@ -59,6 +60,7 @@ const GeneratedScriptDialog = ({
           if (isMounted) {
             setGeneratedScript(result.script);
             setBestHook(result.bestHook || '');
+            setAdStructure(result.adStructure || '');
             setIsLoading(false);
           }
         } else {
@@ -70,6 +72,7 @@ const GeneratedScriptDialog = ({
           if (isMounted) {
             setGeneratedScript(result.script);
             setBestHook(result.bestHook || '');
+            setAdStructure(result.adStructure || '');
             setIsLoading(false);
           }
         }
@@ -101,6 +104,7 @@ const GeneratedScriptDialog = ({
       const result = await generateScript(templateId, verifiedAudienceId || targetAudienceId, advertisingGoal);
       setGeneratedScript(result.script);
       setBestHook(result.bestHook || '');
+      setAdStructure(result.adStructure || '');
       setIsLoading(false);
     } catch (err) {
       console.error('Error during retry:', err);
@@ -136,7 +140,7 @@ const GeneratedScriptDialog = ({
             </button>
           </div>
         ) : (
-          <ScriptDisplay script={generatedScript} bestHook={bestHook} />
+          <ScriptDisplay script={generatedScript} bestHook={bestHook} adStructure={adStructure} />
         )}
       </DialogContent>
     </Dialog>

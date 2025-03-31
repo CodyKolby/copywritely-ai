@@ -1,6 +1,6 @@
 
 // Agent 2: Hook Generator
-export async function generateHooks(hookData: string, openAIApiKey: string): Promise<{ allHooks: string; bestHook: string } | null> {
+export async function generateHooks(hookData: string, openAIApiKey: string): Promise<{ allHooks: string; bestHook: string; adStructure?: string } | null> {
   console.log('✏️ Generuję hooki reklamowe na podstawie przetworzonych danych');
   
   try {
@@ -34,16 +34,16 @@ Twoim zadaniem jest:
 ### STYL I JĘZYK:
 1. Mów emocjami, nie logiką.  
 2. Unikaj ogólników – używaj precyzyjnych, prostych słów.  
-3. Używaj fraz, które odbiorca realnie mógłby pomyśleć („mam tego dość”, „ciągle zaczynam od nowa”, „to znowu nie działa”).  
+3. Używaj fraz, które odbiorca realnie mógłby pomyśleć („mam tego dość", „ciągle zaczynam od nowa", „to znowu nie działa").  
 4. Nie stylizuj się na narratora – pisz tak, jakbyś mówił do jednej osoby.  
-5. Unikaj pustych metafor i coachingu („odkryj swoją moc”, „poczuj swoje światło”) — zamiast tego opisuj konkretne sytuacje, które wynikają z danych z ankiety.
+5. Unikaj pustych metafor i coachingu („odkryj swoją moc", „poczuj swoje światło") — zamiast tego opisuj konkretne sytuacje, które wynikają z danych z ankiety.
 
 ---
 
 ### UNIKAJ I DOPRECYZUJ:
 – Hook nie może być zbyt ogólny ani oderwany od rzeczywistości — musi być **jasne, czego konkretnie dotyczy**: pracy, relacji, ciała, pieniędzy, codziennych frustracji lub marzeń, które wiążą się z ofertą.  
 – Jeśli nie da się zrozumieć, jaki problem porusza hook — przepisz go.  
-– Unikaj pustych haseł, które brzmią „ładnie”, ale nic nie mówią.  
+– Unikaj pustych haseł, które brzmią „ładnie", ale nic nie mówią.  
 – Pomyśl: **czy osoba, która faktycznie ma ten problem, poczuje się tu rozpoznana?** Jeśli nie — odrzuć ten hook.
 
 ---
@@ -60,6 +60,14 @@ Ten wybierz.
 
 ---
 
+Na podstawie wygenerowanych hooków, wybierz strukturę reklamy, która najlepiej pasuje do stylu komunikacji:
+
+– Jeśli hook opiera się na silnym bólu, emocjonalnej frustracji, zagubieniu lub osobistym cierpieniu – wybierz strukturę PAS.  
+– Jeśli hook bazuje na ciekawości, nowej możliwości, inspiracji lub zaskoczeniu – wybierz strukturę AIDA.
+
+Zastanów się, jaka forma lepiej rozwinie dany hook w dalszym skrypcie reklamowym.  
+Weź pod uwagę ton, motyw przewodni, typ emocji i styl językowy.
+
 Dane z ankiety:  
 ${hookData}
 
@@ -69,9 +77,11 @@ ${hookData}
 1. 5 hooków (ponumerowanych).  
 2. Na końcu:  
 **Najlepszy hook (do dalszego wykorzystania):** [tu wklej wybrany hook]
+3. Na samym końcu w nowej linii:  
+**Struktura reklamy:** [PAS lub AIDA]
 
 Nie tłumacz, nie analizuj, nie komentuj.  
-Zwracasz tylko hooki i finalny wybór.
+Zwracasz tylko hooki, finalny wybór i strukturę reklamy.
 `;
 
     console.log('✏️ Prompt dla Hook Generator przygotowany (fragment):', hookGeneratorPrompt.substring(0, 200) + '...');
@@ -134,9 +144,21 @@ Zwracasz tylko hooki i finalny wybór.
       }
     }
     
+    // Extract the ad structure (PAS or AIDA)
+    let adStructure = '';
+    const adStructureMatch = content.match(/Struktura reklamy: (PAS|AIDA)/);
+    
+    if (adStructureMatch && adStructureMatch[1]) {
+      adStructure = adStructureMatch[1].trim();
+      console.log('✅ Wyekstrahowana struktura reklamy:', adStructure);
+    } else {
+      console.warn('⚠️ Nie udało się wyekstrahować struktury reklamy, sprawdź format odpowiedzi.');
+    }
+    
     return {
       allHooks: content,
-      bestHook: bestHook
+      bestHook: bestHook,
+      adStructure: adStructure
     };
   } catch (error) {
     console.error('Błąd podczas generowania hooków:', error);
