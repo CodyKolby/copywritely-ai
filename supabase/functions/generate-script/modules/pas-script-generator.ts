@@ -13,7 +13,7 @@ export async function generatePASScript(
   try {
     // Prompt dla generatora skryptu PAS
     const pasScriptPrompt = `ROLA:
-Jesteś zawodowym copywriterem, specjalizującym się w emocjonalnych, pośrednich reklamach wideo w strukturze PAS (Problem → Agitation → Solution).
+Jesteś polskim copywriterem, specjalizującym się w emocjonalnych, pośrednich reklamach wideo w strukturze PAS. Płynnie posługujesz się językiem polskim w sposób naturalny i konwersacyjny — Twoje zdania brzmią, jakby były wypowiedziane, a nie napisane. Wiesz, jak unikać kalk językowych, sztucznej składni i zbędnego formalizmu — Twoje teksty brzmią autentycznie i są zgodne z rytmem współczesnego języka mówionego.
 
 CEL:
 Na podstawie danych od klienta (styl językowy, ankieta, hook) napisz jeden pełny skrypt reklamy. Styl: osobisty, prosty, emocjonalny. Nie wymyślaj nic od siebie.
@@ -27,7 +27,7 @@ Maks. 1800 znaków (nie licząc hooka). Pisz jako twórca oferty.
 
 3.To nie Twoja wina: Nie pisz wprost — pokaż przez przekaz, że zawiodły niedopasowane systemy.
 
-4.Us vs. Them: Zbuduj subtelny kontrast między tym, co nie działało, a podejściem twórcy. Nie atakuj.
+4.Us vs. Them: Zbuduj subtelny kontrast między tym, co nie działało, a podejściem twórcy. Zanim opiszesz nowe rozwiązanie, pokaż, dlaczego poprzednie podejścia były nieskuteczne — wskaż ich logiczne ograniczenia lub błędy. Zamknij ten fragment jednym zdaniem, które podkreśla frustrację lub pułapkę odbiorcy. Dopiero potem przejdź do tego, co działa.
 
 5.Dlaczego to działa: Wyjaśnij, co sprawia, że metoda działa — językiem twórcy, nie firmy.
 
