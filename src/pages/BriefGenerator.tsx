@@ -28,7 +28,9 @@ const BriefGenerator = () => {
     openGenerationDialog,
     handleGenerationTypeSubmit,
     handleAdObjectiveSubmit,
-    resetBrief
+    resetBrief,
+    saveBriefAsProject,
+    projectSaved
   } = useBriefGenerator(isPremium);
 
   useEffect(() => {
@@ -52,6 +54,8 @@ const BriefGenerator = () => {
             isLoading={isLoading}
             generatedBrief={generatedBrief}
             onResetBrief={resetBrief}
+            saveBriefAsProject={saveBriefAsProject}
+            projectSaved={projectSaved}
           />
         )}
 

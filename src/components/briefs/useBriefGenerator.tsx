@@ -4,10 +4,14 @@ import { toast } from 'sonner';
 import { Brief } from '@/components/BriefCard';
 import { sampleBriefs } from '@/data/briefTemplates';
 import { adObjectives } from '@/components/briefs/AdObjectiveDialog';
+import { supabase } from '@/integrations/supabase/client';
+import { v4 as uuidv4 } from 'uuid';
+import { useAuth } from '@/contexts/auth/AuthContext';
 
 type GenerationType = 'ai' | 'guided';
 
 export const useBriefGenerator = (isPremium: boolean) => {
+  const { user } = useAuth();
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [generatedBrief, setGeneratedBrief] = useState<Brief | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -17,6 +21,7 @@ export const useBriefGenerator = (isPremium: boolean) => {
   const [selectedGenerationType, setSelectedGenerationType] = useState<GenerationType>('ai');
   const [guidanceText, setGuidanceText] = useState<string>('');
   const [selectedAdObjective, setSelectedAdObjective] = useState<string>('');
+  const [projectSaved, setProjectSaved] = useState(false);
 
   const openGenerationDialog = (templateId: string) => {
     if (templateId === 'landing') {
@@ -68,10 +73,71 @@ export const useBriefGenerator = (isPremium: boolean) => {
     generateBriefWithObjective(currentTemplateId, selectedGenerationType, guidanceText, values.objective);
   };
 
+  const saveBriefAsProject = async (brief: Brief) => {
+    if (!user || !brief) return;
+    
+    console.log('Zapisywanie briefu jako projekt...');
+    
+    try {
+      // Przekształć brief na tekst do zapisania
+      const briefContent = `
+Tytuł: ${brief.title}
+
+Cel: ${brief.objective}
+
+Grupa docelowa: ${brief.audience}
+
+Główne przekazy:
+${brief.keyMessages.map(msg => `- ${msg}`).join('\n')}
+
+Wezwanie do działania: ${brief.callToAction}
+
+Dodatkowe informacje:
+${brief.additionalInfo.map(info => `- ${info}`).join('\n')}
+      `.trim();
+      
+      const title = `Brief: ${brief.title}`;
+      
+      const { data, error } = await supabase
+        .from('projects')
+        .insert({
+          id: uuidv4(),
+          user_id: user.id,
+          title: title,
+          content: briefContent,
+          status: 'Completed',
+          type: 'brief',
+          title_auto_generated: true
+        })
+        .select('id')
+        .single();
+      
+      if (error) {
+        console.error('Błąd zapisywania briefu:', error);
+        return;
+      }
+      
+      console.log('Brief zapisany pomyślnie jako projekt:', data);
+      setProjectSaved(true);
+      
+      toast.success('Brief zapisany', {
+        description: 'Brief został zapisany w Twoich projektach.',
+        dismissible: true
+      });
+    } catch (error) {
+      console.error('Błąd podczas zapisywania briefu:', error);
+      toast.error('Nie udało się zapisać briefu', {
+        description: 'Wystąpił błąd podczas zapisywania projektu.',
+        dismissible: true
+      });
+    }
+  };
+
   const generateBrief = (templateId: string, generationType: GenerationType, guidanceText: string) => {
     setIsLoading(true);
     setSelectedTemplate(templateId);
     setGeneratedBrief(null);
+    setProjectSaved(false);
     
     console.log('Generation type:', generationType);
     if (generationType === 'guided' && guidanceText) {
@@ -81,7 +147,7 @@ export const useBriefGenerator = (isPremium: boolean) => {
     setTimeout(() => {
       setGeneratedBrief(sampleBriefs[templateId]);
       setIsLoading(false);
-      toast.success('Brief generated successfully!', {
+      toast.success('Brief wygenerowany pomyślnie!', {
         dismissible: true
       });
     }, 1500);
@@ -91,6 +157,7 @@ export const useBriefGenerator = (isPremium: boolean) => {
     setIsLoading(true);
     setSelectedTemplate(templateId);
     setGeneratedBrief(null);
+    setProjectSaved(false);
     
     console.log('Generation type:', generationType);
     console.log('Ad objective:', objective);
@@ -108,7 +175,7 @@ export const useBriefGenerator = (isPremium: boolean) => {
       
       setGeneratedBrief(modifiedBrief);
       setIsLoading(false);
-      toast.success('Brief generated successfully!', {
+      toast.success('Brief wygenerowany pomyślnie!', {
         dismissible: true
       });
     }, 1500);
@@ -118,6 +185,7 @@ export const useBriefGenerator = (isPremium: boolean) => {
     setSelectedTemplate(null);
     setGeneratedBrief(null);
     setSelectedAdObjective('');
+    setProjectSaved(false);
   };
 
   return {
@@ -131,6 +199,8 @@ export const useBriefGenerator = (isPremium: boolean) => {
     openGenerationDialog,
     handleGenerationTypeSubmit,
     handleAdObjectiveSubmit,
-    resetBrief
+    resetBrief,
+    saveBriefAsProject,
+    projectSaved
   };
 };

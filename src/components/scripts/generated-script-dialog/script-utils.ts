@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { GenerateScriptResponse } from './ai-agents-service';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Wersja utylity do generowania skryptów
@@ -65,3 +66,104 @@ export async function generateScript(
     throw error;
   }
 }
+
+/**
+ * Zapisuje wygenerowany skrypt jako projekt
+ */
+export async function saveScriptAsProject(
+  script: string, 
+  hookText: string, 
+  templateId: string, 
+  user_id: string
+): Promise<{id: string, title: string} | null> {
+  if (!user_id || !script) {
+    console.error('[script-utils] Nie można zapisać skryptu: brak id użytkownika lub treści skryptu');
+    return null;
+  }
+  
+  // Generowanie tytułu na podstawie contentu
+  const title = generateTitleFromScript(script, hookText, templateId);
+  
+  try {
+    console.log('[script-utils] Zapisywanie skryptu jako projekt...', {
+      userId: user_id,
+      title
+    });
+    
+    const id = uuidv4();
+    
+    const { data, error } = await supabase
+      .from('projects')
+      .insert({
+        id,
+        user_id,
+        title,
+        content: script,
+        status: 'Completed',
+        type: 'script',
+        title_auto_generated: true
+      })
+      .select('id, title')
+      .single();
+    
+    if (error) {
+      console.error('[script-utils] Błąd zapisywania skryptu:', error);
+      return null;
+    }
+    
+    console.log('[script-utils] Skrypt zapisany pomyślnie jako projekt:', data);
+    return data;
+  } catch (error) {
+    console.error('[script-utils] Błąd podczas zapisywania skryptu:', error);
+    return null;
+  }
+}
+
+/**
+ * Generuje tytuł projektu na podstawie skryptu
+ */
+function generateTitleFromScript(
+  script: string,
+  hookText: string = '',
+  templateId: string = ''
+): string {
+  // Określenie typu skryptu na podstawie templateId
+  let scriptType = '';
+  switch (templateId) {
+    case 'pas':
+      scriptType = 'Skrypt PAS';
+      break;
+    case 'aida':
+      scriptType = 'Skrypt AIDA';
+      break;
+    case 'social':
+      scriptType = 'Skrypt Social Media';
+      break;
+    default:
+      scriptType = 'Skrypt';
+  }
+  
+  // Używamy fragmentu hooka jako części tytułu
+  let hookFragment = '';
+  if (hookText) {
+    // Wyciągnij pierwsze zdanie lub fragment hooka (maksymalnie 30 znaków)
+    const firstSentence = hookText.split(/[.!?]/, 1)[0].trim();
+    hookFragment = firstSentence.length > 30 
+      ? firstSentence.substring(0, 30) + '...'
+      : firstSentence;
+  }
+  
+  // Jeśli mamy fragment hooka, używamy go w tytule
+  if (hookFragment) {
+    return `${scriptType}: "${hookFragment}"`;
+  }
+  
+  // Jeśli nie mamy hooka, próbujemy wyciągnąć fragment z początku skryptu
+  const scriptStart = script.split(/[.!?]/, 1)[0].trim();
+  const scriptFragment = scriptStart.length > 30 
+    ? scriptStart.substring(0, 30) + '...'
+    : scriptStart;
+  
+  return `${scriptType}: "${scriptFragment}"`;
+}
+
