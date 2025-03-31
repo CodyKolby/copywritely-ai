@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 /**
  * Wersja utylity do generowania skryptów
  */
-export const SCRIPT_UTILS_VERSION = '1.13.2';
+export const SCRIPT_UTILS_VERSION = '1.14.0';
 
 /**
  * Generuje skrypt na podstawie szablonu i grupy docelowej
@@ -76,15 +76,15 @@ export async function saveScriptAsProject(
   templateId: string, 
   user_id: string
 ): Promise<{id: string, title: string} | null> {
-  if (!user_id || !script) {
-    console.error('[script-utils] Nie można zapisać skryptu: brak id użytkownika lub treści skryptu');
-    return null;
-  }
-  
-  // Generowanie tytułu na podstawie contentu
-  const title = generateTitleFromScript(script, hookText, templateId);
-  
   try {
+    if (!user_id || !script) {
+      console.error('[script-utils] Nie można zapisać skryptu: brak id użytkownika lub treści skryptu');
+      return null;
+    }
+    
+    // Generowanie tytułu na podstawie contentu
+    const title = generateTitleFromScript(script, hookText, templateId);
+    
     console.log('[script-utils] Zapisywanie skryptu jako projekt...', {
       userId: user_id,
       title
@@ -108,14 +108,14 @@ export async function saveScriptAsProject(
     
     if (error) {
       console.error('[script-utils] Błąd zapisywania skryptu:', error);
-      return null;
+      throw error;
     }
     
     console.log('[script-utils] Skrypt zapisany pomyślnie jako projekt:', data);
     return data;
   } catch (error) {
     console.error('[script-utils] Błąd podczas zapisywania skryptu:', error);
-    return null;
+    throw error; // Propagate the error so we can handle it in the calling function
   }
 }
 
@@ -138,6 +138,9 @@ function generateTitleFromScript(
       break;
     case 'social':
       scriptType = 'Skrypt Social Media';
+      break;
+    case 'ad':
+      scriptType = 'Skrypt reklamowy';
       break;
     default:
       scriptType = 'Skrypt';

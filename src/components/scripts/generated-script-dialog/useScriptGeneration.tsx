@@ -33,6 +33,7 @@ export const useScriptGeneration = (
       setIsLoading(true);
       setError(null);
       setProjectSaved(false);
+      setProjectId(null);
       
       try {
         console.log("Weryfikacja ID grupy docelowej:", targetAudienceId);
@@ -89,31 +90,31 @@ export const useScriptGeneration = (
     setIsSaving(true);
     
     try {
-      const savedProject = await saveScriptAsProject(
+      const result = await saveScriptAsProject(
         scriptContent,
         hookText,
         templateId,
         uid
       );
       
-      if (savedProject && savedProject.id) {
+      if (result && result.id) {
         setProjectSaved(true);
-        setProjectId(savedProject.id);
+        setProjectId(result.id);
         toast.success('Skrypt zapisany', {
           description: 'Skrypt został automatycznie zapisany w Twoich projektach.',
           dismissible: true
         });
       } else {
-        console.error('Niepoprawna odpowiedź po zapisie:', savedProject);
+        console.error('Niepoprawna odpowiedź po zapisie:', result);
         toast.error('Nie udało się zapisać skryptu', {
           description: 'Spróbuj ponownie później.',
           dismissible: true
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Błąd zapisywania projektu:', error);
       toast.error('Nie udało się zapisać skryptu', {
-        description: 'Wystąpił błąd podczas zapisywania projektu.',
+        description: error?.message || 'Wystąpił błąd podczas zapisywania projektu.',
         dismissible: true
       });
     } finally {
@@ -125,6 +126,7 @@ export const useScriptGeneration = (
     setIsLoading(true);
     setError(null);
     setProjectSaved(false);
+    setProjectId(null);
     
     try {
       const result = await generateScript(templateId, verifiedAudienceId || targetAudienceId, advertisingGoal, currentHookIndex);
@@ -152,6 +154,7 @@ export const useScriptGeneration = (
       setCurrentHookIndex(currentHookIndex + 1);
       setIsGeneratingNewScript(true);
       setProjectSaved(false);
+      setProjectId(null);
       console.log(`Generuję nowy skrypt z hookiem o indeksie ${currentHookIndex + 1}`);
     } else {
       toast.info('Wykorzystano już wszystkie dostępne hooki');

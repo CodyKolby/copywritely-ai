@@ -37,7 +37,7 @@ const GeneratedScriptDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px] max-h-[90vh]">
+      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-auto p-0">
         <DialogHeader 
           currentHookIndex={currentHookIndex}
           totalHooks={totalHooks}

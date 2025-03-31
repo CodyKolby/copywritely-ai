@@ -34,8 +34,10 @@ export const useProjects = (userId: string | undefined) => {
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
   const fetchProjects = async () => {
+    // If no userId, exit and reset loading state
     if (!userId) {
       setLoading(false);
+      setProjects([]);
       return;
     }
     

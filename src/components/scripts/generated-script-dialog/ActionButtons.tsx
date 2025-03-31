@@ -25,10 +25,10 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
   isGeneratingNewScript
 }) => {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 mt-6">
-      <div className="text-sm text-gray-500">
+    <div className="flex flex-wrap items-center justify-between gap-4 mt-6 bg-white rounded-b-lg p-4 border-t border-gray-100">
+      <div className="text-sm">
         {isSaving && (
-          <div className="flex items-center gap-2 text-gray-600">
+          <div className="flex items-center gap-2 text-amber-600">
             <Loader2 className="h-4 w-4 animate-spin" />
             <span>Zapisywanie...</span>
           </div>
