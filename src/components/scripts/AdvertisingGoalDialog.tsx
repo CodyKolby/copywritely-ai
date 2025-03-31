@@ -17,7 +17,7 @@ interface AdvertisingGoalDialogProps {
 
 const formSchema = z.object({
   advertisingGoal: z.string().min(10, {
-    message: "Proszę opisać cel reklamy w minimum 10 znakach",
+    message: "Proszę opisać następny krok klienta w minimum 10 znakach",
   }),
 });
 
@@ -36,9 +36,9 @@ const AdvertisingGoalDialog = ({ onSubmit, onBack, onCancel }: AdvertisingGoalDi
   return (
     <div className="space-y-6">
       <DialogHeader>
-        <DialogTitle className="text-2xl font-semibold">Cel reklamy</DialogTitle>
+        <DialogTitle className="text-2xl font-semibold">Następny krok klienta</DialogTitle>
         <DialogDescription>
-          Opisz jaki konkretny cel chcesz osiągnąć przy pomocy tej reklamy.
+          Opisz jaki konkretny krok klient musi wykonać po zobaczeniu reklamy.
         </DialogDescription>
       </DialogHeader>
 
@@ -50,14 +50,14 @@ const AdvertisingGoalDialog = ({ onSubmit, onBack, onCancel }: AdvertisingGoalDi
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center gap-2">
-                  Cel reklamy
-                  <div className="cursor-help text-gray-500 hover:text-gray-700" title="Opisz jaki cel chciałbyś osiągnąć przy pomocy tej reklamy">
+                  Jaki jest kolejny krok, który klient musi wykonać?
+                  <div className="cursor-help text-gray-500 hover:text-gray-700" title="Opisz konkretne działanie, które klient powinien podjąć po zobaczeniu reklamy">
                     <HelpCircle size={16} />
                   </div>
                 </FormLabel>
                 <FormControl>
                   <Textarea
-                    placeholder="Umówienie darmowej konsultacji na stronie internetowej"
+                    placeholder="Klient ma wejść na stronę przypiętą do reklamy a następnie umówić się na rozmowę"
                     className="min-h-[150px] resize-none"
                     {...field}
                   />
