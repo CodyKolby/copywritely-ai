@@ -7,7 +7,6 @@ import { preprocessAudienceData, extractHookData, extractScriptData } from "./mo
 import { generateHooks } from "./modules/hook-generator.ts";
 import { generatePASScript } from "./modules/pas-script-generator.ts";
 import { editPASScript } from "./modules/pas-script-editor.ts";
-import { generateAIDAScript } from "./modules/aida-script-generator.ts";
 
 // Configuration
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
@@ -185,81 +184,51 @@ serve(async (req) => {
     console.log(hooksResult.allHooks);
     console.log('✅ Najlepszy hook:');
     console.log(hooksResult.bestHook);
-    console.log('✅ Struktura reklamy:');
-    console.log(hooksResult.adStructure);
     
-    // KROK 3: W zależności od struktury reklamy, generujemy odpowiedni skrypt
+    // KROK 3: Generujemy skrypt PAS
     let generatedScript = '';
     let finalScript = '';
     
-    if (hooksResult.adStructure === 'PAS') {
-      console.log('🖋️ Struktura reklamy: PAS - generuję skrypt PAS');
-      
-      // Generuj skrypt PAS
-      const pasScript = await generatePASScript(
-        hooksResult.bestHook,
-        advertisingGoal,
-        scriptData || '',
-        openAIApiKey
-      );
-      
-      if (!pasScript) {
-        console.error('Błąd podczas generowania skryptu PAS');
-        // Fallback - używamy ogólnych hooków
-        generatedScript = hooksResult.allHooks;
-        finalScript = generatedScript;
-      } else {
-        generatedScript = pasScript;
-        
-        // KROK 4: Redakcja skryptu PAS
-        console.log('🖋️ Redakcja skryptu PAS przez Redaktora PAS');
-        const editedPASScript = await editPASScript(
-          generatedScript,
-          advertisingGoal,
-          openAIApiKey
-        );
-        
-        if (!editedPASScript) {
-          console.error('Błąd podczas redakcji skryptu PAS');
-          // Fallback - używamy nieredagowanego skryptu PAS
-          finalScript = generatedScript;
-        } else {
-          finalScript = editedPASScript;
-          console.log('✅ Skrypt PAS po redakcji (fragment):', finalScript.substring(0, 150) + '...');
-        }
-      }
-    } else if (hooksResult.adStructure === 'AIDA') {
-      console.log('🖋️ Struktura reklamy: AIDA - generuję skrypt AIDA');
-      
-      // Generuj skrypt AIDA
-      const aidaScript = await generateAIDAScript(
-        hooksResult.bestHook,
-        advertisingGoal,
-        scriptData || '',
-        openAIApiKey
-      );
-      
-      if (!aidaScript) {
-        console.error('Błąd podczas generowania skryptu AIDA');
-        // Fallback - używamy ogólnych hooków
-        generatedScript = hooksResult.allHooks;
-        finalScript = generatedScript;
-      } else {
-        generatedScript = aidaScript;
-        finalScript = generatedScript; // Na razie nie mamy redaktora AIDA
-      }
-    } else {
-      // Gdy struktura nie jest określona, używamy wygenerowanych hooków
-      console.log('🖋️ Struktura reklamy:', hooksResult.adStructure || 'nieokreślona', '- używam wygenerowanych hooków');
+    console.log('🖋️ Generuję skrypt PAS');
+    
+    // Generuj skrypt PAS
+    const pasScript = await generatePASScript(
+      hooksResult.bestHook,
+      advertisingGoal,
+      scriptData || '',
+      openAIApiKey
+    );
+    
+    if (!pasScript) {
+      console.error('Błąd podczas generowania skryptu PAS');
+      // Fallback - używamy ogólnych hooków
       generatedScript = hooksResult.allHooks;
       finalScript = generatedScript;
+    } else {
+      generatedScript = pasScript;
+      
+      // KROK 4: Redakcja skryptu PAS
+      console.log('🖋️ Redakcja skryptu PAS przez Redaktora PAS');
+      const editedPASScript = await editPASScript(
+        generatedScript,
+        advertisingGoal,
+        openAIApiKey
+      );
+      
+      if (!editedPASScript) {
+        console.error('Błąd podczas redakcji skryptu PAS');
+        // Fallback - używamy nieredagowanego skryptu PAS
+        finalScript = generatedScript;
+      } else {
+        finalScript = editedPASScript;
+        console.log('✅ Skrypt PAS po redakcji (fragment):', finalScript.substring(0, 150) + '...');
+      }
     }
     
     // Przygotowanie odpowiedzi
     const responseData = {
       script: finalScript,
       bestHook: hooksResult.bestHook,
-      adStructure: hooksResult.adStructure || '',
       debug: debugInfo ? {
         originalData: audienceDescription,
         processedData: processedData,

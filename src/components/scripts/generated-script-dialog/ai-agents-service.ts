@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 /**
@@ -20,7 +19,6 @@ export interface HooksResponse {
 export interface GenerateScriptResponse {
   script: string;
   bestHook: string;
-  adStructure?: string;
   debug?: {
     originalData: string;
     processedData: string;

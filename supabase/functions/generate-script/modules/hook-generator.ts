@@ -1,6 +1,6 @@
 
 // Function for generating hooks based on processed audience data
-export async function generateHooks(hookData: string, openAIApiKey: string): Promise<{ allHooks: string; bestHook: string; adStructure: string } | null> {
+export async function generateHooks(hookData: string, openAIApiKey: string): Promise<{ allHooks: string; bestHook: string } | null> {
   console.log('✏️ Generuję hooki reklamowe na podstawie przetworzonych danych');
   
   try {
@@ -11,14 +11,6 @@ CEL:
 1. Napisz 5 różnych hooków reklamowych (otwierających pytań lub stwierdzeń) do maks. 120 znaków każdy, które przyciągają uwagę i pokazują, że rozumiesz odbiorcę.
 
 2. Wybierz jeden najlepszy hook z tych pięciu i oznacz go jako "Najlepszy hook (do dalszego wykorzystania):"
-
-3. Na podstawie wygenerowanych hooków, wybierz strukturę reklamy, która najlepiej pasuje do stylu komunikacji:
-
-– Jeśli hook opiera się na silnym bólu, emocjonalnej frustracji, zagubieniu lub osobistym cierpieniu – wybierz strukturę PAS.  
-– Jeśli hook bazuje na ciekawości, nowej możliwości, inspiracji lub zaskoczeniu – wybierz strukturę PAS.
-
-Zastanów się, jaka forma lepiej rozwinie dany hook w dalszym skrypcie reklamowym.  
-Weź pod uwagę ton, motyw przewodni, typ emocji i styl językowy.
 
 WSKAZÓWKI:
 - Twórz pytania otwierające lub stwierdzenia, które natychmiast przyciągają uwagę – maksymalnie 120 znaków.
@@ -34,8 +26,7 @@ ${hookData}
 
 OUTPUT:
 Zwróć listę 5 hooków reklamowych, każdy w nowej linii, oddzielonych numerami.
-Na koniec wskaż najlepszy hook.
-Poniżej dodaj JEDNO SŁOWO określające strukturę reklamy: "PAS".`;
+Na koniec wskaż najlepszy hook.`;
 
     console.log('✏️ Prompt dla Hook Generator przygotowany (fragment):', hookGeneratorPrompt.substring(0, 150) + '...');
 
@@ -85,23 +76,9 @@ Poniżej dodaj JEDNO SŁOWO określające strukturę reklamy: "PAS".`;
     
     console.log('✅ Wyekstrahowany najlepszy hook:', bestHook);
     
-    // Extract the ad structure (PAS or AIDA)
-    const adStructureMatch = hooksText.match(/\n(PAS|AIDA)$/);
-    let adStructure = '';
-    
-    if (adStructureMatch && adStructureMatch[1]) {
-      adStructure = adStructureMatch[1].trim();
-      console.log('✅ Wyekstrahowana struktura reklamy:', adStructure);
-    } else {
-      // Fallback to PAS if no structure is explicitly mentioned
-      adStructure = 'PAS';
-      console.log('⚠️ Nie znaleziono struktury reklamy, używam domyślnej: PAS');
-    }
-    
     return {
       allHooks: hooksText,
-      bestHook: bestHook,
-      adStructure: adStructure
+      bestHook: bestHook
     };
   } catch (error) {
     console.error('Błąd podczas generowania hooków:', error);
