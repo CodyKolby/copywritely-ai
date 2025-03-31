@@ -6,6 +6,7 @@ import { formatAudienceDetails } from "./modules/formatter.ts";
 import { preprocessAudienceData, extractHookData, extractScriptData } from "./modules/preprocessor.ts";
 import { generateHooks } from "./modules/hook-generator.ts";
 import { generatePASScript } from "./modules/pas-script-generator.ts";
+import { generateAIDAScript } from "./modules/aida-script-generator.ts";
 
 // Configuration
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
@@ -207,8 +208,26 @@ serve(async (req) => {
       } else {
         generatedScript = pasScript;
       }
+    } else if (hooksResult.adStructure === 'AIDA') {
+      console.log('🖋️ Struktura reklamy: AIDA - generuję skrypt AIDA');
+      
+      // Generuj skrypt AIDA
+      const aidaScript = await generateAIDAScript(
+        hooksResult.bestHook,
+        advertisingGoal,
+        scriptData || '',
+        openAIApiKey
+      );
+      
+      if (!aidaScript) {
+        console.error('Błąd podczas generowania skryptu AIDA');
+        // Fallback - używamy ogólnych hooków
+        generatedScript = hooksResult.allHooks;
+      } else {
+        generatedScript = aidaScript;
+      }
     } else {
-      // Dla AIDA lub gdy struktura nie jest określona, używamy wygenerowanych hooków
+      // Gdy struktura nie jest określona, używamy wygenerowanych hooków
       console.log('🖋️ Struktura reklamy:', hooksResult.adStructure || 'nieokreślona', '- używam wygenerowanych hooków');
       generatedScript = hooksResult.allHooks;
     }

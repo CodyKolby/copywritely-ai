@@ -1,66 +1,18 @@
 
-// Agent 2: Hook Generator
-export async function generateHooks(hookData: string, openAIApiKey: string): Promise<{ allHooks: string; bestHook: string; adStructure?: string } | null> {
+// Function for generating hooks based on processed audience data
+export async function generateHooks(hookData: string, openAIApiKey: string): Promise<{ allHooks: string; bestHook: string; adStructure: string } | null> {
   console.log('✏️ Generuję hooki reklamowe na podstawie przetworzonych danych');
   
   try {
     // Prompt dla generatora hooków
-    const hookGeneratorPrompt = `Jesteś elitarnym copywriterem specjalizującym się w pisaniu emocjonalnych hooków reklamowych perfekcyjnie dopasowanych do oferty i grupy docelowej. Działasz wyłącznie na podstawie danych z ankiety. Nie tworzysz ogólników, nie wymyślasz nic od siebie — analizujesz dane i przekładasz je na język, który odbiorca mógłby sam wypowiedzieć w myślach.
+    const hookGeneratorPrompt = `Jesteś elitarnym copywriterem specjalizującym się w pisaniu emocjonalnych hooków reklamowych perfekcyjnie dopasowanych do oferty i grupy docelowej. Działasz wyłącznie na podstawie danych z ankiety. Nie wymyślasz nic od siebie – nie dodajesz wiedzy, której nie ma w danych.
 
-Twoim zadaniem jest:
-1. Stworzenie dokładnie 5 unikalnych hooków.
-2. Spośród nich — wybranie **jednego najlepszego**, który ma największy potencjał przyciągnięcia uwagi.
-3. Zwrot tylko tego najlepszego hooka jako finalnego outputu.
+CEL:
+1. Napisz 5 różnych hooków reklamowych (otwierających pytań lub stwierdzeń) do maks. 120 znaków każdy, które przyciągają uwagę i pokazują, że rozumiesz odbiorcę.
 
----
+2. Wybierz jeden najlepszy hook z tych pięciu i oznacz go jako "Najlepszy hook (do dalszego wykorzystania):"
 
-### CECHY KAŻDEGO HOOKA:
-– Jedno pełne zdanie (bez łączenia dwóch myśli przecinkiem lub myślnikiem).  
-– Trafia w jedną, konkretną emocję (ból, frustrację, pragnienie, tęsknotę).  
-– Pisany w 2. osobie liczby pojedynczej ("jeśli jesteś osobą, która...").  
-– Brzmi jak początek rozmowy, nie jak slogan czy zakończona wypowiedź.  
-– Nie zdradza oferty — prowokuje uwagę, zostawia niedosyt.  
-– Hook musi poruszać problem lub pragnienie, które bezpośrednio wiąże się z ofertą klienta.  
-  ➤ Informacje o ofercie znajdziesz w danych z ankiety – głównie w sekcjach:
-     • Główna oferta  
-     • Problemy klientów  
-     • Pragnienia klientów  
-     • Korzyści produktu/usługi  
-  ➤ Na podstawie tych sekcji określ, **jakie tematy są właściwe**, a które są niepowiązane z tym, co klient sprzedaje.  
-  ➤ Przykład: jeśli klient oferuje usługę marketingową, nie pisz o zdrowiu lub ciele. Jeśli klient oferuje wsparcie emocjonalne, nie pisz o zarabianiu pieniędzy.
-
----
-
-### STYL I JĘZYK:
-1. Mów emocjami, nie logiką.  
-2. Unikaj ogólników – używaj precyzyjnych, prostych słów.  
-3. Używaj fraz, które odbiorca realnie mógłby pomyśleć („mam tego dość", „ciągle zaczynam od nowa", „to znowu nie działa").  
-4. Nie stylizuj się na narratora – pisz tak, jakbyś mówił do jednej osoby.  
-5. Unikaj pustych metafor i coachingu („odkryj swoją moc", „poczuj swoje światło") — zamiast tego opisuj konkretne sytuacje, które wynikają z danych z ankiety.
-
----
-
-### UNIKAJ I DOPRECYZUJ:
-– Hook nie może być zbyt ogólny ani oderwany od rzeczywistości — musi być **jasne, czego konkretnie dotyczy**: pracy, relacji, ciała, pieniędzy, codziennych frustracji lub marzeń, które wiążą się z ofertą.  
-– Jeśli nie da się zrozumieć, jaki problem porusza hook — przepisz go.  
-– Unikaj pustych haseł, które brzmią „ładnie", ale nic nie mówią.  
-– Pomyśl: **czy osoba, która faktycznie ma ten problem, poczuje się tu rozpoznana?** Jeśli nie — odrzuć ten hook.
-
----
-
-### JAK WYBRAĆ NAJLEPSZY HOOK:
-Z 5 stworzonych hooków wybierz ten, który:
-– Najlepiej trafia w konkretny ból lub frustrację opisany w danych,  
-– Jest najbardziej obrazowy i przyciąga uwagę,  
-– Porusza temat spójny z ofertą (na podstawie sekcji: oferta, problemy, pragnienia, korzyści),  
-– Brzmi jak coś, co odbiorca mógłby sam pomyśleć lub powiedzieć.
-
-**Wyobraź sobie, że jesteś osobą opisaną w danych z ankiety. Masz realny problem, który chcesz w końcu rozwiązać. Czytasz 5 hooków. Który z nich brzmi jak Twoja myśl — i jednocześnie odnosi się do tematu, który naprawdę Cię dotyczy?**  
-Ten wybierz.
-
----
-
-Na podstawie wygenerowanych hooków, wybierz strukturę reklamy, która najlepiej pasuje do stylu komunikacji:
+3. Na podstawie wygenerowanych hooków, wybierz strukturę reklamy, która najlepiej pasuje do stylu komunikacji:
 
 – Jeśli hook opiera się na silnym bólu, emocjonalnej frustracji, zagubieniu lub osobistym cierpieniu – wybierz strukturę PAS.  
 – Jeśli hook bazuje na ciekawości, nowej możliwości, inspiracji lub zaskoczeniu – wybierz strukturę AIDA.
@@ -68,25 +20,26 @@ Na podstawie wygenerowanych hooków, wybierz strukturę reklamy, która najlepie
 Zastanów się, jaka forma lepiej rozwinie dany hook w dalszym skrypcie reklamowym.  
 Weź pod uwagę ton, motyw przewodni, typ emocji i styl językowy.
 
-Dane z ankiety:  
+WSKAZÓWKI:
+- Twórz pytania otwierające lub stwierdzenia, które natychmiast przyciągają uwagę – maksymalnie 120 znaków.
+- Najlepsze hooki bazują na emocjach, frustracjach, pragnieniach i najgłębszych potrzebach odbiorcy.
+- Odwołuj się do kluczowego bólu lub pragnienia – używaj dokładnych słów i zwrotów z sekcji „Styl językowy odbiorcy".
+- Używaj drugiej osoby („Ty", „Twoje"), buduj osobistą relację.
+- Uwzględnij doświadczenia codziennego życia odbiorcy.
+- Pytania i stwierdzenia powinny być proste, jednoznaczne i konkretne.
+- Pokaż, że rozumiesz odbiorcę.
+
+DANE Z ANKIETY:
 ${hookData}
 
----
+OUTPUT:
+Zwróć listę 5 hooków reklamowych, każdy w nowej linii, oddzielonych numerami.
+Na koniec wskaż najlepszy hook.
+Poniżej dodaj JEDNO SŁOWO określające strukturę reklamy: "PAS" lub "AIDA".`;
 
-📤 Output:
-1. 5 hooków (ponumerowanych).  
-2. Na końcu:  
-**Najlepszy hook (do dalszego wykorzystania):** [tu wklej wybrany hook]
-3. Na samym końcu w nowej linii:  
-**Struktura reklamy:** [PAS lub AIDA]
+    console.log('✏️ Prompt dla Hook Generator przygotowany (fragment):', hookGeneratorPrompt.substring(0, 150) + '...');
 
-Nie tłumacz, nie analizuj, nie komentuj.  
-Zwracasz tylko hooki, finalny wybór i strukturę reklamy.
-`;
-
-    console.log('✏️ Prompt dla Hook Generator przygotowany (fragment):', hookGeneratorPrompt.substring(0, 200) + '...');
-
-    // Wywołanie OpenAI API dla Hook Generator
+    // Wywołanie OpenAI API
     console.log('✏️ Wywołuję OpenAI API dla Hook Generator...');
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -105,10 +58,7 @@ Zwracasz tylko hooki, finalny wybór i strukturę reklamy.
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error('Błąd API OpenAI podczas generowania hooków:', {
-        status: response.status,
-        data: errorData
-      });
+      console.error('Błąd API OpenAI podczas generowania hooków:', errorData);
       return null;
     }
 
@@ -116,47 +66,40 @@ Zwracasz tylko hooki, finalny wybór i strukturę reklamy.
     const data = await response.json();
     console.log('✅ Generator hooków zakończył pracę, model:', data.model);
     
-    const content = data.choices[0].message.content;
-    console.log('✅ Wygenerowane hooki:', content);
+    const hooksText = data.choices[0].message.content;
+    console.log('✅ Wygenerowane hooki:', hooksText);
     
-    // Extract the best hook using regex - look for the pattern after "Najlepszy hook (do dalszego wykorzystania):"
+    // Extract the best hook from the text
+    const bestHookMatch = hooksText.match(/Najlepszy hook \(do dalszego wykorzystania\): (.*?)(?:\n|$)/);
     let bestHook = '';
-    const bestHookMatch = content.match(/Najlepszy hook \(do dalszego wykorzystania\): (.+?)(?:\n|$)/);
     
     if (bestHookMatch && bestHookMatch[1]) {
       bestHook = bestHookMatch[1].trim();
-      console.log('✅ Wyekstrahowany najlepszy hook:', bestHook);
     } else {
-      // Fallback - if we can't extract it with the expected format, 
-      // try to get the last line that might contain the best hook
-      const lines = content.split('\n').filter(line => line.trim().length > 0);
-      if (lines.length > 0) {
-        const lastLine = lines[lines.length - 1].trim();
-        if (lastLine.includes('Najlepszy hook')) {
-          bestHook = lastLine.replace(/Najlepszy hook.*?:/, '').trim();
-          console.log('✅ Wyekstrahowany najlepszy hook (alternatywna metoda):', bestHook);
-        }
-      }
-      
-      // If we still can't find it, just note that we couldn't extract it properly
-      if (!bestHook) {
-        console.warn('⚠️ Nie udało się wyekstrahować najlepszego hooka, sprawdź format odpowiedzi.');
+      // Fallback: if no explicit best hook, use the first one
+      const firstHookMatch = hooksText.match(/1\.\s*(.*?)(?:\n|$)/);
+      if (firstHookMatch && firstHookMatch[1]) {
+        bestHook = firstHookMatch[1].trim();
       }
     }
     
+    console.log('✅ Wyekstrahowany najlepszy hook:', bestHook);
+    
     // Extract the ad structure (PAS or AIDA)
+    const adStructureMatch = hooksText.match(/\n(PAS|AIDA)$/);
     let adStructure = '';
-    const adStructureMatch = content.match(/Struktura reklamy: (PAS|AIDA)/);
     
     if (adStructureMatch && adStructureMatch[1]) {
       adStructure = adStructureMatch[1].trim();
-      console.log('✅ Wyekstrahowana struktura reklamy:', adStructure);
     } else {
-      console.warn('⚠️ Nie udało się wyekstrahować struktury reklamy, sprawdź format odpowiedzi.');
+      // Fallback to PAS if no structure is explicitly mentioned
+      adStructure = 'PAS';
     }
     
+    console.log('✅ Wyekstrahowana struktura reklamy:', adStructure);
+    
     return {
-      allHooks: content,
+      allHooks: hooksText,
       bestHook: bestHook,
       adStructure: adStructure
     };
