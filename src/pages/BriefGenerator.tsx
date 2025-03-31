@@ -1,3 +1,4 @@
+
 import { useEffect } from 'react';
 import { useAuth } from '@/contexts/auth/AuthContext';
 
@@ -74,6 +75,7 @@ const BriefGenerator = () => {
           open={adObjectiveDialogOpen}
           onOpenChange={setAdObjectiveDialogOpen}
           onSubmit={handleAdObjectiveSubmit}
+          isPremium={isPremium}
         />
       </div>
     </div>

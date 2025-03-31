@@ -46,10 +46,10 @@ interface AdObjectiveDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (values: AdObjectiveFormValues) => void;
-  isPremium: boolean;
+  isPremium?: boolean; // Make isPremium optional with a default value
 }
 
-const AdObjectiveDialog = ({ open, onOpenChange, onSubmit, isPremium }: AdObjectiveDialogProps) => {
+const AdObjectiveDialog = ({ open, onOpenChange, onSubmit, isPremium = false }: AdObjectiveDialogProps) => {
   const adObjectiveForm = useForm<AdObjectiveFormValues>({
     resolver: zodResolver(adObjectiveSchema),
     defaultValues: {
