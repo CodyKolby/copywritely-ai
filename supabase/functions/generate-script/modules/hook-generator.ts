@@ -14,7 +14,7 @@ CEL:
 
 3. Na podstawie wygenerowanych hooków, wybierz strukturę reklamy, która najlepiej pasuje do stylu komunikacji:
 
-– Jeśli hook opiera się na silnym bólu, emocjonalnej frustracji, zagubieniu lub osobistym cierpieniu – wybierz strukturę PAS.  
+– Jeśli hook opiera się na silnym bólu, emocjonalnej frustracji, zagubieniu lub osobistym cierpieniu – wybierz strukturę AIDA.  
 – Jeśli hook bazuje na ciekawości, nowej możliwości, inspiracji lub zaskoczeniu – wybierz strukturę AIDA.
 
 Zastanów się, jaka forma lepiej rozwinie dany hook w dalszym skrypcie reklamowym.  
@@ -35,7 +35,7 @@ ${hookData}
 OUTPUT:
 Zwróć listę 5 hooków reklamowych, każdy w nowej linii, oddzielonych numerami.
 Na koniec wskaż najlepszy hook.
-Poniżej dodaj JEDNO SŁOWO określające strukturę reklamy: "PAS" lub "AIDA".`;
+Poniżej dodaj JEDNO SŁOWO określające strukturę reklamy: "AIDA".`;
 
     console.log('✏️ Prompt dla Hook Generator przygotowany (fragment):', hookGeneratorPrompt.substring(0, 150) + '...');
 
