@@ -21,24 +21,33 @@ Na podstawie danych od klienta (styl językowy, ankieta, hook) napisz jeden peł
 STRUKTURA SKRYPTU (PAS+) — zachowaj kolejność i limity
 Maks. 1800 znaków (nie licząc hooka). Pisz jako twórca oferty.
 
-Rozwinięcie hookaPogłęb emocje — maks. 2–3 zdania. Każde wnosi nową emocję lub myśl. Nie parafrazuj, nie powtarzaj.
+1.Rozwinięcie hooka: Pogłęb myśl rozpoczętą w hooku — maks. 2–3 zdania. Każde zdanie powinno rozwijać konkretny aspekt emocji poruszonej w hooku. Nie parafrazuj, nie przeskakuj tematu — zostań w emocji i ją rozbuduj.
 
-Social proofPokaż, że to powszechny problem. Możesz użyć historii twórcy lub klientów, obserwacji, znanych faktów.
+2.Social proof: Pokaż, że to powszechny problem. Możesz użyć historii twórcy lub klientów, obserwacji, znanych faktów.
 
-To nie Twoja wina - Nie pisz wprost — pokaż przez przekaz, że zawiodły niedopasowane systemy.
+3.To nie Twoja wina: Nie pisz wprost — pokaż przez przekaz, że zawiodły niedopasowane systemy.
 
-Us vs. Them - Zbuduj subtelny kontrast między tym, co nie działało, a podejściem twórcy. Nie atakuj.
+4.Us vs. Them: Zbuduj subtelny kontrast między tym, co nie działało, a podejściem twórcy. Nie atakuj.
 
-Dlaczego to działa - Wyjaśnij, co sprawia, że metoda działa — językiem twórcy, nie firmy.
+5.Dlaczego to działa: Wyjaśnij, co sprawia, że metoda działa — językiem twórcy, nie firmy.
 
-Jak to pomaga w bólu - Obrazowo i prosto: co się zmienia, co staje się możliwe. Pokaż przełom, nie funkcje.
+6.Jak to pomaga w bólu: Obrazowo i prosto: co się zmienia, co staje się możliwe. Pokaż przełom, nie funkcje.
 
-Desire situation- Zbuduj realny, emocjonalny obraz nowego życia. Dodaj 2 akapity, zanim przejdziesz do CTA.
+7.Desire situation: Zbuduj realny, emocjonalny obraz nowego życia. Dodaj 2 akapity, zanim przejdziesz do CTA.
 
-Call to Action - Zakończ konkretnym CTA prowadzącym do jednego kroku (np. obejrzenie wideo, konsultacja). Na koniec dodaj kontrast: „W najgorszym… W najlepszym…”
+Call to Action: Zakończ konkretnym CTA prowadzącym do jednego kroku (np. obejrzenie wideo, konsultacja). Na koniec dodaj kontrast: „W najgorszym… W najlepszym…”
 
 WAŻNE ZASADY:
-– Pisz jako twórca, nie mów „nasz program”.– Nie wymieniaj funkcji — pokazuj, co dają odbiorcy.– Nie powtarzaj emocji i myśli w różnych słowach.– Nie pisz cytatów, nie stosuj narratora.– Styl: prosty, prawdziwy, emocjonalny.– Nie zakładaj, że odbiorca czuje się w określony sposób. Zadawaj pytania lub stosuj warunkowe sformułowania: „Być może...”, „Czy zdarza Ci się...?”, „Możesz czuć, że...”.– Nie opisuj funkcji oferty („plan”, „konsultacja”, „ćwiczenia”, „moduły”, „narzędzie”). Zawsze pokazuj, co dzięki temu odbiorca czuje, robi lub zyskuje. Myśl: funkcja → efekt emocjonalny.– Dbaj o płynność między sekcjami. Każdy fragment powinien wynikać logicznie i emocjonalnie z poprzedniego, tworząc naturalny flow — nie urywaj wątków, nie przeskakuj nagle do kolejnej części.
+– Pisz jako twórca, nie mów „nasz program”.
+– Nie wymieniaj funkcji — pokazuj, co dają odbiorcy.
+– Nie powtarzaj emocji i myśli w różnych słowach.
+– Nie pisz cytatów, nie stosuj narratora.
+– Styl: prosty, prawdziwy, emocjonalny.
+– Nie zakładaj, że odbiorca czuje się w określony sposób. Zadawaj pytania lub stosuj warunkowe sformułowania: „Być może...”, „Czy zdarza Ci się...?”, „Możesz czuć, że...”.
+– Nie opisuj funkcji oferty („plan”, „konsultacja”, „ćwiczenia”, „moduły”, „narzędzie”). Zawsze pokazuj, co dzięki temu odbiorca czuje, robi lub zyskuje. Myśl: funkcja → efekt emocjonalny.
+– Dbaj o płynność między sekcjami. Każdy fragment powinien wynikać logicznie i emocjonalnie z poprzedniego, tworząc naturalny flow — nie urywaj wątków, nie przeskakuj nagle do kolejnej części.
+– Pisz językiem polskim — naturalnym, potocznym, emocjonalnym. Unikaj dosłownych tłumaczeń z angielskiego („a ja sama...”, „nie jesteś sama w tym...”). Zwróć uwagę na melodię polskich zdań: mówisz do kogoś, kto ma to usłyszeć, nie przeczytać w książce.
+– Każda reklama powinna być osadzona w temacie konkretnej oferty. Nie pisz ogólnie o zmęczeniu, ciele czy frustracji — używaj języka i emocji, które są charakterystyczne dla danego typu programu, produktu lub usługi.
 
 INSTRUKCJA STYLU PISANIA:
 
@@ -48,15 +57,15 @@ Oto jak to ma brzmieć:
 
 Prawdziwie i ludzko. Tak, jakby twórca znał ból odbiorcy z własnego doświadczenia, nie z teorii.
 
-Obrazowo. Użyj codziennych scen z życia, które każdy może poczuć. Zamiast „odzyskasz kontrolę”, napisz: „znów zjesz coś bez liczenia kalorii i nie poczujesz winy”.
+Obrazowo. Używaj codziennych scen z życia, które każdy może poczuć. Zamiast „odzyskasz kontrolę”, napisz: „znów zjesz coś bez liczenia kalorii i nie poczujesz winy”.
 
 Emocjonalnie, ale subtelnie. Unikaj dramatyzowania. Jedno mocne zdanie działa lepiej niż trzy przekombinowane.
 
-W rytmie. Dobrze brzmiące zdania to te, które mają flow. Nie rób bloków tekstu — użyj pauz, powtórzeń z sensem, kontrastu.
+W rytmie. Twoje zdania mogą być dłuższe, jeśli niosą emocje — ale pilnuj, by brzmiały naturalnie. Unikaj konstrukcji eseistycznych. Pisz tak, jak się mówi — z pauzami, przecinkami, naturalną melodią.
 
 Bezpośrednio, ale z czułością. Nie oceniaj. Nie mów: „wiesz, że coś jest nie tak” — raczej: „czujesz, że coś się zmieniło”.
 
-Taki styl ma być Twoim domyślnym stylem pisania reklam PAS.Nie rób „ładnych” tekstów. Rób prawdziwe.
+Taki styl ma być Twoim domyślnym stylem pisania reklam PAS. Nie rób „ładnych” tekstów. Rób prawdziwe.
 
 HOOK:  
 ${bestHook}
