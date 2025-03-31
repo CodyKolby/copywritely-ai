@@ -6,6 +6,7 @@ import { formatAudienceDetails } from "./modules/formatter.ts";
 import { preprocessAudienceData, extractHookData, extractScriptData } from "./modules/preprocessor.ts";
 import { generateHooks } from "./modules/hook-generator.ts";
 import { generatePASScript } from "./modules/pas-script-generator.ts";
+import { editPASScript } from "./modules/pas-script-editor.ts";
 import { generateAIDAScript } from "./modules/aida-script-generator.ts";
 
 // Configuration
@@ -189,6 +190,7 @@ serve(async (req) => {
     
     // KROK 3: W zależności od struktury reklamy, generujemy odpowiedni skrypt
     let generatedScript = '';
+    let finalScript = '';
     
     if (hooksResult.adStructure === 'PAS') {
       console.log('🖋️ Struktura reklamy: PAS - generuję skrypt PAS');
@@ -205,8 +207,26 @@ serve(async (req) => {
         console.error('Błąd podczas generowania skryptu PAS');
         // Fallback - używamy ogólnych hooków
         generatedScript = hooksResult.allHooks;
+        finalScript = generatedScript;
       } else {
         generatedScript = pasScript;
+        
+        // KROK 4: Redakcja skryptu PAS
+        console.log('🖋️ Redakcja skryptu PAS przez Redaktora PAS');
+        const editedPASScript = await editPASScript(
+          generatedScript,
+          advertisingGoal,
+          openAIApiKey
+        );
+        
+        if (!editedPASScript) {
+          console.error('Błąd podczas redakcji skryptu PAS');
+          // Fallback - używamy nieredagowanego skryptu PAS
+          finalScript = generatedScript;
+        } else {
+          finalScript = editedPASScript;
+          console.log('✅ Skrypt PAS po redakcji (fragment):', finalScript.substring(0, 150) + '...');
+        }
       }
     } else if (hooksResult.adStructure === 'AIDA') {
       console.log('🖋️ Struktura reklamy: AIDA - generuję skrypt AIDA');
@@ -223,18 +243,21 @@ serve(async (req) => {
         console.error('Błąd podczas generowania skryptu AIDA');
         // Fallback - używamy ogólnych hooków
         generatedScript = hooksResult.allHooks;
+        finalScript = generatedScript;
       } else {
         generatedScript = aidaScript;
+        finalScript = generatedScript; // Na razie nie mamy redaktora AIDA
       }
     } else {
       // Gdy struktura nie jest określona, używamy wygenerowanych hooków
       console.log('🖋️ Struktura reklamy:', hooksResult.adStructure || 'nieokreślona', '- używam wygenerowanych hooków');
       generatedScript = hooksResult.allHooks;
+      finalScript = generatedScript;
     }
     
     // Przygotowanie odpowiedzi
     const responseData = {
-      script: generatedScript,
+      script: finalScript,
       bestHook: hooksResult.bestHook,
       adStructure: hooksResult.adStructure || '',
       debug: debugInfo ? {
@@ -242,7 +265,8 @@ serve(async (req) => {
         processedData: processedData,
         hookData: hookData,
         scriptData: scriptData,
-        advertisingGoal: advertisingGoal
+        advertisingGoal: advertisingGoal,
+        rawScript: generatedScript, // Dodajemy surowy skrypt (przed redakcją)
       } : null
     };
     

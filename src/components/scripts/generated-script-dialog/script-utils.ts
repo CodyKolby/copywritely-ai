@@ -5,7 +5,7 @@ import { GenerateScriptResponse } from './ai-agents-service';
 /**
  * Wersja utylity do generowania skryptów
  */
-export const SCRIPT_UTILS_VERSION = '1.10.0';
+export const SCRIPT_UTILS_VERSION = '1.11.0';
 
 /**
  * Generuje skrypt na podstawie szablonu i grupy docelowej
@@ -47,6 +47,15 @@ export async function generateScript(
     console.log(`[script-utils v${SCRIPT_UTILS_VERSION}] Skrypt wygenerowany pomyślnie`);
     console.log(`[script-utils v${SCRIPT_UTILS_VERSION}] Najlepszy hook:`, response.bestHook || '(brak)');
     console.log(`[script-utils v${SCRIPT_UTILS_VERSION}] Struktura reklamy:`, response.adStructure || '(brak)');
+    
+    // Sprawdzamy, czy otrzymaliśmy zredagowany skrypt
+    if (response.debug?.rawScript) {
+      console.log(`[script-utils v${SCRIPT_UTILS_VERSION}] Otrzymano zredagowany skrypt`);
+      console.log(`[script-utils v${SCRIPT_UTILS_VERSION}] Oryginalny skrypt (fragment):`, 
+        response.debug.rawScript.substring(0, 100) + '...');
+      console.log(`[script-utils v${SCRIPT_UTILS_VERSION}] Zredagowany skrypt (fragment):`, 
+        response.script.substring(0, 100) + '...');
+    }
     
     return {
       script: response.script || '',

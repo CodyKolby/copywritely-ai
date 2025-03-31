@@ -26,6 +26,8 @@ export interface GenerateScriptResponse {
     processedData: string;
     hookData: string;
     scriptData: string;
+    advertisingGoal?: string;
+    rawScript?: string; // Dodajemy pole na oryginalny skrypt (przed redakcją)
   };
 }
 
