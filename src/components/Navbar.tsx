@@ -53,11 +53,12 @@ const Navbar = () => {
       )}
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between">
-        <Link to="/" className="flex items-center space-x-2">
-          <span className="text-copywrite-teal text-2xl font-semibold tracking-tight">
-            Copywritely
-          </span>
-          <span className="text-copywrite-teal-dark text-lg">AI</span>
+        <Link to="/" className="flex items-center">
+          <img 
+            src="/lovable-uploads/eea4437e-d9f4-424c-b7c8-582734b56106.png" 
+            alt="Copility" 
+            className="h-9" 
+          />
         </Link>
 
         <nav className="hidden md:flex items-center space-x-8">

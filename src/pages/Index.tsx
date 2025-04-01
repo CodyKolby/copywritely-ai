@@ -91,7 +91,7 @@ const Index = () => {
     <div className="min-h-screen flex flex-col">
       {/* Version Indicator - Only for testing purposes */}
       <div className="fixed bottom-2 right-2 z-50 bg-copywrite-teal text-white text-xs px-2 py-1 rounded-md opacity-70">
-        v1.0.8 - Added social proof counters
+        v1.0.9 - Updated features section
       </div>
       
       {/* Hero Section */}
@@ -160,47 +160,47 @@ const Index = () => {
         </motion.div>
       </section>
 
-      {/* Features Section with white background */}
-      <section className="py-20 px-6 bg-white text-gray-900">
-        <div className="max-w-6xl mx-auto">
+      {/* Features Section with white background - Expanded to take more space */}
+      <section className="py-32 px-6 bg-white text-gray-900">
+        <div className="max-w-7xl mx-auto">
           <motion.div 
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.7 }}
-            className="grid grid-cols-1 md:grid-cols-3 gap-8"
+            className="grid grid-cols-1 md:grid-cols-3 gap-12"
           >
-            {/* Card 1 */}
-            <div className="flex flex-col items-center text-center p-6 bg-white rounded-xl">
-              <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mb-6">
-                <Lightbulb className="h-12 w-12 text-copywrite-teal" />
+            {/* Card 1 - Updated title */}
+            <div className="flex flex-col items-center text-center p-8 bg-white rounded-xl h-full">
+              <div className="w-28 h-28 bg-green-50 rounded-full flex items-center justify-center mb-8">
+                <Lightbulb className="h-14 w-14 text-copywrite-teal" />
               </div>
-              <h3 className="text-xl font-bold mb-4">Pierwsze w Polsce</h3>
-              <p className="text-gray-600">
+              <h3 className="text-2xl font-bold mb-5">Reklamy gotowe w minutę</h3>
+              <p className="text-gray-600 text-lg">
                 Copility to pierwsze w Polsce w pełni zautomatyzowane narzędzie, które tworzy skrypty reklamowe podnoszące sprzedaż i budujące markę w mniej niż minutę.
               </p>
             </div>
 
-            {/* Card 2 */}
-            <div className="flex flex-col items-center text-center p-6 bg-white rounded-xl">
-              <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mb-6">
-                <Pen className="h-12 w-12 text-copywrite-teal" />
+            {/* Card 2 - Updated description */}
+            <div className="flex flex-col items-center text-center p-8 bg-white rounded-xl h-full">
+              <div className="w-28 h-28 bg-green-50 rounded-full flex items-center justify-center mb-8">
+                <Pen className="h-14 w-14 text-copywrite-teal" />
               </div>
-              <h3 className="text-xl font-bold mb-4">Zero pisania</h3>
-              <p className="text-gray-600">
-                Copility nie wymaga od Ciebie pisania nawet jednego zdania.
+              <h3 className="text-2xl font-bold mb-5">Zero pisania</h3>
+              <p className="text-gray-600 text-lg">
+                Copility nie wymaga od Ciebie pisania nawet jednego zdania. Całą pracę wykonuje za Ciebie nasz autorski agent <span className="font-bold">NeuroScript™</span>
               </p>
             </div>
 
-            {/* Card 3 */}
-            <div className="flex flex-col items-center text-center p-6 bg-white rounded-xl">
-              <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mb-6">
-                <Clipboard className="h-12 w-12 text-copywrite-teal" />
+            {/* Card 3 - Updated COPILITY to Copility */}
+            <div className="flex flex-col items-center text-center p-8 bg-white rounded-xl h-full">
+              <div className="w-28 h-28 bg-green-50 rounded-full flex items-center justify-center mb-8">
+                <Clipboard className="h-14 w-14 text-copywrite-teal" />
               </div>
-              <h3 className="text-xl font-bold mb-4">Prosta ścieżka</h3>
-              <p className="text-gray-600">
+              <h3 className="text-2xl font-bold mb-5">Prosta ścieżka</h3>
+              <p className="text-gray-600 text-lg">
                 Opisujesz swój produkt.<br />
-                COPILITY myśli za Ciebie.<br />
+                Copility myśli za Ciebie.<br />
                 Twój skrypt jest gotowy.<br />
                 Klikasz. Publikujesz. Sprzedajesz.
               </p>
