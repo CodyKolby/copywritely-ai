@@ -109,9 +109,9 @@ const Index = () => {
           >
             <div className="flex justify-center mb-8 md:mb-0 md:mr-16">
               <img 
-                src="/lovable-uploads/bb05d90b-551e-4dc2-94dd-5d4f5b8341ed.png" 
-                alt="Puzzle icon with transparent background" 
-                className="w-auto h-48 md:h-56"
+                src="/lovable-uploads/e0f26738-348e-4670-819a-87bce82ed476.png" 
+                alt="Puzzle icon illustration" 
+                className="w-auto h-64 md:h-72"
               />
             </div>
             <div className="text-center md:text-left max-w-md">
