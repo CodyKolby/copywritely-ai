@@ -33,7 +33,7 @@ const Index = () => {
     <div className="min-h-screen flex flex-col">
       {/* Version Indicator - Only for testing purposes */}
       <div className="fixed bottom-2 right-2 z-50 bg-copywrite-teal text-white text-xs px-2 py-1 rounded-md opacity-70">
-        v1.0.5 - Direct Edge URL fixed
+        v1.0.6 - Updated homepage copy
       </div>
       
       {/* Hero Section */}
@@ -45,35 +45,30 @@ const Index = () => {
             variants={staggerContainer}
             className="text-center mb-12"
           >
-            <motion.div variants={fadeInUp} className="inline-block mb-4">
-              <span className="bg-copywrite-teal-light text-copywrite-teal px-4 py-1.5 rounded-full text-sm font-medium">
-                Empowering Copywriters
-              </span>
-            </motion.div>
-            
             <motion.h1 
               variants={fadeInUp}
-              className="text-4xl md:text-6xl font-bold tracking-tight text-gray-900 mb-6"
+              className="text-4xl md:text-6xl font-bold tracking-tight text-gray-900 mb-6 leading-tight"
             >
-              Create compelling copy with <br className="hidden md:block" />
-              <span className="text-copywrite-teal">AI-powered guidance</span>
+              Skrypty reklamowe, które podnoszą sprzedaż i budują markę.
+              <br className="hidden md:block" />
+              <span className="text-copywrite-teal">Bez stresu. Bez myślenia. W 30 sekund.</span>
             </motion.h1>
             
             <motion.p 
               variants={fadeInUp}
               className="text-xl text-gray-600 max-w-3xl mx-auto mb-10"
             >
-              Copywritely AI helps beginners craft effective advertising scripts with 
-              creative brief generation and professional feedback.
+              Copility to AI stworzone przez topowych sprzedawców,
+              oparte na tysiącach kampanii i sprawdzonych strukturach, 
+              <span className="underline font-medium"> średnio zwiększając skuteczność sprzedaży o 30%.</span>
             </motion.p>
             
             <motion.div variants={fadeInUp} className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link to="/brief-generator">
                 <Button className="h-12 px-8 rounded-lg text-white bg-copywrite-teal hover:bg-copywrite-teal-dark transition-colors">
-                  Generate a Brief
+                  Wypróbuj za darmo
                 </Button>
               </Link>
-              {/* Removed the direct link to Copy Editor */}
             </motion.div>
           </motion.div>
         </div>
@@ -164,7 +159,7 @@ const Index = () => {
             </p>
             <Link to="/brief-generator">
               <Button className="h-12 px-8 rounded-lg bg-white text-copywrite-teal hover:bg-gray-100 transition-colors">
-                Get Started Now
+                Wypróbuj za darmo
               </Button>
             </Link>
           </motion.div>
@@ -175,7 +170,7 @@ const Index = () => {
       <footer className="py-10 px-6 bg-gray-50 mt-auto">
         <div className="max-w-6xl mx-auto text-center">
           <p className="text-gray-600">
-            © {new Date().getFullYear()} Copywritely AI. All rights reserved.
+            © {new Date().getFullYear()} Copility. All rights reserved.
           </p>
         </div>
       </footer>
