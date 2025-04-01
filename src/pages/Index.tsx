@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useEffect } from 'react';
-import { Smartphone, TrendingUp } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 
 const Index = () => {
   // Scroll to top on page load
@@ -109,7 +109,11 @@ const Index = () => {
           >
             <div className="flex justify-center order-last md:order-first">
               <div className="bg-copywrite-teal-light p-6 rounded-lg flex items-center justify-center">
-                <Smartphone className="h-16 w-16 text-copywrite-teal" />
+                <img 
+                  src="/lovable-uploads/718bf216-e60e-4c92-a59c-74a6e1428fde.png" 
+                  alt="Puzzle icon" 
+                  className="h-16 w-auto"
+                />
               </div>
             </div>
             <div className="space-y-3">
