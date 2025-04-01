@@ -9,23 +9,23 @@ export interface ScriptTemplate {
 export const scriptTemplates: ScriptTemplate[] = [
   { 
     id: 'email',
-    title: 'Marketing Email',
-    description: 'Create persuasive email script to promote products or services.'
+    title: 'Email sprzedażowy',
+    description: 'Wygeneruj skuteczny e-mail, który sprzedaje Twój produkt lub usługę bez nachalnego tonu.'
   },
   { 
     id: 'social',
-    title: 'Social Media Post',
-    description: 'Craft engaging script optimized for social media platforms.'
+    title: 'Post na social media',
+    description: 'Stwórz angażujący post dopasowany do Twojej grupy odbiorców, który przekona ich do Ciebie lub Twojego produktu.'
   },
   { 
     id: 'landing',
-    title: 'Landing Page',
-    description: 'Wkrótce dostępne - Create compelling script for conversion-focused landing pages.',
+    title: 'Strona internetowa',
+    description: 'Wygeneruj tekst, który skutecznie konwertuje odwiedzających Twoją strone w płacących klientów.',
     comingSoon: true
   },
   { 
     id: 'ad',
-    title: 'Digital Advertisement',
-    description: 'Write attention-grabbing script for digital marketing campaigns.'
+    title: 'Reklama internetowa',
+    description: 'Wygeneruj skrypt, który przyciąga uwagę i zwiększa skuteczność Twoich reklam nawet o 30%.'
   }
 ];
