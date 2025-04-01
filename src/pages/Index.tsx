@@ -1,3 +1,4 @@
+
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -98,46 +99,46 @@ const Index = () => {
             </div>
           </motion.div>
 
-          {/* Second row - with puzzle icon */}
+          {/* HYROS-style feature section with puzzle icon */}
           <motion.div
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.7, delay: 0.2 }}
-            className="grid md:grid-cols-2 gap-12 items-center mb-20 border border-gray-200 rounded-xl p-10 bg-white shadow-sm"
+            className="flex flex-col md:flex-row items-center justify-center max-w-4xl mx-auto mb-20 py-16"
           >
-            <div className="flex justify-center md:justify-end order-last md:order-first">
+            <div className="flex justify-center mb-8 md:mb-0 md:mr-16">
               <img 
                 src="/lovable-uploads/bb05d90b-551e-4dc2-94dd-5d4f5b8341ed.png" 
                 alt="Puzzle icon with transparent background" 
-                className="h-32 w-auto"
+                className="w-auto h-48 md:h-56"
               />
             </div>
-            <div className="flex items-center">
-              <h2 className="text-xl md:text-2xl font-bold text-gray-800">
+            <div className="text-center md:text-left max-w-md">
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
                 COPILITY nie wymaga od Ciebie pisania nawet jednego zdania.
               </h2>
             </div>
           </motion.div>
 
-          {/* Third row - with trending up icon */}
+          {/* HYROS-style feature section with trending up icon */}
           <motion.div
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.7, delay: 0.4 }}
-            className="grid md:grid-cols-2 gap-12 items-center border border-gray-200 rounded-xl p-10 bg-white shadow-sm"
+            className="flex flex-col-reverse md:flex-row items-center justify-center max-w-4xl mx-auto py-16"
           >
-            <div className="flex items-center">
-              <div className="space-y-3">
-                <p className="text-lg font-semibold text-gray-800">Opisujesz swój produkt</p>
-                <p className="text-lg font-semibold text-gray-800">COPILITY myśli za Ciebie</p>
-                <p className="text-lg font-semibold text-gray-800">Twój skrypt jest gotowy</p>
-                <p className="text-lg font-semibold text-gray-800">Klikasz. Publikujesz. Sprzedajesz.</p>
+            <div className="text-center md:text-left max-w-md mt-8 md:mt-0 md:mr-16">
+              <div className="space-y-4">
+                <p className="text-xl font-semibold text-gray-800">Opisujesz swój produkt</p>
+                <p className="text-xl font-semibold text-gray-800">COPILITY myśli za Ciebie</p>
+                <p className="text-xl font-semibold text-gray-800">Twój skrypt jest gotowy</p>
+                <p className="text-xl font-semibold text-gray-800">Klikasz. Publikujesz. Sprzedajesz.</p>
               </div>
             </div>
-            <div className="flex justify-center md:justify-end">
-              <TrendingUp className="h-32 w-32 text-copywrite-teal" />
+            <div className="flex justify-center">
+              <TrendingUp className="h-48 w-48 text-copywrite-teal" />
             </div>
           </motion.div>
         </div>
