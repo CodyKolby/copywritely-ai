@@ -37,7 +37,7 @@ export const adObjectives = [
 ];
 
 export const adObjectiveSchema = z.object({
-  objective: z.string()
+  objective: z.string().min(1, "Wybierz cel dla reklamy")
 });
 
 export type AdObjectiveFormValues = z.infer<typeof adObjectiveSchema>;
@@ -114,27 +114,19 @@ const AdObjectiveDialog = ({ open, onOpenChange, onSubmit, isPremium = false }: 
                               ? 'bg-copywrite-teal text-white' 
                               : 'bg-copywrite-teal-light text-copywrite-teal hover:bg-copywrite-teal hover:text-white'
                           }`}
+                          onClick={() => field.onChange(objective.id)}
                         >
                           <Label 
                             htmlFor={objective.id} 
-                            className={`font-medium cursor-pointer ${field.value === objective.id ? 'text-white' : ''}`}
+                            className={`font-medium cursor-pointer flex-1 ${field.value === objective.id ? 'text-white' : ''}`}
                           >
                             {objective.title}
                           </Label>
                           <RadioGroupItem 
                             value={objective.id} 
                             id={objective.id} 
-                            className="sr-only"
+                            className="data-[state=checked]:border-white data-[state=checked]:bg-white/20"
                           />
-                          <div className={`h-5 w-5 rounded-full border flex items-center justify-center ${
-                            field.value === objective.id 
-                              ? 'border-white bg-white/20' 
-                              : 'border-copywrite-teal'
-                          }`}>
-                            {field.value === objective.id && (
-                              <div className="h-3 w-3 rounded-full bg-white" />
-                            )}
-                          </div>
                         </div>
                       ))}
                     </RadioGroup>
