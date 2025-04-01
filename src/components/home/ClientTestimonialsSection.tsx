@@ -17,7 +17,7 @@ const testimonials: Testimonial[] = [
     quote: "Copility zrewolucjonizował sposób, w jaki tworzymy treści marketingowe. Dzięki temu narzędziu nasza konwersja wzrosła o 47% w zaledwie dwa miesiące.",
     author: "Piotr Nowak",
     role: "CEO, Marketing Masters",
-    image: "/lovable-uploads/79e674fd-6ba7-48f8-91ab-ec2a04fc3f2e.png"
+    image: "/lovable-uploads/43dd36cf-540c-47e9-8e5b-3daed10d8e97.png"
   },
   {
     id: 2,
@@ -30,7 +30,7 @@ const testimonials: Testimonial[] = [
 
 const ClientTestimonialsSection = () => {
   return (
-    <section className="py-20 bg-gray-900 text-white">
+    <section className="py-20 bg-white text-black">
       <div className="container px-4 mx-auto">
         <motion.h2 
           className="text-3xl md:text-4xl font-bold text-center mb-16"
@@ -60,14 +60,14 @@ const ClientTestimonialsSection = () => {
               </div>
               
               <div className="flex flex-col justify-center">
-                <p className="text-[#00ffaa] mb-6 text-xl font-medium">
+                <p className="text-black mb-6 text-xl font-medium">
                   "{testimonial.quote}"
                 </p>
                 <div className="flex items-center">
-                  <div className="w-8 h-0.5 bg-[#00ffaa] mr-3"></div>
+                  <div className="w-8 h-0.5 bg-copywrite-teal mr-3"></div>
                   <div>
                     <p className="font-bold text-lg">{testimonial.author}</p>
-                    <p className="text-gray-400">{testimonial.role}</p>
+                    <p className="text-gray-600">{testimonial.role}</p>
                   </div>
                 </div>
               </div>
