@@ -51,7 +51,7 @@ const HeroSection = () => {
           </motion.p>
           
           <motion.div variants={fadeInUp} className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link to="/brief-generator">
+            <Link to="/pricing">
               <Button className="h-12 px-8 rounded-lg text-white bg-copywrite-teal hover:bg-copywrite-teal-dark transition-colors">
                 Wypróbuj za darmo
               </Button>

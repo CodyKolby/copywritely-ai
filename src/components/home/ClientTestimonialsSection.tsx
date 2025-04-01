@@ -30,7 +30,7 @@ const testimonials: Testimonial[] = [
 
 const ClientTestimonialsSection = () => {
   return (
-    <section className="py-20 bg-white text-black">
+    <section className="py-20 bg-gray-50 text-black">
       <div className="container px-4 mx-auto">
         <div className="grid md:grid-cols-2 gap-10 md:gap-16">
           {testimonials.map((testimonial) => (
