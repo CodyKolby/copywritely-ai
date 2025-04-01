@@ -33,7 +33,7 @@ const Index = () => {
     <div className="min-h-screen flex flex-col">
       {/* Version Indicator - Only for testing purposes */}
       <div className="fixed bottom-2 right-2 z-50 bg-copywrite-teal text-white text-xs px-2 py-1 rounded-md opacity-70">
-        v1.0.6 - Updated homepage copy
+        v1.0.7 - Updated homepage features
       </div>
       
       {/* Hero Section */}
@@ -74,70 +74,89 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Features */}
-      <section className="py-20 px-6 bg-gray-50">
+      {/* New Features Section styled like the image */}
+      <section className="py-20 px-6 bg-gray-900 text-white">
         <div className="max-w-6xl mx-auto">
+          {/* First row */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            className="text-center mb-16"
+            transition={{ duration: 0.7 }}
+            className="grid md:grid-cols-2 gap-8 items-center mb-20 border border-gray-800 rounded-xl p-8 bg-gray-900/70"
           >
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Perfect your copywriting skills
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Our AI-powered platform provides everything you need to create professional-quality copy.
-            </p>
+            <div className="space-y-4">
+              <h2 className="text-2xl md:text-3xl font-bold leading-tight">
+                COPILITY to pierwsze w Polsce w pełni zautomatyzowane narzędzie, które tworzy skrypty reklamowe podnoszące sprzedaż i budujące markę w mniej niż minutę.
+              </h2>
+            </div>
+            <div className="flex justify-end">
+              <div className="bg-copywrite-teal/20 p-6 rounded-lg">
+                <div className="text-copywrite-teal font-mono text-3xl md:text-4xl font-bold">1 min</div>
+                <div className="text-copywrite-teal text-sm">Czas napisania skryptu</div>
+              </div>
+            </div>
           </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              {
-                title: "Generate Creative Briefs",
-                description: "Get AI-generated briefs for various marketing scenarios to practice your copywriting skills.",
-                icon: (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-copywrite-teal" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                  </svg>
-                )
-              },
-              {
-                title: "Write & Submit Copy",
-                description: "Draft your advertising copy in our editor and submit it for instant AI analysis and feedback.",
-                icon: (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-copywrite-teal" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                )
-              },
-              {
-                title: "Get Expert Analysis",
-                description: "Receive detailed feedback on your copy, with scores and suggestions for improvement.",
-                icon: (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-copywrite-teal" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                  </svg>
-                )
-              }
-            ].map((feature, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.1 }}
-                className="bg-white rounded-xl p-8 shadow-soft flex flex-col items-center text-center"
-              >
-                <div className="mb-6 p-3 bg-copywrite-teal-light rounded-full">
-                  {feature.icon}
+          {/* Second row */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.7, delay: 0.2 }}
+            className="grid md:grid-cols-2 gap-8 items-center mb-20 border border-gray-800 rounded-xl p-8 bg-gray-900/70"
+          >
+            <div className="flex justify-center md:order-last">
+              <div className="relative">
+                <div className="bg-copywrite-teal/20 rounded-lg p-6 grid grid-cols-2 gap-4">
+                  <div className="border-2 border-copywrite-teal/50 rounded-lg aspect-square flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-copywrite-teal" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                  </div>
+                  <div className="border-2 border-copywrite-teal/50 rounded-lg aspect-square flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-copywrite-teal" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </div>
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">{feature.title}</h3>
-                <p className="text-gray-600">{feature.description}</p>
-              </motion.div>
-            ))}
-          </div>
+                <div className="absolute -inset-10 bg-copywrite-teal/5 rounded-full blur-xl -z-10"></div>
+              </div>
+            </div>
+            <div className="space-y-3">
+              <h2 className="text-2xl md:text-3xl font-bold mb-2">
+                COPILITY nie wymaga od Ciebie pisania nawet jednego zdania.
+              </h2>
+              <p className="text-gray-400">
+                <span className="text-copywrite-teal font-medium">zero</span> pisania
+              </p>
+            </div>
+          </motion.div>
+
+          {/* Third row */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.7, delay: 0.4 }}
+            className="grid md:grid-cols-2 gap-8 items-center border border-gray-800 rounded-xl p-8 bg-gray-900/70"
+          >
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <p className="text-lg font-semibold">Opisujesz swój produkt</p>
+                <p className="text-lg font-semibold">COPILITY myśli za Ciebie</p>
+                <p className="text-lg font-semibold">Twój skrypt jest gotowy</p>
+                <p className="text-lg font-semibold">Klikasz. Publikujesz. Sprzedajesz.</p>
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <div className="bg-copywrite-teal/20 p-4 rounded-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-24 w-24 text-copywrite-teal" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 0l-2 2a1 1 0 101.414 1.414L8 10.414l1.293 1.293a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              </div>
+            </div>
+          </motion.div>
         </div>
       </section>
 
