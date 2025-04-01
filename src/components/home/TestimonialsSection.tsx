@@ -71,7 +71,7 @@ const TestimonialsSection = () => {
   useInterval(() => {
     if (!api) return;
     api.scrollNext();
-  }, 4000);
+  }, 8000);
 
   useEffect(() => {
     if (!api) return;
