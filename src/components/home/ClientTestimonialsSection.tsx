@@ -17,14 +17,14 @@ const testimonials: Testimonial[] = [
     quote: "Copility zrewolucjonizował sposób, w jaki tworzymy treści marketingowe. Dzięki temu narzędziu nasza konwersja wzrosła o 47% w zaledwie dwa miesiące.",
     author: "Piotr Nowak",
     role: "CEO, Marketing Masters",
-    image: "/lovable-uploads/da2cf7cd-0efe-4f32-bbb4-745465b0bc10.png"
+    image: "/lovable-uploads/fce3ac6c-a9e7-43a4-98c1-5e9f01f4fb79.png"
   },
   {
     id: 2,
     quote: "Odkąd zaczęliśmy korzystać z Copility, nasze kampanie w social mediach osiągają o 65% lepsze wyniki. To narzędzie dokładnie trafia w naszą grupę docelową.",
     author: "Michał Kowalski",
     role: "Digital Marketing Director, GrowthGenius",
-    image: "/lovable-uploads/c4f57be2-035e-45ff-ac74-f14cb7a4542d.png"
+    image: "/lovable-uploads/91b6bc7e-9450-4eb0-9ba8-63c1b5165afc.png"
   }
 ];
 
@@ -43,10 +43,13 @@ const ClientTestimonialsSection = () => {
               className="flex flex-col md:flex-row gap-6 md:gap-8"
             >
               <div className="flex-shrink-0">
-                <Avatar className="h-24 w-24 md:h-32 md:w-32 rounded-none">
-                  <AvatarImage src={testimonial.image} alt={testimonial.author} className="object-cover" />
-                  <AvatarFallback className="text-2xl bg-copywrite-teal">{testimonial.author.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                </Avatar>
+                <div className="h-full w-32 md:w-48">
+                  <img 
+                    src={testimonial.image} 
+                    alt={testimonial.author}
+                    className="w-full h-full object-cover object-center rounded-md"
+                  />
+                </div>
               </div>
               
               <div className="flex flex-col justify-center">
