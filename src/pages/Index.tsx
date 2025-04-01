@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useEffect } from 'react';
+import { Smartphone, TrendingUp } from 'lucide-react';
 
 const Index = () => {
   // Scroll to top on page load
@@ -74,7 +75,7 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Features Section with white background (changed from black) */}
+      {/* Features Section with white background */}
       <section className="py-20 px-6 bg-white text-gray-900">
         <div className="max-w-6xl mx-auto">
           {/* First row */}
@@ -90,7 +91,7 @@ const Index = () => {
                 COPILITY to pierwsze w Polsce w pełni zautomatyzowane narzędzie, które tworzy skrypty reklamowe podnoszące sprzedaż i budujące markę w mniej niż minutę.
               </h2>
             </div>
-            <div className="flex justify-end">
+            <div className="flex justify-center">
               <div className="bg-copywrite-teal-light p-6 rounded-lg">
                 <div className="text-copywrite-teal font-mono text-3xl md:text-4xl font-bold">1 min</div>
                 <div className="text-copywrite-teal text-sm">Czas napisania skryptu</div>
@@ -98,7 +99,7 @@ const Index = () => {
             </div>
           </motion.div>
 
-          {/* Second row - reversed order as requested */}
+          {/* Second row - with reversed order */}
           <motion.div
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
@@ -106,28 +107,15 @@ const Index = () => {
             transition={{ duration: 0.7, delay: 0.2 }}
             className="grid md:grid-cols-2 gap-8 items-center mb-20 border border-gray-200 rounded-xl p-8 bg-white shadow-sm"
           >
-            <div className="flex justify-center">
-              <div className="relative">
-                <div className="bg-copywrite-teal-light rounded-lg p-6 grid grid-cols-2 gap-4">
-                  <div className="border-2 border-copywrite-teal/50 rounded-lg aspect-square flex items-center justify-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-copywrite-teal" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                    </svg>
-                  </div>
-                  <div className="border-2 border-copywrite-teal/50 rounded-lg aspect-square flex items-center justify-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-copywrite-teal" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                  </div>
-                </div>
-                <div className="absolute -inset-10 bg-copywrite-teal/5 rounded-full blur-xl -z-10"></div>
+            <div className="flex justify-center order-last md:order-first">
+              <div className="bg-copywrite-teal-light p-6 rounded-lg flex items-center justify-center">
+                <Smartphone className="h-16 w-16 text-copywrite-teal" />
               </div>
             </div>
             <div className="space-y-3">
               <h2 className="text-xl md:text-2xl font-bold mb-2 text-gray-800">
                 COPILITY nie wymaga od Ciebie pisania nawet jednego zdania.
               </h2>
-              {/* Removed the "zero pisania" text as requested */}
             </div>
           </motion.div>
 
@@ -147,11 +135,9 @@ const Index = () => {
                 <p className="text-lg font-semibold text-gray-800">Klikasz. Publikujesz. Sprzedajesz.</p>
               </div>
             </div>
-            <div className="flex justify-end">
-              <div className="bg-copywrite-teal-light p-4 rounded-lg">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-24 w-24 text-copywrite-teal" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 0l-2 2a1 1 0 101.414 1.414L8 10.414l1.293 1.293a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
+            <div className="flex justify-center">
+              <div className="bg-copywrite-teal-light p-6 rounded-lg flex items-center justify-center">
+                <TrendingUp className="h-16 w-16 text-copywrite-teal" />
               </div>
             </div>
           </motion.div>
