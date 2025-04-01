@@ -110,8 +110,8 @@ const Index = () => {
             <div className="flex justify-center order-last md:order-first">
               <div className="bg-copywrite-teal-light p-6 rounded-lg flex items-center justify-center">
                 <img 
-                  src="/lovable-uploads/718bf216-e60e-4c92-a59c-74a6e1428fde.png" 
-                  alt="Puzzle icon" 
+                  src="/lovable-uploads/bb05d90b-551e-4dc2-94dd-5d4f5b8341ed.png" 
+                  alt="Puzzle icon with transparent background" 
                   className="h-16 w-auto"
                 />
               </div>
