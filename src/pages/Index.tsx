@@ -92,9 +92,9 @@ const Index = () => {
               </h2>
             </div>
             <div className="flex justify-center">
-              <div className="bg-copywrite-teal-light p-6 rounded-lg">
+              <div className="flex items-center rounded-lg">
                 <div className="text-copywrite-teal font-mono text-3xl md:text-4xl font-bold">1 min</div>
-                <div className="text-copywrite-teal text-sm">Czas napisania skryptu</div>
+                <div className="text-copywrite-teal text-sm ml-2">Czas napisania skryptu</div>
               </div>
             </div>
           </motion.div>
@@ -105,18 +105,18 @@ const Index = () => {
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.7, delay: 0.2 }}
-            className="grid md:grid-cols-2 gap-8 items-center mb-20 border border-gray-200 rounded-xl p-8 bg-white shadow-sm"
+            className="grid md:grid-cols-2 gap-2 items-center mb-20 border border-gray-200 rounded-xl p-8 bg-white shadow-sm"
           >
-            <div className="flex justify-center order-last md:order-first">
-              <div className="bg-copywrite-teal-light p-6 rounded-lg flex items-center justify-center">
+            <div className="flex justify-end order-last md:order-first">
+              <div className="flex items-center">
                 <img 
                   src="/lovable-uploads/bb05d90b-551e-4dc2-94dd-5d4f5b8341ed.png" 
                   alt="Puzzle icon with transparent background" 
-                  className="h-16 w-auto"
+                  className="h-24 w-auto"
                 />
               </div>
             </div>
-            <div className="space-y-3">
+            <div className="pl-3">
               <h2 className="text-xl md:text-2xl font-bold mb-2 text-gray-800">
                 COPILITY nie wymaga od Ciebie pisania nawet jednego zdania.
               </h2>
@@ -129,9 +129,9 @@ const Index = () => {
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.7, delay: 0.4 }}
-            className="grid md:grid-cols-2 gap-8 items-center border border-gray-200 rounded-xl p-8 bg-white shadow-sm"
+            className="grid md:grid-cols-2 gap-2 items-center border border-gray-200 rounded-xl p-8 bg-white shadow-sm"
           >
-            <div className="space-y-4">
+            <div className="space-y-2 pl-3">
               <div className="space-y-2">
                 <p className="text-lg font-semibold text-gray-800">Opisujesz swój produkt</p>
                 <p className="text-lg font-semibold text-gray-800">COPILITY myśli za Ciebie</p>
@@ -139,9 +139,9 @@ const Index = () => {
                 <p className="text-lg font-semibold text-gray-800">Klikasz. Publikujesz. Sprzedajesz.</p>
               </div>
             </div>
-            <div className="flex justify-center">
-              <div className="bg-copywrite-teal-light p-6 rounded-lg flex items-center justify-center">
-                <TrendingUp className="h-16 w-16 text-copywrite-teal" />
+            <div className="flex justify-end">
+              <div className="flex items-center">
+                <TrendingUp className="h-24 w-24 text-copywrite-teal" />
               </div>
             </div>
           </motion.div>
