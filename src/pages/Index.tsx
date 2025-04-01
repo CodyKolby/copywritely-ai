@@ -1,4 +1,3 @@
-
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -99,50 +98,46 @@ const Index = () => {
             </div>
           </motion.div>
 
-          {/* Second row - with reversed order */}
+          {/* Second row - with puzzle icon */}
           <motion.div
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.7, delay: 0.2 }}
-            className="grid md:grid-cols-2 gap-2 items-center mb-20 border border-gray-200 rounded-xl p-8 bg-white shadow-sm"
+            className="grid md:grid-cols-2 gap-12 items-center mb-20 border border-gray-200 rounded-xl p-10 bg-white shadow-sm"
           >
-            <div className="flex justify-end order-last md:order-first">
-              <div className="flex items-center">
-                <img 
-                  src="/lovable-uploads/bb05d90b-551e-4dc2-94dd-5d4f5b8341ed.png" 
-                  alt="Puzzle icon with transparent background" 
-                  className="h-24 w-auto"
-                />
-              </div>
+            <div className="flex justify-center md:justify-end order-last md:order-first">
+              <img 
+                src="/lovable-uploads/bb05d90b-551e-4dc2-94dd-5d4f5b8341ed.png" 
+                alt="Puzzle icon with transparent background" 
+                className="h-32 w-auto"
+              />
             </div>
-            <div className="pl-3">
-              <h2 className="text-xl md:text-2xl font-bold mb-2 text-gray-800">
+            <div className="flex items-center">
+              <h2 className="text-xl md:text-2xl font-bold text-gray-800">
                 COPILITY nie wymaga od Ciebie pisania nawet jednego zdania.
               </h2>
             </div>
           </motion.div>
 
-          {/* Third row */}
+          {/* Third row - with trending up icon */}
           <motion.div
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.7, delay: 0.4 }}
-            className="grid md:grid-cols-2 gap-2 items-center border border-gray-200 rounded-xl p-8 bg-white shadow-sm"
+            className="grid md:grid-cols-2 gap-12 items-center border border-gray-200 rounded-xl p-10 bg-white shadow-sm"
           >
-            <div className="space-y-2 pl-3">
-              <div className="space-y-2">
+            <div className="flex items-center">
+              <div className="space-y-3">
                 <p className="text-lg font-semibold text-gray-800">Opisujesz swój produkt</p>
                 <p className="text-lg font-semibold text-gray-800">COPILITY myśli za Ciebie</p>
                 <p className="text-lg font-semibold text-gray-800">Twój skrypt jest gotowy</p>
                 <p className="text-lg font-semibold text-gray-800">Klikasz. Publikujesz. Sprzedajesz.</p>
               </div>
             </div>
-            <div className="flex justify-end">
-              <div className="flex items-center">
-                <TrendingUp className="h-24 w-24 text-copywrite-teal" />
-              </div>
+            <div className="flex justify-center md:justify-end">
+              <TrendingUp className="h-32 w-32 text-copywrite-teal" />
             </div>
           </motion.div>
         </div>
