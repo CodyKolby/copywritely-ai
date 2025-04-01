@@ -17,14 +17,14 @@ const testimonials: Testimonial[] = [
     quote: "Copility zrewolucjonizował sposób, w jaki tworzymy treści marketingowe. Dzięki temu narzędziu nasza konwersja wzrosła o 47% w zaledwie dwa miesiące.",
     author: "Piotr Nowak",
     role: "CEO, Marketing Masters",
-    image: "/lovable-uploads/43dd36cf-540c-47e9-8e5b-3daed10d8e97.png"
+    image: "/lovable-uploads/da2cf7cd-0efe-4f32-bbb4-745465b0bc10.png"
   },
   {
     id: 2,
     quote: "Odkąd zaczęliśmy korzystać z Copility, nasze kampanie w social mediach osiągają o 65% lepsze wyniki. To narzędzie dokładnie trafia w naszą grupę docelową.",
     author: "Michał Kowalski",
     role: "Digital Marketing Director, GrowthGenius",
-    image: "/lovable-uploads/48781640-8f65-4003-86cb-a73da8c04476.png"
+    image: "/lovable-uploads/c4f57be2-035e-45ff-ac74-f14cb7a4542d.png"
   }
 ];
 
@@ -32,16 +32,6 @@ const ClientTestimonialsSection = () => {
   return (
     <section className="py-20 bg-white text-black">
       <div className="container px-4 mx-auto">
-        <motion.h2 
-          className="text-3xl md:text-4xl font-bold text-center mb-16"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          viewport={{ once: true }}
-        >
-          Zaufali nam
-        </motion.h2>
-
         <div className="grid md:grid-cols-2 gap-10 md:gap-16">
           {testimonials.map((testimonial) => (
             <motion.div 
