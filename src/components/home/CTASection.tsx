@@ -15,12 +15,12 @@ const CTASection = () => {
           className="bg-copywrite-teal rounded-2xl p-8 md:p-12 text-center"
         >
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-            Ready to improve your copywriting skills?
+            Przekonaj się, jak Copility może pomóc Twojemu biznesowi
           </h2>
           <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
-            Start with AI-generated briefs and get instant feedback on your writing.
+            Dołącz do 427+ zadowolonych użytkowników i zacznij tworzyć skuteczne skrypty sprzedażowe już dziś.
           </p>
-          <Link to="/brief-generator">
+          <Link to="/script-generator">
             <Button className="h-12 px-8 rounded-lg bg-white text-copywrite-teal hover:bg-gray-100 transition-colors">
               Wypróbuj za darmo
             </Button>
