@@ -1,8 +1,9 @@
+
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useEffect, useState, useRef } from 'react';
-import { TrendingUp } from 'lucide-react';
+import { Lightbulb, Pen, Clipboard } from 'lucide-react';
 
 const Index = () => {
   // Scroll to top on page load
@@ -162,67 +163,47 @@ const Index = () => {
       {/* Features Section with white background */}
       <section className="py-20 px-6 bg-white text-gray-900">
         <div className="max-w-6xl mx-auto">
-          {/* First row */}
-          <motion.div
+          <motion.div 
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.7 }}
-            className="grid md:grid-cols-2 gap-8 items-center mb-20 border border-gray-200 rounded-xl p-8 bg-white shadow-sm"
+            className="grid grid-cols-1 md:grid-cols-3 gap-8"
           >
-            <div className="space-y-4">
-              <h2 className="text-xl md:text-2xl font-bold leading-tight text-gray-800">
-                COPILITY to pierwsze w Polsce w pełni zautomatyzowane narzędzie, które tworzy skrypty reklamowe podnoszące sprzedaż i budujące markę w mniej niż minutę.
-              </h2>
-            </div>
-            <div className="flex justify-center">
-              <div className="flex items-center rounded-lg">
-                <div className="text-copywrite-teal font-mono text-3xl md:text-4xl font-bold">1 min</div>
-                <div className="text-copywrite-teal text-sm ml-2">Czas napisania skryptu</div>
+            {/* Card 1 */}
+            <div className="flex flex-col items-center text-center p-6 bg-white rounded-xl">
+              <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mb-6">
+                <Lightbulb className="h-12 w-12 text-copywrite-teal" />
               </div>
+              <h3 className="text-xl font-bold mb-4">Pierwsze w Polsce</h3>
+              <p className="text-gray-600">
+                Copility to pierwsze w Polsce w pełni zautomatyzowane narzędzie, które tworzy skrypty reklamowe podnoszące sprzedaż i budujące markę w mniej niż minutę.
+              </p>
             </div>
-          </motion.div>
 
-          {/* HYROS-style feature section with puzzle icon */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.7, delay: 0.2 }}
-            className="flex flex-col md:flex-row items-center justify-center max-w-4xl mx-auto mb-20 py-16"
-          >
-            <div className="flex justify-center mb-8 md:mb-0 md:mr-16">
-              <img 
-                src="/lovable-uploads/e0f26738-348e-4670-819a-87bce82ed476.png" 
-                alt="Puzzle icon illustration" 
-                className="w-auto h-64 md:h-72"
-              />
-            </div>
-            <div className="text-center md:text-left max-w-md">
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
-                COPILITY nie wymaga od Ciebie pisania nawet jednego zdania.
-              </h2>
-            </div>
-          </motion.div>
-
-          {/* HYROS-style feature section with trending up icon */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.7, delay: 0.4 }}
-            className="flex flex-col-reverse md:flex-row items-center justify-center max-w-4xl mx-auto py-16"
-          >
-            <div className="text-center md:text-left max-w-md mt-8 md:mt-0 md:mr-16">
-              <div className="space-y-4">
-                <p className="text-xl font-semibold text-gray-800">Opisujesz swój produkt</p>
-                <p className="text-xl font-semibold text-gray-800">COPILITY myśli za Ciebie</p>
-                <p className="text-xl font-semibold text-gray-800">Twój skrypt jest gotowy</p>
-                <p className="text-xl font-semibold text-gray-800">Klikasz. Publikujesz. Sprzedajesz.</p>
+            {/* Card 2 */}
+            <div className="flex flex-col items-center text-center p-6 bg-white rounded-xl">
+              <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mb-6">
+                <Pen className="h-12 w-12 text-copywrite-teal" />
               </div>
+              <h3 className="text-xl font-bold mb-4">Zero pisania</h3>
+              <p className="text-gray-600">
+                Copility nie wymaga od Ciebie pisania nawet jednego zdania.
+              </p>
             </div>
-            <div className="flex justify-center">
-              <TrendingUp className="h-48 w-48 text-copywrite-teal" />
+
+            {/* Card 3 */}
+            <div className="flex flex-col items-center text-center p-6 bg-white rounded-xl">
+              <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mb-6">
+                <Clipboard className="h-12 w-12 text-copywrite-teal" />
+              </div>
+              <h3 className="text-xl font-bold mb-4">Prosta ścieżka</h3>
+              <p className="text-gray-600">
+                Opisujesz swój produkt.<br />
+                COPILITY myśli za Ciebie.<br />
+                Twój skrypt jest gotowy.<br />
+                Klikasz. Publikujesz. Sprzedajesz.
+              </p>
             </div>
           </motion.div>
         </div>
