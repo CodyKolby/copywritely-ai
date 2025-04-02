@@ -1,12 +1,15 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { usePaymentHandler } from '@/hooks/usePaymentHandler';
 import { BillingToggle } from '@/components/pricing/BillingToggle';
 import { PricingCard } from '@/components/pricing/PricingCard';
 import { PricingFAQ } from '@/components/pricing/PricingFAQ';
 import { BillingCycle, getProPrice, getPricingLabel } from '@/components/pricing/pricing-utils';
 import { DebugDialog } from '@/components/pricing/DebugDialog';
+import { Button } from '@/components/ui/button';
+import { Mail } from 'lucide-react';
 
 const Pricing = () => {
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('annual');
@@ -93,6 +96,22 @@ const Pricing = () => {
             isLoading={isLoading}
             onSubscribe={onSubscribe}
           />
+        </motion.div>
+
+        {/* Contact us button */}
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4, duration: 0.5 }}
+          className="text-center mt-10"
+        >
+          <p className="text-gray-600 mb-3">Masz pytania dotyczące naszych planów?</p>
+          <Link to="/contact">
+            <Button variant="outline" className="gap-2">
+              <Mail size={16} />
+              Skontaktuj się z nami
+            </Button>
+          </Link>
         </motion.div>
 
         {/* FAQ Section */}

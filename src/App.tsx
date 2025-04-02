@@ -12,6 +12,7 @@ import ScriptGenerator from "./pages/ScriptGenerator";
 import CopyEditor from "./pages/CopyEditor";
 import About from "./pages/About";
 import Pricing from "./pages/Pricing";
+import Contact from "./pages/Contact";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import Projekty from "./pages/Projekty";
@@ -42,6 +43,7 @@ const App = () => (
                     <Route path="/copy-editor/:projectId" element={<CopyEditor />} />
                     <Route path="/about" element={<About />} />
                     <Route path="/pricing" element={<Pricing />} />
+                    <Route path="/contact" element={<Contact />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/projekty" element={<Projekty />} />
                     <Route path="/success" element={<Success />} />
