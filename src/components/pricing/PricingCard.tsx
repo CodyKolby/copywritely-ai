@@ -34,11 +34,12 @@ export const PricingCard = ({
   };
 
   const features = [
-    "Nielimitowana liczba briefów i analiz",
-    "Gotowe briefy generowane przez AI",
-    "Tworzenie spersonalizowanych briefów pod swoją grupę docelową",
-    "Zaawansowana analiza tekstów przez AI",
-    "Zapis projektów w aplikacji"
+    "Nielimitowana liczba skryptów reklamowych",
+    "Nielimitowana liczba postów na social media",
+    "Nielimitowana liczba maili sprzedażowych",
+    "Dostęp do najnowszej wersji agenta NeuroScript™",
+    "Dowolna liczba grup docelowych",
+    "Dostęp do zespołu Copility 24/7"
   ];
 
   // Function to handle the click event with improved logging

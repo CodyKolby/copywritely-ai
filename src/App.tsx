@@ -16,6 +16,7 @@ import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import Projekty from "./pages/Projekty";
 import Navbar from "./components/Navbar";
+import Footer from "./components/home/Footer";
 import AnimatedTransition from "./components/AnimatedTransition";
 import Success from './pages/Success';
 
