@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -123,12 +124,12 @@ const CaseStudiesSection = () => {
           onValueChange={setActiveTab}
           className="w-full"
         >
-          <TabsList className="w-full mb-10 grid grid-cols-3 rounded-md overflow-hidden">
+          <TabsList className="w-full max-w-3xl mx-auto mb-0 grid grid-cols-3 overflow-hidden rounded-t-lg">
             {caseStudies.map((study) => (
               <TabsTrigger 
                 key={study.id} 
                 value={study.id}
-                className="py-4 rounded-none text-white data-[state=active]:bg-copywrite-teal data-[state=active]:text-white data-[state=inactive]:bg-gray-800 data-[state=inactive]:hover:bg-gray-700 transition-colors"
+                className="py-4 flex items-center justify-center text-white data-[state=active]:bg-copywrite-teal data-[state=active]:text-white data-[state=inactive]:bg-gray-800 data-[state=inactive]:hover:bg-gray-700 transition-colors"
               >
                 {study.label}
               </TabsTrigger>
@@ -136,18 +137,19 @@ const CaseStudiesSection = () => {
           </TabsList>
 
           {caseStudies.map((study) => (
-            <TabsContent key={study.id} value={study.id} className="mt-6">
+            <TabsContent key={study.id} value={study.id} className="mt-0">
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.3 }}
+                className="bg-gray-800 text-white p-8 max-w-3xl mx-auto rounded-b-lg shadow-lg"
               >
                 <div className="mb-10">
-                  <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
+                  <h3 className="text-2xl md:text-3xl font-bold mb-4">
                     {study.title}
                   </h3>
-                  <p className="text-lg text-gray-600">
+                  <p className="text-lg text-gray-300">
                     {study.subtitle}
                   </p>
                 </div>
@@ -156,14 +158,14 @@ const CaseStudiesSection = () => {
                   {study.steps.map((step) => (
                     <div key={step.id} className="flex flex-col gap-3">
                       <div className="flex-shrink-0">
-                        <div className="inline-block px-4 py-2 bg-copywrite-teal-light text-copywrite-teal font-medium rounded-md">
+                        <div className="inline-block px-4 py-2 bg-gray-700 text-white font-medium rounded-md">
                           Krok {step.id}
                         </div>
                       </div>
-                      <h4 className="text-xl font-semibold text-gray-900">
+                      <h4 className="text-xl font-semibold text-white">
                         {step.title}
                       </h4>
-                      <p className="text-gray-700 leading-relaxed">
+                      <p className="text-gray-300 leading-relaxed">
                         {step.description}
                       </p>
                     </div>
