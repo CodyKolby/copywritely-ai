@@ -5,7 +5,6 @@ import { Link } from 'react-router-dom';
 import { usePaymentHandler } from '@/hooks/usePaymentHandler';
 import { BillingToggle } from '@/components/pricing/BillingToggle';
 import { PricingCard } from '@/components/pricing/PricingCard';
-import { PricingFAQ } from '@/components/pricing/PricingFAQ';
 import { BillingCycle, getProPrice, getPricingLabel } from '@/components/pricing/pricing-utils';
 import { DebugDialog } from '@/components/pricing/DebugDialog';
 import { Button } from '@/components/ui/button';
@@ -113,9 +112,6 @@ const Pricing = () => {
             </Button>
           </Link>
         </motion.div>
-
-        {/* FAQ Section */}
-        <PricingFAQ />
       </div>
       
       {/* Debug Dialog */}
