@@ -36,7 +36,7 @@ const Navbar = () => {
     { path: '/', label: 'Główna' },
     // Brief Generator tab is temporarily hidden
     // { path: '/brief-generator', label: 'Brief Generator' },
-    { path: '/script-generator', label: 'Skrypt' },
+    { path: '/script-generator', label: 'Twórz skrypty' },
     { path: '/pricing', label: 'Plany' },
     { path: '/about', label: 'O nas' },
   ];
