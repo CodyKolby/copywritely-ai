@@ -20,6 +20,8 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/home/Footer";
 import AnimatedTransition from "./components/AnimatedTransition";
 import Success from './pages/Success';
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
 
 const queryClient = new QueryClient();
 
@@ -47,6 +49,8 @@ const App = () => (
                     <Route path="/login" element={<Login />} />
                     <Route path="/projekty" element={<Projekty />} />
                     <Route path="/success" element={<Success />} />
+                    <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                    <Route path="/terms-of-service" element={<TermsOfService />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </AnimatedTransition>
