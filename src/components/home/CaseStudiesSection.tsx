@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -124,12 +123,12 @@ const CaseStudiesSection = () => {
           onValueChange={setActiveTab}
           className="w-full"
         >
-          <TabsList className="w-full mb-12 grid grid-cols-3 bg-gray-100 rounded-md p-1 h-auto">
+          <TabsList className="w-full mb-10 grid grid-cols-3 rounded-md overflow-hidden">
             {caseStudies.map((study) => (
               <TabsTrigger 
                 key={study.id} 
                 value={study.id}
-                className="py-4 data-[state=active]:bg-copywrite-teal data-[state=active]:text-white"
+                className="py-4 rounded-none text-white data-[state=active]:bg-copywrite-teal data-[state=active]:text-white data-[state=inactive]:bg-gray-800 data-[state=inactive]:hover:bg-gray-700 transition-colors"
               >
                 {study.label}
               </TabsTrigger>
@@ -155,20 +154,18 @@ const CaseStudiesSection = () => {
 
                 <div className="space-y-12">
                   {study.steps.map((step) => (
-                    <div key={step.id} className="flex flex-col md:flex-row gap-8">
-                      <div className="md:w-1/4 flex-shrink-0">
+                    <div key={step.id} className="flex flex-col gap-3">
+                      <div className="flex-shrink-0">
                         <div className="inline-block px-4 py-2 bg-copywrite-teal-light text-copywrite-teal font-medium rounded-md">
                           Krok {step.id}
                         </div>
-                        <h4 className="text-xl font-semibold mt-4 text-gray-900">
-                          {step.title}
-                        </h4>
                       </div>
-                      <div className="md:w-3/4">
-                        <p className="text-gray-700 leading-relaxed">
-                          {step.description}
-                        </p>
-                      </div>
+                      <h4 className="text-xl font-semibold text-gray-900">
+                        {step.title}
+                      </h4>
+                      <p className="text-gray-700 leading-relaxed">
+                        {step.description}
+                      </p>
                     </div>
                   ))}
                 </div>
