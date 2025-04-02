@@ -126,17 +126,25 @@ const CaseStudiesSection = () => {
           className="w-full"
         >
           <div className="max-w-2xl mx-auto">
-            <TabsList className="w-full grid grid-cols-3 overflow-visible p-0 h-auto rounded-none bg-transparent">
-              {caseStudies.map((study) => (
-                <TabsTrigger 
-                  key={study.id} 
-                  value={study.id}
-                  className="py-4 flex items-center justify-center text-white data-[state=active]:bg-copywrite-teal data-[state=active]:text-white data-[state=inactive]:bg-gray-800 data-[state=inactive]:hover:bg-gray-700 transition-colors border-0 rounded-none rounded-t-lg shadow-none text-base"
-                >
-                  {study.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
+            <TabsList className="w-full flex overflow-hidden p-0 bg-transparent border-0 rounded-t-xl">
+  {caseStudies.map((study, index) => (
+    <TabsTrigger 
+      key={study.id}
+      value={study.id}
+      className={cn(
+        "flex-1 py-4 text-base text-white border-t border-x border-gray-700 transition-colors shadow-sm",
+        "data-[state=active]:bg-copywrite-teal data-[state=active]:text-white",
+        "data-[state=inactive]:bg-gray-800 data-[state=inactive]:hover:bg-gray-700",
+        index === 0 && "rounded-tl-xl",
+        index === caseStudies.length - 1 && "rounded-tr-xl",
+        index !== 0 && index !== caseStudies.length - 1 && "rounded-none"
+      )}
+    >
+      {study.label}
+    </TabsTrigger>
+  ))}
+</TabsList>
+
             
             <Separator className="h-[2px] bg-gray-700 w-full -mt-[2px] relative z-10" />
 
