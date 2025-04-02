@@ -40,7 +40,7 @@ const BriefGenerator = () => {
   }, []);
 
   return (
-    <div className="min-h-screen pt-24 pb-16 px-6">
+    <div className="pt-24 pb-16 px-6">
       <div className="max-w-6xl mx-auto">
         <BriefGeneratorHeader />
         

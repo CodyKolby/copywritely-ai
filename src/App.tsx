@@ -30,22 +30,27 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <Navbar />
-            <AnimatedTransition>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/brief-generator" element={<BriefGenerator />} />
-                <Route path="/script-generator" element={<ScriptGenerator />} />
-                <Route path="/copy-editor" element={<CopyEditor />} />
-                <Route path="/copy-editor/:projectId" element={<CopyEditor />} />
-                <Route path="/about" element={<About />} />
-                <Route path="/pricing" element={<Pricing />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/projekty" element={<Projekty />} />
-                <Route path="/success" element={<Success />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </AnimatedTransition>
+            <div className="flex flex-col min-h-screen">
+              <Navbar />
+              <div className="flex-grow">
+                <AnimatedTransition>
+                  <Routes>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/brief-generator" element={<BriefGenerator />} />
+                    <Route path="/script-generator" element={<ScriptGenerator />} />
+                    <Route path="/copy-editor" element={<CopyEditor />} />
+                    <Route path="/copy-editor/:projectId" element={<CopyEditor />} />
+                    <Route path="/about" element={<About />} />
+                    <Route path="/pricing" element={<Pricing />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/projekty" element={<Projekty />} />
+                    <Route path="/success" element={<Success />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </AnimatedTransition>
+              </div>
+              <Footer />
+            </div>
           </BrowserRouter>
         </LazyMotion>
       </AuthProvider>

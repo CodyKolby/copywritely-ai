@@ -11,7 +11,6 @@ import ThreeStepsSection from '@/components/home/ThreeStepsSection';
 import ClientTestimonialsSection from '@/components/home/ClientTestimonialsSection';
 import CaseStudiesSection from '@/components/home/CaseStudiesSection';
 import TrialCTASection from '@/components/home/TrialCTASection';
-import Footer from '@/components/home/Footer';
 
 const Index = () => {
   // Scroll to top on page load
@@ -34,7 +33,6 @@ const Index = () => {
       <ClientTestimonialsSection />
       <CaseStudiesSection />
       <TrialCTASection />
-      <Footer />
     </div>
   );
 };
