@@ -30,10 +30,10 @@ const Footer = () => {
               </Link>
             </div>
             <div className="space-y-3">
-              <Link to="/privacy" className="block hover:text-copywrite-teal transition-colors">
+              <Link to="/privacy-policy" className="block hover:text-copywrite-teal transition-colors">
                 Polityka prywatności
               </Link>
-              <Link to="/terms" className="block hover:text-copywrite-teal transition-colors">
+              <Link to="/terms-of-service" className="block hover:text-copywrite-teal transition-colors">
                 Regulamin
               </Link>
             </div>
