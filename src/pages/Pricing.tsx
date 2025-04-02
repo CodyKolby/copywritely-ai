@@ -64,8 +64,7 @@ const Pricing = () => {
             Wybierz plan idealny dla siebie
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Profesjonalne narzędzie do copywritingu, które pomoże Ci tworzyć
-            skuteczne teksty reklamowe.
+            Nowoczesna platforma do tworzenia skryptów, które realnie zwiększają sprzedaż i rozwijają Twoją markę.
           </p>
           
           {/* Debug button */}
