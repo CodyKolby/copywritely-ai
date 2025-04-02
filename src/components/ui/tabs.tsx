@@ -28,7 +28,7 @@ const TabsTrigger = React.forwardRef<
     ref={ref}
     className={cn(
       "inline-flex items-center justify-center whitespace-nowrap px-4 py-2 text-sm font-medium transition-all",
-      "rounded-t-lg", // zaokrąglone tylko górne rogi dla wszystkich zakładek
+      "rounded-t-[12px] !rounded-b-none", // Wymuszenie zaokrąglonych GÓRNYCH rogów i prostych dolnych
       "text-white bg-gray-800 hover:bg-gray-700",
       "data-[state=active]:bg-copywrite-teal data-[state=active]:text-white",
       className
