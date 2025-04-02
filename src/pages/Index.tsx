@@ -8,7 +8,6 @@ import SocialProofSection from '@/components/home/SocialProofSection';
 import FeaturesSection from '@/components/home/FeaturesSection';
 import TestimonialsSection from '@/components/home/TestimonialsSection';
 import ThreeStepsSection from '@/components/home/ThreeStepsSection';
-import CTASection from '@/components/home/CTASection';
 import ClientTestimonialsSection from '@/components/home/ClientTestimonialsSection';
 import CaseStudiesSection from '@/components/home/CaseStudiesSection';
 import TrialCTASection from '@/components/home/TrialCTASection';
@@ -35,7 +34,6 @@ const Index = () => {
       <ClientTestimonialsSection />
       <CaseStudiesSection />
       <TrialCTASection />
-      <CTASection />
       <Footer />
     </div>
   );

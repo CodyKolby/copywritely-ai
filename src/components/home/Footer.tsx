@@ -12,7 +12,7 @@ const Footer = () => {
           <div className="flex flex-col">
             <Link to="/" className="mb-4">
               <img 
-                src="/lovable-uploads/eea4437e-d9f4-424c-b7c8-582734b56106.png" 
+                src="/lovable-uploads/ca5d4ef6-6381-4c48-a3a6-be71b24f9bb6.png" 
                 alt="Copility" 
                 className="h-10" 
               />
