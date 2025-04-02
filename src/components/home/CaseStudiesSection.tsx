@@ -171,7 +171,7 @@ const CaseStudiesSection = () => {
                     {study.steps.map((step) => (
                       <div key={step.id} className="flex flex-col gap-3">
                         <div className="flex-shrink-0">
-                          <div className="inline-block px-4 py-2 bg-gray-700 text-white font-medium rounded-md">
+                          <div className="inline-block px-4 py-2 bg-[#2A5C56] text-white font-medium rounded-md">
                             Krok {step.id}
                           </div>
                         </div>
