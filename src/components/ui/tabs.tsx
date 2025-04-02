@@ -12,7 +12,7 @@ const TabsList = React.forwardRef<
   <TabsPrimitive.List
     ref={ref}
     className={cn(
-      "grid grid-cols-3 gap-2 w-full overflow-visible bg-transparent p-0",
+      "flex w-full overflow-hidden p-0 bg-transparent border-0 rounded-t-xl",
       className
     )}
     {...props}
@@ -27,12 +27,11 @@ const TabsTrigger = React.forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      "inline-flex items-center justify-center whitespace-nowrap px-4 py-2 text-sm font-medium transition-all",
-      "rounded-t-xl", // wyraźne zaokrąglenie
+      "flex-1 inline-flex items-center justify-center whitespace-nowrap px-4 py-2 text-sm font-medium transition-all",
       "text-white bg-gray-800 hover:bg-gray-700",
-      "data-[state=active]:bg-copywrite-teal data-[state=active]:text-white",
       "border-t border-x border-gray-700",
-      "drop-shadow-md", // delikatny cień jak w Hyrosie
+      "data-[state=active]:bg-copywrite-teal data-[state=active]:text-white",
+      "drop-shadow-sm",
       className
     )}
     {...props}
