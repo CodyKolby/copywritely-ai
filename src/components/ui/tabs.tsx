@@ -28,9 +28,11 @@ const TabsTrigger = React.forwardRef<
     ref={ref}
     className={cn(
       "inline-flex items-center justify-center whitespace-nowrap px-4 py-2 text-sm font-medium transition-all",
-      "rounded-t-[12px] !rounded-b-none", // Wymuszenie zaokrąglonych GÓRNYCH rogów i prostych dolnych
+      "rounded-t-xl", // wyraźne zaokrąglenie
       "text-white bg-gray-800 hover:bg-gray-700",
       "data-[state=active]:bg-copywrite-teal data-[state=active]:text-white",
+      "border-t border-x border-gray-700",
+      "drop-shadow-md", // delikatny cień jak w Hyrosie
       className
     )}
     {...props}
