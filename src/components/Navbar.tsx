@@ -33,11 +33,12 @@ const Navbar = () => {
   }, []);
 
   const navItems = [
-    { path: '/', label: 'Home' },
-    { path: '/brief-generator', label: 'Brief Generator' },
-    { path: '/script-generator', label: 'Script Generator' },
-    { path: '/pricing', label: 'Pricing' },
-    { path: '/about', label: 'About' },
+    { path: '/', label: 'Główna' },
+    // Brief Generator tab is temporarily hidden
+    // { path: '/brief-generator', label: 'Brief Generator' },
+    { path: '/script-generator', label: 'Skrypt' },
+    { path: '/pricing', label: 'Plany' },
+    { path: '/about', label: 'O nas' },
   ];
 
   const getInitials = () => {
