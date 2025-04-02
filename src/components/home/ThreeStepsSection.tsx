@@ -2,6 +2,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
 
 const stepImages = [
   "/lovable-uploads/53691d1f-6795-4432-b53f-05aff7aa243d.png", // Script Generator
@@ -114,6 +116,19 @@ const ThreeStepsSection = () => {
             </Card>
           </motion.div>
         </div>
+        
+        {/* CTA Button after steps */}
+        <motion.div 
+          className="flex justify-center mt-16"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+          viewport={{ once: true }}
+        >
+          <Button asChild className="bg-copywrite-teal hover:bg-copywrite-teal/90 text-white px-8 py-6 text-lg">
+            <Link to="/pricing">Wypróbuj za darmo</Link>
+          </Button>
+        </motion.div>
       </div>
     </section>
   );
