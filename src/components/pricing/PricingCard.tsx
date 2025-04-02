@@ -78,7 +78,7 @@ export const PricingCard = ({
             <h2 className="text-3xl font-bold">Pro</h2>
           </div>
           <p className="text-gray-600 mb-6">
-            Pełen dostęp do zaawansowanych funkcji copywritingu.
+            Pełen dostęp do wszystkich funkcji, które pozwolą Ci tworzyć skuteczne skrypty marketingowe i skalować sprzedaż.
           </p>
           <div className="flex items-baseline mb-2">
             <span className="text-5xl font-bold">{price}</span>
