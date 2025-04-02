@@ -131,7 +131,7 @@ const CaseStudiesSection = () => {
                 <TabsTrigger 
                   key={study.id} 
                   value={study.id}
-                  className="py-4 flex items-center justify-center text-white data-[state=active]:bg-copywrite-teal data-[state=inactive]:bg-gray-800 data-[state=inactive]:hover:bg-gray-700 transition-colors border-0 rounded-none rounded-t-lg shadow-none text-base"
+                  className="py-4 flex items-center justify-center text-white data-[state=active]:bg-copywrite-teal data-[state=active]:text-white data-[state=inactive]:bg-gray-800 data-[state=inactive]:hover:bg-gray-700 transition-colors border-0 rounded-none rounded-t-lg shadow-none text-base"
                 >
                   {study.label}
                 </TabsTrigger>
