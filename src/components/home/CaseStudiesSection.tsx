@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Separator } from '@/components/ui/separator';
 
 interface Step {
   id: number;
@@ -124,56 +125,60 @@ const CaseStudiesSection = () => {
           onValueChange={setActiveTab}
           className="w-full"
         >
-          <TabsList className="w-full max-w-3xl mx-auto mb-0 grid grid-cols-3 overflow-hidden rounded-t-lg">
+          <div className="max-w-2xl mx-auto">
+            <TabsList className="w-full grid grid-cols-3 overflow-visible p-0 h-auto rounded-none bg-transparent">
+              {caseStudies.map((study) => (
+                <TabsTrigger 
+                  key={study.id} 
+                  value={study.id}
+                  className="py-4 flex items-center justify-center text-white data-[state=active]:bg-copywrite-teal data-[state=inactive]:bg-gray-800 data-[state=inactive]:hover:bg-gray-700 transition-colors border-0 rounded-none rounded-t-lg shadow-none text-base"
+                >
+                  {study.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            
+            <Separator className="h-[2px] bg-gray-700 w-full -mt-[2px] relative z-10" />
+
             {caseStudies.map((study) => (
-              <TabsTrigger 
-                key={study.id} 
-                value={study.id}
-                className="py-4 flex items-center justify-center text-white data-[state=active]:bg-copywrite-teal data-[state=active]:text-white data-[state=inactive]:bg-gray-800 data-[state=inactive]:hover:bg-gray-700 transition-colors"
-              >
-                {study.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+              <TabsContent key={study.id} value={study.id} className="mt-0">
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="bg-gray-800 text-white p-8 rounded-b-lg shadow-lg border-t-0"
+                >
+                  <div className="mb-10">
+                    <h3 className="text-2xl md:text-3xl font-bold mb-4">
+                      {study.title}
+                    </h3>
+                    <p className="text-lg text-gray-300">
+                      {study.subtitle}
+                    </p>
+                  </div>
 
-          {caseStudies.map((study) => (
-            <TabsContent key={study.id} value={study.id} className="mt-0">
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.3 }}
-                className="bg-gray-800 text-white p-8 max-w-3xl mx-auto rounded-b-lg shadow-lg"
-              >
-                <div className="mb-10">
-                  <h3 className="text-2xl md:text-3xl font-bold mb-4">
-                    {study.title}
-                  </h3>
-                  <p className="text-lg text-gray-300">
-                    {study.subtitle}
-                  </p>
-                </div>
-
-                <div className="space-y-12">
-                  {study.steps.map((step) => (
-                    <div key={step.id} className="flex flex-col gap-3">
-                      <div className="flex-shrink-0">
-                        <div className="inline-block px-4 py-2 bg-gray-700 text-white font-medium rounded-md">
-                          Krok {step.id}
+                  <div className="space-y-12">
+                    {study.steps.map((step) => (
+                      <div key={step.id} className="flex flex-col gap-3">
+                        <div className="flex-shrink-0">
+                          <div className="inline-block px-4 py-2 bg-gray-700 text-white font-medium rounded-md">
+                            Krok {step.id}
+                          </div>
                         </div>
+                        <h4 className="text-xl font-semibold text-white">
+                          {step.title}
+                        </h4>
+                        <p className="text-gray-300 leading-relaxed">
+                          {step.description}
+                        </p>
                       </div>
-                      <h4 className="text-xl font-semibold text-white">
-                        {step.title}
-                      </h4>
-                      <p className="text-gray-300 leading-relaxed">
-                        {step.description}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-            </TabsContent>
-          ))}
+                    ))}
+                  </div>
+                </motion.div>
+              </TabsContent>
+            ))}
+          </div>
         </Tabs>
       </div>
     </section>
