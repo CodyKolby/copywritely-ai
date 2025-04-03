@@ -5,7 +5,6 @@ import { useNavigate } from 'react-router-dom';
 import { AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Card } from '@/components/ui/card';
 import { useAuth } from '@/contexts/auth/AuthContext';
 import { supabase } from '@/lib/supabase';
 
@@ -75,28 +74,26 @@ const Login = () => {
   }
 
   return (
-    <div className="min-h-screen pt-24 pb-16 px-6">
-      <div className="max-w-md mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="text-center mb-8"
-        >
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Witamy w Copility
-          </h1>
-        </motion.div>
+    <div className="min-h-screen flex items-center">
+      <div className="container mx-auto px-4">
+        <div className="flex flex-col md:flex-row bg-white rounded-xl overflow-hidden shadow-xl max-w-5xl mx-auto">
+          {/* Left Section - Login */}
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5 }}
+            className="w-full md:w-1/2 p-10 md:p-16 flex flex-col justify-center"
+          >
+            <h1 className="text-4xl font-bold text-gray-900 mb-3">
+              Zaloguj się
+            </h1>
+            <p className="text-gray-600 mb-8">
+              Witaj w Copility — zaloguj się, aby kontynuować
+            </p>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-        >
-          <Card className="bg-white rounded-xl p-8 shadow-soft border border-gray-100">
             <Button 
               variant="outline" 
-              className="w-full gap-2"
+              className="w-full gap-2 py-6 text-base font-medium"
               onClick={handleGoogleSignIn}
               disabled={loading}
             >
@@ -115,8 +112,24 @@ const Login = () => {
                 </>
               )}
             </Button>
-          </Card>
-        </motion.div>
+          </motion.div>
+          
+          {/* Right Section - Image */}
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="w-full md:w-1/2 bg-copywrite-teal-light flex items-center justify-center p-6"
+          >
+            <div className="rounded-full overflow-hidden w-full max-w-md aspect-square">
+              <img 
+                src="/lovable-uploads/d82eeba7-f4a8-4627-ad06-d7964bfde25c.png" 
+                alt="Copility login illustration" 
+                className="w-full h-full object-cover"
+              />
+            </div>
+          </motion.div>
+        </div>
       </div>
     </div>
   );
