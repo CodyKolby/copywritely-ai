@@ -217,9 +217,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Completely rewritten refreshSession function for better reliability
   const refreshSession = async () => {
     try {
       console.log('Manually refreshing session');
+      
+      // STEP 1: Refresh the Supabase session
       const { data, error } = await supabase.auth.refreshSession();
       
       if (error) {
@@ -227,13 +230,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return false;
       }
       
+      // STEP 2: Update local state with new session
       if (data.session) {
         console.log('Session refreshed successfully');
         setSession(data.session);
         setUser(data.session.user);
         
         if (data.session.user) {
-          await handleUserAuthenticated(data.session.user.id);
+          // STEP 3: Force a complete profile refresh
+          try {
+            // STEP 3A: Get latest profile data directly
+            const { data: latestProfile } = await supabase
+              .from('profiles')
+              .select('is_premium, subscription_id, subscription_status, subscription_expiry, updated_at')
+              .eq('id', data.session.user.id)
+              .single();
+            
+            console.log('Latest profile from refresh:', latestProfile);
+            
+            // STEP 3B: Update local profile state with latest data
+            if (latestProfile) {
+              const fullProfile = await fetchProfile(data.session.user.id);
+              if (fullProfile) {
+                console.log('Setting updated profile with premium data:', {
+                  isPremium: latestProfile.is_premium,
+                  subscriptionId: latestProfile.subscription_id,
+                  subscriptionStatus: latestProfile.subscription_status,
+                  subscriptionExpiry: latestProfile.subscription_expiry
+                });
+                
+                setProfile({
+                  ...fullProfile,
+                  is_premium: latestProfile.is_premium,
+                  subscription_id: latestProfile.subscription_id,
+                  subscription_status: latestProfile.subscription_status,
+                  subscription_expiry: latestProfile.subscription_expiry
+                });
+                
+                // STEP 3C: Update isPremium state separately
+                if (latestProfile.is_premium) {
+                  setIsPremium(true);
+                }
+              }
+            }
+            
+            // STEP 4: Run premium check as backup
+            await checkPremiumStatus(data.session.user.id, false);
+            
+          } catch (profileError) {
+            console.error('Error refreshing profile in session refresh:', profileError);
+            // Continue even with error
+          }
         }
         
         return true;

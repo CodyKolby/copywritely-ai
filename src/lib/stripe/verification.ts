@@ -41,30 +41,35 @@ export const verifyStripePayment = async (sessionId: string, userId: string): Pr
   }
 };
 
-// Manual premium status update - this is the key function that ensures premium access
+// Completely rewritten function that ensures all subscription fields are updated
 export const forceUpdatePremiumStatus = async (userId: string, sessionId?: string): Promise<boolean> => {
   try {
     console.log(`Forcing premium status update for user: ${userId}`);
     
-    // Try to get subscription details from Stripe if session ID provided
-    let subscriptionId = null;
-    let subscriptionStatus = 'active';
-    let subscriptionExpiry = null;
+    // Set defaults in case we can't get actual data
+    let subscriptionData = {
+      subscriptionId: null,
+      subscriptionStatus: 'active',
+      subscriptionExpiry: null
+    };
     
+    // Try to get subscription details from Stripe if session ID provided
     if (sessionId) {
       try {
         console.log(`Fetching session details for ${sessionId}`);
-        const { data: sessionData, error: sessionError } = await supabase.functions.invoke('check-session-details', {
+        const { data, error } = await supabase.functions.invoke('check-session-details', {
           body: { sessionId }
         });
         
-        if (sessionError) {
-          console.error('Error fetching session details:', sessionError);
-        } else if (sessionData) {
-          console.log('Got subscription details:', sessionData);
-          subscriptionId = sessionData.subscriptionId || null;
-          subscriptionStatus = sessionData.subscriptionStatus || 'active';
-          subscriptionExpiry = sessionData.subscriptionExpiry || null;
+        if (error) {
+          console.error('Error fetching session details:', error);
+        } else if (data) {
+          console.log('Got subscription details:', data);
+          subscriptionData = {
+            subscriptionId: data.subscriptionId,
+            subscriptionStatus: data.subscriptionStatus || 'active',
+            subscriptionExpiry: data.subscriptionExpiry
+          };
         }
       } catch (detailsError) {
         console.error('Error getting subscription details:', detailsError);
@@ -72,27 +77,28 @@ export const forceUpdatePremiumStatus = async (userId: string, sessionId?: strin
     }
     
     // If we still don't have an expiry date, calculate one
-    if (!subscriptionExpiry) {
+    if (!subscriptionData.subscriptionExpiry) {
       // Set expiry to 30 days from now as fallback
       const expiryDate = new Date();
       expiryDate.setDate(expiryDate.getDate() + 30);
-      subscriptionExpiry = expiryDate.toISOString();
+      subscriptionData.subscriptionExpiry = expiryDate.toISOString();
     }
     
     console.log('Updating profile with:', {
       is_premium: true,
-      subscription_id: subscriptionId,
-      subscription_status: subscriptionStatus,
-      subscription_expiry: subscriptionExpiry
+      subscription_id: subscriptionData.subscriptionId,
+      subscription_status: subscriptionData.subscriptionStatus,
+      subscription_expiry: subscriptionData.subscriptionExpiry
     });
     
+    // Update profile with all subscription details
     const { error } = await supabase
       .from('profiles')
       .update({ 
         is_premium: true,
-        subscription_id: subscriptionId,
-        subscription_status: subscriptionStatus,
-        subscription_expiry: subscriptionExpiry,
+        subscription_id: subscriptionData.subscriptionId,
+        subscription_status: subscriptionData.subscriptionStatus,
+        subscription_expiry: subscriptionData.subscriptionExpiry,
         updated_at: new Date().toISOString()
       })
       .eq('id', userId);
