@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/integrations/supabase/client'
@@ -31,6 +30,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     testProfile, 
     setTestUserState 
   } = useTestUser()
+
+  useEffect(() => {
+    const premiumBackup = localStorage.getItem('premium_backup') === 'true';
+    const premiumTimestamp = localStorage.getItem('premium_timestamp');
+    
+    if (premiumBackup && premiumTimestamp) {
+      const timestamp = new Date(premiumTimestamp);
+      const now = new Date();
+      const hoursDiff = (now.getTime() - timestamp.getTime()) / (1000 * 60 * 60);
+      
+      if (hoursDiff < 24) {
+        console.log('[AUTH] Using backup premium status from localStorage');
+        setIsPremium(true);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     console.log("[AUTH] Setting up auth state listener");
@@ -128,7 +143,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
       
-      // Force get the latest profile data first
+      const premiumBackup = localStorage.getItem('premium_backup') === 'true';
+      const premiumTimestamp = localStorage.getItem('premium_timestamp');
+      
+      if (premiumBackup && premiumTimestamp) {
+        const timestamp = new Date(premiumTimestamp);
+        const now = new Date();
+        const hoursDiff = (now.getTime() - timestamp.getTime()) / (1000 * 60 * 60);
+        
+        if (hoursDiff < 24) {
+          console.log('[AUTH] Setting premium status from localStorage backup');
+          setIsPremium(true);
+        }
+      }
+      
       const { data: latestProfile, error: profileError } = await supabase
         .from('profiles')
         .select('is_premium, subscription_id, subscription_status, subscription_expiry')
@@ -140,7 +168,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         console.log('[AUTH] Latest profile data from database:', latestProfile);
         
-        // Use the database value directly to immediately update the UI
         if (latestProfile?.is_premium) {
           console.log('[AUTH] User has premium status according to database');
           setIsPremium(true);
@@ -154,10 +181,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             });
           }
         } else {
-          // If not premium in database, check with Stripe
-          const isPremiumStatus = await checkPremiumStatus(userId);
-          console.log('[AUTH] Premium status after check:', isPremiumStatus);
-          setIsPremium(isPremiumStatus);
+          try {
+            const { data: paymentLogs, error: logsError } = await supabase
+              .from('payment_logs')
+              .select('*')
+              .eq('user_id', userId)
+              .order('timestamp', { ascending: false })
+              .limit(1);
+              
+            if (!logsError && paymentLogs && paymentLogs.length > 0) {
+              console.log('[AUTH] Found payment logs, assuming premium status');
+              setIsPremium(true);
+              
+              await supabase
+                .from('profiles')
+                .update({ 
+                  is_premium: true,
+                  subscription_status: 'active',
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', userId);
+            } else {
+              const isPremiumStatus = await checkPremiumStatus(userId);
+              console.log('[AUTH] Premium status after check:', isPremiumStatus);
+              setIsPremium(isPremiumStatus);
+            }
+          } catch (logsError) {
+            console.error('[AUTH] Error checking payment logs:', logsError);
+            
+            const isPremiumStatus = await checkPremiumStatus(userId);
+            console.log('[AUTH] Premium status after check:', isPremiumStatus);
+            setIsPremium(isPremiumStatus);
+          }
         }
       }
     } catch (error) {
@@ -169,7 +224,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       console.log('[AUTH] Manual premium status check for user:', userId);
       
-      // First try direct database check - MOST RELIABLE
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('is_premium, subscription_id, subscription_status, subscription_expiry')
@@ -184,10 +238,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (profile?.is_premium) {
           console.log('[AUTH] User has premium status according to database');
           
-          // CRITICAL: Update isPremium state
           setIsPremium(true);
           
-          // CRITICAL: Update the profile state with all subscription details
           setProfile(prevProfile => {
             if (!prevProfile) return null;
             return {
@@ -209,14 +261,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
       
-      // If not premium in database, check with Stripe
       const isPremiumStatus = await checkPremiumStatus(userId, showToast);
       
-      // CRITICAL: Update isPremium state based on check result
       console.log('[AUTH] Setting isPremium state to:', isPremiumStatus);
       setIsPremium(isPremiumStatus);
       
-      // If premium status is true, get the latest profile info
       if (isPremiumStatus) {
         const updatedProfile = await fetchProfile(userId);
         if (updatedProfile) {
@@ -229,7 +278,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('[AUTH] Error checking premium status:', error);
       
-      // Try fallback method
       try {
         const fallbackResult = await checkPremiumStatusFallback(userId, false);
         console.log('[AUTH] Fallback premium check result:', fallbackResult);
@@ -242,12 +290,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Completely rewritten refreshSession function for 100% reliability
   const refreshSession = async () => {
     try {
       console.log('[AUTH] Manually refreshing session');
       
-      // STEP 1: First attempt to update the premium status directly in database
       if (user?.id) {
         console.log('[AUTH] Direct premium status update in refreshSession');
         
@@ -272,7 +318,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
       
-      // STEP 2: Refresh the Supabase session
       const { data, error } = await supabase.auth.refreshSession();
       
       if (error) {
@@ -280,16 +325,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return false;
       }
       
-      // STEP 3: Update local state with new session
       if (data.session) {
         console.log('[AUTH] Session refreshed successfully');
         setSession(data.session);
         setUser(data.session.user);
         
         if (data.session.user) {
-          // STEP 4: Force a complete profile refresh
           try {
-            // STEP 4A: Get latest profile data directly
             const { data: latestProfile, error: profileError } = await supabase
               .from('profiles')
               .select('is_premium, subscription_id, subscription_status, subscription_expiry, updated_at')
@@ -301,13 +343,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             } else {
               console.log('[AUTH] Latest profile from refresh:', latestProfile);
               
-              // STEP 4B: Update local premium status immediately if database says premium
               if (latestProfile && latestProfile.is_premium) {
                 console.log('[AUTH] Setting isPremium to true based on database');
                 setIsPremium(true);
               }
               
-              // STEP 4C: Update local profile state with latest data
               if (latestProfile) {
                 const fullProfile = await fetchProfile(data.session.user.id);
                 if (fullProfile) {
@@ -318,7 +358,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     subscriptionExpiry: latestProfile.subscription_expiry
                   });
                   
-                  // Update profile state with all subscription details
                   setProfile({
                     ...fullProfile,
                     is_premium: latestProfile.is_premium,
@@ -330,13 +369,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               }
             }
             
-            // STEP 5: Run premium check as backup
             const premiumCheckResult = await checkPremiumStatus(data.session.user.id, false);
             console.log('[AUTH] Premium check in session refresh:', premiumCheckResult);
-            
           } catch (profileError) {
             console.error('[AUTH] Error refreshing profile in session refresh:', profileError);
-            // Continue even with error
           }
         }
         

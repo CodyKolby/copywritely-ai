@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -22,6 +21,7 @@ const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
   const { user, signOut, isPremium, profile } = useAuth();
   const [subscriptionModalOpen, setSubscriptionModalOpen] = useState(false);
+  const [localPremium, setLocalPremium] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -31,21 +31,35 @@ const Navbar = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+  
+  useEffect(() => {
+    const premiumBackup = localStorage.getItem('premium_backup') === 'true';
+    const premiumTimestamp = localStorage.getItem('premium_timestamp');
+    
+    if (premiumBackup && premiumTimestamp) {
+      const timestamp = new Date(premiumTimestamp);
+      const now = new Date();
+      const hoursDiff = (now.getTime() - timestamp.getTime()) / (1000 * 60 * 60);
+      
+      if (hoursDiff < 24) {
+        console.log('[NAVBAR] Using backup premium status from localStorage');
+        setLocalPremium(true);
+      }
+    }
+  }, []);
 
-  // Log premium status for debugging
   useEffect(() => {
     console.log('Navbar premium status:', {
       isPremium,
       profileIsPremium: profile?.is_premium,
       subscriptionId: profile?.subscription_id,
-      subscriptionStatus: profile?.subscription_status
+      subscriptionStatus: profile?.subscription_status,
+      localPremium
     });
-  }, [isPremium, profile]);
+  }, [isPremium, profile, localPremium]);
 
   const navItems = [
     { path: '/', label: 'Główna' },
-    // Brief Generator tab is temporarily hidden
-    // { path: '/brief-generator', label: 'Brief Generator' },
     { path: '/script-generator', label: 'Twórz skrypty' },
     { path: '/pricing', label: 'Plany' },
     { path: '/about', label: 'O nas' },
@@ -56,8 +70,7 @@ const Navbar = () => {
     return user.email.charAt(0).toUpperCase();
   };
 
-  // Determine premium status from either global state or profile data
-  const userHasPremium = isPremium || profile?.is_premium;
+  const userHasPremium = isPremium || profile?.is_premium || localPremium;
 
   return (
     <header

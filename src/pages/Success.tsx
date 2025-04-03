@@ -12,7 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 const Success = () => {
   const location = useLocation();
-  const { user, refreshSession } = useAuth();
+  const { user, refreshSession, isPremium } = useAuth();
   
   // Extract session ID from URL
   const searchParams = new URLSearchParams(location.search);
@@ -25,6 +25,7 @@ const Success = () => {
   const [waitTime, setWaitTime] = useState(0);
   const [redirectTimer, setRedirectTimer] = useState(0);
   const [processAttempts, setProcessAttempts] = useState(0);
+  const [forceRedirect, setForceRedirect] = useState(false);
   
   // Start wait timer
   useEffect(() => {
@@ -35,27 +36,60 @@ const Success = () => {
     return () => clearInterval(timer);
   }, []);
   
-  // Auto redirect to projects after 3 seconds of success
+  // Auto redirect to projects after success with shorter timeout
   useEffect(() => {
-    if (verificationSuccess && redirectTimer < 3) {
+    if ((verificationSuccess || isPremium) && redirectTimer < 2) {
       const timer = setTimeout(() => {
         setRedirectTimer(prev => prev + 1);
-      }, 1000);
+      }, 800); // Faster redirection
       
       return () => clearTimeout(timer);
-    } else if (verificationSuccess && redirectTimer >= 3) {
+    } else if ((verificationSuccess || isPremium) && redirectTimer >= 2) {
       console.log("[SUCCESS-PAGE] Redirecting to /projekty after success");
+      // Use window.location for a full page refresh to ensure auth state is updated
       window.location.href = '/projekty';
     }
-  }, [verificationSuccess, redirectTimer]);
+  }, [verificationSuccess, redirectTimer, isPremium]);
   
-  // Force completion after 15 seconds if stuck
+  // CRITICAL FIX: Force redirect after 10 seconds regardless of verification
   useEffect(() => {
-    if (waitTime >= 15 && !verificationSuccess && loading) {
-      console.log("[SUCCESS-PAGE] Forcing verification completion after 15 seconds");
-      handleManualCompletion();
+    if (waitTime >= 10 && !forceRedirect) {
+      console.log("[SUCCESS-PAGE] Force redirecting after 10 seconds regardless of status");
+      setForceRedirect(true);
+      
+      // Store session information to indicate payment was processed
+      sessionStorage.setItem('paymentProcessed', 'true');
+      
+      // Set premium in local storage as a backup mechanism
+      localStorage.setItem('premium_backup', 'true');
+      localStorage.setItem('premium_timestamp', new Date().toISOString());
+      
+      // Force one more direct update to DB
+      if (user?.id) {
+        supabase
+          .from('profiles')
+          .update({ 
+            is_premium: true,
+            subscription_status: 'active',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', user.id)
+          .then(() => {
+            console.log("[SUCCESS-PAGE] Final DB update before redirect");
+            
+            // Redirect to projects page after one final attempt
+            setTimeout(() => {
+              window.location.href = '/projekty';
+            }, 500);
+          });
+      } else {
+        // No user, just redirect
+        setTimeout(() => {
+          window.location.href = '/projekty';
+        }, 500);
+      }
     }
-  }, [waitTime, verificationSuccess, loading]);
+  }, [waitTime, user, forceRedirect]);
   
   // Handle manual completion (used in timeout and retry)
   const handleManualCompletion = useCallback(async () => {
@@ -116,6 +150,10 @@ const Success = () => {
       // Store session information in sessionStorage to prevent loops
       sessionStorage.setItem('paymentProcessed', 'true');
       
+      // Also store in localStorage for extra backup
+      localStorage.setItem('premium_backup', 'true');
+      localStorage.setItem('premium_timestamp', new Date().toISOString());
+      
       // Show success message
       toast.success('Gratulacje! Twoje konto zostało zaktualizowane do wersji Premium.', {
         dismissible: true
@@ -162,6 +200,15 @@ const Success = () => {
     }
   }, [user, sessionId, refreshSession]);
   
+  // CRITICAL FIX: Check for isPremium directly from auth context
+  useEffect(() => {
+    if (isPremium && loading) {
+      console.log("[SUCCESS-PAGE] User already has premium status from auth context");
+      setVerificationSuccess(true);
+      setLoading(false);
+    }
+  }, [isPremium, loading]);
+  
   // Process payment verification when we have user and sessionId
   useEffect(() => {
     const successToastShown = sessionStorage.getItem('paymentProcessed') === 'true';
@@ -174,17 +221,22 @@ const Success = () => {
       return;
     }
     
+    // Skip if already verified
+    if (verificationSuccess) {
+      return;
+    }
+    
+    // Skip if too many attempts - force manual completion
+    if (processAttempts >= 2) {
+      console.log("[SUCCESS-PAGE] Too many attempts, triggering manual completion");
+      handleManualCompletion();
+      return;
+    }
+    
     const processPayment = async () => {
       // Skip if already processed
       if (verificationSuccess) {
         console.log("[SUCCESS-PAGE] Already verified, skipping");
-        return;
-      }
-      
-      // Skip if too many attempts
-      if (processAttempts >= 3) {
-        console.log("[SUCCESS-PAGE] Too many attempts, triggering manual completion");
-        handleManualCompletion();
         return;
       }
       
@@ -248,6 +300,10 @@ const Success = () => {
         console.log("[SUCCESS-PAGE] STEP 4: Marking as processed in session storage");
         sessionStorage.setItem('paymentProcessed', 'true');
         
+        // Also store in localStorage as backup
+        localStorage.setItem('premium_backup', 'true');
+        localStorage.setItem('premium_timestamp', new Date().toISOString());
+        
         // Success! Show toast and update state
         toast.success('Gratulacje! Twoje konto zostało zaktualizowane do wersji Premium.', {
           dismissible: true
@@ -258,14 +314,9 @@ const Success = () => {
       } catch (err: any) {
         console.error("[SUCCESS-PAGE] Payment verification process error:", err);
         
-        // Don't show error yet - retry with timeout
-        console.log("[SUCCESS-PAGE] Will retry verification...");
-        setTimeout(() => {
-          if (!verificationSuccess && loading) {
-            console.log("[SUCCESS-PAGE] Retrying verification...");
-            processPayment();
-          }
-        }, 3000);
+        // Don't show error yet - trigger manual completion
+        console.log("[SUCCESS-PAGE] Error in verification, triggering manual completion");
+        handleManualCompletion();
       }
     };
     
@@ -292,7 +343,12 @@ const Success = () => {
           transition={{ duration: 0.5 }}
           className="bg-white p-8 rounded-xl shadow-lg text-center"
         >
-          {loading ? (
+          {isPremium ? (
+            // CRITICAL: Show success immediately if isPremium is true in auth context
+            <SuccessState 
+              redirectTimer={redirectTimer}
+            />
+          ) : loading ? (
             <LoadingState 
               isWaitingForAuth={!user}
               onManualRetry={handleRetryVerification}

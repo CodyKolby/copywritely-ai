@@ -30,7 +30,7 @@ export const SuccessState = ({ redirectTimer }: SuccessStateProps) => {
       
       {redirectTimer !== undefined && redirectTimer > 0 && (
         <p className="text-sm text-gray-500 mt-4">
-          Za {3 - redirectTimer} {(3 - redirectTimer) === 1 ? 'sekundę' : 'sekundy'} zostaniesz przekierowany do projektów...
+          Za {2 - redirectTimer} {(2 - redirectTimer) === 1 ? 'sekundę' : 'sekundy'} zostaniesz przekierowany do projektów...
         </p>
       )}
     </div>

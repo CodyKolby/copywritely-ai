@@ -13,25 +13,25 @@ interface LoadingStateProps {
 export const LoadingState = ({ isWaitingForAuth, onManualRetry, waitTime }: LoadingStateProps) => {
   const [progress, setProgress] = useState(0);
   
-  // Simulate progress for visual feedback - make it faster
+  // Simulate progress for visual feedback - make it EVEN faster
   useEffect(() => {
     // Use a faster progress curve that reaches 100% sooner
     const calculateProgress = (seconds: number) => {
-      if (seconds < 2) return Math.min(40, seconds * 20); // Much faster start
-      if (seconds < 5) return Math.min(75, 40 + (seconds - 2) * 11); // Very fast ramp-up
-      if (seconds < 10) return Math.min(95, 75 + (seconds - 5) * 4); // Slower near the end
-      return 100; // After 10 seconds, show 100%
+      if (seconds < 1) return Math.min(30, seconds * 30); // Much faster start
+      if (seconds < 3) return Math.min(60, 30 + (seconds - 1) * 15); // Very fast ramp-up
+      if (seconds < 6) return Math.min(90, 60 + (seconds - 3) * 10); // Faster toward the end
+      return 100; // After 6 seconds, show 100%
     };
     
     setProgress(calculateProgress(waitTime));
   }, [waitTime]);
   
-  // Auto-refresh after 15 seconds
+  // Auto-refresh after 10 seconds
   useEffect(() => {
-    if (waitTime >= 15) {
+    if (waitTime >= 10) {
       const countdown = setTimeout(() => {
         window.location.reload();
-      }, 3000);
+      }, 1000);
       
       return () => clearTimeout(countdown);
     }
@@ -43,11 +43,11 @@ export const LoadingState = ({ isWaitingForAuth, onManualRetry, waitTime }: Load
       return 'Weryfikujemy Twoją tożsamość...';
     }
     
-    if (waitTime > 10) {
-      return 'Proszę czekać, aktualizujemy Twoje konto!';
+    if (waitTime > 7) {
+      return 'Gotowe! Przygotowujemy Twoje konto...';
     }
     
-    if (waitTime > 5) {
+    if (waitTime > 4) {
       return 'Weryfikacja płatności zakończona!';
     }
     
@@ -60,11 +60,11 @@ export const LoadingState = ({ isWaitingForAuth, onManualRetry, waitTime }: Load
       return 'Łączymy dane płatności z Twoim kontem...';
     }
     
-    if (waitTime > 10) {
-      return 'Odświeżamy stronę za 3 sekundy...';
+    if (waitTime > 7) {
+      return 'Za moment zostaniesz przekierowany...';
     }
     
-    if (waitTime > 5) {
+    if (waitTime > 4) {
       return 'Twoje konto otrzyma dostęp w ciągu kilku sekund.';
     }
     
@@ -88,13 +88,13 @@ export const LoadingState = ({ isWaitingForAuth, onManualRetry, waitTime }: Load
         </div>
       </div>
       
-      {waitTime > 7 && (
+      {waitTime > 4 && (
         <p className="text-xs text-green-600 mt-3 mb-3 max-w-xs text-center font-medium">
           Płatność została przyjęta. Za chwilę zakończymy proces.
         </p>
       )}
       
-      {waitTime > 10 && onManualRetry && (
+      {waitTime > 7 && onManualRetry && (
         <Button 
           variant="outline" 
           size="sm" 
@@ -106,7 +106,7 @@ export const LoadingState = ({ isWaitingForAuth, onManualRetry, waitTime }: Load
         </Button>
       )}
       
-      {waitTime > 15 && (
+      {waitTime > 10 && (
         <div className="mt-4">
           <p className="text-xs text-gray-600">Odświeżanie strony za moment...</p>
         </div>

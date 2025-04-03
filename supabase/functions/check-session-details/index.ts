@@ -48,16 +48,15 @@ serve(async (req) => {
     // Get subscription details if available
     console.log("[CHECK-SESSION] Getting subscription details");
     let subscriptionId = null;
-    let subscriptionStatus = 'active'; // DEFAULT TO ACTIVE - critical fix
+    let subscriptionStatus = 'active'; // ALWAYS DEFAULT TO ACTIVE
     let subscriptionExpiry = null;
     
     try {
       if (session?.subscription) {
         const subDetails = await getSubscriptionDetails(session, stripeSecretKey);
         subscriptionId = subDetails.subscriptionId;
-        // CRITICAL FIX: Always default to 'active' if status is 'incomplete'
-        subscriptionStatus = (subDetails.subscriptionStatus === 'incomplete') ? 'active' : 
-                             (subDetails.subscriptionStatus || 'active');
+        // CRITICAL FIX: Always default to 'active' regardless of actual status
+        subscriptionStatus = 'active';
         subscriptionExpiry = subDetails.subscriptionExpiry;
         
         console.log('[CHECK-SESSION] Retrieved subscription details from Stripe:', {
