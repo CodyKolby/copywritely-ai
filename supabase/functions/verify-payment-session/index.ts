@@ -85,7 +85,7 @@ serve(async (req) => {
 
     // Get subscription details
     const subscriptionId = session.subscription;
-    let subscriptionStatus = 'active';
+    let subscriptionStatus = 'active'; // Simplified to just active
     let subscriptionExpiry = null;
 
     if (subscriptionId) {
@@ -100,7 +100,12 @@ serve(async (req) => {
 
         if (subscriptionResponse.ok) {
           const subscription = await subscriptionResponse.json();
-          subscriptionStatus = subscription.status;
+          // Simplified - all active subscriptions are treated the same
+          if (subscription.status === 'active' || subscription.status === 'trialing') {
+            subscriptionStatus = 'active';
+          } else {
+            subscriptionStatus = 'inactive';
+          }
           // Convert UNIX timestamp to ISO string
           subscriptionExpiry = new Date(subscription.current_period_end * 1000).toISOString();
           console.log('Subscription details:', {

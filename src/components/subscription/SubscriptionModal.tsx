@@ -118,28 +118,20 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
   const renderStatus = () => {
     if (!data) return null;
     
-    const isActive = data.status === 'active';
-    const isTrialing = data.status === 'trialing';
+    const isActive = data.status === 'active' || data.status === 'trialing';
     const isCanceled = data.cancelAtPeriodEnd;
     
     return (
       <div className="flex items-center gap-2 mb-2">
         <Badge className={`px-2 py-1 ${
-          isTrialing ? 'bg-blue-500' : 
           isActive && !isCanceled ? 'bg-green-500' : 
           isActive && isCanceled ? 'bg-yellow-500' : 
           'bg-red-500'
         }`}>
-          {isTrialing ? 'Okres próbny' : 
-           isActive && !isCanceled ? 'Aktywna' : 
+          {isActive && !isCanceled ? 'Aktywna' : 
            isActive && isCanceled ? 'Anulowana' : 
            'Nieaktywna'}
         </Badge>
-        {isTrialing && data.trialEnd && (
-          <span className="text-sm text-gray-500">
-            do {formatDate(data.trialEnd)}
-          </span>
-        )}
       </div>
     );
   };

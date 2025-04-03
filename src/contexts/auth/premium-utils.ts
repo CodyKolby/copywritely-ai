@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client'
 import { toast } from 'sonner';
 
@@ -34,7 +35,7 @@ export const checkPremiumStatus = async (userId: string, showToast = false): Pro
       }
     }
     
-    // Then try edge function
+    // Then try edge function for verification with Stripe
     console.log('DB check did not confirm premium status, trying edge function check');
     const { data, error } = await supabase.functions.invoke('check-subscription-status', {
       body: { userId }
@@ -111,7 +112,7 @@ export const checkPremiumStatusFallback = async (userId: string, showToast = fal
     let isPremium = data?.is_premium || false;
     
     // Check subscription status if available
-    if (data?.subscription_status === 'active' || data?.subscription_status === 'trialing') {
+    if (data?.subscription_status === 'active') {
       isPremium = true;
       
       // Update database if there's inconsistency
@@ -167,4 +168,3 @@ export const checkPremiumStatusFallback = async (userId: string, showToast = fal
     return false;
   }
 }
-
