@@ -4,9 +4,12 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import TargetAudienceForm from './TargetAudienceForm';
 import GeneratedScriptDialog from './GeneratedScriptDialog';
 import AdvertisingGoalDialog from './AdvertisingGoalDialog';
+import EmailStyleDialog from './EmailStyleDialog';
+import GeneratedEmailDialog from './GeneratedEmailDialog';
 import { TargetAudienceDialogProps } from './target-audience-dialog/types';
 import { useTargetAudienceDialog } from './target-audience-dialog/useTargetAudienceDialog';
 import DialogSelectionContent from './target-audience-dialog/DialogSelectionContent';
+import { EmailStyle } from './EmailStyleDialog';
 
 const TargetAudienceDialog = ({
   open,
@@ -22,8 +25,11 @@ const TargetAudienceDialog = ({
     selectedAudienceId,
     existingAudiences,
     showScriptDialog,
+    showEmailDialog,
     showGoalDialog,
+    showEmailStyleDialog,
     advertisingGoal,
+    emailStyle,
     handleChoiceSelection,
     handleExistingAudienceSelect,
     handleContinue,
@@ -32,7 +38,10 @@ const TargetAudienceDialog = ({
     handleBack,
     handleGoalSubmit,
     handleGoalBack,
+    handleEmailStyleSubmit,
+    handleEmailStyleBack,
     handleScriptDialogClose,
+    handleEmailDialogClose,
   } = useTargetAudienceDialog({
     open,
     onOpenChange,
@@ -50,11 +59,16 @@ const TargetAudienceDialog = ({
     onOpenChange(false);
   };
 
+  const handleEmailClose = () => {
+    handleEmailDialogClose();
+    onOpenChange(false);
+  };
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
-          {!showForm && !showGoalDialog ? (
+          {!showForm && !showGoalDialog && !showEmailStyleDialog ? (
             <DialogSelectionContent
               isPremium={isPremium}
               isLoading={isLoading}
@@ -73,6 +87,12 @@ const TargetAudienceDialog = ({
               onBack={handleGoalBack}
               onCancel={handleDialogClose}
             />
+          ) : showEmailStyleDialog ? (
+            <EmailStyleDialog
+              onSubmit={handleEmailStyleSubmit}
+              onBack={handleEmailStyleBack}
+              onCancel={handleDialogClose}
+            />
           ) : (
             <TargetAudienceForm 
               onSubmit={handleFormSubmit}
@@ -83,13 +103,28 @@ const TargetAudienceDialog = ({
         </DialogContent>
       </Dialog>
       
-      <GeneratedScriptDialog
-        open={showScriptDialog}
-        onOpenChange={handleScriptClose}
-        targetAudienceId={selectedAudienceId || ''}
-        templateId={templateId}
-        advertisingGoal={advertisingGoal}
-      />
+      {/* Script Dialog - shown for non-email templates */}
+      {templateId !== 'email' && (
+        <GeneratedScriptDialog
+          open={showScriptDialog}
+          onOpenChange={handleScriptClose}
+          targetAudienceId={selectedAudienceId || ''}
+          templateId={templateId}
+          advertisingGoal={advertisingGoal}
+        />
+      )}
+
+      {/* Email Dialog - shown only for email template */}
+      {templateId === 'email' && (
+        <GeneratedEmailDialog
+          open={showEmailDialog}
+          onOpenChange={handleEmailClose}
+          targetAudienceId={selectedAudienceId || ''}
+          templateId={templateId}
+          advertisingGoal={advertisingGoal}
+          emailStyle={emailStyle as EmailStyle}
+        />
+      )}
     </>
   );
 };
