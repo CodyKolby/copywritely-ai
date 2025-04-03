@@ -14,3 +14,8 @@ export interface TargetAudienceDialogOptions {
   userId: string;
   isPremium: boolean;
 }
+
+export interface TargetAudience {
+  id: string;
+  name: string;
+}

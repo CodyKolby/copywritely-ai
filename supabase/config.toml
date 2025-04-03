@@ -1,6 +1,5 @@
 
 project_id = "jorbqjareswzdrsmepbv"
-plugins = []
 [functions.generate-script]
 verify_jwt = false
 [functions.ai-agents]

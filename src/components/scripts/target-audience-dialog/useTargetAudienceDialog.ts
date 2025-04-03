@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { getExistingTargetAudiences } from './api';
+import { fetchExistingAudiences } from './api';
 import { toast } from 'sonner';
 import { FormValues } from '../target-audience-form/types';
 import { supabase } from '@/integrations/supabase/client';
@@ -60,7 +60,7 @@ export const useTargetAudienceDialog = ({
     setIsLoading(true);
     
     try {
-      const audiences = await getExistingTargetAudiences(userId);
+      const audiences = await fetchExistingAudiences(userId);
       setExistingAudiences(audiences);
     } catch (error) {
       console.error('Error loading existing target audiences:', error);
