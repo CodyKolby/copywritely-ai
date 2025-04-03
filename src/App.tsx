@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { LazyMotion, domAnimation } from "framer-motion";
-import { AuthProvider } from "./contexts/auth/AuthContext";
+import { AuthProvider } from "./contexts/auth/AuthProvider";
 import Index from "./pages/Index";
 import BriefGenerator from "./pages/BriefGenerator";
 import ScriptGenerator from "./pages/ScriptGenerator";

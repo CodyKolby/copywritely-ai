@@ -1,5 +1,4 @@
-
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { useEffect, useState, ReactNode } from 'react'
 import { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/integrations/supabase/client'
 import { AuthContextType, Profile } from './types'
@@ -24,8 +23,7 @@ import {
 } from './local-storage-utils'
 import { useTestUser } from './use-test-user'
 import { toast } from 'sonner'
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+import { AuthContext } from './AuthContext'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -43,7 +41,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setTestUserState 
   } = useTestUser()
 
-  // When auth loads, check localStorage for premium status as a first check
   useEffect(() => {
     if (!localStoragePremiumChecked) {
       const localPremium = validateLocalStoragePremium();
@@ -138,10 +135,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       console.log('[AUTH] Handling authenticated user:', userId);
       
-      // Reset premium state until verified from database
       setIsPremium(false);
       
-      // Fetch user profile
       const userProfile = await fetchProfile(userId);
       console.log('[AUTH] User profile after fetch:', userProfile);
       setProfile(userProfile);
@@ -155,7 +150,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
       
-      // FIRST SOURCE OF TRUTH: Check database directly for premium status
       const { data: latestProfile, error: profileError } = await supabase
         .from('profiles')
         .select('is_premium, subscription_id, subscription_status, subscription_expiry')
@@ -167,7 +161,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         console.log('[AUTH] Latest profile data from database:', latestProfile);
         
-        // Update profile state with latest data
         if (userProfile && latestProfile) {
           setProfile({
             ...userProfile,
@@ -178,19 +171,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           });
         }
         
-        // Only set premium if database explicitly says so
         if (latestProfile?.is_premium) {
           console.log('[AUTH] User has premium status according to database');
           setIsPremium(true);
           
-          // Update localStorage backup
           storePremiumInLocalStorage(true);
           
-          return; // Early return as we have confirmed premium status
+          return;
         }
       }
       
-      // SECOND SOURCE OF TRUTH: Check for payment logs as proof of purchase
       try {
         console.log('[AUTH] Checking payment logs for premium confirmation');
         const { data: paymentLogs, error: logsError } = await supabase
@@ -203,27 +193,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!logsError && paymentLogs && paymentLogs.length > 0) {
           console.log('[AUTH] Found payment logs, assuming premium status');
           
-          // Update profile in database to ensure consistency
           await updatePremiumStatus(userId, true);
           
-          // Update local state
           setIsPremium(true);
           
-          // Update localStorage backup
           storePremiumInLocalStorage(true);
           
-          return; // Early return as we have confirmed premium status
+          return;
         }
       } catch (logsError) {
         console.error('[AUTH] Error checking payment logs:', logsError);
       }
       
-      // THIRD SOURCE OF TRUTH: Check localStorage backup if it exists
       const localPremium = validateLocalStoragePremium();
       if (localPremium) {
         console.log('[AUTH] Setting premium status from validated localStorage backup');
         
-        // Also update database to ensure consistency
         try {
           await updatePremiumStatus(userId, true);
           
@@ -234,12 +219,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
       
-      // FINAL CHECK: Use the edge function as a last resort
       const isPremiumStatus = await checkPremiumStatus(userId);
       console.log('[AUTH] Premium status after final edge function check:', isPremiumStatus);
       setIsPremium(isPremiumStatus);
       
-      // If premium was found, update localStorage backup
       if (isPremiumStatus) {
         storePremiumInLocalStorage(true);
       }
@@ -252,7 +235,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       console.log('[AUTH] Manual premium status check for user:', userId);
       
-      // Check database directly first
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('is_premium, subscription_id, subscription_status, subscription_expiry')
@@ -280,7 +262,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             };
           });
           
-          // Update localStorage backup
           storePremiumInLocalStorage(true);
           
           if (showToast) {
@@ -293,7 +274,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
       
-      // Check for payment logs as evidence
       try {
         const { data: paymentLogs, error: logsError } = await supabase
           .from('payment_logs')
@@ -305,12 +285,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!logsError && paymentLogs && paymentLogs.length > 0) {
           console.log('[AUTH] Found payment logs, setting premium status');
           
-          // Update profile to ensure consistency
           await updatePremiumStatus(userId, true);
             
           setIsPremium(true);
           
-          // Update localStorage backup
           storePremiumInLocalStorage(true);
           
           if (showToast) {
@@ -325,12 +303,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error('[AUTH] Error checking payment logs:', logsError);
       }
       
-      // Check localStorage backup
       const localPremium = validateLocalStoragePremium();
       if (localPremium) {
         console.log('[AUTH] Using validated localStorage premium backup');
         
-        // Update database for consistency
         try {
           await updatePremiumStatus(userId, true);
             
@@ -348,7 +324,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
       
-      // Fall back to edge function check
       const isPremiumStatus = await checkPremiumStatus(userId, showToast);
       
       console.log('[AUTH] Setting isPremium state to:', isPremiumStatus);
@@ -361,10 +336,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setProfile(updatedProfile);
         }
         
-        // Update localStorage backup
         storePremiumInLocalStorage(true);
       } else {
-        // If all checks failed, ensure localStorage backup is cleared
         storePremiumInLocalStorage(false);
       }
       
@@ -391,7 +364,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (user?.id) {
         console.log('[AUTH] Checking current premium status before refresh');
         
-        // Check current database state
         const { data: currentProfile, error: currentProfileError } = await supabase
           .from('profiles')
           .select('is_premium, subscription_id, subscription_status, subscription_expiry')
@@ -404,7 +376,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.log('[AUTH] User already has premium status in database, no need to update');
           setIsPremium(true);
         } else {
-          // Check payment logs for evidence of premium purchase
           try {
             const { data: paymentLogs } = await supabase
               .from('payment_logs')

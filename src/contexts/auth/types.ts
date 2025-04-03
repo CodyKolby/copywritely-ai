@@ -18,6 +18,7 @@ export interface AuthContextType {
   loading: boolean
   isPremium: boolean
   profile: Profile | null
+  authInitialized: boolean
   signInWithGoogle: () => Promise<void>
   signInWithEmail: (email: string, password: string) => Promise<void>
   signUpWithEmail: (email: string, password: string) => Promise<void>
