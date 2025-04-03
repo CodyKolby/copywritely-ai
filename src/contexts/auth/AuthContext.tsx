@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/integrations/supabase/client'
@@ -22,6 +21,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [isPremium, setIsPremium] = useState(false)
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [authInitialized, setAuthInitialized] = useState(false)
   const { 
     testUser, 
     testSession, 
@@ -33,44 +33,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     console.log("Setting up auth state listener");
     
-    // First set up the auth state change listener BEFORE checking for session
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-      console.log("Auth state changed", event, !!newSession);
+    const handleAuthStateChange = async (event: string, newSession: Session | null) => {
+      console.log("Auth state changed", event, !!newSession?.user);
       
-      // Only update if we're not using a test user
       if (!testUser) {
         setSession(newSession);
         setUser(newSession?.user ?? null);
         
         if (newSession?.user) {
-          // Save user email for Stripe
           if (newSession.user.email) {
             localStorage.setItem('userEmail', newSession.user.email);
           }
           
-          // Fetch user profile and premium status
           await handleUserAuthenticated(newSession.user.id);
         } else {
           setIsPremium(false);
           setProfile(null);
         }
       }
-    });
+    };
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
 
     const initializeAuth = async () => {
-      // If we have a test user active, use that
-      if (testUser) {
-        setUser(testUser);
-        setSession(testSession);
-        setIsPremium(testIsPremium);
-        setProfile(testProfile);
-        setLoading(false);
-        return;
-      }
-
-      // Otherwise check for a real session
       try {
         console.log('Initializing auth state');
+        
+        if (testUser) {
+          setUser(testUser);
+          setSession(testSession);
+          setIsPremium(testIsPremium);
+          setProfile(testProfile);
+          setLoading(false);
+          setAuthInitialized(true);
+          return;
+        }
+
         const { data: { session: currentSession }, error } = await supabase.auth.getSession();
         
         if (error) {
@@ -81,7 +79,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.log('Found existing session, user ID:', currentSession.user.id);
           console.log('User metadata:', currentSession.user.user_metadata);
           
-          // Save user email for Stripe
           if (currentSession.user.email) {
             localStorage.setItem('userEmail', currentSession.user.email);
           }
@@ -95,8 +92,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setSession(null);
           setUser(null);
         }
+        
+        setAuthInitialized(true);
       } catch (error) {
         console.error('Error initializing auth:', error);
+        setAuthInitialized(true);
       }
       
       setLoading(false);
@@ -119,7 +119,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (!userProfile) {
         console.warn('No profile found or created for user:', userId);
-        // Try to create profile one more time
         const retryProfile = await createProfile(userId);
         if (retryProfile) {
           console.log('Successfully created profile on retry:', retryProfile);
@@ -127,7 +126,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
       
-      // Check premium status
       const isPremiumStatus = await checkPremiumStatus(userId);
       console.log('Premium status after check:', isPremiumStatus);
       setIsPremium(isPremiumStatus);
@@ -148,6 +146,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const refreshSession = async () => {
+    try {
+      console.log('Manually refreshing session');
+      const { data, error } = await supabase.auth.refreshSession();
+      
+      if (error) {
+        console.error('Error refreshing session:', error);
+        return false;
+      }
+      
+      if (data.session) {
+        console.log('Session refreshed successfully');
+        setSession(data.session);
+        setUser(data.session.user);
+        
+        if (data.session.user) {
+          await handleUserAuthenticated(data.session.user.id);
+        }
+        
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Exception refreshing session:', error);
+      return false;
+    }
+  };
+
   return (
     <AuthContext.Provider value={{ 
       user: testUser || user, 
@@ -155,11 +182,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading, 
       isPremium: testIsPremium || isPremium,
       profile: testProfile || profile,
+      authInitialized,
       signInWithGoogle,
       signInWithEmail,
       signUpWithEmail,
       signOut,
       checkPremiumStatus: checkUserPremiumStatus,
+      refreshSession,
       setTestUserState
     }}>
       {children}

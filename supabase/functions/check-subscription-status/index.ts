@@ -1,17 +1,12 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.5.0";
-
-// Get environment variables
-const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
-const supabaseUrl = Deno.env.get('SUPABASE_URL');
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-
-// Define CORS headers
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { 
+  corsHeaders, 
+  getSupabaseClient, 
+  verifyUser, 
+  isSubscriptionExpired,
+  verifyStripeSubscription
+} from "./helpers.ts";
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -31,23 +26,16 @@ serve(async (req) => {
 
     console.log(`Checking subscription status for user: ${userId}`);
 
-    // Create Supabase client with Service Role Key
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // Get Stripe secret key
+    const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
+    
+    // Create Supabase client
+    const supabase = getSupabaseClient();
 
     // First check if user exists in auth system
-    try {
-      const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
-      
-      if (userError) {
-        console.error('Error verifying user:', userError);
-      } else if (!userData.user) {
-        console.error('User not found in auth system:', userId);
-      } else {
-        console.log('User verified in auth system:', userData.user.id);
-      }
-    } catch (userCheckError) {
-      console.error('Exception checking user in auth system:', userCheckError);
-      // Continue anyway - we might have the profile in the database already
+    const userExists = await verifyUser(supabase, userId);
+    if (!userExists) {
+      console.warn('User not verified in auth system. Will continue anyway as they might exist in profiles table');
     }
 
     // Check subscription status in profiles table
@@ -93,17 +81,8 @@ serve(async (req) => {
 
     // Check expiry date first - this is critical
     if (profile.subscription_expiry) {
-      const expiryDate = new Date(profile.subscription_expiry);
-      const now = new Date();
-      
-      console.log('Checking expiry date:', {
-        expiry: expiryDate.toISOString(),
-        now: now.toISOString(),
-        isExpired: expiryDate <= now
-      });
-      
-      if (expiryDate <= now) {
-        console.log('Subscription has expired on:', expiryDate);
+      if (isSubscriptionExpired(profile.subscription_expiry)) {
+        console.log('Subscription has expired on:', profile.subscription_expiry);
         
         // Update database to reflect expired status
         await supabase
@@ -126,105 +105,45 @@ serve(async (req) => {
     
     // If we have a subscription ID, validate with Stripe directly
     if (profile.subscription_id && stripeSecretKey) {
-      try {
-        console.log('Validating subscription with Stripe:', profile.subscription_id);
-        const response = await fetch(`https://api.stripe.com/v1/subscriptions/${profile.subscription_id}`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${stripeSecretKey}`,
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-        });
-
-        if (response.ok) {
-          const subscription = await response.json();
-          console.log('Stripe subscription status:', subscription.status);
+      const { isActive, expiryDate } = await verifyStripeSubscription(
+        profile.subscription_id, 
+        stripeSecretKey
+      );
+      
+      // Update based on Stripe's data - the source of truth
+      if (isActive) {
+        isPremium = true;
+        
+        // Update DB if needed
+        if (!profile.is_premium || profile.subscription_status !== 'active') {
+          console.log('Updating profile based on active Stripe subscription');
           
-          // Update based on Stripe's data - the source of truth
-          if (subscription.status === 'active' || subscription.status === 'trialing') {
-            isPremium = true;
-            
-            // Check if subscription's current period end has passed
-            if (subscription.current_period_end) {
-              const expiryTimestamp = subscription.current_period_end * 1000; // Convert to milliseconds
-              const expiryDate = new Date(expiryTimestamp);
-              const now = new Date();
-              
-              console.log('Checking Stripe period end:', {
-                expiry: expiryDate.toISOString(),
-                now: now.toISOString(),
-                isExpired: expiryDate <= now
-              });
-              
-              if (expiryDate <= now) {
-                console.log('Subscription period has ended:', expiryDate);
-                isPremium = false;
-                
-                // Update DB with expired status
-                await supabase
-                  .from('profiles')
-                  .update({ 
-                    is_premium: false,
-                    subscription_status: 'inactive'
-                  })
-                  .eq('id', userId);
-                  
-                return new Response(
-                  JSON.stringify({ isPremium: false }),
-                  { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-                );
-              }
-              
-              // Update expiry date in database
-              const updatedExpiryDate = expiryDate.toISOString();
-              
-              // Update DB if needed
-              if (!profile.is_premium || subscription.status !== profile.subscription_status) {
-                console.log('Updating profile based on active Stripe subscription with expiry:', updatedExpiryDate);
-                
-                await supabase
-                  .from('profiles')
-                  .update({ 
-                    is_premium: true,
-                    subscription_status: 'active',
-                    subscription_expiry: updatedExpiryDate
-                  })
-                  .eq('id', userId);
-              }
-            }
-          } else if (profile.is_premium) {
-            // Subscription is not active in Stripe, but marked as premium in DB
-            console.log('Updating profile to non-premium based on inactive Stripe subscription');
-            isPremium = false;
-            await supabase
-              .from('profiles')
-              .update({ 
-                is_premium: false,
-                subscription_status: 'inactive'
-              })
-              .eq('id', userId);
-          }
-        } else {
-          console.error('Failed to fetch subscription from Stripe:', await response.text());
+          const updateData: Record<string, any> = { 
+            is_premium: true,
+            subscription_status: 'active'
+          };
           
-          // If it's an invalid subscription and user is marked as premium, update to not premium
-          const errorData = await response.json();
-          if (isPremium && errorData?.error?.type === 'invalid_request_error') {
-            console.log('Subscription not found in Stripe, updating premium status to false');
-            await supabase
-              .from('profiles')
-              .update({ 
-                is_premium: false,
-                subscription_status: 'inactive'
-              })
-              .eq('id', userId);
-            
-            isPremium = false;
+          if (expiryDate) {
+            updateData.subscription_expiry = expiryDate;
           }
+          
+          await supabase
+            .from('profiles')
+            .update(updateData)
+            .eq('id', userId);
         }
-      } catch (stripeError) {
-        console.error('Error validating with Stripe:', stripeError);
-        // Continue with database values if Stripe validation fails
+      } else if (profile.is_premium) {
+        // Subscription is not active in Stripe, but marked as premium in DB
+        console.log('Updating profile to non-premium based on inactive Stripe subscription');
+        isPremium = false;
+        
+        await supabase
+          .from('profiles')
+          .update({ 
+            is_premium: false,
+            subscription_status: 'inactive'
+          })
+          .eq('id', userId);
       }
     }
 
