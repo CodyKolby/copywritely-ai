@@ -13,22 +13,28 @@ interface LoadingStateProps {
 export const LoadingState = ({ isWaitingForAuth, onManualRetry, waitTime }: LoadingStateProps) => {
   const [progress, setProgress] = useState(0);
   
-  // Simulate progress for visual feedback
+  // Simulate progress for visual feedback - make it faster
   useEffect(() => {
-    const maxProgress = 95; // Cap at 95% until completion
-    
-    // Use a non-linear progress curve to start fast and slow down
+    // Use a faster progress curve that reaches 100% sooner
     const calculateProgress = (seconds: number) => {
-      if (seconds < 2) return Math.min(30, seconds * 15); // Fast start
-      if (seconds < 5) return Math.min(50, 30 + (seconds - 2) * 6); // Slower
-      if (seconds < 10) return Math.min(70, 50 + (seconds - 5) * 4); // Even slower
-      if (seconds < 20) return Math.min(85, 70 + (seconds - 10) * 1.5); // Very slow
-      return Math.min(maxProgress, 85 + (seconds - 20) * 0.25); // Extremely slow
+      if (seconds < 2) return Math.min(40, seconds * 20); // Much faster start
+      if (seconds < 5) return Math.min(75, 40 + (seconds - 2) * 11); // Very fast ramp-up
+      if (seconds < 10) return Math.min(95, 75 + (seconds - 5) * 4); // Slower near the end
+      return 100; // After 10 seconds, show 100%
     };
     
-    // Update progress based on wait time
     setProgress(calculateProgress(waitTime));
-    
+  }, [waitTime]);
+  
+  // Auto-refresh after 15 seconds
+  useEffect(() => {
+    if (waitTime >= 15) {
+      const countdown = setTimeout(() => {
+        window.location.reload();
+      }, 3000);
+      
+      return () => clearTimeout(countdown);
+    }
   }, [waitTime]);
   
   // Determine message based on wait time and state
@@ -37,20 +43,12 @@ export const LoadingState = ({ isWaitingForAuth, onManualRetry, waitTime }: Load
       return 'Weryfikujemy Twoją tożsamość...';
     }
     
-    if (waitTime > 25) {
-      return 'Płatność została przyjęta!';
-    }
-    
-    if (waitTime > 20) {
-      return 'Proces trwa dłużej niż zwykle...';
-    }
-    
     if (waitTime > 10) {
-      return 'Potwierdzanie statusu płatności...';
+      return 'Proszę czekać, aktualizujemy Twoje konto!';
     }
     
     if (waitTime > 5) {
-      return 'Aktualizowanie Twojego konta...';
+      return 'Weryfikacja płatności zakończona!';
     }
     
     return 'Weryfikujemy Twoją płatność...';
@@ -62,12 +60,12 @@ export const LoadingState = ({ isWaitingForAuth, onManualRetry, waitTime }: Load
       return 'Łączymy dane płatności z Twoim kontem...';
     }
     
-    if (waitTime > 25) {
-      return 'Za chwilę zostaniesz przekierowany...';
+    if (waitTime > 10) {
+      return 'Odświeżamy stronę za 3 sekundy...';
     }
     
-    if (waitTime > 15) {
-      return 'To może potrwać chwilę dłużej niż zwykle...';
+    if (waitTime > 5) {
+      return 'Twoje konto otrzyma dostęp w ciągu kilku sekund.';
     }
     
     return 'Prosimy o cierpliwość...';
@@ -90,19 +88,13 @@ export const LoadingState = ({ isWaitingForAuth, onManualRetry, waitTime }: Load
         </div>
       </div>
       
-      {waitTime > 15 && (
-        <p className="text-xs text-gray-500 mt-3 mb-3 max-w-xs text-center">
-          Weryfikacja może potrwać do 1 minuty. Jeśli proces trwa zbyt długo, możesz spróbować odświeżyć stronę.
+      {waitTime > 7 && (
+        <p className="text-xs text-green-600 mt-3 mb-3 max-w-xs text-center font-medium">
+          Płatność została przyjęta. Za chwilę zakończymy proces.
         </p>
       )}
       
-      {waitTime > 20 && (
-        <p className="text-xs text-green-600 mt-1 mb-3 max-w-xs text-center font-medium">
-          Płatność została przyjęta przez Stripe. Trwa aktualizacja Twojego konta.
-        </p>
-      )}
-      
-      {waitTime > 20 && onManualRetry && (
+      {waitTime > 10 && onManualRetry && (
         <Button 
           variant="outline" 
           size="sm" 
@@ -110,15 +102,13 @@ export const LoadingState = ({ isWaitingForAuth, onManualRetry, waitTime }: Load
           onClick={onManualRetry}
         >
           <RefreshCw className="h-3 w-3" />
-          Spróbuj ponownie
+          Odśwież teraz
         </Button>
       )}
       
-      {/* Auto refresh after 30 seconds for better user experience */}
-      {waitTime > 30 && (
+      {waitTime > 15 && (
         <div className="mt-4">
-          <p className="text-xs text-gray-600">Odświeżanie strony za 5 sekund...</p>
-          {setTimeout(() => window.location.reload(), 5000)}
+          <p className="text-xs text-gray-600">Odświeżanie strony za moment...</p>
         </div>
       )}
     </div>

@@ -56,4 +56,5 @@ enable_signup = true
 verify_jwt = false
 [functions.verify-payment-session]
 verify_jwt = false
-
+[functions.check-subscription-status]
+verify_jwt = false
