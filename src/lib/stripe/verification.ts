@@ -71,8 +71,8 @@ export const forceUpdatePremiumStatus = async (userId: string, sessionId?: strin
       }
     }
     
-    // If we still don't have an expiry date but have subscription ID, calculate one
-    if (subscriptionId && !subscriptionExpiry) {
+    // If we still don't have an expiry date, calculate one
+    if (!subscriptionExpiry) {
       // Set expiry to 30 days from now as fallback
       const expiryDate = new Date();
       expiryDate.setDate(expiryDate.getDate() + 30);

@@ -20,7 +20,7 @@ import SubscriptionModal from './subscription/SubscriptionModal';
 const Navbar = () => {
   const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
-  const { user, signOut, isPremium } = useAuth();
+  const { user, signOut, isPremium, profile } = useAuth();
   const [subscriptionModalOpen, setSubscriptionModalOpen] = useState(false);
 
   useEffect(() => {
@@ -31,6 +31,16 @@ const Navbar = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Log premium status for debugging
+  useEffect(() => {
+    console.log('Navbar premium status:', {
+      isPremium,
+      profileIsPremium: profile?.is_premium,
+      subscriptionId: profile?.subscription_id,
+      subscriptionStatus: profile?.subscription_status
+    });
+  }, [isPremium, profile]);
 
   const navItems = [
     { path: '/', label: 'Główna' },
@@ -45,6 +55,9 @@ const Navbar = () => {
     if (!user?.email) return 'U';
     return user.email.charAt(0).toUpperCase();
   };
+
+  // Determine premium status from either global state or profile data
+  const userHasPremium = isPremium || profile?.is_premium;
 
   return (
     <header
@@ -82,7 +95,7 @@ const Navbar = () => {
                         {getInitials()}
                       </AvatarFallback>
                     </Avatar>
-                    {isPremium && (
+                    {userHasPremium && (
                       <div className="absolute -top-1 -right-1 bg-amber-400 text-white rounded-full p-0.5">
                         <Shield className="h-3 w-3" />
                       </div>
@@ -94,7 +107,7 @@ const Navbar = () => {
                     <div className="flex flex-col space-y-1">
                       <p className="text-sm font-medium leading-none">{user.email}</p>
                       <p className="text-xs leading-none text-muted-foreground">
-                        {isPremium ? 'Konto Premium' : 'Konto Free'}
+                        {userHasPremium ? 'Konto Premium' : 'Konto Free'}
                       </p>
                     </div>
                   </DropdownMenuLabel>

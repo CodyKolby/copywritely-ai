@@ -3,7 +3,11 @@ import { CheckCircle, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 
-export const SuccessState = () => {
+interface SuccessStateProps {
+  redirectTimer?: number;
+}
+
+export const SuccessState = ({ redirectTimer }: SuccessStateProps) => {
   const navigate = useNavigate();
   
   return (
@@ -23,6 +27,12 @@ export const SuccessState = () => {
         Przejdź do projektów
         <ArrowRight className="w-4 h-4" />
       </Button>
+      
+      {redirectTimer !== undefined && redirectTimer > 0 && (
+        <p className="text-sm text-gray-500 mt-4">
+          Za {3 - redirectTimer} {(3 - redirectTimer) === 1 ? 'sekundę' : 'sekundy'} zostaniesz przekierowany do projektów...
+        </p>
+      )}
     </div>
   );
 };

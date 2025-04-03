@@ -23,14 +23,32 @@ const Success = () => {
   const [verificationSuccess, setVerificationSuccess] = useState(false);
   const [waitTime, setWaitTime] = useState(0);
   const [debugInfo, setDebugInfo] = useState<Record<string, any>>({});
+  const [redirectTimer, setRedirectTimer] = useState(0);
   
-  // Auto-refresh page after 15 seconds if stuck
+  // Set a flag to prevent multiple refreshes
+  const [hasDoneFullRefresh, setHasDoneFullRefresh] = useState(false);
+  
+  // Force reload after 15 seconds if stuck
   useEffect(() => {
     if (waitTime >= 15 && !verificationSuccess && loading) {
-      console.log("Auto-refreshing page after 15 seconds");
-      window.location.reload();
+      if (!hasDoneFullRefresh) {
+        console.log("Forcing full page reload after 15 seconds");
+        setHasDoneFullRefresh(true);
+        window.location.reload();
+      }
     }
-  }, [waitTime, verificationSuccess, loading]);
+    
+    // Auto redirect to projects after 3 seconds of success
+    if (verificationSuccess && redirectTimer < 3) {
+      const timer = setTimeout(() => {
+        setRedirectTimer(prev => prev + 1);
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    } else if (verificationSuccess && redirectTimer >= 3) {
+      window.location.href = '/projekty';
+    }
+  }, [waitTime, verificationSuccess, loading, hasDoneFullRefresh, redirectTimer]);
   
   // Start wait timer
   useEffect(() => {
@@ -87,12 +105,28 @@ const Success = () => {
         }
         
         // FORCE UPDATE IMMEDIATELY: This ensures user gets premium right away
-        const forceResult = await forceUpdatePremiumStatus(user.id);
+        const forceResult = await forceUpdatePremiumStatus(user.id, sessionId);
         console.log("Force update result:", forceResult);
         
         // CRITICAL: Refresh auth session to update isPremium state
         await refreshSession();
         console.log("Session refreshed after force update");
+        
+        // Try a second refresh after a short delay to ensure database changes propagate
+        setTimeout(async () => {
+          await refreshSession();
+          console.log("Second session refresh completed");
+          
+          // Check premium status again - this should update UI elements
+          const isPremiumNow = await checkPremiumStatus(user.id, true);
+          console.log("Is premium after second refresh:", isPremiumNow);
+          
+          // If premium status is true, show success
+          if (isPremiumNow) {
+            setVerificationSuccess(true);
+            setLoading(false);
+          }
+        }, 2000);
         
         // Then run full verification in parallel
         verifyStripePayment(sessionId, user.id)
@@ -105,9 +139,14 @@ const Success = () => {
           })
           .catch(err => console.error("Full verification error (non-blocking):", err));
         
-        // Consider verification successful - we'll show success screen
-        setVerificationSuccess(true);
-        setLoading(false);
+        // For better UX, consider verification successful after a reasonable timeout
+        setTimeout(() => {
+          if (loading) {
+            console.log("Setting verification success by timeout");
+            setVerificationSuccess(true);
+            setLoading(false);
+          }
+        }, 8000);
         
       } catch (err: any) {
         console.error("Payment verification process error:", err);
@@ -115,7 +154,7 @@ const Success = () => {
         // GRACEFUL FAILURE: Even on error, try to update premium status
         try {
           console.log("Verification failed, trying emergency status update");
-          await forceUpdatePremiumStatus(user.id);
+          await forceUpdatePremiumStatus(user.id, sessionId);
           await refreshSession(); // Critical: refresh session here too
           setVerificationSuccess(true);
           setLoading(false);
@@ -143,12 +182,28 @@ const Success = () => {
     setWaitTime(0);
     
     // Force update premium status on retry
-    if (user?.id) {
+    if (user?.id && sessionId) {
       try {
-        await forceUpdatePremiumStatus(user.id);
+        await forceUpdatePremiumStatus(user.id, sessionId);
         await refreshSession(); // Critical: refresh session here too
-        setVerificationSuccess(true);
-        setLoading(false);
+        
+        // Set a short timeout to ensure the database changes propagate
+        setTimeout(async () => {
+          await refreshSession();
+          const isPremiumNow = await checkPremiumStatus(user.id, true);
+          
+          if (isPremiumNow) {
+            setVerificationSuccess(true);
+            setLoading(false);
+          } else {
+            // If still not premium, try one more time with a larger delay
+            setTimeout(async () => {
+              await refreshSession();
+              setVerificationSuccess(true);
+              setLoading(false);
+            }, 3000);
+          }
+        }, 1000);
       } catch (err) {
         console.error("Manual retry failed:", err);
         await refreshSession();
@@ -180,7 +235,9 @@ const Success = () => {
               debugInfo={debugInfo}
             />
           ) : (
-            <SuccessState />
+            <SuccessState 
+              redirectTimer={redirectTimer}
+            />
           )}
         </motion.div>
       </div>

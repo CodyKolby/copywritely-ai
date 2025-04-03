@@ -41,11 +41,12 @@ serve(async (req) => {
       subscriptionExpiry
     });
     
+    // Make sure we always return valid values for these fields
     return new Response(
       JSON.stringify({
-        subscriptionId,
-        subscriptionStatus,
-        subscriptionExpiry,
+        subscriptionId: subscriptionId || null,
+        subscriptionStatus: subscriptionStatus || 'active',
+        subscriptionExpiry: subscriptionExpiry || getDefaultExpiryDate(),
         customerId: session.customer || null,
         customerEmail: session.customer_email || null
       }),
@@ -55,9 +56,12 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in check-session-details function:', error);
     
+    // Even on error, return some default data
     return new Response(
       JSON.stringify({ 
-        error: error.message || 'Error checking session details' 
+        error: error.message || 'Error checking session details',
+        subscriptionStatus: 'active',
+        subscriptionExpiry: getDefaultExpiryDate()
       }),
       { 
         status: 400, 
@@ -66,3 +70,10 @@ serve(async (req) => {
     );
   }
 });
+
+// Helper function to get a default expiry date (30 days from now)
+function getDefaultExpiryDate(): string {
+  const date = new Date();
+  date.setDate(date.getDate() + 30);
+  return date.toISOString();
+}

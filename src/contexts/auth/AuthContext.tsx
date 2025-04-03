@@ -127,9 +127,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
       
-      const isPremiumStatus = await checkPremiumStatus(userId);
-      console.log('Premium status after check:', isPremiumStatus);
-      setIsPremium(isPremiumStatus);
+      // Force get the latest profile data first
+      const { data: latestProfile } = await supabase
+        .from('profiles')
+        .select('is_premium, subscription_id, subscription_status, subscription_expiry')
+        .eq('id', userId)
+        .single();
+        
+      console.log('Latest profile data from database:', latestProfile);
+      
+      // Use the database value directly to immediately update the UI
+      if (latestProfile?.is_premium) {
+        console.log('User has premium status according to database');
+        setIsPremium(true);
+        if (userProfile) {
+          setProfile({
+            ...userProfile,
+            is_premium: true,
+            subscription_id: latestProfile.subscription_id,
+            subscription_status: latestProfile.subscription_status,
+            subscription_expiry: latestProfile.subscription_expiry
+          });
+        }
+      } else {
+        // If not premium in database, check with Stripe
+        const isPremiumStatus = await checkPremiumStatus(userId);
+        console.log('Premium status after check:', isPremiumStatus);
+        setIsPremium(isPremiumStatus);
+      }
     } catch (error) {
       console.error('Error in handleUserAuthenticated:', error);
     }
@@ -138,10 +163,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const checkUserPremiumStatus = async (userId: string, showToast = false) => {
     try {
       console.log('Manual premium status check for user:', userId);
+      
+      // First try direct database check
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_premium, subscription_id, subscription_status, subscription_expiry')
+        .eq('id', userId)
+        .single();
+        
+      console.log('Profile data from direct check:', profile);
+      
+      if (profile?.is_premium) {
+        console.log('User has premium status according to database');
+        setIsPremium(true);
+        
+        // Update the profile state
+        setProfile(prevProfile => {
+          if (!prevProfile) return null;
+          return {
+            ...prevProfile,
+            is_premium: true,
+            subscription_id: profile.subscription_id,
+            subscription_status: profile.subscription_status,
+            subscription_expiry: profile.subscription_expiry
+          };
+        });
+        
+        if (showToast) {
+          toast.success('Twoje konto ma status Premium!', {
+            dismissible: true
+          });
+        }
+        
+        return true;
+      }
+      
+      // If not premium in database, check with Stripe
       const isPremiumStatus = await checkPremiumStatus(userId, showToast);
       setIsPremium(isPremiumStatus);
       
-      // Get the latest profile info after premium status check
+      // If premium status is true, get the latest profile info
       if (isPremiumStatus) {
         const updatedProfile = await fetchProfile(userId);
         if (updatedProfile) {
