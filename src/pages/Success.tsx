@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -12,13 +13,70 @@ const Success = () => {
   const [error, setError] = useState<string | null>(null);
   const [verificationAttempt, setVerificationAttempt] = useState(0);
   const [verificationSuccess, setVerificationSuccess] = useState(false);
+  const [waitingForAuth, setWaitingForAuth] = useState(true);
   const { user, checkPremiumStatus, isPremium } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   
   const successToastShown = sessionStorage.getItem('paymentProcessed') === 'true';
 
+  // First, handle authentication check with retry mechanism
   useEffect(() => {
+    const checkAuthWithRetry = async () => {
+      console.log("Checking authentication status...");
+      
+      // If we already have a user, we can proceed
+      if (user?.id) {
+        console.log("User already authenticated:", user.id);
+        setWaitingForAuth(false);
+        return;
+      }
+      
+      // Get current session to check auth status
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        console.log("Found session for user:", session.user.id);
+        setWaitingForAuth(false);
+      } else {
+        // If we don't have a session, try to get the search params
+        const searchParams = new URLSearchParams(location.search);
+        const sessionId = searchParams.get('session_id');
+        
+        if (!sessionId) {
+          // No session ID in URL, redirect to login
+          console.error("No session ID and no authenticated user");
+          setError("Nie jesteś zalogowany. Zaloguj się, aby kontynuować.");
+          setLoading(false);
+          return;
+        }
+        
+        console.log("No user session but have Stripe session ID:", sessionId);
+        
+        // We have a session ID but no user - wait a bit and retry
+        if (verificationAttempt < 5) {
+          console.log(`Auth retry attempt ${verificationAttempt + 1}/5`);
+          setTimeout(() => {
+            setVerificationAttempt(prev => prev + 1);
+          }, 1000);
+        } else {
+          console.log("Max auth retry attempts reached");
+          setError("Nie udało się zidentyfikować użytkownika. Spróbuj zalogować się ponownie.");
+          setLoading(false);
+        }
+      }
+    };
+    
+    checkAuthWithRetry();
+  }, [user, location.search, verificationAttempt]);
+
+  // Only run the payment verification after we have authentication
+  useEffect(() => {
+    if (waitingForAuth) {
+      console.log("Waiting for authentication before verifying payment...");
+      return;
+    }
+    
     const forceUpdatePremiumStatus = async (userId: string) => {
       try {
         console.log('Forced update of premium status for user:', userId);
@@ -48,19 +106,19 @@ const Success = () => {
           return;
         }
 
+        if (!user?.id) {
+          console.error('No user ID available for payment verification');
+          setError('Nie udało się zidentyfikować użytkownika. Spróbuj zalogować się ponownie.');
+          setLoading(false);
+          return;
+        }
+
         const searchParams = new URLSearchParams(location.search);
         const sessionId = searchParams.get('session_id');
 
         if (!sessionId) {
           console.error('No session ID found in URL');
           setError('Brak identyfikatora sesji płatności');
-          setLoading(false);
-          return;
-        }
-
-        if (!user?.id) {
-          console.error('No user ID available');
-          setError('Nie udało się zidentyfikować użytkownika');
           setLoading(false);
           return;
         }
@@ -145,8 +203,11 @@ const Success = () => {
       }
     };
 
-    verifyPayment();
-  }, [location, user, checkPremiumStatus, successToastShown, verificationAttempt, isPremium]);
+    // Only proceed with payment verification if we have a user
+    if (user?.id) {
+      verifyPayment();
+    }
+  }, [location, user, checkPremiumStatus, successToastShown, verificationAttempt, isPremium, waitingForAuth]);
 
   return (
     <div className="min-h-screen pt-24 pb-12 px-4">
@@ -160,7 +221,9 @@ const Success = () => {
           {loading ? (
             <div className="flex flex-col items-center">
               <div className="w-16 h-16 border-4 border-t-copywrite-teal border-opacity-50 rounded-full animate-spin mb-4"></div>
-              <p className="text-lg text-gray-600">Weryfikujemy Twoją płatność...</p>
+              <p className="text-lg text-gray-600">
+                {waitingForAuth ? 'Weryfikujemy Twoją sesję...' : 'Weryfikujemy Twoją płatność...'}
+              </p>
             </div>
           ) : error ? (
             <div className="text-center">
@@ -183,6 +246,13 @@ const Success = () => {
               <p className="text-gray-600 mb-6">{error}</p>
               <Button onClick={() => navigate('/pricing')}>
                 Wróć do cennika
+              </Button>
+              <Button 
+                className="mt-3 ml-2" 
+                variant="outline" 
+                onClick={() => navigate('/login')}
+              >
+                Przejdź do logowania
               </Button>
             </div>
           ) : (

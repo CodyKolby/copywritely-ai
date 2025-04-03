@@ -21,9 +21,11 @@ serve(async (req) => {
 
   try {
     // Get user ID from request
-    const { userId } = await req.json();
+    const requestData = await req.json();
+    const userId = requestData.userId;
 
     if (!userId) {
+      console.error('Missing userId parameter in request');
       throw new Error('Missing userId parameter');
     }
 
