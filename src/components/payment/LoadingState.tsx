@@ -73,9 +73,6 @@ export const LoadingState = ({ isWaitingForAuth, onManualRetry, waitTime }: Load
     return 'Prosimy o cierpliwość...';
   };
   
-  // Auto-refresh suggestion after a certain time
-  const showAutoRefreshSuggestion = waitTime > 30;
-  
   return (
     <div className="flex flex-col items-center">
       <div className="w-16 h-16 border-4 border-t-copywrite-teal border-opacity-50 rounded-full animate-spin mb-4"></div>
@@ -105,14 +102,6 @@ export const LoadingState = ({ isWaitingForAuth, onManualRetry, waitTime }: Load
         </p>
       )}
       
-      {showAutoRefreshSuggestion && (
-        <div className="bg-amber-50 p-3 rounded-md border border-amber-200 mt-2 mb-2 max-w-xs">
-          <p className="text-xs text-amber-700">
-            Wygląda na to, że proces trwa wyjątkowo długo. Za chwilę nastąpi automatyczne odświeżenie strony.
-          </p>
-        </div>
-      )}
-      
       {waitTime > 20 && onManualRetry && (
         <Button 
           variant="outline" 
@@ -125,8 +114,8 @@ export const LoadingState = ({ isWaitingForAuth, onManualRetry, waitTime }: Load
         </Button>
       )}
       
-      {/* Auto refresh after 45 seconds */}
-      {waitTime > 45 && (
+      {/* Auto refresh after 30 seconds for better user experience */}
+      {waitTime > 30 && (
         <div className="mt-4">
           <p className="text-xs text-gray-600">Odświeżanie strony za 5 sekund...</p>
           {setTimeout(() => window.location.reload(), 5000)}

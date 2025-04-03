@@ -56,7 +56,27 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           success: true,
-          message: 'Payment already confirmed'
+          message: 'Payment already confirmed',
+          source: 'payment_logs'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Also check if the user already has premium status
+    const { data: profileCheck } = await supabase
+      .from('profiles')
+      .select('is_premium, subscription_id')
+      .eq('id', userId)
+      .single();
+      
+    if (profileCheck?.is_premium) {
+      console.log("User already has premium status, returning success");
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          message: 'User already has premium status',
+          source: 'profile_check'
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -87,6 +107,16 @@ serve(async (req) => {
         // Continue verification even if metadata update fails
       }
       
+      // Log full session details for debugging
+      console.log("Session details:", JSON.stringify({
+        id: session.id,
+        payment_status: session.payment_status,
+        status: session.status,
+        customer: session.customer,
+        subscription: session.subscription,
+        metadata: session.metadata
+      }));
+      
       // Check if payment was successful
       if (session.payment_status === 'paid') {
         console.log("Session is paid, updating profile...");
@@ -106,6 +136,8 @@ serve(async (req) => {
             if (subscription.current_period_end) {
               subscriptionExpiry = new Date(subscription.current_period_end * 1000).toISOString();
             }
+            
+            console.log(`Subscription: id=${subscriptionId}, status=${subscriptionStatus}, expiry=${subscriptionExpiry}`);
           } catch (subError) {
             console.error("Error getting subscription details:", subError);
           }
@@ -120,7 +152,29 @@ serve(async (req) => {
           subscriptionExpiry
         );
         
-        // Log the payment
+        if (!updateSuccess) {
+          console.log("Failed to update profile with premium status, retrying with direct query");
+          
+          // Try a direct update as fallback
+          const { error: directUpdateError } = await supabase
+            .from('profiles')
+            .update({
+              is_premium: true,
+              subscription_id: subscriptionId,
+              subscription_status: subscriptionStatus,
+              subscription_expiry: subscriptionExpiry,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', userId);
+            
+          if (directUpdateError) {
+            console.error("Direct profile update also failed:", directUpdateError);
+          } else {
+            console.log("Direct profile update succeeded");
+          }
+        }
+        
+        // Log the payment regardless of profile update success
         try {
           await supabase.from('payment_logs').insert({
             user_id: userId,
@@ -135,10 +189,19 @@ serve(async (req) => {
           console.error("Error logging payment:", insertError);
         }
         
+        // Verify if profile was actually updated
+        const { data: updatedProfile } = await supabase
+          .from('profiles')
+          .select('is_premium')
+          .eq('id', userId)
+          .single();
+          
         return new Response(
           JSON.stringify({ 
             success: true,
-            message: 'Payment verified successfully'
+            premium_status: !!updatedProfile?.is_premium,
+            message: 'Payment verified successfully',
+            source: 'stripe_api'
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
@@ -147,7 +210,7 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({ 
             success: false,
-            message: 'Payment not completed'
+            message: `Payment not completed. Status: ${session.payment_status}`
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
