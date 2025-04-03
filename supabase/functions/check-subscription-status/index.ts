@@ -73,36 +73,21 @@ serve(async (req) => {
 
     console.log('Profile data:', profile);
 
-    // Default status - start with database flag
-    let isPremium = profile.is_premium || false;
-    console.log('Initial premium status from database flag:', isPremium);
-    
-    // Check expiry date if it exists
+    // Check expiry date first - this is critical
     if (profile.subscription_expiry) {
       const expiryDate = new Date(profile.subscription_expiry);
       const now = new Date();
       
-      // If expiry date is in the future, user has active subscription
-      if (expiryDate > now) {
-        console.log('User has valid subscription until:', expiryDate);
-        isPremium = true;
+      console.log('Checking expiry date:', {
+        expiry: expiryDate.toISOString(),
+        now: now.toISOString(),
+        isExpired: expiryDate <= now
+      });
+      
+      if (expiryDate <= now) {
+        console.log('Subscription has expired on:', expiryDate);
         
-        // Update database if there's inconsistency
-        if (!profile.is_premium) {
-          console.log('Expiry date valid but is_premium flag is false. Fixing...');
-          await supabase
-            .from('profiles')
-            .update({ 
-              is_premium: true,
-              subscription_status: profile.subscription_status || 'active'
-            })
-            .eq('id', userId);
-        }
-      } else if (isPremium && expiryDate <= now) {
-        // If expiry date is in the past but is_premium flag is true,
-        // update status to false
-        console.log('Subscription expired, updating premium status to false');
-        
+        // Update database to reflect expired status
         await supabase
           .from('profiles')
           .update({ 
@@ -111,10 +96,16 @@ serve(async (req) => {
           })
           .eq('id', userId);
         
-        isPremium = false;
+        return new Response(
+          JSON.stringify({ isPremium: false }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
     }
 
+    // Default status after expiry check
+    let isPremium = profile.is_premium || false;
+    
     // If we have a subscription ID, validate with Stripe directly
     if (profile.subscription_id && stripeSecretKey) {
       try {
@@ -135,24 +126,53 @@ serve(async (req) => {
           if (subscription.status === 'active' || subscription.status === 'trialing') {
             isPremium = true;
             
-            // Update DB if needed (adding subscription expiry if available)
-            if (!profile.is_premium || subscription.status !== profile.subscription_status) {
-              console.log('Updating profile based on active Stripe subscription');
+            // Check if subscription's current period end has passed
+            if (subscription.current_period_end) {
+              const expiryTimestamp = subscription.current_period_end * 1000; // Convert to milliseconds
+              const expiryDate = new Date(expiryTimestamp);
+              const now = new Date();
               
-              // Calculate expiry date from current_period_end if available
-              let expiryDate = profile.subscription_expiry;
-              if (subscription.current_period_end) {
-                expiryDate = new Date(subscription.current_period_end * 1000).toISOString();
+              console.log('Checking Stripe period end:', {
+                expiry: expiryDate.toISOString(),
+                now: now.toISOString(),
+                isExpired: expiryDate <= now
+              });
+              
+              if (expiryDate <= now) {
+                console.log('Subscription period has ended:', expiryDate);
+                isPremium = false;
+                
+                // Update DB with expired status
+                await supabase
+                  .from('profiles')
+                  .update({ 
+                    is_premium: false,
+                    subscription_status: 'inactive'
+                  })
+                  .eq('id', userId);
+                  
+                return new Response(
+                  JSON.stringify({ isPremium: false }),
+                  { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+                );
               }
               
-              await supabase
-                .from('profiles')
-                .update({ 
-                  is_premium: true,
-                  subscription_status: 'active', // Simplified to just active
-                  subscription_expiry: expiryDate
-                })
-                .eq('id', userId);
+              // Update expiry date in database
+              const updatedExpiryDate = expiryDate.toISOString();
+              
+              // Update DB if needed
+              if (!profile.is_premium || subscription.status !== profile.subscription_status) {
+                console.log('Updating profile based on active Stripe subscription with expiry:', updatedExpiryDate);
+                
+                await supabase
+                  .from('profiles')
+                  .update({ 
+                    is_premium: true,
+                    subscription_status: 'active',
+                    subscription_expiry: updatedExpiryDate
+                  })
+                  .eq('id', userId);
+              }
             }
           } else if (profile.is_premium) {
             // Subscription is not active in Stripe, but marked as premium in DB
@@ -162,7 +182,7 @@ serve(async (req) => {
               .from('profiles')
               .update({ 
                 is_premium: false,
-                subscription_status: 'inactive' // Simplified to just inactive
+                subscription_status: 'inactive'
               })
               .eq('id', userId);
           }
@@ -187,23 +207,6 @@ serve(async (req) => {
       } catch (stripeError) {
         console.error('Error validating with Stripe:', stripeError);
         // Continue with database values if Stripe validation fails
-      }
-    }
-
-    // Force a final consistency check before returning
-    if (isPremium !== profile.is_premium) {
-      try {
-        console.log(`Final consistency check - updating is_premium to ${isPremium}`);
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ is_premium: isPremium })
-          .eq('id', userId);
-          
-        if (updateError) {
-          console.error('Error in final premium status update:', updateError);
-        }
-      } catch (finalCheckError) {
-        console.error('Error in final consistency check:', finalCheckError);
       }
     }
 
