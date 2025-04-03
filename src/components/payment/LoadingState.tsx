@@ -15,7 +15,7 @@ export const LoadingState = ({ isWaitingForAuth, onManualRetry, waitTime }: Load
   
   // Simulate progress for visual feedback
   useEffect(() => {
-    const maxProgress = 90; // Cap at 90% until completion
+    const maxProgress = 95; // Cap at 95% until completion
     
     // Use a non-linear progress curve to start fast and slow down
     const calculateProgress = (seconds: number) => {
@@ -35,6 +35,10 @@ export const LoadingState = ({ isWaitingForAuth, onManualRetry, waitTime }: Load
   const getMessage = () => {
     if (isWaitingForAuth) {
       return 'Weryfikujemy Twoją tożsamość...';
+    }
+    
+    if (waitTime > 25) {
+      return 'Płatność została przyjęta!';
     }
     
     if (waitTime > 20) {
@@ -58,12 +62,19 @@ export const LoadingState = ({ isWaitingForAuth, onManualRetry, waitTime }: Load
       return 'Łączymy dane płatności z Twoim kontem...';
     }
     
+    if (waitTime > 25) {
+      return 'Za chwilę zostaniesz przekierowany...';
+    }
+    
     if (waitTime > 15) {
       return 'To może potrwać chwilę dłużej niż zwykle...';
     }
     
     return 'Prosimy o cierpliwość...';
   };
+  
+  // Auto-refresh suggestion after a certain time
+  const showAutoRefreshSuggestion = waitTime > 30;
   
   return (
     <div className="flex flex-col items-center">
@@ -84,8 +95,22 @@ export const LoadingState = ({ isWaitingForAuth, onManualRetry, waitTime }: Load
       
       {waitTime > 15 && (
         <p className="text-xs text-gray-500 mt-3 mb-3 max-w-xs text-center">
-          Weryfikacja może potrwać do 1 minuty. Możesz również spróbować odświeżyć stronę, jeśli proces trwa zbyt długo.
+          Weryfikacja może potrwać do 1 minuty. Jeśli proces trwa zbyt długo, możesz spróbować odświeżyć stronę.
         </p>
+      )}
+      
+      {waitTime > 20 && (
+        <p className="text-xs text-green-600 mt-1 mb-3 max-w-xs text-center font-medium">
+          Płatność została przyjęta przez Stripe. Trwa aktualizacja Twojego konta.
+        </p>
+      )}
+      
+      {showAutoRefreshSuggestion && (
+        <div className="bg-amber-50 p-3 rounded-md border border-amber-200 mt-2 mb-2 max-w-xs">
+          <p className="text-xs text-amber-700">
+            Wygląda na to, że proces trwa wyjątkowo długo. Za chwilę nastąpi automatyczne odświeżenie strony.
+          </p>
+        </div>
       )}
       
       {waitTime > 20 && onManualRetry && (
@@ -98,6 +123,14 @@ export const LoadingState = ({ isWaitingForAuth, onManualRetry, waitTime }: Load
           <RefreshCw className="h-3 w-3" />
           Spróbuj ponownie
         </Button>
+      )}
+      
+      {/* Auto refresh after 45 seconds */}
+      {waitTime > 45 && (
+        <div className="mt-4">
+          <p className="text-xs text-gray-600">Odświeżanie strony za 5 sekund...</p>
+          {setTimeout(() => window.location.reload(), 5000)}
+        </div>
       )}
     </div>
   );

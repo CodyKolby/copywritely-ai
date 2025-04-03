@@ -1,6 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { corsHeaders } from "./utils.ts";
+import { corsHeaders, getSupabaseClient, getStripeClient, updateProfileWithPremium } from "./utils.ts";
+import { getStripeSession } from "./stripe.ts";
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -24,18 +25,10 @@ serve(async (req) => {
     
     console.log(`Verifying payment for session: ${sessionId}, user: ${userId}`);
     
-    // Import utils
-    const { 
-      getSupabaseClient,
-      getStripeClient,
-      updateProfileWithPremium
-    } = await import("./utils.ts");
-    
-    // Initialize clients
+    // Initialize Supabase client
     const supabase = getSupabaseClient();
-    const stripe = getStripeClient();
     
-    // First check if payment was already logged
+    // First check if payment was already logged in our database
     console.log("Checking payment logs...");
     const { data: paymentLog, error: logError } = await supabase
       .from('payment_logs')
@@ -46,7 +39,7 @@ serve(async (req) => {
     if (logError) {
       console.error("Error checking payment logs:", logError);
     } else if (paymentLog) {
-      console.log("Payment already logged");
+      console.log("Payment found in logs, confirming premium status");
       
       // Update user profile with premium status if needed
       const { data: profile } = await supabase
@@ -70,13 +63,21 @@ serve(async (req) => {
     }
     
     // If not found in logs, check with Stripe directly
-    console.log("Checking Stripe session...");
     try {
-      // Get session from Stripe
-      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      console.log("Checking Stripe session via direct API call...");
+      
+      // Get the Stripe secret key
+      const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY");
+      if (!stripeSecretKey) {
+        throw new Error("STRIPE_SECRET_KEY not set");
+      }
+      
+      // Fetch the session with retry logic built into getStripeSession
+      const session = await getStripeSession(sessionId, stripeSecretKey);
       
       // Update session metadata with userId for future webhook processing
       try {
+        const stripe = getStripeClient();
         await stripe.checkout.sessions.update(sessionId, {
           metadata: { userId }
         });
@@ -98,6 +99,7 @@ serve(async (req) => {
         // If we have a subscription, get additional details
         if (subscriptionId) {
           try {
+            const stripe = getStripeClient();
             const subscription = await stripe.subscriptions.retrieve(subscriptionId);
             subscriptionStatus = subscription.status;
             
