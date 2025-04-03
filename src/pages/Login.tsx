@@ -121,7 +121,7 @@ const Login = () => {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="w-full md:w-1/2 bg-copywrite-teal-light flex items-center justify-center p-6"
           >
-            <div className="rounded-full overflow-hidden w-full max-w-md aspect-square">
+            <div className="rounded-xl overflow-hidden w-full h-full">
               <img 
                 src="/lovable-uploads/d82eeba7-f4a8-4627-ad06-d7964bfde25c.png" 
                 alt="Copility login illustration" 
