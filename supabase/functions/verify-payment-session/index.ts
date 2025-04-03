@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "./utils.ts";
 
@@ -46,11 +47,86 @@ serve(async (req) => {
     console.log("Ensuring user profile exists");
     await ensureUserProfile(supabase, userId);
     
-    // 2. Verify session with Stripe
+    // 2. First check if the profile already has premium status (might have been updated by webhook)
+    console.log("Checking if profile already has premium status from webhook");
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('is_premium, subscription_status, subscription_id, subscription_expiry')
+      .eq('id', userId)
+      .single();
+      
+    if (profileError) {
+      console.error("Error fetching profile:", profileError);
+    } else if (profileData?.is_premium) {
+      console.log("Profile already has premium status, likely updated by webhook");
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          profile: profileData,
+          message: 'Płatność już została zweryfikowana'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // 3. Check payment logs to see if this session was already processed by webhook
+    console.log("Checking payment logs for this session");
+    const { data: paymentLogData, error: paymentLogError } = await supabase
+      .from('payment_logs')
+      .select('*')
+      .eq('session_id', sessionId)
+      .single();
+      
+    if (paymentLogError) {
+      console.log("Session not found in payment logs, continuing with verification");
+    } else if (paymentLogData) {
+      console.log("Payment already logged for this session, updating profile if needed");
+      
+      // Update profile if it's not premium yet
+      if (!profileData?.is_premium) {
+        console.log("Payment logged but profile not updated, fixing now");
+        await updateProfileWithPremium(
+          supabase, 
+          userId, 
+          paymentLogData.subscription_id, 
+          'active', 
+          null
+        );
+      }
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          message: 'Płatność została potwierdzona'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // 4. If not found in logs, verify session with Stripe directly
     console.log(`Verifying Stripe session: ${sessionId}`);
     const session = await getStripeSession(sessionId, stripeSecretKey);
     
-    // 3. Validate payment status
+    // 5. Add userId to session metadata for future webhook processing
+    console.log("Updating session metadata with userId");
+    try {
+      await fetch(`https://api.stripe.com/v1/checkout/sessions/${sessionId}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${stripeSecretKey}`,
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({
+          'metadata[userId]': userId
+        }).toString()
+      });
+      console.log("Session metadata updated with userId");
+    } catch (metadataError) {
+      console.error("Error updating session metadata:", metadataError);
+      // Continue with verification even if metadata update fails
+    }
+    
+    // 6. Validate payment status
     if (session.payment_status !== 'paid') {
       console.log(`Payment not completed. Status: ${session.payment_status}`);
       return new Response(
@@ -62,7 +138,7 @@ serve(async (req) => {
       );
     }
     
-    // 4. Get subscription details
+    // 7. Get subscription details
     const { subscriptionId, subscriptionStatus, subscriptionExpiry } = 
       await getSubscriptionDetails(session, stripeSecretKey);
       
@@ -72,7 +148,7 @@ serve(async (req) => {
       subscriptionExpiry
     });
     
-    // 5. Update user profile with premium status
+    // 8. Update user profile with premium status
     console.log("Updating profile with premium status");
     const updateSuccess = await updateProfileWithPremium(
       supabase, 
@@ -102,7 +178,23 @@ serve(async (req) => {
       }
     }
     
-    // 6. Verify profile was updated correctly
+    // 9. Log this payment
+    console.log("Logging successful payment");
+    try {
+      await supabase.from('payment_logs').insert({
+        user_id: userId,
+        session_id: sessionId,
+        subscription_id: subscriptionId,
+        customer: session.customer || null,
+        customer_email: session.customer_email || null,
+        timestamp: new Date().toISOString()
+      });
+    } catch (logError) {
+      console.error("Error logging payment:", logError);
+      // Continue even if logging fails
+    }
+    
+    // 10. Verify profile was updated correctly
     console.log("Verifying profile was updated correctly");
     const { success: verificationSuccess, profile: verifiedProfile } = 
       await verifyProfileUpdate(supabase, userId);

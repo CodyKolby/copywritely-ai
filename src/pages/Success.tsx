@@ -1,7 +1,7 @@
 
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/auth/AuthContext';
 import { SuccessState } from '@/components/payment/SuccessState';
@@ -23,7 +23,28 @@ const Success = () => {
   const [error, setError] = useState<string | null>(null);
   const [verificationSuccess, setVerificationSuccess] = useState(false);
   const [verificationAttempt, setVerificationAttempt] = useState(0);
+  const [waitingForAuth, setWaitingForAuth] = useState(true);
+  const [waitTime, setWaitTime] = useState(0);
   const [debugInfo, setDebugInfo] = useState<Record<string, any>>({});
+  
+  // Reference for timing
+  const verificationTimeoutRef = useRef<number | null>(null);
+  const waitingTimerRef = useRef<number | null>(null);
+  
+  // Start wait timer
+  useEffect(() => {
+    if (loading) {
+      waitingTimerRef.current = window.setInterval(() => {
+        setWaitTime(prev => prev + 1);
+      }, 1000);
+    }
+    
+    return () => {
+      if (waitingTimerRef.current) {
+        clearInterval(waitingTimerRef.current);
+      }
+    };
+  }, [loading]);
   
   // Add console logs to track component lifecycle
   useEffect(() => {
@@ -36,10 +57,51 @@ const Success = () => {
     
     return () => {
       console.log('Success page unmounted');
+      // Clear any timeouts
+      if (verificationTimeoutRef.current) {
+        clearTimeout(verificationTimeoutRef.current);
+      }
+      if (waitingTimerRef.current) {
+        clearInterval(waitingTimerRef.current);
+      }
     };
   }, [sessionId]);
   
-  // Verify payment when component mounts or verification attempt changes
+  // Check authentication status
+  useEffect(() => {
+    const checkAuth = async () => {
+      if (user) {
+        console.log('User authenticated:', user.id);
+        setWaitingForAuth(false);
+        return;
+      }
+      
+      console.log('No user, attempting to refresh session');
+      try {
+        await refreshSession();
+        // If we still don't have a user after refresh
+        if (!user && verificationAttempt < 5) {
+          console.log(`No user after refresh, retry ${verificationAttempt}/5`);
+          setTimeout(() => {
+            setVerificationAttempt(prev => prev + 1);
+          }, 2000);
+        } else if (!user) {
+          setError('Nie udało się zidentyfikować użytkownika. Zaloguj się ponownie.');
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error('Error refreshing session:', err);
+        setError('Wystąpił błąd autoryzacji. Spróbuj zalogować się ponownie.');
+        setLoading(false);
+      }
+    };
+    
+    if (waitingForAuth) {
+      checkAuth();
+    }
+  }, [user, refreshSession, verificationAttempt, waitingForAuth]);
+  
+  // Verify payment when auth is confirmed
   useEffect(() => {
     let isMounted = true;
     
@@ -52,118 +114,136 @@ const Success = () => {
         return;
       }
       
-      // If user not available, try to refresh session
+      // If no authenticated user, can't verify for a user
       if (!user) {
-        console.log('No user, attempting to refresh session');
-        try {
-          await refreshSession();
-          // If we still don't have a user after refresh
-          if (!user && verificationAttempt < 5) {
-            console.log(`No user after refresh, retry ${verificationAttempt}/5`);
-            setTimeout(() => {
-              if (isMounted) setVerificationAttempt(prev => prev + 1);
-            }, 2000);
-            return;
-          } else if (!user) {
-            setError('Nie udało się zidentyfikować użytkownika. Zaloguj się ponownie.');
-            setLoading(false);
-            return;
-          }
-        } catch (err) {
-          console.error('Error refreshing session:', err);
-          setError('Wystąpił błąd autoryzacji. Spróbuj zalogować się ponownie.');
-          setLoading(false);
-          return;
-        }
+        return; // Auth check will handle this case
       }
       
       // Once we have both sessionId and user, proceed with verification
-      if (sessionId && user) {
-        console.log('Verifying payment', { sessionId, userId: user.id });
-        
-        try {
-          // Set up a timeout promise to prevent hanging
-          const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Verification timeout')), 15000);
-          });
-          
-          // Set up the actual verification request
-          const verificationPromise = supabase.functions.invoke('verify-payment-session', {
-            body: { sessionId, userId: user.id }
-          });
-          
-          // Race the verification against the timeout
-          const { data, error } = await Promise.race([
-            verificationPromise,
-            timeoutPromise.then(() => {
-              throw new Error('Przekroczono czas oczekiwania na weryfikację płatności');
-            })
-          ]) as any;
-          
-          if (error) {
-            console.error('Error from verification function:', error);
-            throw error;
-          }
-          
-          console.log('Verification response:', data);
-          
-          if (!data?.success) {
-            throw new Error(data?.message || 'Weryfikacja płatności nie powiodła się');
-          }
-          
-          // Update premium status
-          const isPremium = await checkPremiumStatus(user.id, true);
-          console.log('Premium status after verification:', isPremium);
-          
-          // Mark as successful regardless of premium status check
-          // (it might take a moment for the database to update)
+      console.log('Verifying payment', { sessionId, userId: user.id });
+      
+      try {
+        // Set up a timeout promise to prevent hanging
+        verificationTimeoutRef.current = window.setTimeout(() => {
           if (isMounted) {
-            toast.success('Twoja płatność została potwierdzona!', { duration: 5000 });
-            sessionStorage.setItem('paymentProcessed', 'true');
-            setVerificationSuccess(true);
+            console.error('Verification timeout after 25 seconds');
+            setError('Przekroczono czas oczekiwania na weryfikację płatności. Spróbuj odświeżyć stronę.');
             setLoading(false);
-          }
-          
-        } catch (err: any) {
-          console.error('Payment verification error:', err);
-          
-          // Handle the error based on type
-          if (isMounted) {
             setDebugInfo({
-              error: err.message,
+              error: 'Verification timeout',
               timestamp: new Date().toISOString(),
               verificationAttempt,
               sessionId,
               userId: user.id
             });
-            
-            if (err.message.includes('time') || err.message.includes('timeout')) {
-              setError('Przekroczono czas oczekiwania na weryfikację płatności. Spróbuj odświeżyć stronę.');
-            } else {
-              setError('Wystąpił błąd podczas weryfikacji płatności. Spróbuj odświeżyć stronę.');
-            }
+          }
+        }, 25000);
+        
+        // Check if user already has premium status
+        if (user.isPremium) {
+          console.log('User already has premium status, skipping verification');
+          clearTimeout(verificationTimeoutRef.current);
+          verificationTimeoutRef.current = null;
+          
+          if (isMounted) {
+            toast.success('Twoje konto już posiada status Premium!');
+            setVerificationSuccess(true);
             setLoading(false);
           }
+          return;
+        }
+        
+        // Call our verification endpoint
+        const { data, error } = await supabase.functions.invoke('verify-payment-session', {
+          body: { sessionId, userId: user.id }
+        });
+        
+        // Clear timeout since we got a response
+        if (verificationTimeoutRef.current) {
+          clearTimeout(verificationTimeoutRef.current);
+          verificationTimeoutRef.current = null;
+        }
+        
+        if (error) {
+          console.error('Error from verification function:', error);
+          throw error;
+        }
+        
+        console.log('Verification response:', data);
+        
+        if (!data?.success) {
+          throw new Error(data?.message || 'Weryfikacja płatności nie powiodła się');
+        }
+        
+        // Update premium status
+        const isPremium = await checkPremiumStatus(user.id, true);
+        console.log('Premium status after verification:', isPremium);
+        
+        // Mark as successful regardless of premium status check
+        // (it might take a moment for the database to update)
+        if (isMounted) {
+          toast.success('Twoja płatność została potwierdzona!', { duration: 5000 });
+          sessionStorage.setItem('paymentProcessed', 'true');
+          setVerificationSuccess(true);
+          setLoading(false);
+        }
+        
+      } catch (err: any) {
+        console.error('Payment verification error:', err);
+        
+        // Clear timeout if it exists
+        if (verificationTimeoutRef.current) {
+          clearTimeout(verificationTimeoutRef.current);
+          verificationTimeoutRef.current = null;
+        }
+        
+        // Handle the error based on type
+        if (isMounted) {
+          setDebugInfo({
+            error: err.message,
+            timestamp: new Date().toISOString(),
+            verificationAttempt,
+            sessionId,
+            userId: user.id
+          });
+          
+          if (err.message.includes('time') || err.message.includes('timeout')) {
+            setError('Przekroczono czas oczekiwania na weryfikację płatności. Spróbuj odświeżyć stronę.');
+          } else {
+            setError('Wystąpił błąd podczas weryfikacji płatności. Spróbuj odświeżyć stronę.');
+          }
+          setLoading(false);
         }
       }
     };
     
-    // Start verification if loading
-    if (loading) {
+    // Start verification if we have auth but are still loading
+    if (!waitingForAuth && loading) {
       verifyPayment();
     }
     
     return () => {
       isMounted = false;
+      // Clear timeout on cleanup
+      if (verificationTimeoutRef.current) {
+        clearTimeout(verificationTimeoutRef.current);
+      }
     };
-  }, [sessionId, user, verificationAttempt, checkPremiumStatus, refreshSession]);
+  }, [sessionId, user, waitingForAuth, loading, verificationAttempt, checkPremiumStatus]);
   
   // Handle manual retry
   const handleRetryVerification = () => {
     console.log('Manually retrying verification');
     setLoading(true);
     setError(null);
+    setWaitTime(0);
     setVerificationAttempt(prev => prev + 1);
+    
+    // Clear existing timeout
+    if (verificationTimeoutRef.current) {
+      clearTimeout(verificationTimeoutRef.current);
+      verificationTimeoutRef.current = null;
+    }
   };
   
   // Handle back to pricing
@@ -181,7 +261,11 @@ const Success = () => {
           className="bg-white p-8 rounded-xl shadow-lg text-center"
         >
           {loading ? (
-            <LoadingState isWaitingForAuth={!user} />
+            <LoadingState 
+              isWaitingForAuth={waitingForAuth} 
+              onManualRetry={handleRetryVerification}
+              waitTime={waitTime}
+            />
           ) : error ? (
             <ErrorState 
               error={error} 

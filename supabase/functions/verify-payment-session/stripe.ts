@@ -1,32 +1,74 @@
-
 // Function to fetch Stripe session
 export async function getStripeSession(sessionId: string, stripeSecretKey: string) {
   try {
     console.log(`Fetching Stripe session: ${sessionId}`);
     
-    const response = await fetch(`https://api.stripe.com/v1/checkout/sessions/${sessionId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${stripeSecretKey}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-    });
+    // Try to fetch the session up to 3 times with exponential backoff
+    let attempt = 0;
+    const maxAttempts = 3;
+    let lastError: any = null;
     
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Stripe API error response:', errorText);
-      throw new Error('Error fetching Stripe session: ' + errorText);
+    while (attempt < maxAttempts) {
+      try {
+        const response = await fetch(`https://api.stripe.com/v1/checkout/sessions/${sessionId}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${stripeSecretKey}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`Stripe API error response (attempt ${attempt + 1}/${maxAttempts}):`, errorText);
+          lastError = new Error('Error fetching Stripe session: ' + errorText);
+          
+          // If we get a 404, no need to retry
+          if (response.status === 404) {
+            throw lastError;
+          }
+          
+          // Otherwise, wait and retry
+          attempt++;
+          if (attempt < maxAttempts) {
+            const backoffMs = Math.pow(2, attempt) * 500; // Exponential backoff: 1s, 2s, 4s
+            console.log(`Retrying after ${backoffMs}ms...`);
+            await new Promise(resolve => setTimeout(resolve, backoffMs));
+            continue;
+          } else {
+            throw lastError;
+          }
+        }
+        
+        const session = await response.json();
+        console.log('Stripe session data received:', {
+          id: session.id,
+          payment_status: session.payment_status,
+          subscription: session.subscription ? 'Yes' : 'No',
+          customer: session.customer ? 'Yes' : 'No'
+        });
+        
+        return session;
+      } catch (error) {
+        console.error(`Error in attempt ${attempt + 1}/${maxAttempts}:`, error);
+        lastError = error;
+        attempt++;
+        
+        // If last attempt, rethrow
+        if (attempt >= maxAttempts) {
+          throw error;
+        }
+        
+        // Otherwise wait and retry
+        const backoffMs = Math.pow(2, attempt) * 500;
+        console.log(`Retrying after ${backoffMs}ms...`);
+        await new Promise(resolve => setTimeout(resolve, backoffMs));
+      }
     }
     
-    const session = await response.json();
-    console.log('Stripe session data received:', {
-      id: session.id,
-      payment_status: session.payment_status,
-      subscription: session.subscription ? 'Yes' : 'No',
-      customer: session.customer ? 'Yes' : 'No'
-    });
+    // This should never happen due to the loop structure, but TypeScript wants a return
+    throw lastError || new Error('Failed to fetch Stripe session after retries');
     
-    return session;
   } catch (error) {
     console.error('Error fetching Stripe session:', error);
     throw error;

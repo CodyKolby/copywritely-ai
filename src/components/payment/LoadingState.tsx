@@ -1,14 +1,17 @@
 
 import { Progress } from '@/components/ui/progress';
 import { useState, useEffect } from 'react';
+import { RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface LoadingStateProps {
   isWaitingForAuth: boolean;
+  onManualRetry?: () => void;
+  waitTime: number;
 }
 
-export const LoadingState = ({ isWaitingForAuth }: LoadingStateProps) => {
+export const LoadingState = ({ isWaitingForAuth, onManualRetry, waitTime }: LoadingStateProps) => {
   const [progress, setProgress] = useState(0);
-  const [waitTime, setWaitTime] = useState(0);
   
   // Simulate progress for visual feedback
   useEffect(() => {
@@ -21,23 +24,53 @@ export const LoadingState = ({ isWaitingForAuth }: LoadingStateProps) => {
         if (prev < maxProgress) return prev + 0.5;
         return prev;
       });
-      
-      setWaitTime(prev => prev + 1);
     }, 1000);
     
     return () => clearInterval(progressInterval);
   }, []);
   
+  // Determine message based on wait time and state
+  const getMessage = () => {
+    if (isWaitingForAuth) {
+      return 'Weryfikujemy Twoją tożsamość...';
+    }
+    
+    if (waitTime > 15) {
+      return 'Oczekiwanie na odpowiedź od serwera płatności...';
+    }
+    
+    if (waitTime > 10) {
+      return 'Potwierdzanie statusu płatności...';
+    }
+    
+    if (waitTime > 5) {
+      return 'Aktualizowanie Twojego konta...';
+    }
+    
+    return 'Weryfikujemy Twoją płatność...';
+  };
+  
+  // Determine subtext based on wait time
+  const getSubtext = () => {
+    if (isWaitingForAuth) {
+      return 'Potwierdzamy Twoją tożsamość...';
+    }
+    
+    if (waitTime > 15) {
+      return 'To może potrwać chwilę dłużej niż zwykle...';
+    }
+    
+    return 'Trwa przetwarzanie płatności...';
+  };
+  
   return (
     <div className="flex flex-col items-center">
       <div className="w-16 h-16 border-4 border-t-copywrite-teal border-opacity-50 rounded-full animate-spin mb-4"></div>
       <p className="text-lg text-gray-600">
-        {isWaitingForAuth ? 'Weryfikujemy Twoją sesję...' : 'Weryfikujemy Twoją płatność...'}
+        {getMessage()}
       </p>
       <p className="text-sm text-gray-500 mt-2 mb-4">
-        {isWaitingForAuth 
-          ? 'Potwierdzamy Twoją tożsamość...' 
-          : 'Trwa przetwarzanie płatności...'}
+        {getSubtext()}
       </p>
       
       <div className="w-full max-w-xs mb-2">
@@ -50,10 +83,16 @@ export const LoadingState = ({ isWaitingForAuth }: LoadingStateProps) => {
           : 'Może to potrwać kilka sekund...'}
       </p>
       
-      {waitTime > 15 && (
-        <p className="text-xs text-amber-500 mt-4">
-          Trwa to dłużej niż zwykle. Odświeżenie strony może przyspieszyć weryfikację.
-        </p>
+      {waitTime > 15 && onManualRetry && (
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="mt-4 flex items-center gap-1"
+          onClick={onManualRetry}
+        >
+          <RefreshCw className="h-3 w-3" />
+          Ponów próbę weryfikacji
+        </Button>
       )}
     </div>
   );
