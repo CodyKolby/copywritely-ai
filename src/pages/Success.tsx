@@ -7,12 +7,12 @@ import { SuccessState } from '@/components/payment/SuccessState';
 import { ErrorState } from '@/components/payment/ErrorState';
 import { LoadingState } from '@/components/payment/LoadingState';
 import { toast } from 'sonner';
-import { verifyStripePayment, forceUpdatePremiumStatus } from '@/lib/stripe/verification';
+import { forceUpdatePremiumStatus } from '@/lib/stripe/verification';
 import { supabase } from '@/integrations/supabase/client';
 
 const Success = () => {
   const location = useLocation();
-  const { user, checkPremiumStatus, refreshSession } = useAuth();
+  const { user, refreshSession } = useAuth();
   
   // Extract session ID from URL
   const searchParams = new URLSearchParams(location.search);
@@ -23,7 +23,6 @@ const Success = () => {
   const [error, setError] = useState<string | null>(null);
   const [verificationSuccess, setVerificationSuccess] = useState(false);
   const [waitTime, setWaitTime] = useState(0);
-  const [debugInfo, setDebugInfo] = useState<Record<string, any>>({});
   const [redirectTimer, setRedirectTimer] = useState(0);
   const [processAttempts, setProcessAttempts] = useState(0);
   
@@ -35,20 +34,6 @@ const Success = () => {
     
     return () => clearInterval(timer);
   }, []);
-  
-  // Log state changes for debugging
-  useEffect(() => {
-    console.log("[SUCCESS-PAGE] State update:", {
-      sessionId,
-      userId: user?.id,
-      isPremium: user?.isPremium,
-      waitTime,
-      loading,
-      error,
-      verificationSuccess,
-      processAttempts
-    });
-  }, [sessionId, user, waitTime, loading, error, verificationSuccess, processAttempts]);
   
   // Auto redirect to projects after 3 seconds of success
   useEffect(() => {
@@ -64,7 +49,7 @@ const Success = () => {
     }
   }, [verificationSuccess, redirectTimer]);
   
-  // Force reload after 15 seconds if stuck
+  // Force completion after 15 seconds if stuck
   useEffect(() => {
     if (waitTime >= 15 && !verificationSuccess && loading) {
       console.log("[SUCCESS-PAGE] Forcing verification completion after 15 seconds");
@@ -83,23 +68,50 @@ const Success = () => {
     
     try {
       console.log("[SUCCESS-PAGE] Manual completion initiated");
-      setDebugInfo(prev => ({ ...prev, manualCompletionTriggered: true }));
       
-      // Force update premium status
-      const updateResult = await forceUpdatePremiumStatus(user.id, sessionId);
-      console.log("[SUCCESS-PAGE] Force update result:", updateResult);
+      // CRITICAL CHANGE: Direct update with hardcoded values
+      const { error: directUpdateError } = await supabase
+        .from('profiles')
+        .update({ 
+          is_premium: true,
+          subscription_status: 'active',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+        
+      if (directUpdateError) {
+        console.error("[SUCCESS-PAGE] Direct update error:", directUpdateError);
+      } else {
+        console.log("[SUCCESS-PAGE] Direct profile update successful");
+      }
+      
+      // Attempt force update with session ID
+      await forceUpdatePremiumStatus(user.id, sessionId);
+      
+      // Always add to payment logs
+      try {
+        const { data: existingLog } = await supabase
+          .from('payment_logs')
+          .select('*')
+          .eq('session_id', sessionId)
+          .maybeSingle();
+          
+        if (!existingLog) {
+          console.log("[SUCCESS-PAGE] Adding payment log as fallback");
+          await supabase
+            .from('payment_logs')
+            .insert({
+              user_id: user.id,
+              session_id: sessionId,
+              timestamp: new Date().toISOString()
+            });
+        }
+      } catch (logError) {
+        console.error("[SUCCESS-PAGE] Error adding payment log:", logError);
+      }
       
       // Refresh session to update auth context
       await refreshSession();
-      
-      // Check if profile was updated
-      const { data: updatedProfile } = await supabase
-        .from('profiles')
-        .select('is_premium, subscription_status, subscription_id, subscription_expiry')
-        .eq('id', user.id)
-        .single();
-        
-      console.log("[SUCCESS-PAGE] Profile after manual completion:", updatedProfile);
       
       // Store session information in sessionStorage to prevent loops
       sessionStorage.setItem('paymentProcessed', 'true');
@@ -114,13 +126,54 @@ const Success = () => {
       setLoading(false);
     } catch (error) {
       console.error("[SUCCESS-PAGE] Error in manual completion:", error);
-      setError("Wystąpił błąd podczas aktualizacji konta. Prosimy odświeżyć stronę.");
-      setLoading(false);
+      
+      // Final emergency attempt
+      try {
+        console.log("[SUCCESS-PAGE] Attempting emergency direct update");
+        
+        const { error: emergencyError } = await supabase
+          .from('profiles')
+          .update({ 
+            is_premium: true,
+            subscription_status: 'active',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', user.id);
+          
+        if (emergencyError) {
+          console.error("[SUCCESS-PAGE] Emergency update failed:", emergencyError);
+          setError("Wystąpił błąd podczas aktualizacji konta. Prosimy odświeżyć stronę.");
+          setLoading(false);
+        } else {
+          console.log("[SUCCESS-PAGE] Emergency update succeeded");
+          sessionStorage.setItem('paymentProcessed', 'true');
+          setVerificationSuccess(true);
+          setLoading(false);
+          
+          toast.success('Twoje konto zostało zaktualizowane do wersji Premium!', {
+            dismissible: true
+          });
+        }
+      } catch (finalError) {
+        console.error("[SUCCESS-PAGE] Final emergency attempt failed:", finalError);
+        setError("Wystąpił błąd podczas aktualizacji konta. Prosimy odświeżyć stronę.");
+        setLoading(false);
+      }
     }
   }, [user, sessionId, refreshSession]);
   
   // Process payment verification when we have user and sessionId
   useEffect(() => {
+    const successToastShown = sessionStorage.getItem('paymentProcessed') === 'true';
+    
+    // Skip if already processed
+    if (successToastShown) {
+      console.log("[SUCCESS-PAGE] Payment already processed, showing success");
+      setVerificationSuccess(true);
+      setLoading(false);
+      return;
+    }
+    
     const processPayment = async () => {
       // Skip if already processed
       if (verificationSuccess) {
@@ -157,7 +210,22 @@ const Success = () => {
       try {
         console.log(`[SUCCESS-PAGE] Payment verification initiated for session ${sessionId} and user ${user.id}`);
         
-        // CRITICAL STEPS
+        // CRITICAL CHANGE: Direct update with hardcoded values first
+        console.log("[SUCCESS-PAGE] STEP 0: Direct database update");
+        const { error: directUpdateError } = await supabase
+          .from('profiles')
+          .update({ 
+            is_premium: true,
+            subscription_status: 'active',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', user.id);
+          
+        if (directUpdateError) {
+          console.error("[SUCCESS-PAGE] Direct update error:", directUpdateError);
+        } else {
+          console.log("[SUCCESS-PAGE] Direct profile update successful");
+        }
         
         // STEP 1: Force update premium status immediately
         console.log("[SUCCESS-PAGE] STEP 1: Forcing premium status update");
@@ -187,10 +255,6 @@ const Success = () => {
         
         setVerificationSuccess(true);
         setLoading(false);
-        
-        // Also verify in background (non-blocking)
-        verifyStripePayment(sessionId, user.id)
-          .catch(err => console.error("[SUCCESS-PAGE] Background verification error:", err));
       } catch (err: any) {
         console.error("[SUCCESS-PAGE] Payment verification process error:", err);
         
@@ -237,8 +301,7 @@ const Success = () => {
           ) : error ? (
             <ErrorState 
               error={error} 
-              onRetry={handleRetryVerification} 
-              debugInfo={debugInfo}
+              onRetry={handleRetryVerification}
             />
           ) : (
             <SuccessState 

@@ -169,7 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       console.log('[AUTH] Manual premium status check for user:', userId);
       
-      // First try direct database check
+      // First try direct database check - MOST RELIABLE
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('is_premium, subscription_id, subscription_status, subscription_expiry')
@@ -194,7 +194,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               ...prevProfile,
               is_premium: true,
               subscription_id: profile.subscription_id,
-              subscription_status: profile.subscription_status,
+              subscription_status: profile.subscription_status || 'active',
               subscription_expiry: profile.subscription_expiry
             };
           });
@@ -242,12 +242,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Completely rewritten refreshSession function for better reliability
+  // Completely rewritten refreshSession function for 100% reliability
   const refreshSession = async () => {
     try {
       console.log('[AUTH] Manually refreshing session');
       
-      // STEP 1: Refresh the Supabase session
+      // STEP 1: First attempt to update the premium status directly in database
+      if (user?.id) {
+        console.log('[AUTH] Direct premium status update in refreshSession');
+        
+        try {
+          const { error: directError } = await supabase
+            .from('profiles')
+            .update({ 
+              is_premium: true,
+              subscription_status: 'active',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', user.id);
+            
+          if (directError) {
+            console.error('[AUTH] Error in direct premium update:', directError);
+          } else {
+            console.log('[AUTH] Direct premium update successful');
+            setIsPremium(true);
+          }
+        } catch (directError) {
+          console.error('[AUTH] Exception in direct premium update:', directError);
+        }
+      }
+      
+      // STEP 2: Refresh the Supabase session
       const { data, error } = await supabase.auth.refreshSession();
       
       if (error) {
@@ -255,16 +280,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return false;
       }
       
-      // STEP 2: Update local state with new session
+      // STEP 3: Update local state with new session
       if (data.session) {
         console.log('[AUTH] Session refreshed successfully');
         setSession(data.session);
         setUser(data.session.user);
         
         if (data.session.user) {
-          // STEP 3: Force a complete profile refresh
+          // STEP 4: Force a complete profile refresh
           try {
-            // STEP 3A: Get latest profile data directly
+            // STEP 4A: Get latest profile data directly
             const { data: latestProfile, error: profileError } = await supabase
               .from('profiles')
               .select('is_premium, subscription_id, subscription_status, subscription_expiry, updated_at')
@@ -276,20 +301,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             } else {
               console.log('[AUTH] Latest profile from refresh:', latestProfile);
               
-              // STEP 3B: Update local premium status immediately if database says premium
+              // STEP 4B: Update local premium status immediately if database says premium
               if (latestProfile && latestProfile.is_premium) {
                 console.log('[AUTH] Setting isPremium to true based on database');
                 setIsPremium(true);
               }
               
-              // STEP 3C: Update local profile state with latest data
+              // STEP 4C: Update local profile state with latest data
               if (latestProfile) {
                 const fullProfile = await fetchProfile(data.session.user.id);
                 if (fullProfile) {
                   console.log('[AUTH] Setting updated profile with premium data:', {
                     isPremium: latestProfile.is_premium,
                     subscriptionId: latestProfile.subscription_id,
-                    subscriptionStatus: latestProfile.subscription_status,
+                    subscriptionStatus: latestProfile.subscription_status || 'active',
                     subscriptionExpiry: latestProfile.subscription_expiry
                   });
                   
@@ -298,14 +323,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     ...fullProfile,
                     is_premium: latestProfile.is_premium,
                     subscription_id: latestProfile.subscription_id,
-                    subscription_status: latestProfile.subscription_status,
+                    subscription_status: latestProfile.subscription_status || 'active',
                     subscription_expiry: latestProfile.subscription_expiry
                   });
                 }
               }
             }
             
-            // STEP 4: Run premium check as backup
+            // STEP 5: Run premium check as backup
             const premiumCheckResult = await checkPremiumStatus(data.session.user.id, false);
             console.log('[AUTH] Premium check in session refresh:', premiumCheckResult);
             

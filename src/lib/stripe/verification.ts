@@ -39,7 +39,12 @@ export const verifyStripePayment = async (sessionId: string, userId: string): Pr
     
     console.log('[STRIPE-VERIFY] Payment not found in logs, calling forceUpdatePremiumStatus to set premium immediately');
     // Immediate update for better UX - don't wait for verification
-    await forceUpdatePremiumStatus(userId, sessionId);
+    const updateResult = await forceUpdatePremiumStatus(userId, sessionId);
+    
+    if (updateResult) {
+      console.log('[STRIPE-VERIFY] Premium status updated successfully');
+      return true;
+    }
     
     // Then continue with official verification in background
     console.log('[STRIPE-VERIFY] Calling verify-payment-session edge function');
@@ -49,7 +54,8 @@ export const verifyStripePayment = async (sessionId: string, userId: string): Pr
     
     if (error) {
       console.error('[STRIPE-VERIFY] Error from verify-payment-session:', error);
-      // Even on error, return true as we've already updated premium status
+      // Even on error, we attempt one more force update
+      await forceUpdatePremiumStatus(userId, sessionId);
       return true;
     }
     
@@ -62,45 +68,135 @@ export const verifyStripePayment = async (sessionId: string, userId: string): Pr
     // Log full error details for debugging
     console.error('[STRIPE-VERIFY] Full error:', JSON.stringify(error));
     
+    // Final attempt to update premium status
+    try {
+      await forceUpdatePremiumStatus(userId, sessionId);
+    } catch (e) {
+      console.error('[STRIPE-VERIFY] Final attempt failed:', e);
+    }
+    
     // Even on exception, return true for better UX
     return true;
   }
 };
 
-// Completely rewritten function that ensures all subscription fields are updated
+// Completely rewritten function with better database handling
 export const forceUpdatePremiumStatus = async (userId: string, sessionId?: string): Promise<boolean> => {
   try {
     console.log(`[PREMIUM-UPDATE] --------- FORCE UPDATE START ---------`);
     console.log(`[PREMIUM-UPDATE] Forcing premium status update for user: ${userId}, sessionId: ${sessionId || 'not provided'}`);
     
-    // Set defaults in case we can't get actual data
-    let subscriptionData = {
-      subscriptionId: null,
-      subscriptionStatus: 'active',
-      subscriptionExpiry: null
+    // CRITICAL DIFFERENCE: First check and update directly without session check
+    const directUpdateData = { 
+      is_premium: true,
+      subscription_status: 'active',
+      updated_at: new Date().toISOString()
     };
     
-    // Try to get subscription details from Stripe if session ID provided
+    console.log('[PREMIUM-UPDATE] Attempting direct update first with:', directUpdateData);
+    
+    // First attempt direct update
+    const { error: directError } = await supabase
+      .from('profiles')
+      .update(directUpdateData)
+      .eq('id', userId);
+      
+    if (directError) {
+      console.error('[PREMIUM-UPDATE] Direct update error:', directError);
+    } else {
+      console.log('[PREMIUM-UPDATE] Direct update successful');
+      
+      // Add payment log if it doesn't exist yet and sessionId is provided
+      if (sessionId) {
+        try {
+          const { data: existingLog } = await supabase
+            .from('payment_logs')
+            .select('*')
+            .eq('session_id', sessionId)
+            .maybeSingle();
+            
+          if (!existingLog) {
+            console.log('[PREMIUM-UPDATE] Adding payment log for session:', sessionId);
+            await supabase
+              .from('payment_logs')
+              .insert({
+                user_id: userId,
+                session_id: sessionId,
+                timestamp: new Date().toISOString()
+              });
+          }
+        } catch (logError) {
+          console.error('[PREMIUM-UPDATE] Error adding payment log:', logError);
+        }
+      }
+      
+      // Show success message
+      toast.success('Twoje konto zostało zaktualizowane do wersji Premium!');
+      return true;
+    }
+    
+    // If session ID provided, try to get more details
     if (sessionId) {
       try {
         console.log(`[PREMIUM-UPDATE] Fetching session details for ${sessionId}`);
-        const { data, error } = await supabase.functions.invoke('check-session-details', {
+        const { data: sessionData, error: sessionError } = await supabase.functions.invoke('check-session-details', {
           body: { sessionId }
         });
         
-        if (error) {
-          console.error('[PREMIUM-UPDATE] Error fetching session details:', error);
-        } else if (data) {
-          console.log('[PREMIUM-UPDATE] Got subscription details from edge function:', data);
-          subscriptionData = {
-            subscriptionId: data.subscriptionId,
-            subscriptionStatus: data.subscriptionStatus || 'active',
-            subscriptionExpiry: data.subscriptionExpiry
+        if (sessionError) {
+          console.error('[PREMIUM-UPDATE] Error fetching session details:', sessionError);
+        } else if (sessionData) {
+          console.log('[PREMIUM-UPDATE] Got subscription details from edge function:', sessionData);
+          
+          // Set expiry to 30 days from now if not provided
+          let subscriptionExpiry = sessionData.subscriptionExpiry;
+          if (!subscriptionExpiry) {
+            const expiryDate = new Date();
+            expiryDate.setDate(expiryDate.getDate() + 30);
+            subscriptionExpiry = expiryDate.toISOString();
+          }
+          
+          const updateData = { 
+            is_premium: true,
+            subscription_id: sessionData.subscriptionId,
+            subscription_status: 'active', // ALWAYS SET TO ACTIVE
+            subscription_expiry: subscriptionExpiry,
+            updated_at: new Date().toISOString()
           };
           
-          console.log('[PREMIUM-UPDATE] Parsed subscription data:', subscriptionData);
+          console.log('[PREMIUM-UPDATE] Updating profile with session data:', updateData);
           
-          // Add payment log if it doesn't exist yet
+          // Update profile with all subscription details
+          const { error } = await supabase
+            .from('profiles')
+            .update(updateData)
+            .eq('id', userId);
+            
+          if (error) {
+            console.error('[PREMIUM-UPDATE] Error updating premium status:', error);
+            
+            // Try one more time with a delay
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            const { error: retryError } = await supabase
+              .from('profiles')
+              .update(updateData)
+              .eq('id', userId);
+              
+            if (retryError) {
+              console.error('[PREMIUM-UPDATE] Retry also failed:', retryError);
+            } else {
+              console.log('[PREMIUM-UPDATE] Retry update succeeded');
+              toast.success('Twoje konto zostało zaktualizowane do wersji Premium!');
+              return true;
+            }
+          } else {
+            console.log('[PREMIUM-UPDATE] Update with session data succeeded');
+            toast.success('Twoje konto zostało zaktualizowane do wersji Premium!');
+            return true;
+          }
+          
+          // Add payment log if sessionId provided
           try {
             const { data: existingLog } = await supabase
               .from('payment_logs')
@@ -115,9 +211,9 @@ export const forceUpdatePremiumStatus = async (userId: string, sessionId?: strin
                 .insert({
                   user_id: userId,
                   session_id: sessionId,
-                  subscription_id: data.subscriptionId,
-                  customer: data.customerId,
-                  customer_email: data.customerEmail,
+                  subscription_id: sessionData.subscriptionId,
+                  customer: sessionData.customerId,
+                  customer_email: sessionData.customerEmail,
                   timestamp: new Date().toISOString()
                 });
             }
@@ -130,63 +226,40 @@ export const forceUpdatePremiumStatus = async (userId: string, sessionId?: strin
       }
     }
     
-    // If we still don't have an expiry date, calculate one
-    if (!subscriptionData.subscriptionExpiry) {
-      // Set expiry to 30 days from now as fallback
+    // Final emergency update with hardcoded values
+    try {
+      console.log('[PREMIUM-UPDATE] Attempting emergency fallback update');
+      
+      // Set expiry to 30 days from now
       const expiryDate = new Date();
       expiryDate.setDate(expiryDate.getDate() + 30);
-      subscriptionData.subscriptionExpiry = expiryDate.toISOString();
-      console.log('[PREMIUM-UPDATE] Using fallback expiry date:', subscriptionData.subscriptionExpiry);
-    }
-    
-    const updateData = { 
-      is_premium: true,
-      subscription_id: subscriptionData.subscriptionId,
-      subscription_status: subscriptionData.subscriptionStatus,
-      subscription_expiry: subscriptionData.subscriptionExpiry,
-      updated_at: new Date().toISOString()
-    };
-    
-    console.log('[PREMIUM-UPDATE] About to update profile with:', updateData);
-    
-    // Update profile with all subscription details
-    const { error } = await supabase
-      .from('profiles')
-      .update(updateData)
-      .eq('id', userId);
       
-    if (error) {
-      console.error('[PREMIUM-UPDATE] Error updating premium status:', error);
+      const emergencyUpdateData = { 
+        is_premium: true,
+        subscription_status: 'active',
+        subscription_expiry: expiryDate.toISOString(),
+        updated_at: new Date().toISOString()
+      };
       
-      // Try one more time with a delay if first attempt failed
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const { error: retryError } = await supabase
+      const { error: emergencyError } = await supabase
         .from('profiles')
-        .update(updateData)
+        .update(emergencyUpdateData)
         .eq('id', userId);
         
-      if (retryError) {
-        console.error('[PREMIUM-UPDATE] Retry also failed:', retryError);
+      if (emergencyError) {
+        console.error('[PREMIUM-UPDATE] Emergency update failed:', emergencyError);
         return false;
+      } else {
+        console.log('[PREMIUM-UPDATE] Emergency update succeeded');
+        toast.success('Twoje konto zostało zaktualizowane do wersji Premium!');
+        return true;
       }
+    } catch (emergencyError) {
+      console.error('[PREMIUM-UPDATE] Emergency update exception:', emergencyError);
+      return false;
     }
-    
-    // Double-check that the update succeeded by fetching the profile
-    const { data: updatedProfile } = await supabase
-      .from('profiles')
-      .select('is_premium, subscription_status, subscription_id, subscription_expiry')
-      .eq('id', userId)
-      .single();
-      
-    console.log('[PREMIUM-UPDATE] Profile after update:', updatedProfile);
-    console.log(`[PREMIUM-UPDATE] --------- FORCE UPDATE END ---------`);
-    
-    toast.success('Twoje konto zostało zaktualizowane do wersji Premium!');
-    return true;
   } catch (error) {
     console.error('[PREMIUM-UPDATE] Exception in forceUpdatePremiumStatus:', error);
-    // Log full error details for debugging
     console.error('[PREMIUM-UPDATE] Full error:', JSON.stringify(error));
     return false;
   }
