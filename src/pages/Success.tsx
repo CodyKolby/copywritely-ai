@@ -1,7 +1,7 @@
 
 import { useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth/AuthContext';
 import { SuccessState } from '@/components/payment/SuccessState';
 import { ErrorState } from '@/components/payment/ErrorState';
@@ -25,9 +25,7 @@ const Success = () => {
   const [waitTime, setWaitTime] = useState(0);
   const [debugInfo, setDebugInfo] = useState<Record<string, any>>({});
   const [redirectTimer, setRedirectTimer] = useState(0);
-  
-  // Flag to prevent redundant operations
-  const [hasProcessedPayment, setHasProcessedPayment] = useState(false);
+  const [processAttempts, setProcessAttempts] = useState(0);
   
   // Start wait timer
   useEffect(() => {
@@ -48,9 +46,9 @@ const Success = () => {
       loading,
       error,
       verificationSuccess,
-      hasProcessedPayment
+      processAttempts
     });
-  }, [sessionId, user, waitTime, loading, error, verificationSuccess, hasProcessedPayment]);
+  }, [sessionId, user, waitTime, loading, error, verificationSuccess, processAttempts]);
   
   // Auto redirect to projects after 3 seconds of success
   useEffect(() => {
@@ -69,17 +67,71 @@ const Success = () => {
   // Force reload after 15 seconds if stuck
   useEffect(() => {
     if (waitTime >= 15 && !verificationSuccess && loading) {
-      console.log("[SUCCESS-PAGE] Forcing full page reload after 15 seconds");
-      window.location.reload();
+      console.log("[SUCCESS-PAGE] Forcing verification completion after 15 seconds");
+      handleManualCompletion();
     }
   }, [waitTime, verificationSuccess, loading]);
   
-  // Verify payment as soon as we have both sessionId and userId
+  // Handle manual completion (used in timeout and retry)
+  const handleManualCompletion = useCallback(async () => {
+    if (!user?.id || !sessionId) {
+      console.error("[SUCCESS-PAGE] Cannot complete verification - missing user or sessionId");
+      setError("Brak danych użytkownika lub sesji. Proszę zalogować się ponownie.");
+      setLoading(false);
+      return;
+    }
+    
+    try {
+      console.log("[SUCCESS-PAGE] Manual completion initiated");
+      setDebugInfo(prev => ({ ...prev, manualCompletionTriggered: true }));
+      
+      // Force update premium status
+      const updateResult = await forceUpdatePremiumStatus(user.id, sessionId);
+      console.log("[SUCCESS-PAGE] Force update result:", updateResult);
+      
+      // Refresh session to update auth context
+      await refreshSession();
+      
+      // Check if profile was updated
+      const { data: updatedProfile } = await supabase
+        .from('profiles')
+        .select('is_premium, subscription_status, subscription_id, subscription_expiry')
+        .eq('id', user.id)
+        .single();
+        
+      console.log("[SUCCESS-PAGE] Profile after manual completion:", updatedProfile);
+      
+      // Store session information in sessionStorage to prevent loops
+      sessionStorage.setItem('paymentProcessed', 'true');
+      
+      // Show success message
+      toast.success('Gratulacje! Twoje konto zostało zaktualizowane do wersji Premium.', {
+        dismissible: true
+      });
+      
+      // Update UI state
+      setVerificationSuccess(true);
+      setLoading(false);
+    } catch (error) {
+      console.error("[SUCCESS-PAGE] Error in manual completion:", error);
+      setError("Wystąpił błąd podczas aktualizacji konta. Prosimy odświeżyć stronę.");
+      setLoading(false);
+    }
+  }, [user, sessionId, refreshSession]);
+  
+  // Process payment verification when we have user and sessionId
   useEffect(() => {
-    const verifyPayment = async () => {
+    const processPayment = async () => {
       // Skip if already processed
-      if (hasProcessedPayment) {
-        console.log("[SUCCESS-PAGE] Payment already processed, skipping verification");
+      if (verificationSuccess) {
+        console.log("[SUCCESS-PAGE] Already verified, skipping");
+        return;
+      }
+      
+      // Skip if too many attempts
+      if (processAttempts >= 3) {
+        console.log("[SUCCESS-PAGE] Too many attempts, triggering manual completion");
+        handleManualCompletion();
         return;
       }
       
@@ -91,7 +143,6 @@ const Success = () => {
       }
       
       if (!user?.id) {
-        // No user yet, try to refresh session
         try {
           console.log("[SUCCESS-PAGE] No user, attempting to refresh session");
           await refreshSession();
@@ -101,169 +152,71 @@ const Success = () => {
         return; // Wait for auth to complete
       }
       
+      setProcessAttempts(prev => prev + 1);
+      
       try {
-        setHasProcessedPayment(true); // Mark as processed to prevent duplicate processing
         console.log(`[SUCCESS-PAGE] Payment verification initiated for session ${sessionId} and user ${user.id}`);
         
-        // First check if user already has premium access
-        if (user.isPremium) {
-          console.log("[SUCCESS-PAGE] User already has premium status");
-          toast.success("Masz już aktywny dostęp premium!");
-          setVerificationSuccess(true);
-          setLoading(false);
-          return;
-        }
+        // CRITICAL STEPS
         
-        // CRITICAL STEP 0: Check current database state
-        const { data: beforeProfile } = await supabase
-          .from('profiles')
-          .select('is_premium, subscription_status, subscription_id, subscription_expiry')
-          .eq('id', user.id)
-          .single();
-        
-        console.log("[SUCCESS-PAGE] Profile before updates:", beforeProfile);
-        
-        // CRITICAL STEP 1: Force update premium status immediately
+        // STEP 1: Force update premium status immediately
         console.log("[SUCCESS-PAGE] STEP 1: Forcing premium status update");
-        const forceResult = await forceUpdatePremiumStatus(user.id, sessionId);
-        console.log("[SUCCESS-PAGE] Force update result:", forceResult);
+        await forceUpdatePremiumStatus(user.id, sessionId);
         
-        // CRITICAL STEP 2: Refresh session to update auth context
+        // STEP 2: Refresh session to update auth context
         console.log("[SUCCESS-PAGE] STEP 2: Refreshing auth session");
         await refreshSession();
         
-        // CRITICAL STEP 3: Double-check database directly to confirm changes
-        const { data: afterProfile } = await supabase
+        // STEP 3: Check profile directly to confirm changes
+        const { data: profile } = await supabase
           .from('profiles')
           .select('is_premium, subscription_status, subscription_id, subscription_expiry')
           .eq('id', user.id)
           .single();
         
-        console.log("[SUCCESS-PAGE] Profile after updates:", afterProfile);
+        console.log("[SUCCESS-PAGE] STEP 3: Profile after updates:", profile);
         
-        // CRITICAL STEP 4: Check premium status again
-        console.log("[SUCCESS-PAGE] STEP 4: Verifying premium status is updated");
-        const isPremiumNow = await checkPremiumStatus(user.id, true);
-        console.log("[SUCCESS-PAGE] Is premium after updates:", isPremiumNow);
+        // STEP 4: Mark as processed in session storage
+        console.log("[SUCCESS-PAGE] STEP 4: Marking as processed in session storage");
+        sessionStorage.setItem('paymentProcessed', 'true');
         
-        // If premium status is confirmed, show success immediately
-        if (isPremiumNow) {
-          console.log("[SUCCESS-PAGE] Premium status confirmed, showing success");
-          setVerificationSuccess(true);
-          setLoading(false);
-          return;
-        }
+        // Success! Show toast and update state
+        toast.success('Gratulacje! Twoje konto zostało zaktualizowane do wersji Premium.', {
+          dismissible: true
+        });
         
-        // If still not premium, do one more attempt after a short delay
-        console.log("[SUCCESS-PAGE] Premium status not confirmed yet, trying once more");
-        setTimeout(async () => {
-          // Final attempt at direct database update with maximum fallback values
-          try {
-            console.log("[SUCCESS-PAGE] EMERGENCY: Direct database update as last resort");
-            
-            // Generate fallback expiry date
-            const expiryDate = new Date();
-            expiryDate.setDate(expiryDate.getDate() + 30);
-            const fallbackExpiry = expiryDate.toISOString();
-            
-            // Emergency direct update
-            const { error: updateError, data: updateResult } = await supabase
-              .from('profiles')
-              .update({ 
-                is_premium: true,
-                subscription_status: 'active',
-                subscription_expiry: fallbackExpiry,
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', user.id)
-              .select();
-              
-            if (updateError) {
-              console.error("[SUCCESS-PAGE] Emergency update failed:", updateError);
-            } else {
-              console.log("[SUCCESS-PAGE] Emergency update completed:", updateResult);
-            }
-          } catch (emergencyError) {
-            console.error("[SUCCESS-PAGE] Exception in emergency update:", emergencyError);
-          }
-          
-          // Refresh session one last time
-          await refreshSession();
-          
-          // Final check of database state
-          const { data: finalProfile } = await supabase
-            .from('profiles')
-            .select('is_premium, subscription_status, subscription_id, subscription_expiry')
-            .eq('id', user.id)
-            .single();
-          
-          console.log("[SUCCESS-PAGE] Final profile state:", finalProfile);
-          
-          // Show success regardless of result (optimistic UI)
-          console.log("[SUCCESS-PAGE] Showing success by timeout regardless of status");
-          setVerificationSuccess(true);
-          setLoading(false);
-          
-          // Run official verification in parallel (non-blocking)
-          verifyStripePayment(sessionId, user.id)
-            .catch(err => console.error("[SUCCESS-PAGE] Background verification error:", err));
-        }, 3000);
+        setVerificationSuccess(true);
+        setLoading(false);
         
+        // Also verify in background (non-blocking)
+        verifyStripePayment(sessionId, user.id)
+          .catch(err => console.error("[SUCCESS-PAGE] Background verification error:", err));
       } catch (err: any) {
         console.error("[SUCCESS-PAGE] Payment verification process error:", err);
         
-        // GRACEFUL FAILURE: Even on error, try to update premium status
-        try {
-          console.log("[SUCCESS-PAGE] Verification failed, trying emergency status update");
-          await forceUpdatePremiumStatus(user.id, sessionId);
-          await refreshSession();
-          
-          // Show success even on error (optimistic UI)
-          setVerificationSuccess(true);
-          setLoading(false);
-        } catch (fallbackErr) {
-          console.error("[SUCCESS-PAGE] Emergency update failed:", fallbackErr);
-          setError("Wystąpił problem z weryfikacją płatności. Prosimy o kontakt z obsługą.");
-          setDebugInfo({
-            error: err.message,
-            timestamp: new Date().toISOString(),
-            sessionId,
-            userId: user?.id
-          });
-          setLoading(false);
-        }
+        // Don't show error yet - retry with timeout
+        console.log("[SUCCESS-PAGE] Will retry verification...");
+        setTimeout(() => {
+          if (!verificationSuccess && loading) {
+            console.log("[SUCCESS-PAGE] Retrying verification...");
+            processPayment();
+          }
+        }, 3000);
       }
     };
     
-    verifyPayment();
-  }, [sessionId, user, checkPremiumStatus, refreshSession, hasProcessedPayment]);
+    if (user?.id && sessionId && loading && !verificationSuccess) {
+      processPayment();
+    }
+  }, [user, sessionId, loading, verificationSuccess, refreshSession, processAttempts, handleManualCompletion]);
   
   // Handle manual retry
-  const handleRetryVerification = async () => {
+  const handleRetryVerification = () => {
     setError(null);
     setLoading(true);
     setWaitTime(0);
-    setHasProcessedPayment(false); // Reset the processed flag to allow a fresh attempt
-    
-    // Force update premium status on retry
-    if (user?.id && sessionId) {
-      try {
-        await forceUpdatePremiumStatus(user.id, sessionId);
-        await refreshSession();
-        await checkPremiumStatus(user.id, true);
-        
-        // Set success after a short delay
-        setTimeout(() => {
-          setVerificationSuccess(true);
-          setLoading(false);
-        }, 2000);
-      } catch (err) {
-        console.error("[SUCCESS-PAGE] Manual retry failed:", err);
-        await refreshSession();
-      }
-    } else {
-      await refreshSession();
-    }
+    setProcessAttempts(0);
+    refreshSession();
   };
   
   return (

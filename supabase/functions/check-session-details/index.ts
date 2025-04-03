@@ -38,28 +38,44 @@ serve(async (req) => {
     
     console.log("[CHECK-SESSION] Session data retrieved:", {
       id: session.id,
-      subscription: session.subscription ? "yes" : "no",
-      customer: session.customer ? "yes" : "no",
-      payment_status: session.payment_status
+      subscription: session.subscription ? session.subscription : "no subscription found",
+      customer: session.customer ? session.customer : "no customer found",
+      payment_status: session.payment_status,
+      metadata: session.metadata || {}
     });
     
     // Get subscription details if available
     console.log("[CHECK-SESSION] Getting subscription details");
-    const { subscriptionId, subscriptionStatus, subscriptionExpiry } = 
-      await getSubscriptionDetails(session, stripeSecretKey);
-      
-    console.log('[CHECK-SESSION] Retrieved subscription details:', {
-      subscriptionId,
-      subscriptionStatus,
-      subscriptionExpiry
-    });
+    let subscriptionId = null;
+    let subscriptionStatus = 'active'; // Default fallback
+    let subscriptionExpiry = null;
+    
+    try {
+      if (session.subscription) {
+        const subDetails = await getSubscriptionDetails(session, stripeSecretKey);
+        subscriptionId = subDetails.subscriptionId;
+        subscriptionStatus = subDetails.subscriptionStatus || 'active';
+        subscriptionExpiry = subDetails.subscriptionExpiry;
+        
+        console.log('[CHECK-SESSION] Retrieved subscription details from Stripe:', {
+          subscriptionId,
+          subscriptionStatus,
+          subscriptionExpiry
+        });
+      } else {
+        console.log('[CHECK-SESSION] No subscription in session, using default values');
+      }
+    } catch (subError) {
+      console.error('[CHECK-SESSION] Error getting subscription details:', subError);
+      // Continue with defaults
+    }
     
     // Always provide default values
     const defaultExpiryDate = getDefaultExpiryDate();
     
-    // Response data with fallbacks for missing values
+    // Response data with guaranteed values
     const responseData = {
-      subscriptionId: subscriptionId || null,
+      subscriptionId: subscriptionId || session.subscription || null,
       subscriptionStatus: subscriptionStatus || 'active',
       subscriptionExpiry: subscriptionExpiry || defaultExpiryDate,
       customerId: session.customer || null,
@@ -68,7 +84,6 @@ serve(async (req) => {
     
     console.log('[CHECK-SESSION] Returning response data:', responseData);
     
-    // Make sure we always return valid values for these fields
     return new Response(
       JSON.stringify(responseData),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

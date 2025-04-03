@@ -1,9 +1,7 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { stripe, constructWebhookEvent } from "./stripe.ts";
 import { getSupabaseAdmin } from "./db.ts";
 
-// More comprehensive CORS headers to ensure they're respected by clients
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, stripe-signature',
@@ -12,7 +10,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     console.log("Handling OPTIONS preflight request");
     return new Response(null, { 
@@ -23,7 +20,6 @@ serve(async (req) => {
 
   console.log(`Stripe webhook received: ${req.method} request`);
   
-  // Only accept POST requests for actual webhook events
   if (req.method !== 'POST') {
     console.error(`Invalid method: ${req.method}`);
     return new Response(
@@ -39,7 +35,6 @@ serve(async (req) => {
   let verified = false;
   
   try {
-    // Get the raw request body as a string for signature verification
     const rawBody = await req.text();
     console.log(`Raw body received, length: ${rawBody.length} chars`);
     
@@ -47,15 +42,12 @@ serve(async (req) => {
       throw new Error("Empty request body");
     }
     
-    // Get the signature from headers
     const signature = req.headers.get('stripe-signature');
     console.log(`Signature header present: ${!!signature}`);
     
-    // Get the webhook secret from environment variables
     const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET');
     console.log(`Webhook secret configured: ${!!webhookSecret}`);
     
-    // Attempt to construct and verify the event
     try {
       const result = await constructWebhookEvent(rawBody, signature, webhookSecret);
       event = result.event;
@@ -76,12 +68,10 @@ serve(async (req) => {
       );
     }
     
-    // Validate minimum required event data
     if (!event || !event.type || !event.data) {
       throw new Error("Missing required webhook data");
     }
     
-    // Handle based on event type
     const supabase = getSupabaseAdmin();
     
     switch (event.type) {
@@ -91,22 +81,19 @@ serve(async (req) => {
         console.log(`Payment status: ${session.payment_status}`);
         console.log(`Session mode: ${session.mode}`);
         
-        // Extract user ID and subscription data
-        const userId = session.metadata?.userId;
+        const userId = session.metadata?.userId || session.client_reference_id;
         const customerEmail = session.customer_details?.email || session.customer_email;
         const subscriptionId = session.subscription;
         
         console.log(`User ID from metadata: ${userId || 'not found'}`);
+        console.log(`Client reference ID: ${session.client_reference_id || 'not found'}`);
         console.log(`Customer email: ${customerEmail || 'not found'}`);
         console.log(`Subscription ID: ${subscriptionId || 'not found'}`);
         
-        // Only process paid sessions
         if (session.payment_status === 'paid') {
-          // If we have a user ID, update the user's profile directly
           if (userId) {
             console.log(`Updating profile for user ${userId}`);
             
-            // First log the payment
             try {
               const { error: logError } = await supabase
                 .from('payment_logs')
@@ -128,13 +115,34 @@ serve(async (req) => {
               console.error('Exception logging payment:', insertError);
             }
             
-            // Then update the user's premium status
+            let expiryDate = null;
+            if (session.mode === 'subscription') {
+              try {
+                if (subscriptionId) {
+                  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+                  if (subscription.current_period_end) {
+                    expiryDate = new Date(subscription.current_period_end * 1000).toISOString();
+                  }
+                }
+              } catch (subError) {
+                console.error('Error getting subscription details:', subError);
+              }
+            }
+            
+            if (!expiryDate) {
+              const fallbackDate = new Date();
+              fallbackDate.setDate(fallbackDate.getDate() + 30);
+              expiryDate = fallbackDate.toISOString();
+            }
+            
             try {
               const { error: updateError } = await supabase
                 .from('profiles')
                 .update({
                   is_premium: true,
                   subscription_id: subscriptionId,
+                  subscription_status: 'active',
+                  subscription_expiry: expiryDate,
                   updated_at: new Date().toISOString()
                 })
                 .eq('id', userId);
@@ -142,14 +150,12 @@ serve(async (req) => {
               if (updateError) {
                 console.error('Error updating profile:', updateError);
               } else {
-                console.log('Profile updated with premium status');
+                console.log('Profile updated with premium status and all subscription details');
               }
             } catch (updateError) {
               console.error('Exception updating profile:', updateError);
             }
-          } 
-          // If no user ID but we have an email, try to find the user
-          else if (customerEmail) {
+          } else if (customerEmail) {
             console.log(`Looking for user with email ${customerEmail}`);
             
             try {
@@ -164,7 +170,6 @@ serve(async (req) => {
               } else if (user) {
                 console.log(`Found user ${user.id} by email`);
                 
-                // Log the payment
                 const { error: logError } = await supabase
                   .from('payment_logs')
                   .insert({
@@ -182,12 +187,13 @@ serve(async (req) => {
                   console.log('Payment logged successfully');
                 }
                 
-                // Update the user's premium status
                 const { error: updateError } = await supabase
                   .from('profiles')
                   .update({
                     is_premium: true,
                     subscription_id: subscriptionId,
+                    subscription_status: 'active',
+                    subscription_expiry: expiryDate,
                     updated_at: new Date().toISOString()
                   })
                   .eq('id', user.id);
@@ -195,12 +201,11 @@ serve(async (req) => {
                 if (updateError) {
                   console.error('Error updating profile:', updateError);
                 } else {
-                  console.log('Profile updated with premium status');
+                  console.log('Profile updated with premium status and all subscription details');
                 }
               } else {
                 console.log('No user found with email:', customerEmail);
                 
-                // Store unprocessed payment
                 const { error: unprocessedError } = await supabase
                   .from('unprocessed_payments')
                   .insert({
@@ -222,7 +227,6 @@ serve(async (req) => {
           } else {
             console.log('No user ID or email found in session');
             
-            // Store unprocessed payment
             try {
               const { error: unprocessedError } = await supabase
                 .from('unprocessed_payments')
@@ -254,14 +258,12 @@ serve(async (req) => {
         console.log(`Processing ${event.type} for subscription ${subscription.id}`);
         console.log(`Status: ${subscription.status}`);
         
-        // Get expiry date if available
-        const subscriptionExpiry = subscription.current_period_end
-          ? new Date(subscription.current_period_end * 1000).toISOString()
-          : null;
+        let expiryDate = null;
+        if (subscription.current_period_end) {
+          expiryDate = new Date(subscription.current_period_end * 1000).toISOString();
+        }
         
-        // Look up user by subscription ID or customer ID
         try {
-          // First try by subscription ID
           let { data: profile, error } = await supabase
             .from('profiles')
             .select('id')
@@ -272,7 +274,6 @@ serve(async (req) => {
             console.error('Error finding user by subscription ID:', error);
           }
           
-          // If not found by subscription ID, try payment logs
           if (!profile) {
             console.log('User not found by subscription ID, checking payment logs');
             
@@ -287,7 +288,6 @@ serve(async (req) => {
             } else if (paymentLog) {
               console.log(`Found user ${paymentLog.user_id} in payment logs`);
               
-              // Update the profile with subscription status
               const isActive = 
                 subscription.status === 'active' || 
                 subscription.status === 'trialing';
@@ -298,7 +298,7 @@ serve(async (req) => {
                   is_premium: isActive,
                   subscription_id: subscription.id,
                   subscription_status: subscription.status,
-                  subscription_expiry: subscriptionExpiry,
+                  subscription_expiry: expiryDate,
                   updated_at: new Date().toISOString()
                 })
                 .eq('id', paymentLog.user_id);
@@ -314,7 +314,6 @@ serve(async (req) => {
           } else {
             console.log(`Found user ${profile.id} by subscription ID`);
             
-            // Update the profile with subscription status
             const isActive = 
               subscription.status === 'active' || 
               subscription.status === 'trialing';
@@ -324,7 +323,7 @@ serve(async (req) => {
               .update({
                 is_premium: isActive,
                 subscription_status: subscription.status,
-                subscription_expiry: subscriptionExpiry,
+                subscription_expiry: expiryDate,
                 updated_at: new Date().toISOString()
               })
               .eq('id', profile.id);
@@ -346,7 +345,6 @@ serve(async (req) => {
         console.log(`Processing subscription deletion: ${subscription.id}`);
         
         try {
-          // Find user by subscription ID
           const { data: profile, error } = await supabase
             .from('profiles')
             .select('id')
@@ -358,7 +356,6 @@ serve(async (req) => {
           } else if (profile) {
             console.log(`Found user ${profile.id} for deleted subscription`);
             
-            // Update the profile - remove premium status
             const { error: updateError } = await supabase
               .from('profiles')
               .update({
@@ -386,7 +383,6 @@ serve(async (req) => {
         console.log(`Received unhandled event type: ${event.type}`);
     }
     
-    // Return a successful response
     return new Response(
       JSON.stringify({ 
         received: true, 

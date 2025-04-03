@@ -9,6 +9,39 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      payment_logs: {
+        Row: {
+          created_at: string
+          customer: string | null
+          customer_email: string | null
+          id: string
+          session_id: string
+          subscription_id: string | null
+          timestamp: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          customer?: string | null
+          customer_email?: string | null
+          id?: string
+          session_id: string
+          subscription_id?: string | null
+          timestamp: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          customer?: string | null
+          customer_email?: string | null
+          id?: string
+          session_id?: string
+          subscription_id?: string | null
+          timestamp?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -141,6 +174,33 @@ export type Database = {
           updated_at?: string
           user_id?: string
           why_it_works?: string
+        }
+        Relationships: []
+      }
+      unprocessed_payments: {
+        Row: {
+          created_at: string
+          id: string
+          processed: boolean
+          processed_at: string | null
+          session_data: Json
+          session_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          processed?: boolean
+          processed_at?: string | null
+          session_data: Json
+          session_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          processed?: boolean
+          processed_at?: string | null
+          session_data?: Json
+          session_id?: string
         }
         Relationships: []
       }
