@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/auth/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -11,9 +11,27 @@ export function usePaymentVerification(sessionId: string | null) {
   const [verificationSuccess, setVerificationSuccess] = useState(false);
   const [waitingForAuth, setWaitingForAuth] = useState(true);
   const [debugInfo, setDebugInfo] = useState<Record<string, any>>({});
-  const { user, checkPremiumStatus, isPremium } = useAuth();
+  const { user, checkPremiumStatus, isPremium, refreshSession } = useAuth();
+  const verificationTimeoutRef = useRef<number | null>(null);
   
   const successToastShown = sessionStorage.getItem('paymentProcessed') === 'true';
+
+  // Log initial hook state
+  useEffect(() => {
+    console.log('usePaymentVerification initialized:', { 
+      sessionId, 
+      hasUser: !!user,
+      userId: user?.id,
+      isPremium
+    });
+    
+    return () => {
+      // Clear any timeouts when the hook unmounts
+      if (verificationTimeoutRef.current) {
+        window.clearTimeout(verificationTimeoutRef.current);
+      }
+    };
+  }, [sessionId, user, isPremium]);
 
   // Handle retry verification
   const handleRetryVerification = async () => {
@@ -23,11 +41,20 @@ export function usePaymentVerification(sessionId: string | null) {
     setWaitingForAuth(true);
     setVerificationAttempt(0);
     
+    // Clear any existing timeouts
+    if (verificationTimeoutRef.current) {
+      window.clearTimeout(verificationTimeoutRef.current);
+      verificationTimeoutRef.current = null;
+    }
+    
     // Try to manually refresh auth
     try {
-      await supabase.auth.refreshSession();
+      console.log('Manually refreshing session before retry');
+      const refreshResult = await refreshSession();
+      console.log('Manual session refresh result:', refreshResult);
     } catch (e) {
       console.error("Exception refreshing auth on manual retry:", e);
+      setDebugInfo(prev => ({ ...prev, refreshError: String(e) }));
     }
   };
 
@@ -49,7 +76,7 @@ export function usePaymentVerification(sessionId: string | null) {
         
         if (sessionError) {
           console.error("Error getting session:", sessionError);
-          setDebugInfo(prev => ({ ...prev, sessionError }));
+          setDebugInfo(prev => ({ ...prev, sessionError: String(sessionError) }));
         }
         
         if (session?.user) {
@@ -68,46 +95,55 @@ export function usePaymentVerification(sessionId: string | null) {
           
           // Try to manually refresh the session
           try {
-            const { error: refreshError } = await supabase.auth.refreshSession();
-            if (refreshError) {
-              console.error("Error refreshing session:", refreshError);
-              setDebugInfo(prev => ({ ...prev, refreshError }));
-            } else {
-              console.log("Successfully refreshed session");
-              
-              // Check if we now have a session
+            console.log("Attempting to refresh auth session");
+            const refreshResult = await refreshSession();
+            console.log("Session refresh result:", refreshResult);
+            
+            // Check if we now have a session - delay slightly to allow state update
+            setTimeout(async () => {
               const { data: { session: refreshedSession } } = await supabase.auth.getSession();
               if (refreshedSession?.user) {
                 console.log("Got user after refresh:", refreshedSession.user.id);
                 setWaitingForAuth(false);
                 return;
+              } else {
+                console.log("Still no user after session refresh");
+                
+                // We have a session ID but no user - wait a bit and retry
+                if (verificationAttempt < 5) {
+                  console.log(`Auth retry attempt ${verificationAttempt + 1}/5`);
+                  setTimeout(() => {
+                    setVerificationAttempt(prev => prev + 1);
+                  }, 2000); // Increased delay
+                } else {
+                  console.log("Max auth retry attempts reached");
+                  setError("Nie udało się zidentyfikować użytkownika. Spróbuj zalogować się ponownie.");
+                  setLoading(false);
+                }
               }
-            }
+            }, 500);
           } catch (refreshError) {
             console.error("Exception refreshing session:", refreshError);
-            setDebugInfo(prev => ({ ...prev, refreshError }));
-          }
-          
-          // We have a session ID but no user - wait a bit and retry
-          if (verificationAttempt < 5) {
-            console.log(`Auth retry attempt ${verificationAttempt + 1}/5`);
-            setTimeout(() => {
-              setVerificationAttempt(prev => prev + 1);
-            }, 1500);
-          } else {
-            console.log("Max auth retry attempts reached");
-            setError("Nie udało się zidentyfikować użytkownika. Spróbuj zalogować się ponownie.");
-            setLoading(false);
+            setDebugInfo(prev => ({ ...prev, refreshError: String(refreshError) }));
+            
+            if (verificationAttempt < 5) {
+              setTimeout(() => {
+                setVerificationAttempt(prev => prev + 1);
+              }, 2000);
+            } else {
+              setError("Wystąpił błąd podczas weryfikacji użytkownika.");
+              setLoading(false);
+            }
           }
         }
       } catch (error) {
         console.error("Error checking auth status:", error);
-        setDebugInfo(prev => ({ ...prev, authError: error }));
+        setDebugInfo(prev => ({ ...prev, authError: String(error) }));
         
         if (verificationAttempt < 5) {
           setTimeout(() => {
             setVerificationAttempt(prev => prev + 1);
-          }, 1500);
+          }, 2000);
         } else {
           setError("Wystąpił błąd podczas weryfikacji użytkownika.");
           setLoading(false);
@@ -116,7 +152,7 @@ export function usePaymentVerification(sessionId: string | null) {
     };
     
     checkAuthWithRetry();
-  }, [user, sessionId, verificationAttempt]);
+  }, [user, sessionId, verificationAttempt, refreshSession]);
 
   // Verify payment after authentication is confirmed
   useEffect(() => {
@@ -135,14 +171,14 @@ export function usePaymentVerification(sessionId: string | null) {
           
         if (error) {
           console.error('Error in forced premium status update:', error);
-          setDebugInfo(prev => ({ ...prev, forceUpdateError: error }));
+          setDebugInfo(prev => ({ ...prev, forceUpdateError: String(error) }));
         } else {
           console.log('Successfully forced premium status update');
           return true;
         }
       } catch (err) {
         console.error('Exception in forced update:', err);
-        setDebugInfo(prev => ({ ...prev, forcedUpdateException: err }));
+        setDebugInfo(prev => ({ ...prev, forcedUpdateException: String(err) }));
       }
       return false;
     };
@@ -171,30 +207,44 @@ export function usePaymentVerification(sessionId: string | null) {
           ...prev, 
           verifyingPayment: true,
           sessionId,
-          userId: user.id 
+          userId: user.id,
+          timestamp: new Date().toISOString()
         }));
 
-        // Add timeout to prevent the request from hanging indefinitely
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Verification request timeout')), 15000)
-        );
-
-        // Try to verify the payment
-        const verifyPromise = supabase.functions.invoke('verify-payment-session', {
-          body: { sessionId, userId: user.id }
+        // Set up a timeout to prevent the request from hanging indefinitely
+        const verificationPromise = new Promise<any>((resolve, reject) => {
+          // Capture the current timeout
+          const timeoutId = setTimeout(() => {
+            reject(new Error('Verification request timeout'));
+          }, 20000); // Increased timeout to 20 seconds
+          
+          // Store the timeout ref for cleanup
+          verificationTimeoutRef.current = timeoutId as unknown as number;
+          
+          // Try to verify the payment
+          supabase.functions.invoke('verify-payment-session', {
+            body: { sessionId, userId: user.id }
+          }).then(result => {
+            clearTimeout(timeoutId);
+            verificationTimeoutRef.current = null;
+            resolve(result);
+          }).catch(error => {
+            clearTimeout(timeoutId);
+            verificationTimeoutRef.current = null;
+            reject(error);
+          });
         });
 
-        // Race the verification against the timeout
-        const { data, error: verifyError } = await Promise.race([
-          verifyPromise,
-          timeoutPromise.then(() => { 
-            throw new Error('Timeout waiting for verification response');
-          })
-        ]) as any;
+        // Execute the verification with timeout
+        const { data, error: verifyError } = await verificationPromise;
 
         if (verifyError) {
           console.error('Error invoking verify-payment-session function:', verifyError);
-          setDebugInfo(prev => ({ ...prev, verifyError }));
+          setDebugInfo(prev => ({ 
+            ...prev, 
+            verifyError: String(verifyError),
+            verifyErrorStack: verifyError.stack
+          }));
           setError('Wystąpił błąd podczas weryfikacji płatności: ' + verifyError.message);
           setLoading(false);
           return;
@@ -241,10 +291,29 @@ export function usePaymentVerification(sessionId: string | null) {
         }
 
         setLoading(false);
-      } catch (err) {
+      } catch (err: any) {
+        // Detailed error logging
         console.error('Error during payment verification process:', err);
-        setDebugInfo(prev => ({ ...prev, verificationException: err }));
-        setError('Wystąpił błąd podczas weryfikacji płatności. Spróbuj odświeżyć stronę.');
+        
+        const errorDetail = {
+          message: err?.message || String(err),
+          stack: err?.stack,
+          name: err?.name,
+          code: err?.code
+        };
+        
+        setDebugInfo(prev => ({ 
+          ...prev, 
+          verificationException: errorDetail,
+          timestamp: new Date().toISOString()
+        }));
+        
+        let errorMessage = 'Wystąpił błąd podczas weryfikacji płatności.';
+        if (err?.message?.includes('timeout')) {
+          errorMessage = 'Przekroczono czas oczekiwania na weryfikację płatności. Spróbuj odświeżyć stronę.';
+        }
+        
+        setError(errorMessage);
         setLoading(false);
       }
     };
@@ -253,7 +322,7 @@ export function usePaymentVerification(sessionId: string | null) {
     if (user?.id) {
       verifyPayment();
     }
-  }, [user, sessionId, waitingForAuth, checkPremiumStatus, successToastShown]);
+  }, [user, sessionId, waitingForAuth, checkPremiumStatus, successToastShown, refreshSession]);
 
   return {
     loading,

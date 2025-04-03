@@ -33,6 +33,7 @@ export function getStripeSecretKey() {
 // Verify user exists in auth system
 export async function verifyUser(supabase: any, userId: string) {
   try {
+    console.log(`Checking if user ${userId} exists in auth system`);
     const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
     
     if (userError) {
@@ -71,6 +72,9 @@ export async function updateProfileWithPremium(
   if (subscriptionExpiry) updateData.subscription_expiry = subscriptionExpiry;
   
   try {
+    console.log(`Updating profile for user ${userId} with premium status`);
+    console.log('Update data:', updateData);
+    
     const { error: updateError } = await supabase
       .from('profiles')
       .update(updateData)
@@ -98,6 +102,8 @@ export async function createProfileIfNotExists(
   subscriptionExpiry?: string
 ) {
   try {
+    console.log(`Creating new profile for user ${userId} with premium status`);
+    
     const profile = {
       id: userId,
       is_premium: true
@@ -107,6 +113,8 @@ export async function createProfileIfNotExists(
     if (subscriptionId) profile.subscription_id = subscriptionId;
     if (subscriptionStatus) profile.subscription_status = subscriptionStatus;
     if (subscriptionExpiry) profile.subscription_expiry = subscriptionExpiry;
+    
+    console.log('Profile data to be created:', profile);
     
     const { error: createError } = await supabase
       .from('profiles')
@@ -130,8 +138,12 @@ export async function verifyProfileUpdate(supabase: any, userId: string) {
   let retries = 0;
   const maxRetries = 3;
   
+  console.log(`Verifying profile update for user ${userId}`);
+  
   while (retries < maxRetries) {
     try {
+      console.log(`Verification attempt ${retries + 1} of ${maxRetries}`);
+      
       const { data: profile, error: verifyError } = await supabase
         .from('profiles')
         .select('is_premium, subscription_status, subscription_expiry')
@@ -148,6 +160,7 @@ export async function verifyProfileUpdate(supabase: any, userId: string) {
       }
       
       // Wait before retry
+      console.log(`Waiting before retry ${retries + 1}...`);
       await new Promise(resolve => setTimeout(resolve, 1000));
       retries++;
     } catch (error) {
@@ -157,5 +170,6 @@ export async function verifyProfileUpdate(supabase: any, userId: string) {
     }
   }
   
+  console.warn(`All ${maxRetries} verification attempts failed`);
   return { success: false, profile: null };
 }

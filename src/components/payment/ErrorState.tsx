@@ -1,15 +1,19 @@
 
 import { useNavigate } from 'react-router-dom';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useState } from 'react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface ErrorStateProps {
   error: string;
   onRetry: () => void;
+  debugInfo?: Record<string, any>;
 }
 
-export const ErrorState = ({ error, onRetry }: ErrorStateProps) => {
+export const ErrorState = ({ error, onRetry, debugInfo }: ErrorStateProps) => {
   const navigate = useNavigate();
+  const [showDetails, setShowDetails] = useState(false);
   
   return (
     <div className="text-center">
@@ -30,8 +34,33 @@ export const ErrorState = ({ error, onRetry }: ErrorStateProps) => {
       </div>
       <h2 className="text-2xl font-bold text-gray-800 mb-4">Coś poszło nie tak</h2>
       <p className="text-gray-600 mb-6">{error}</p>
+      
+      {debugInfo && (
+        <div className="mb-4">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="text-xs flex items-center gap-1">
+                <Info className="h-3 w-3" />
+                Szczegóły techniczne
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 max-h-80 overflow-auto text-xs text-left">
+              <div className="space-y-2">
+                <h4 className="font-semibold">Informacje diagnostyczne:</h4>
+                <pre className="bg-gray-100 p-2 rounded text-left overflow-auto max-h-60">
+                  {JSON.stringify(debugInfo, null, 2)}
+                </pre>
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
+      )}
+      
       <div className="flex flex-col sm:flex-row justify-center gap-3">
-        <Button onClick={onRetry} className="flex items-center gap-2">
+        <Button 
+          onClick={onRetry} 
+          className="flex items-center gap-2 bg-copywrite-teal hover:bg-copywrite-teal-dark"
+        >
           <RefreshCw className="w-4 h-4" />
           Spróbuj ponownie
         </Button>
