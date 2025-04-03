@@ -24,10 +24,10 @@ const Success = () => {
   const [waitTime, setWaitTime] = useState(0);
   const [debugInfo, setDebugInfo] = useState<Record<string, any>>({});
   
-  // Auto-refresh page after 20 seconds if stuck
+  // Auto-refresh page after 15 seconds if stuck
   useEffect(() => {
-    if (waitTime >= 20 && !verificationSuccess && loading) {
-      console.log("Auto-refreshing page after 20 seconds");
+    if (waitTime >= 15 && !verificationSuccess && loading) {
+      console.log("Auto-refreshing page after 15 seconds");
       window.location.reload();
     }
   }, [waitTime, verificationSuccess, loading]);
@@ -86,22 +86,26 @@ const Success = () => {
           return;
         }
         
-        // SIMPLIFIED APPROACH: Force premium update immediately
-        await forceUpdatePremiumStatus(user.id);
+        // FORCE UPDATE IMMEDIATELY: This ensures user gets premium right away
+        const forceResult = await forceUpdatePremiumStatus(user.id);
+        console.log("Force update result:", forceResult);
         
-        // Then proceed with official verification in parallel
+        // CRITICAL: Refresh auth session to update isPremium state
+        await refreshSession();
+        console.log("Session refreshed after force update");
+        
+        // Then run full verification in parallel
         verifyStripePayment(sessionId, user.id)
           .then(success => {
+            console.log("Full verification completed:", success);
             if (success) {
-              console.log("Payment verification succeeded");
+              // Refresh premium status one more time to ensure it's in sync
               checkPremiumStatus(user.id, true);
             }
           })
-          .catch(err => {
-            console.error("Verification error (non-blocking):", err);
-          });
+          .catch(err => console.error("Full verification error (non-blocking):", err));
         
-        // Consider verification successful even before it completes
+        // Consider verification successful - we'll show success screen
         setVerificationSuccess(true);
         setLoading(false);
         
@@ -112,6 +116,7 @@ const Success = () => {
         try {
           console.log("Verification failed, trying emergency status update");
           await forceUpdatePremiumStatus(user.id);
+          await refreshSession(); // Critical: refresh session here too
           setVerificationSuccess(true);
           setLoading(false);
         } catch (fallbackErr) {
@@ -141,6 +146,7 @@ const Success = () => {
     if (user?.id) {
       try {
         await forceUpdatePremiumStatus(user.id);
+        await refreshSession(); // Critical: refresh session here too
         setVerificationSuccess(true);
         setLoading(false);
       } catch (err) {

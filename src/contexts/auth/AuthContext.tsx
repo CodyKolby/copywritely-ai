@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/integrations/supabase/client'
@@ -139,6 +140,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('Manual premium status check for user:', userId);
       const isPremiumStatus = await checkPremiumStatus(userId, showToast);
       setIsPremium(isPremiumStatus);
+      
+      // Get the latest profile info after premium status check
+      if (isPremiumStatus) {
+        const updatedProfile = await fetchProfile(userId);
+        if (updatedProfile) {
+          setProfile(updatedProfile);
+        }
+      }
+      
       return isPremiumStatus;
     } catch (error) {
       console.error('Error checking premium status:', error);

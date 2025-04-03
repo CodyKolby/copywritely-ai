@@ -56,7 +56,10 @@ export const checkPremiumStatus = async (userId: string, showToast = false): Pro
           try {
             const { error: updateError } = await supabase
               .from('profiles')
-              .update({ is_premium: true })
+              .update({ 
+                is_premium: true,
+                updated_at: new Date().toISOString()
+              })
               .eq('id', userId);
               
             if (updateError) {
@@ -98,7 +101,11 @@ export const checkPremiumStatus = async (userId: string, showToast = false): Pro
         try {
           const { error: updateError } = await supabase
             .from('profiles')
-            .update({ is_premium: true })
+            .update({ 
+              is_premium: true,
+              subscription_id: logs[0].subscription_id || null,
+              updated_at: new Date().toISOString()
+            })
             .eq('id', userId);
             
           if (updateError) {
@@ -132,13 +139,24 @@ export const checkPremiumStatusFallback = async (userId: string, showToast = fal
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('is_premium')
+      .select('is_premium, subscription_status, subscription_expiry')
       .eq('id', userId)
       .single();
     
     if (error) {
       console.error('Error checking premium status (fallback):', error);
       return false;
+    }
+    
+    // Check if subscription is expired
+    if (data?.subscription_expiry) {
+      const expiryDate = new Date(data.subscription_expiry);
+      const now = new Date();
+      
+      if (expiryDate < now) {
+        console.log('Subscription expired on:', data.subscription_expiry);
+        return false;
+      }
     }
     
     // Trust the database value
