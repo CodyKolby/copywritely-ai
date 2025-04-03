@@ -23,6 +23,7 @@ export interface AuthContextType {
   signUpWithEmail: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
   checkPremiumStatus: (userId: string, showToast?: boolean) => Promise<boolean>
+  refreshSession: () => Promise<boolean>
   // For testing auth states
   setTestUserState: (loggedIn: boolean, premium?: boolean) => void
 }

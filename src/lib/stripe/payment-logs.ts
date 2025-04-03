@@ -45,22 +45,24 @@ export const addPaymentLog = async (userId: string, sessionId: string, subscript
     
     console.log('[PAYMENT-LOGS] Adding payment log for session:', sessionId);
     
-    const logData: Record<string, any> = {
+    // Create properly typed object for insertion
+    const logData = {
       user_id: userId,
       session_id: sessionId,
       timestamp: new Date().toISOString()
     };
     
+    // Add optional fields only if they exist
     if (subscriptionId) {
-      logData.subscription_id = subscriptionId;
+      logData['subscription_id'] = subscriptionId;
     }
     
     if (customer) {
-      logData.customer = customer;
+      logData['customer'] = customer;
     }
     
     if (customerEmail) {
-      logData.customer_email = customerEmail;
+      logData['customer_email'] = customerEmail;
     }
     
     const { error } = await supabase
