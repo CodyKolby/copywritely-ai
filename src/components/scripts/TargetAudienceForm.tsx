@@ -108,30 +108,23 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
       };
       
       console.log("Dane do zapisania w bazie:", formDataWithName);
-      const targetAudienceId = await submitTargetAudienceForm(formDataWithName, userId);
-      console.log("Form submitted, target audience ID:", targetAudienceId);
       
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      if (targetAudienceId) {
-        const { data: checkData, error: checkError } = await supabase
-          .from('target_audiences')
-          .select('id')
-          .eq('id', targetAudienceId)
-          .single();
-          
-        if (checkError || !checkData) {
-          console.error("Verification failed, record not saved properly:", checkError);
-          toast.error('Błąd podczas weryfikacji zapisu danych');
-          
+      try {
+        const targetAudienceId = await submitTargetAudienceForm(formDataWithName, userId);
+        console.log("Form submitted, target audience ID:", targetAudienceId);
+        
+        if (targetAudienceId) {
+          toast.success('Dane grupy docelowej zostały zapisane');
+          // Pass the ID and form data to the parent component
           onSubmit(formDataWithName, targetAudienceId);
         } else {
-          console.log("Record verified in database:", checkData);
-          toast.success('Dane grupy docelowej zostały zapisane');
-          onSubmit(formDataWithName, targetAudienceId);
+          toast.warning('Brak ID grupy docelowej, używam tymczasowego ID');
+          const tempId = crypto.randomUUID();
+          onSubmit(formDataWithName, tempId);
         }
-      } else {
-        toast.warning('Brak ID grupy docelowej, używam tymczasowego ID');
+      } catch (submitError) {
+        console.error("Error in submitTargetAudienceForm:", submitError);
+        toast.error('Błąd podczas zapisywania danych');
         const tempId = crypto.randomUUID();
         onSubmit(formDataWithName, tempId);
       }
@@ -140,7 +133,7 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
       toast.error('Wystąpił błąd podczas wysyłania formularza');
       
       const tempId = crypto.randomUUID();
-      onSubmit(data, tempId);
+      onSubmit(form.getValues(), tempId);
     }
   };
 
@@ -173,6 +166,7 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
         goToNextStep={goToNextStep}
         setCurrentStep={setCurrentStep}
         isLastStep={currentStep === TOTAL_STEPS}
+        isSubmitting={isSubmitting}
       />
     </TooltipProvider>
   );

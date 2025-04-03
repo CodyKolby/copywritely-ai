@@ -30,6 +30,7 @@ const TargetAudienceDialog = ({
     showEmailStyleDialog,
     advertisingGoal,
     emailStyle,
+    isProcessing,
     handleChoiceSelection,
     handleExistingAudienceSelect,
     handleContinue,
@@ -80,18 +81,21 @@ const TargetAudienceDialog = ({
               handleCreateNewAudience={handleCreateNewAudience}
               handleContinue={handleContinue}
               handleCancel={handleDialogClose}
+              isProcessing={isProcessing}
             />
           ) : showGoalDialog ? (
             <AdvertisingGoalDialog 
               onSubmit={handleGoalSubmit}
               onBack={handleGoalBack}
               onCancel={handleDialogClose}
+              isProcessing={isProcessing}
             />
           ) : showEmailStyleDialog ? (
             <EmailStyleDialog
               onSubmit={handleEmailStyleSubmit}
               onBack={handleEmailStyleBack}
               onCancel={handleDialogClose}
+              isProcessing={isProcessing}
             />
           ) : (
             <TargetAudienceForm 

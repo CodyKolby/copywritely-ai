@@ -15,21 +15,32 @@ export const submitTargetAudienceForm = async (
     // Tworzymy nazwę grupy docelowej, jeśli nie została podana
     const audienceName = data.name || `Grupa ${Math.floor(Math.random() * 1000) + 1}`;
     
+    // Filter out empty strings from array fields
+    const competitors = data.competitors.filter(item => item.trim().length > 0);
+    const pains = data.pains.filter(item => item.trim().length > 0);
+    const desires = data.desires.filter(item => item.trim().length > 0);
+    const benefits = data.benefits.filter(item => item.trim().length > 0);
+    
+    // Ensure we have at least one item in each required array
+    if (competitors.length === 0 || pains.length === 0 || desires.length === 0 || benefits.length === 0) {
+      throw new Error("Wymagane pola tablicowe nie mogą być puste");
+    }
+    
     // Przygotowanie danych do zapisu
     const targetAudienceData = {
       user_id: userId,
       name: audienceName,
       age_range: data.ageRange,
       gender: data.gender,
-      competitors: data.competitors.filter(Boolean), // Usuwamy puste wartości
+      competitors: competitors,
       language: data.language,
       biography: data.biography,
       beliefs: data.beliefs,
-      pains: data.pains.filter(Boolean),
-      desires: data.desires.filter(Boolean),
+      pains: pains,
+      desires: desires,
       main_offer: data.mainOffer,
       offer_details: data.offerDetails,
-      benefits: data.benefits.filter(Boolean),
+      benefits: benefits,
       why_it_works: data.whyItWorks,
       experience: data.experience,
     };
@@ -45,38 +56,14 @@ export const submitTargetAudienceForm = async (
     
     if (error) {
       console.error("Błąd podczas zapisywania danych:", error);
-      toast.error('Błąd podczas zapisywania danych');
-      
-      // Generujemy losowe ID, aby proces mógł kontynuować
-      return crypto.randomUUID();
+      throw new Error(`Błąd podczas zapisywania danych: ${error.message}`);
     }
     
     console.log("Dane zostały zapisane pomyślnie. ID grupy docelowej:", insertedData.id);
-    toast.success('Dane grupy docelowej zostały zapisane');
-    
-    // Dodajemy małe opóźnienie, aby upewnić się, że dane są widoczne w bazie
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Sprawdzamy, czy rekord faktycznie istnieje w bazie
-    const { data: verificationData, error: verificationError } = await supabase
-      .from('target_audiences')
-      .select('id')
-      .eq('id', insertedData.id)
-      .maybeSingle();
-    
-    if (verificationError || !verificationData) {
-      console.error("Weryfikacja rekordu nie powiodła się:", verificationError);
-      toast.warning('Weryfikacja zapisu nie powiodła się, ale kontynuujemy proces');
-    } else {
-      console.log("Weryfikacja rekordu zakończona pomyślnie:", verificationData);
-    }
     
     return insertedData.id;
   } catch (error) {
     console.error("Nieoczekiwany błąd podczas zapisywania danych:", error);
-    toast.error('Wystąpił nieoczekiwany błąd');
-    
-    // Generujemy losowe ID jako fallback
-    return crypto.randomUUID();
+    throw error;
   }
 };

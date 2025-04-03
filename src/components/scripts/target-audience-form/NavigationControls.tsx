@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
 
 interface NavigationControlsProps {
   currentStep: number;
@@ -9,6 +10,7 @@ interface NavigationControlsProps {
   goToNextStep: () => void;
   setCurrentStep: (step: number) => void;
   isLastStep?: boolean;
+  isSubmitting?: boolean;
 }
 
 const NavigationControls = ({
@@ -18,6 +20,7 @@ const NavigationControls = ({
   goToNextStep,
   setCurrentStep,
   isLastStep = false,
+  isSubmitting = false,
 }: NavigationControlsProps) => {
   return (
     <div className="space-y-4">
@@ -27,6 +30,7 @@ const NavigationControls = ({
           variant="outline" 
           onClick={goToPreviousStep}
           className="text-gray-700"
+          disabled={isSubmitting}
         >
           {currentStep === 1 ? 'Wróć' : 'Poprzedni krok'}
         </Button>
@@ -39,8 +43,16 @@ const NavigationControls = ({
           type={isLastStep ? "submit" : "button"} 
           onClick={isLastStep ? undefined : goToNextStep}
           className="bg-copywrite-teal hover:bg-copywrite-teal-dark text-white"
+          disabled={isSubmitting}
         >
-          {isLastStep ? 'Zapisz i kontynuuj' : 'Następny krok'}
+          {isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Zapisywanie...
+            </>
+          ) : (
+            isLastStep ? 'Zapisz i kontynuuj' : 'Następny krok'
+          )}
         </Button>
       </div>
     </div>

@@ -29,6 +29,7 @@ export const useTargetAudienceDialog = ({
   const [showEmailStyleDialog, setShowEmailStyleDialog] = useState<boolean>(false);
   const [advertisingGoal, setAdvertisingGoal] = useState<string>('');
   const [emailStyle, setEmailStyle] = useState<EmailStyle | null>(null);
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
 
   // Reset state when dialog opens/closes
   useEffect(() => {
@@ -49,6 +50,7 @@ export const useTargetAudienceDialog = ({
     setSelectedAudienceId(null);
     setAdvertisingGoal('');
     setEmailStyle(null);
+    setIsProcessing(false);
   };
 
   const loadExistingAudiences = useCallback(async () => {
@@ -100,43 +102,24 @@ export const useTargetAudienceDialog = ({
   };
 
   // Handle form submission (create new target audience)
-  const handleFormSubmit = async (data: FormValues) => {
+  const handleFormSubmit = async (data: FormValues, targetAudienceId?: string) => {
+    if (isProcessing) return;
+    
     try {
-      const newTargetAudienceId = uuidv4();
+      setIsProcessing(true);
       
-      const audienceData = {
-        id: newTargetAudienceId,
-        user_id: userId,
-        name: `Grupa ${existingAudiences.length + 1}`,
-        age_range: data.ageRange,
-        gender: data.gender,
-        competitors: data.competitors,
-        language: data.language,
-        biography: data.biography,
-        beliefs: data.beliefs,
-        pains: data.pains,
-        desires: data.desires,
-        main_offer: data.mainOffer,
-        offer_details: data.offerDetails,
-        benefits: data.benefits,
-        why_it_works: data.whyItWorks,
-        experience: data.experience
-      };
-      
-      const { error } = await supabase
-        .from('target_audiences')
-        .insert(audienceData);
-      
-      if (error) throw error;
-      
-      setSelectedAudienceId(newTargetAudienceId);
-      toast.success('Utworzono nową grupę docelową');
-      setShowForm(false);
-      setShowGoalDialog(true);
-      
+      if (targetAudienceId) {
+        setSelectedAudienceId(targetAudienceId);
+        setShowForm(false);
+        setShowGoalDialog(true);
+      } else {
+        toast.error('Nie udało się pobrać ID grupy docelowej');
+      }
     } catch (error) {
-      console.error('Error creating target audience:', error);
-      toast.error('Nie udało się utworzyć grupy docelowej');
+      console.error('Error handling form submission:', error);
+      toast.error('Wystąpił błąd podczas przetwarzania formularza');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -200,6 +183,7 @@ export const useTargetAudienceDialog = ({
     showEmailStyleDialog,
     advertisingGoal,
     emailStyle,
+    isProcessing,
     handleChoiceSelection,
     handleExistingAudienceSelect,
     handleContinue,
