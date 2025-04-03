@@ -17,6 +17,6 @@ export const getStripe = () => {
 
 // Use test mode price IDs that work with test mode
 export const PRICE_IDS = {
-  PRO_MONTHLY: 'price_1ORzDYAGO17NLUWtQEg4cYBE', // Updated test mode price ID for monthly
-  PRO_ANNUAL: 'price_1ORzDYAGO17NLUWtQEg4cYBE', // Same ID for annual for testing
+  PRO_MONTHLY: 'price_1R5A8aAGO17NLUWtxzthF8lo', // Aktualizacja ID cenowego na poprawny
+  PRO_ANNUAL: 'price_1R5A8aAGO17NLUWtxzthF8lo', // Ten sam ID dla planu rocznego (dla testów)
 };
