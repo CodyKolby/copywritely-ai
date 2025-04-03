@@ -2,6 +2,8 @@
 // Function to fetch Stripe session
 export async function getStripeSession(sessionId: string, stripeSecretKey: string) {
   try {
+    console.log(`Fetching Stripe session: ${sessionId}`);
+    
     const response = await fetch(`https://api.stripe.com/v1/checkout/sessions/${sessionId}`, {
       method: 'GET',
       headers: {
@@ -16,7 +18,15 @@ export async function getStripeSession(sessionId: string, stripeSecretKey: strin
       throw new Error('Error fetching Stripe session: ' + errorText);
     }
     
-    return await response.json();
+    const session = await response.json();
+    console.log('Stripe session data received:', {
+      id: session.id,
+      payment_status: session.payment_status,
+      subscription: session.subscription ? 'Yes' : 'No',
+      customer: session.customer ? 'Yes' : 'No'
+    });
+    
+    return session;
   } catch (error) {
     console.error('Error fetching Stripe session:', error);
     throw error;
@@ -26,6 +36,8 @@ export async function getStripeSession(sessionId: string, stripeSecretKey: strin
 // Function to fetch Stripe subscription
 export async function getStripeSubscription(subscriptionId: string, stripeSecretKey: string) {
   try {
+    console.log(`Fetching Stripe subscription: ${subscriptionId}`);
+    
     const response = await fetch(`https://api.stripe.com/v1/subscriptions/${subscriptionId}`, {
       method: 'GET',
       headers: {
@@ -49,21 +61,22 @@ export async function getStripeSubscription(subscriptionId: string, stripeSecret
 
 // Get subscription details from Stripe
 export async function getSubscriptionDetails(session: any, stripeSecretKey: string) {
-  const subscriptionId = session.subscription;
-  
-  if (!subscriptionId) {
-    console.log('No subscription ID in session');
-    return { 
-      subscriptionId: null, 
-      subscriptionStatus: 'inactive', 
-      subscriptionExpiry: null 
-    };
-  }
-  
   try {
+    const subscriptionId = session.subscription;
+    
+    if (!subscriptionId) {
+      console.log('No subscription ID in session');
+      return { 
+        subscriptionId: null, 
+        subscriptionStatus: 'inactive', 
+        subscriptionExpiry: null 
+      };
+    }
+    
+    console.log(`Getting details for subscription: ${subscriptionId}`);
     const subscription = await getStripeSubscription(subscriptionId, stripeSecretKey);
     
-    // Simplified - all active subscriptions are treated the same
+    // Determine subscription status
     const subscriptionStatus = 
       (subscription.status === 'active' || subscription.status === 'trialing') 
         ? 'active' 
@@ -77,15 +90,14 @@ export async function getSubscriptionDetails(session: any, stripeSecretKey: stri
         status: subscriptionStatus,
         expiry: subscriptionExpiry
       });
-    } else {
-      console.warn('Subscription does not have current_period_end:', subscription);
     }
     
     return { subscriptionId, subscriptionStatus, subscriptionExpiry };
   } catch (error) {
     console.error('Error getting subscription details:', error);
+    // Return basic info even if there's an error
     return { 
-      subscriptionId, 
+      subscriptionId: session.subscription || null, 
       subscriptionStatus: 'unknown', 
       subscriptionExpiry: null 
     };

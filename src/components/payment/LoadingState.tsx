@@ -12,19 +12,20 @@ export const LoadingState = ({ isWaitingForAuth }: LoadingStateProps) => {
   
   // Simulate progress for visual feedback
   useEffect(() => {
-    const interval = setInterval(() => {
+    const maxProgress = 95; // Cap at 95% until completion
+    const progressInterval = setInterval(() => {
       setProgress(prev => {
-        // Cap at 90% until completion to indicate it's still working
-        if (prev < 90) {
-          return prev + 1;
-        }
+        // Gradually slow down progress as it gets higher
+        if (prev < 30) return prev + 2;
+        if (prev < 60) return prev + 1;
+        if (prev < maxProgress) return prev + 0.5;
         return prev;
       });
       
       setWaitTime(prev => prev + 1);
     }, 1000);
     
-    return () => clearInterval(interval);
+    return () => clearInterval(progressInterval);
   }, []);
   
   return (
@@ -49,9 +50,9 @@ export const LoadingState = ({ isWaitingForAuth }: LoadingStateProps) => {
           : 'Może to potrwać kilka sekund...'}
       </p>
       
-      {waitTime > 20 && (
+      {waitTime > 15 && (
         <p className="text-xs text-amber-500 mt-4">
-          Trwa to dłużej niż zwykle. Jeśli problem będzie się powtarzał, spróbuj odświeżyć stronę.
+          Trwa to dłużej niż zwykle. Odświeżenie strony może przyspieszyć weryfikację.
         </p>
       )}
     </div>
