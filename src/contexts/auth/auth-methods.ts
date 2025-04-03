@@ -1,6 +1,7 @@
 
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
+import { clearPremiumFromLocalStorage } from './local-storage-utils'
 
 export const signInWithGoogle = async () => {
   try {
@@ -76,6 +77,9 @@ export const signOut = async () => {
       dismissible: true
     });
     
+    // Clear premium from localStorage
+    clearPremiumFromLocalStorage();
+    
     // Force clear local storage auth data immediately to ensure logout works
     const allKeys = Object.keys(localStorage);
     const supabaseAuthKeys = allKeys.filter(key => key.startsWith('sb-') && key.includes('-auth-token'));
@@ -99,6 +103,8 @@ export const signOut = async () => {
     console.error('Error signing out:', error);
     
     // Force clear local storage auth data as a fallback
+    clearPremiumFromLocalStorage();
+    
     const allKeys = Object.keys(localStorage);
     const supabaseAuthKeys = allKeys.filter(key => key.startsWith('sb-') && key.includes('-auth-token'));
     for (const key of supabaseAuthKeys) {

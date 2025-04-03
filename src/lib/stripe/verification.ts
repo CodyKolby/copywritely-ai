@@ -1,6 +1,10 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { updateProfilePremiumStatus } from './profile-updates';
+import { addPaymentLog, checkPaymentLogs } from './payment-logs';
+import { updateLocalStoragePremium } from './localStorage-utils';
+import { fetchSessionDetails, verifyPaymentWithEdgeFunction } from './edge-functions';
 
 // Direct verification with the Edge Function
 export const verifyStripePayment = async (sessionId: string, userId: string): Promise<boolean> => {
@@ -23,14 +27,10 @@ export const verifyStripePayment = async (sessionId: string, userId: string): Pr
     }
     
     // First check if payment is logged in database
-    const { data: paymentLog } = await supabase
-      .from('payment_logs')
-      .select('*')
-      .eq('session_id', sessionId)
-      .maybeSingle();
-      
-    if (paymentLog) {
-      console.log('[STRIPE-VERIFY] Payment already logged in database:', paymentLog);
+    const paymentLogged = await checkPaymentLogs(sessionId);
+    
+    if (paymentLogged) {
+      console.log('[STRIPE-VERIFY] Payment already logged in database');
       
       // Even if already logged, still update premium status
       await forceUpdatePremiumStatus(userId, sessionId);
@@ -42,8 +42,7 @@ export const verifyStripePayment = async (sessionId: string, userId: string): Pr
     const updateResult = await forceUpdatePremiumStatus(userId, sessionId);
     
     // Store in localStorage as a backup
-    localStorage.setItem('premium_backup', 'true');
-    localStorage.setItem('premium_timestamp', new Date().toISOString());
+    updateLocalStoragePremium(true);
     
     if (updateResult) {
       console.log('[STRIPE-VERIFY] Premium status updated successfully');
@@ -51,47 +50,15 @@ export const verifyStripePayment = async (sessionId: string, userId: string): Pr
     }
     
     // Then continue with official verification in background
-    console.log('[STRIPE-VERIFY] Calling verify-payment-session edge function');
-    try {
-      const { data, error } = await supabase.functions.invoke('verify-payment-session', {
-        body: { sessionId, userId }
-      });
-      
-      if (error) {
-        console.error('[STRIPE-VERIFY] Error from verify-payment-session:', error);
-        // Even on error, we attempt one more force update
-        await forceUpdatePremiumStatus(userId, sessionId);
-        return true;
-      }
-      
-      console.log('[STRIPE-VERIFY] verify-payment-session response:', data);
-      console.log(`[STRIPE-VERIFY] --------- PAYMENT VERIFICATION END ---------`);
-      
-      return data?.success || true;
-    } catch (invokeError) {
-      console.error('[STRIPE-VERIFY] Error invoking verify-payment-session:', invokeError);
-      
-      // On exception, try direct approach as fallback
-      try {
-        const { error: directError } = await supabase
-          .from('profiles')
-          .update({ 
-            is_premium: true,
-            subscription_status: 'active',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', userId);
-          
-        if (!directError) {
-          console.log('[STRIPE-VERIFY] Direct profile update successful as fallback');
-          return true;
-        }
-      } catch (directError) {
-        console.error('[STRIPE-VERIFY] Direct update fallback failed:', directError);
-      }
-      
-      return true; // Return true anyway for better UX
+    const verificationResult = await verifyPaymentWithEdgeFunction(sessionId, userId);
+    
+    if (!verificationResult) {
+      // Even on error, we attempt one more force update
+      await forceUpdatePremiumStatus(userId, sessionId);
     }
+    
+    console.log(`[STRIPE-VERIFY] --------- PAYMENT VERIFICATION END ---------`);
+    return true; // Always return true for better UX
   } catch (error) {
     console.error('[STRIPE-VERIFY] Exception in verifyStripePayment:', error);
     // Log full error details for debugging
@@ -101,8 +68,7 @@ export const verifyStripePayment = async (sessionId: string, userId: string): Pr
     try {
       await forceUpdatePremiumStatus(userId, sessionId);
       // Store in localStorage as a backup
-      localStorage.setItem('premium_backup', 'true');
-      localStorage.setItem('premium_timestamp', new Date().toISOString());
+      updateLocalStoragePremium(true);
     } catch (e) {
       console.error('[STRIPE-VERIFY] Final attempt failed:', e);
     }
@@ -119,51 +85,17 @@ export const forceUpdatePremiumStatus = async (userId: string, sessionId?: strin
     console.log(`[PREMIUM-UPDATE] Forcing premium status update for user: ${userId}, sessionId: ${sessionId || 'not provided'}`);
     
     // FIRST CRITICAL STEP: Always update localStorage as backup
-    localStorage.setItem('premium_backup', 'true');
-    localStorage.setItem('premium_timestamp', new Date().toISOString());
+    updateLocalStoragePremium(true);
     
-    // CRITICAL DIFFERENCE: First check and update directly without session check
-    const directUpdateData = { 
-      is_premium: true,
-      subscription_status: 'active',
-      updated_at: new Date().toISOString()
-    };
+    // CRITICAL DIFFERENCE: First direct update without session check
+    const directUpdateSuccess = await updateProfilePremiumStatus(userId, true);
     
-    console.log('[PREMIUM-UPDATE] Attempting direct update first with:', directUpdateData);
-    
-    // First attempt direct update
-    const { error: directError } = await supabase
-      .from('profiles')
-      .update(directUpdateData)
-      .eq('id', userId);
-      
-    if (directError) {
-      console.error('[PREMIUM-UPDATE] Direct update error:', directError);
-    } else {
+    if (directUpdateSuccess) {
       console.log('[PREMIUM-UPDATE] Direct update successful');
       
       // Add payment log if it doesn't exist yet and sessionId is provided
       if (sessionId) {
-        try {
-          const { data: existingLog } = await supabase
-            .from('payment_logs')
-            .select('*')
-            .eq('session_id', sessionId)
-            .maybeSingle();
-            
-          if (!existingLog) {
-            console.log('[PREMIUM-UPDATE] Adding payment log for session:', sessionId);
-            await supabase
-              .from('payment_logs')
-              .insert({
-                user_id: userId,
-                session_id: sessionId,
-                timestamp: new Date().toISOString()
-              });
-          }
-        } catch (logError) {
-          console.error('[PREMIUM-UPDATE] Error adding payment log:', logError);
-        }
+        await addPaymentLog(userId, sessionId);
       }
       
       // Show success message
@@ -173,154 +105,91 @@ export const forceUpdatePremiumStatus = async (userId: string, sessionId?: strin
     
     // If session ID provided, try to get more details
     if (sessionId) {
-      try {
-        console.log(`[PREMIUM-UPDATE] Fetching session details for ${sessionId}`);
-        const { data: sessionData, error: sessionError } = await supabase.functions.invoke('check-session-details', {
-          body: { sessionId }
-        });
+      const sessionData = await fetchSessionDetails(sessionId);
+      
+      if (sessionData) {
+        console.log('[PREMIUM-UPDATE] Got subscription details from edge function:', sessionData);
         
-        if (sessionError) {
-          console.error('[PREMIUM-UPDATE] Error fetching session details:', sessionError);
-        } else if (sessionData) {
-          console.log('[PREMIUM-UPDATE] Got subscription details from edge function:', sessionData);
+        // Update profile with all subscription details
+        const updateSuccess = await updateProfilePremiumStatus(
+          userId,
+          true, 
+          sessionData.subscriptionId,
+          'active',
+          sessionData.subscriptionExpiry
+        );
+        
+        if (updateSuccess) {
+          console.log('[PREMIUM-UPDATE] Update with session data succeeded');
           
-          // Set expiry to 30 days from now if not provided
-          let subscriptionExpiry = sessionData.subscriptionExpiry;
-          if (!subscriptionExpiry) {
-            const expiryDate = new Date();
-            expiryDate.setDate(expiryDate.getDate() + 30);
-            subscriptionExpiry = expiryDate.toISOString();
-          }
+          // Add payment log
+          await addPaymentLog(
+            userId, 
+            sessionId, 
+            sessionData.subscriptionId, 
+            sessionData.customerId, 
+            sessionData.customerEmail
+          );
           
-          const updateData = { 
-            is_premium: true,
-            subscription_id: sessionData.subscriptionId,
-            subscription_status: 'active', // ALWAYS SET TO ACTIVE
-            subscription_expiry: subscriptionExpiry,
-            updated_at: new Date().toISOString()
-          };
-          
-          console.log('[PREMIUM-UPDATE] Updating profile with session data:', updateData);
-          
-          // Update profile with all subscription details
-          const { error } = await supabase
-            .from('profiles')
-            .update(updateData)
-            .eq('id', userId);
-            
-          if (error) {
-            console.error('[PREMIUM-UPDATE] Error updating premium status:', error);
-            
-            // Try one more time with a delay
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            const { error: retryError } = await supabase
-              .from('profiles')
-              .update(updateData)
-              .eq('id', userId);
-              
-            if (retryError) {
-              console.error('[PREMIUM-UPDATE] Retry also failed:', retryError);
-            } else {
-              console.log('[PREMIUM-UPDATE] Retry update succeeded');
-              toast.success('Twoje konto zostało zaktualizowane do wersji Premium!');
-              return true;
-            }
-          } else {
-            console.log('[PREMIUM-UPDATE] Update with session data succeeded');
-            toast.success('Twoje konto zostało zaktualizowane do wersji Premium!');
-            return true;
-          }
-          
-          // Add payment log if sessionId provided
-          try {
-            const { data: existingLog } = await supabase
-              .from('payment_logs')
-              .select('*')
-              .eq('session_id', sessionId)
-              .maybeSingle();
-              
-            if (!existingLog) {
-              console.log('[PREMIUM-UPDATE] Adding payment log for session:', sessionId);
-              await supabase
-                .from('payment_logs')
-                .insert({
-                  user_id: userId,
-                  session_id: sessionId,
-                  subscription_id: sessionData.subscriptionId,
-                  customer: sessionData.customerId,
-                  customer_email: sessionData.customerEmail,
-                  timestamp: new Date().toISOString()
-                });
-            }
-          } catch (logError) {
-            console.error('[PREMIUM-UPDATE] Error adding payment log:', logError);
-          }
+          toast.success('Twoje konto zostało zaktualizowane do wersji Premium!');
+          return true;
         }
-      } catch (detailsError) {
-        console.error('[PREMIUM-UPDATE] Exception getting subscription details:', detailsError);
+        
+        // Try one more time with a delay if first attempt failed
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        const retrySuccess = await updateProfilePremiumStatus(
+          userId,
+          true, 
+          sessionData.subscriptionId,
+          'active',
+          sessionData.subscriptionExpiry
+        );
+        
+        if (retrySuccess) {
+          console.log('[PREMIUM-UPDATE] Retry update succeeded');
+          
+          // Add payment log
+          await addPaymentLog(
+            userId, 
+            sessionId, 
+            sessionData.subscriptionId, 
+            sessionData.customerId, 
+            sessionData.customerEmail
+          );
+          
+          toast.success('Twoje konto zostało zaktualizowane do wersji Premium!');
+          return true;
+        }
       }
     }
     
     // Final emergency update with hardcoded values
-    try {
-      console.log('[PREMIUM-UPDATE] Attempting emergency fallback update');
-      
-      // Set expiry to 30 days from now
-      const expiryDate = new Date();
-      expiryDate.setDate(expiryDate.getDate() + 30);
-      
-      const emergencyUpdateData = { 
-        is_premium: true,
-        subscription_status: 'active',
-        subscription_expiry: expiryDate.toISOString(),
-        updated_at: new Date().toISOString()
-      };
-      
-      const { error: emergencyError } = await supabase
-        .from('profiles')
-        .update(emergencyUpdateData)
-        .eq('id', userId);
-        
-      if (emergencyError) {
-        console.error('[PREMIUM-UPDATE] Emergency update failed:', emergencyError);
-        return false;
-      } else {
-        console.log('[PREMIUM-UPDATE] Emergency update succeeded');
-        toast.success('Twoje konto zostało zaktualizowane do wersji Premium!');
-        return true;
-      }
-    } catch (emergencyError) {
-      console.error('[PREMIUM-UPDATE] Emergency update exception:', emergencyError);
-      return false;
+    console.log('[PREMIUM-UPDATE] Attempting emergency fallback update');
+    
+    // Set expiry to 30 days from now
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + 30);
+    
+    const emergencySuccess = await updateProfilePremiumStatus(
+      userId,
+      true,
+      undefined,
+      'active',
+      expiryDate.toISOString()
+    );
+    
+    if (emergencySuccess) {
+      console.log('[PREMIUM-UPDATE] Emergency update succeeded');
+      toast.success('Twoje konto zostało zaktualizowane do wersji Premium!');
+      return true;
     }
+    
+    console.error('[PREMIUM-UPDATE] All update attempts failed');
+    return false;
   } catch (error) {
     console.error('[PREMIUM-UPDATE] Exception in forceUpdatePremiumStatus:', error);
     console.error('[PREMIUM-UPDATE] Full error:', JSON.stringify(error));
-    return false;
-  }
-};
-
-// Check if payment is logged in database
-export const checkPaymentLogs = async (sessionId: string): Promise<boolean> => {
-  try {
-    console.log(`[PAYMENT-LOGS] Checking payment logs for session: ${sessionId}`);
-    
-    const { data, error } = await supabase
-      .from('payment_logs')
-      .select('*')
-      .eq('session_id', sessionId)
-      .maybeSingle();
-      
-    if (error) {
-      console.error('[PAYMENT-LOGS] Error checking payment logs:', error);
-      return false;
-    }
-    
-    console.log('[PAYMENT-LOGS] Payment log data:', data);
-    return !!data;
-  } catch (error) {
-    console.error('[PAYMENT-LOGS] Exception checking payment logs:', error);
     return false;
   }
 };

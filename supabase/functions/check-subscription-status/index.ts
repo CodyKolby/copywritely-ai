@@ -6,7 +6,16 @@ import {
   verifyUser, 
   isSubscriptionExpired,
   verifyStripeSubscription
-} from "./helpers.ts";
+} from "./utils.ts";
+import {
+  checkPaymentLogs,
+  createBasicProfile,
+  updateProfileFromPaymentLogs
+} from "./payment-logs.ts";
+import {
+  updatePremiumStatus,
+  getProfile
+} from "./profile.ts";
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -39,76 +48,29 @@ serve(async (req) => {
     }
 
     // Check subscription status in profiles table
-    let { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('is_premium, subscription_status, subscription_expiry, subscription_id')
-      .eq('id', userId)
-      .maybeSingle();
-
-    if (profileError) {
-      console.error('Error fetching profile:', profileError);
-      throw new Error('Failed to fetch user profile');
-    }
+    const profile = await getProfile(supabase, userId);
 
     if (!profile) {
       console.log('Profile not found, user has no premium status');
       
       // Try to create a basic profile since it doesn't exist
-      try {
-        const { error: createError } = await supabase
-          .from('profiles')
-          .insert({
-            id: userId,
-            is_premium: false
-          });
-          
-        if (createError) {
-          console.error('Error creating missing profile:', createError);
-        } else {
-          console.log('Created basic profile for missing user');
-        }
-      } catch (createError) {
-        console.error('Exception creating profile:', createError);
-      }
+      await createBasicProfile(supabase, userId);
       
       // Also check payment logs before returning - this deals with "ghost premium" issue
-      try {
-        const { data: paymentLogs, error: logsError } = await supabase
-          .from('payment_logs')
-          .select('*')
-          .eq('user_id', userId)
-          .limit(1);
-          
-        if (logsError) {
-          console.error('Error checking payment logs:', logsError);
-        } else if (paymentLogs && paymentLogs.length > 0) {
-          console.log('Found payment logs but no profile, creating premium profile');
-          
-          // User has payment but no profile or premium status
-          try {
-            const { error: updateError } = await supabase
-              .from('profiles')
-              .upsert({ 
-                id: userId,
-                is_premium: true,
-                subscription_status: 'active',
-                updated_at: new Date().toISOString()
-              });
-              
-            if (updateError) {
-              console.error('Error creating payment-based profile:', updateError);
-            } else {
-              return new Response(
-                JSON.stringify({ isPremium: true }),
-                { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-              );
-            }
-          } catch (updateError) {
-            console.error('Exception creating payment-based profile:', updateError);
-          }
+      const hasPaymentLogs = await checkPaymentLogs(supabase, userId);
+      
+      if (hasPaymentLogs) {
+        console.log('Found payment logs but no profile, creating premium profile');
+        
+        // User has payment but no profile or premium status
+        const updated = await updateProfileFromPaymentLogs(supabase, userId);
+        
+        if (updated) {
+          return new Response(
+            JSON.stringify({ isPremium: true }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
         }
-      } catch (logsError) {
-        console.error('Exception checking payment logs:', logsError);
       }
       
       return new Response(
@@ -125,13 +87,7 @@ serve(async (req) => {
         console.log('Subscription has expired on:', profile.subscription_expiry);
         
         // Update database to reflect expired status
-        await supabase
-          .from('profiles')
-          .update({ 
-            is_premium: false,
-            subscription_status: 'inactive'
-          })
-          .eq('id', userId);
+        await updatePremiumStatus(supabase, userId, false, 'inactive');
         
         return new Response(
           JSON.stringify({ isPremium: false }),
@@ -177,44 +133,20 @@ serve(async (req) => {
         console.log('Updating profile to non-premium based on inactive Stripe subscription');
         isPremium = false;
         
-        await supabase
-          .from('profiles')
-          .update({ 
-            is_premium: false,
-            subscription_status: 'inactive'
-          })
-          .eq('id', userId);
+        await updatePremiumStatus(supabase, userId, false, 'inactive');
       }
     }
     
     // One final check - if premium is false but payment logs exist, override
     if (!isPremium) {
-      try {
-        const { data: paymentLogs, error: logsError } = await supabase
-          .from('payment_logs')
-          .select('*')
-          .eq('user_id', userId)
-          .limit(1);
-          
-        if (logsError) {
-          console.error('Error checking payment logs:', logsError);
-        } else if (paymentLogs && paymentLogs.length > 0) {
-          console.log('Found payment logs - overriding subscription status to active');
-          
-          // User has payment but premium status is false
-          await supabase
-            .from('profiles')
-            .update({ 
-              is_premium: true,
-              subscription_status: 'active',
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', userId);
-            
-          isPremium = true;
-        }
-      } catch (logsError) {
-        console.error('Exception checking payment logs:', logsError);
+      const hasPaymentLogs = await checkPaymentLogs(supabase, userId);
+      
+      if (hasPaymentLogs) {
+        console.log('Found payment logs - overriding subscription status to active');
+        
+        // User has payment but premium status is false
+        await updatePremiumStatus(supabase, userId, true);
+        isPremium = true;
       }
     }
 

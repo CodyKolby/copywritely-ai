@@ -1,110 +1,19 @@
 
-import { useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { LogIn, LogOut, User, Menu, FolderOpen, CreditCard, Shield } from 'lucide-react';
+import { LogIn } from 'lucide-react';
 import { useAuth } from '@/contexts/auth/AuthContext';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-  DropdownMenuLabel
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from '@/components/ui/button';
-import SubscriptionModal from './subscription/SubscriptionModal';
+import { NavLink } from './navbar/NavLink';
+import { MobileMenu } from './navbar/MobileMenu';
+import { UserMenu } from './navbar/UserMenu';
+import { useNavbar } from './navbar/useNavbar';
 
 const Navbar = () => {
   const location = useLocation();
-  const [scrolled, setScrolled] = useState(false);
-  const { user, signOut, isPremium, profile, checkPremiumStatus } = useAuth();
-  const [subscriptionModalOpen, setSubscriptionModalOpen] = useState(false);
-  const [localPremium, setLocalPremium] = useState(false);
-  const [premiumChecked, setPremiumChecked] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 10);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-  
-  // Check localStorage for premium status backup
-  useEffect(() => {
-    const validateLocalStorage = () => {
-      try {
-        const premiumBackup = localStorage.getItem('premium_backup') === 'true';
-        const premiumTimestamp = localStorage.getItem('premium_timestamp');
-        
-        if (premiumBackup && premiumTimestamp) {
-          const timestamp = new Date(premiumTimestamp);
-          const now = new Date();
-          const hoursDiff = (now.getTime() - timestamp.getTime()) / (1000 * 60 * 60);
-          
-          if (hoursDiff < 24) {
-            console.log('[NAVBAR] Using backup premium status from localStorage');
-            setLocalPremium(true);
-            return true;
-          } else {
-            localStorage.removeItem('premium_backup');
-            localStorage.removeItem('premium_timestamp');
-          }
-        }
-        return false;
-      } catch (e) {
-        console.error('[NAVBAR] Error checking localStorage premium:', e);
-        return false;
-      }
-    };
-    
-    if (!premiumChecked) {
-      const hasLocalPremium = validateLocalStorage();
-      setPremiumChecked(true);
-      
-      // If a user is logged in but we don't have isPremium from context,
-      // but we have localStorage premium, verify with database
-      if (user?.id && !isPremium && hasLocalPremium) {
-        checkPremiumStatus(user.id);
-      }
-    }
-  }, [user, isPremium, premiumChecked, checkPremiumStatus]);
-
-  // When isPremium changes, update localPremium
-  useEffect(() => {
-    if (isPremium) {
-      setLocalPremium(true);
-    }
-  }, [isPremium]);
-
-  useEffect(() => {
-    console.log('Navbar premium status:', {
-      isPremium,
-      profileIsPremium: profile?.is_premium,
-      subscriptionId: profile?.subscription_id,
-      subscriptionStatus: profile?.subscription_status,
-      localPremium
-    });
-  }, [isPremium, profile, localPremium]);
-
-  const navItems = [
-    { path: '/', label: 'Główna' },
-    { path: '/script-generator', label: 'Twórz skrypty' },
-    { path: '/pricing', label: 'Plany' },
-    { path: '/about', label: 'O nas' },
-  ];
-
-  const getInitials = () => {
-    if (!user?.email) return 'U';
-    return user.email.charAt(0).toUpperCase();
-  };
-
-  // User has premium if any of the premium indicators are true
-  const userHasPremium = isPremium || profile?.is_premium || localPremium;
+  const { user, signOut, isPremium, profile } = useAuth();
+  const { scrolled, localPremium, subscriptionModalOpen, setSubscriptionModalOpen, navItems } = useNavbar();
 
   return (
     <header
@@ -132,67 +41,13 @@ const Navbar = () => {
 
         <div className="flex items-center gap-4">
           {user ? (
-            <>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                    <Avatar>
-                      <AvatarImage src={user.user_metadata?.avatar_url} alt="Profile" />
-                      <AvatarFallback className="bg-copywrite-teal text-white">
-                        {getInitials()}
-                      </AvatarFallback>
-                    </Avatar>
-                    {userHasPremium && (
-                      <div className="absolute -top-1 -right-1 bg-amber-400 text-white rounded-full p-0.5">
-                        <Shield className="h-3 w-3" />
-                      </div>
-                    )}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel className="font-normal">
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">{user.email}</p>
-                      <p className="text-xs leading-none text-muted-foreground">
-                        {userHasPremium ? 'Konto Premium' : 'Konto Free'}
-                      </p>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="gap-2">
-                    <User size={16} /> 
-                    <span>Profil</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild className="gap-2">
-                    <Link to="/projekty">
-                      <FolderOpen size={16} /> 
-                      <span>Projekty</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSubscriptionModalOpen(true)} className="gap-2">
-                    <CreditCard size={16} /> 
-                    <span>Subskrypcja</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem 
-                    onClick={() => {
-                      // Clear localStorage premium backup on logout
-                      localStorage.removeItem('premium_backup');
-                      localStorage.removeItem('premium_timestamp');
-                      signOut();
-                    }} 
-                    className="gap-2 text-red-500"
-                  >
-                    <LogOut size={16} /> 
-                    <span>Wyloguj</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <SubscriptionModal 
-                open={subscriptionModalOpen}
-                onOpenChange={setSubscriptionModalOpen}
-              />
-            </>
+            <UserMenu 
+              user={user} 
+              profile={profile} 
+              isPremium={isPremium} 
+              localPremium={localPremium}
+              signOut={signOut}
+            />
           ) : (
             <Link to="/login">
               <Button variant="default" className="bg-copywrite-teal hover:bg-copywrite-teal-dark flex items-center gap-2 text-white">
@@ -202,62 +57,11 @@ const Navbar = () => {
             </Link>
           )}
           
-          <div className="md:hidden">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <Menu className="h-6 w-6 text-copywrite-teal" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                {navItems.map((item) => (
-                  <DropdownMenuItem key={item.path} asChild>
-                    <Link 
-                      to={item.path} 
-                      className={cn(
-                        "w-full", 
-                        location.pathname === item.path ? "text-copywrite-teal" : ""
-                      )}
-                    >
-                      {item.label}
-                    </Link>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          <MobileMenu navItems={navItems} currentPath={location.pathname} />
         </div>
       </div>
     </header>
   );
 };
-
-interface NavLinkProps {
-  to: string;
-  active: boolean;
-  children: React.ReactNode;
-}
-
-const NavLink = ({ to, active, children }: NavLinkProps) => (
-  <Link to={to} className="relative group">
-    <motion.span
-      className={cn(
-        "inline-block py-1 transition-colors duration-300",
-        active ? "text-copywrite-teal" : "text-gray-700 hover:text-copywrite-teal"
-      )}
-    >
-      {children}
-    </motion.span>
-    {active && (
-      <motion.div
-        layoutId="navbar-indicator"
-        className="absolute bottom-0 left-0 right-0 h-0.5 bg-copywrite-teal"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.3 }}
-      />
-    )}
-  </Link>
-);
 
 export default Navbar;
