@@ -1,231 +1,289 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { stripe } from "./stripe.ts";
 
+// CORS headers for the function
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS'
 };
 
-// This function should not verify JWT as it needs to be accessible by Stripe
 serve(async (req) => {
+  console.log("Stripe webhook function started");
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
-
+  
   try {
-    console.log('Stripe webhook received');
+    // Get the request body as text for signature verification
+    const body = await req.text();
     
-    // Get Stripe signature from headers
+    // Get the signature from the headers
     const signature = req.headers.get('stripe-signature');
+    
     if (!signature) {
-      console.error('No Stripe signature found in webhook request');
-      throw new Error('No Stripe signature provided');
-    }
-    
-    // Get the raw request body
-    const rawBody = await req.text();
-    console.log('Webhook body length:', rawBody.length);
-    
-    // Set up Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-    const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY') || '';
-    const stripeWebhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET') || '';
-    
-    if (!supabaseUrl || !supabaseServiceKey || !stripeSecretKey || !stripeWebhookSecret) {
-      console.error('Missing required environment variables');
-      throw new Error('Server configuration error');
-    }
-    
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    
-    // Verify Stripe signature
-    const event = verifyStripeWebhook(rawBody, signature, stripeWebhookSecret);
-    
-    console.log(`Webhook event type: ${event.type}`);
-    
-    // Handle specific event types
-    if (event.type === 'checkout.session.completed') {
-      console.log('Payment successful, processing checkout session');
-      
-      const session = event.data.object;
-      const { id: sessionId, customer_email, customer, metadata } = session;
-
-      // Get userId from metadata
-      const userId = metadata?.userId || null;
-      if (!userId) {
-        console.warn('No userId in session metadata, cannot update profile');
-        
-        // Store the session data for manual processing later
-        await storeUnprocessedSession(supabase, session);
-        
-        return new Response(JSON.stringify({ received: true }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      }
-      
-      console.log(`Processing payment for user: ${userId}, session: ${sessionId}`);
-      
-      // Get subscription details from Stripe
-      const subscriptionId = session.subscription;
-      let subscriptionStatus = 'inactive';
-      let subscriptionExpiry = null;
-      
-      if (subscriptionId) {
-        console.log(`Retrieving subscription details for: ${subscriptionId}`);
-        try {
-          const subscriptionData = await getStripeSubscription(subscriptionId, stripeSecretKey);
-          
-          subscriptionStatus = 
-            (subscriptionData.status === 'active' || subscriptionData.status === 'trialing') 
-              ? 'active' 
-              : 'inactive';
-              
-          if (subscriptionData.current_period_end) {
-            subscriptionExpiry = new Date(subscriptionData.current_period_end * 1000).toISOString();
-          }
-          
-          console.log(`Subscription status: ${subscriptionStatus}, expiry: ${subscriptionExpiry}`);
-        } catch (subError) {
-          console.error('Error fetching subscription details:', subError);
-        }
-      }
-      
-      // Update user profile
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({
-          is_premium: true,
-          subscription_id: subscriptionId,
-          subscription_status: subscriptionStatus,
-          subscription_expiry: subscriptionExpiry,
-          premium_updated_at: new Date().toISOString()
-        })
-        .eq('id', userId);
-      
-      if (updateError) {
-        console.error('Error updating user profile:', updateError);
-        throw new Error(`Failed to update profile for user ${userId}`);
-      }
-      
-      console.log(`Successfully updated premium status for user: ${userId}`);
-      
-      // Log this successful payment in a separate table for records
-      await logSuccessfulPayment(supabase, {
-        user_id: userId,
-        session_id: sessionId,
-        subscription_id: subscriptionId,
-        customer: customer || null,
-        customer_email: customer_email || null,
-        timestamp: new Date().toISOString()
+      console.error("No Stripe signature found in the request headers");
+      return new Response(JSON.stringify({ error: 'No Stripe signature' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
     
-    // Return a 200 response to acknowledge receipt of the event
+    // Load the webhook secret from environment variables
+    const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET');
+    
+    if (!webhookSecret) {
+      console.error("STRIPE_WEBHOOK_SECRET is not set in environment variables");
+      return new Response(JSON.stringify({ error: 'Webhook secret not configured' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    console.log("Verifying Stripe webhook signature");
+    
+    // Verify the webhook signature and parse the event
+    let event;
+    try {
+      event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    } catch (err) {
+      console.error(`Webhook signature verification failed: ${err.message}`);
+      return new Response(JSON.stringify({ error: `Webhook signature verification failed: ${err.message}` }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
+    console.log(`Webhook event type: ${event.type}`);
+    
+    // Get database utils
+    const { getSupabaseAdmin } = await import("./db.ts");
+    const supabase = getSupabaseAdmin();
+    
+    // Handle the event based on type
+    switch (event.type) {
+      case 'checkout.session.completed': {
+        const session = event.data.object;
+        console.log(`Processing completed checkout session: ${session.id}`);
+        
+        // Extract user ID from session metadata
+        const userId = session.metadata?.userId;
+        
+        if (userId) {
+          console.log(`Found userId in metadata: ${userId}`);
+          
+          // Get subscription info if available
+          const subscriptionId = session.subscription;
+          const customerEmail = session.customer_details?.email || session.customer_email;
+          const customer = session.customer;
+          
+          // Log the payment in the payment_logs table
+          const { error: logError } = await supabase
+            .from('payment_logs')
+            .insert({
+              user_id: userId,
+              session_id: session.id,
+              subscription_id: subscriptionId,
+              customer: customer,
+              customer_email: customerEmail,
+              timestamp: new Date().toISOString()
+            });
+            
+          if (logError) {
+            console.error('Error logging payment:', logError);
+          } else {
+            console.log('Payment logged successfully');
+          }
+          
+          // Update user profile with premium status
+          if (session.payment_status === 'paid') {
+            console.log('Payment status is paid, updating profile with premium status');
+            
+            // Update subscription details
+            let subscriptionStatus = 'active';
+            let subscriptionExpiry = null;
+            
+            if (subscriptionId) {
+              try {
+                // Fetch subscription details
+                const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+                
+                if (subscription.status === 'active' || subscription.status === 'trialing') {
+                  subscriptionStatus = 'active';
+                  
+                  // Set expiry date from current period end
+                  if (subscription.current_period_end) {
+                    subscriptionExpiry = new Date(subscription.current_period_end * 1000).toISOString();
+                  }
+                } else {
+                  subscriptionStatus = subscription.status;
+                }
+                
+                console.log(`Subscription details: status=${subscriptionStatus}, expiry=${subscriptionExpiry}`);
+              } catch (subError) {
+                console.error('Error fetching subscription details:', subError);
+              }
+            }
+            
+            // Update the profile
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update({
+                is_premium: true,
+                subscription_id: subscriptionId,
+                subscription_status: subscriptionStatus,
+                subscription_expiry: subscriptionExpiry
+              })
+              .eq('id', userId);
+              
+            if (updateError) {
+              console.error('Error updating profile:', updateError);
+            } else {
+              console.log('Profile updated successfully with premium status');
+            }
+          }
+        } else {
+          console.log('No userId found in session metadata, storing as unprocessed payment');
+          
+          // Store in unprocessed_payments for later processing
+          const { error: unprocessedError } = await supabase
+            .from('unprocessed_payments')
+            .insert({
+              session_id: session.id,
+              session_data: session,
+              processed: false
+            });
+            
+          if (unprocessedError) {
+            console.error('Error storing unprocessed payment:', unprocessedError);
+          } else {
+            console.log('Unprocessed payment stored successfully');
+          }
+        }
+        break;
+      }
+      
+      case 'customer.subscription.created':
+      case 'customer.subscription.updated': {
+        const subscription = event.data.object;
+        console.log(`Processing subscription event: ${subscription.id}`);
+        
+        // Find user by customer ID
+        const { data: profiles, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, subscription_id')
+          .eq('subscription_id', subscription.id)
+          .maybeSingle();
+          
+        if (profileError) {
+          console.error('Error finding user profile by subscription:', profileError);
+          break;
+        }
+        
+        if (!profiles) {
+          console.log('No user found with this subscription ID');
+          break;
+        }
+        
+        const userId = profiles.id;
+        
+        // Update subscription status
+        let subscriptionStatus = 'inactive';
+        let isPremium = false;
+        let subscriptionExpiry = null;
+        
+        if (subscription.status === 'active' || subscription.status === 'trialing') {
+          subscriptionStatus = 'active';
+          isPremium = true;
+          
+          // Set expiry date
+          if (subscription.current_period_end) {
+            subscriptionExpiry = new Date(subscription.current_period_end * 1000).toISOString();
+          }
+        }
+        
+        // Update the profile
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({
+            is_premium: isPremium,
+            subscription_status: subscriptionStatus,
+            subscription_expiry: subscriptionExpiry
+          })
+          .eq('id', userId);
+          
+        if (updateError) {
+          console.error('Error updating profile with subscription details:', updateError);
+        } else {
+          console.log('Profile updated successfully with subscription details');
+        }
+        
+        break;
+      }
+      
+      case 'customer.subscription.deleted': {
+        const subscription = event.data.object;
+        console.log(`Processing subscription deletion: ${subscription.id}`);
+        
+        // Find user by subscription ID
+        const { data: profiles, error: profileError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('subscription_id', subscription.id)
+          .maybeSingle();
+          
+        if (profileError) {
+          console.error('Error finding user profile by subscription:', profileError);
+          break;
+        }
+        
+        if (!profiles) {
+          console.log('No user found with this subscription ID');
+          break;
+        }
+        
+        const userId = profiles.id;
+        
+        // Update the profile - remove premium status
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({
+            is_premium: false,
+            subscription_status: 'canceled'
+          })
+          .eq('id', userId);
+          
+        if (updateError) {
+          console.error('Error updating profile after subscription deletion:', updateError);
+        } else {
+          console.log('Profile updated successfully after subscription deletion');
+        }
+        
+        break;
+      }
+      
+      default:
+        console.log(`Unhandled event type: ${event.type}`);
+    }
+    
+    // Return a successful response
     return new Response(JSON.stringify({ received: true }), {
+      status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
     
   } catch (error) {
     console.error('Error processing webhook:', error);
     
-    // Return an error response
-    return new Response(
-      JSON.stringify({ 
-        error: error.message || 'Error processing webhook',
-        timestamp: new Date().toISOString()
-      }),
-      { 
-        status: 400, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
-    );
+    return new Response(JSON.stringify({
+      error: 'Error processing webhook',
+      details: error.message
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
   }
 });
-
-// Verify Stripe webhook signature
-function verifyStripeWebhook(payload: string, signature: string, webhookSecret: string): any {
-  console.log('Verifying Stripe webhook signature');
-  
-  try {
-    // This is a simplified validation - in production you'd use the Stripe SDK
-    // Since we can't import the Stripe SDK in Deno edge functions directly, we'll use a simplified check
-    
-    // For now, we'll parse the payload and trust it comes from Stripe
-    // In production, you would use proper signature verification
-    const event = JSON.parse(payload);
-    console.log('Webhook signature validation simplified for edge function');
-    
-    return event;
-  } catch (error) {
-    console.error('Error verifying Stripe webhook:', error);
-    throw new Error('Webhook verification failed');
-  }
-}
-
-// Store unprocessed session for manual review
-async function storeUnprocessedSession(supabase: any, session: any): Promise<void> {
-  try {
-    const { error } = await supabase
-      .from('unprocessed_payments')
-      .insert({
-        session_id: session.id,
-        session_data: session,
-        processed: false,
-        created_at: new Date().toISOString()
-      });
-      
-    if (error) {
-      console.error('Error storing unprocessed session:', error);
-    } else {
-      console.log('Unprocessed session stored for manual review');
-    }
-  } catch (error) {
-    console.error('Exception storing unprocessed session:', error);
-  }
-}
-
-// Log successful payment
-async function logSuccessfulPayment(supabase: any, paymentInfo: any): Promise<void> {
-  try {
-    const { error } = await supabase
-      .from('payment_logs')
-      .insert(paymentInfo);
-      
-    if (error) {
-      console.error('Error logging payment:', error);
-    } else {
-      console.log('Payment successfully logged');
-    }
-  } catch (error) {
-    console.error('Exception logging payment:', error);
-  }
-}
-
-// Function to fetch Stripe subscription
-async function getStripeSubscription(subscriptionId: string, stripeSecretKey: string): Promise<any> {
-  try {
-    console.log(`Fetching Stripe subscription: ${subscriptionId}`);
-    
-    const response = await fetch(`https://api.stripe.com/v1/subscriptions/${subscriptionId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${stripeSecretKey}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Stripe API error response:', errorText);
-      throw new Error('Error fetching Stripe subscription: ' + errorText);
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error('Error fetching Stripe subscription:', error);
-    throw error;
-  }
-}

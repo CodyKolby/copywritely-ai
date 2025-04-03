@@ -87,3 +87,5 @@ url = ""
 [functions]
 [functions.stripe-webhook]
 verify_jwt = false
+[functions.verify-payment-session]
+verify_jwt = true
