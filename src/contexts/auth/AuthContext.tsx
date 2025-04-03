@@ -71,7 +71,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Otherwise check for a real session
       try {
         console.log('Initializing auth state');
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        const { data: { session: currentSession }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Error getting session:', error);
+        }
         
         if (currentSession?.user) {
           console.log('Found existing session, user ID:', currentSession.user.id);

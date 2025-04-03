@@ -34,6 +34,22 @@ serve(async (req) => {
     // Create Supabase client with Service Role Key
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // First check if user exists in auth system
+    try {
+      const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
+      
+      if (userError) {
+        console.error('Error verifying user:', userError);
+      } else if (!userData.user) {
+        console.error('User not found in auth system:', userId);
+      } else {
+        console.log('User verified in auth system:', userData.user.id);
+      }
+    } catch (userCheckError) {
+      console.error('Exception checking user in auth system:', userCheckError);
+      // Continue anyway - we might have the profile in the database already
+    }
+
     // Check subscription status in profiles table
     let { data: profile, error: profileError } = await supabase
       .from('profiles')

@@ -34,31 +34,65 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Parse and validate request data
-    const { sessionId, userId } = await req.json();
+    const requestData = await req.json();
+    console.log('Received request data:', requestData);
+    
+    const { sessionId, userId } = requestData;
 
     if (!sessionId) {
+      console.error('Missing sessionId parameter');
       throw new Error('Missing sessionId parameter');
     }
 
     if (!userId) {
+      console.error('Missing userId parameter');
       throw new Error('Missing userId parameter');
     }
 
     console.log(`Verifying payment session: ${sessionId} for user: ${userId}`);
     
+    // First check if user exists in auth system
+    try {
+      const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
+      
+      if (userError) {
+        console.error('Error verifying user:', userError);
+      } else if (!userData.user) {
+        console.error('User not found in auth system:', userId);
+      } else {
+        console.log('User verified in auth system:', userData.user.id);
+      }
+    } catch (userCheckError) {
+      console.error('Exception checking user in auth system:', userCheckError);
+    }
+    
     // Verify session with Stripe
-    const response = await fetch(`https://api.stripe.com/v1/checkout/sessions/${sessionId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${stripeSecretKey}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-    });
+    let response;
+    try {
+      response = await fetch(`https://api.stripe.com/v1/checkout/sessions/${sessionId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${stripeSecretKey}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      });
+    } catch (fetchError) {
+      console.error('Error fetching from Stripe API:', fetchError);
+      throw new Error('Network error connecting to Stripe');
+    }
 
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Stripe API error:', errorData);
-      throw new Error('Error verifying payment session with Stripe');
+      const errorText = await response.text();
+      console.error('Stripe API error response:', errorText);
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch (parseError) {
+        console.error('Error parsing Stripe error response:', parseError);
+      }
+      
+      throw new Error('Error verifying payment session with Stripe: ' + 
+        (errorData?.error?.message || 'Unknown Stripe API error'));
     }
 
     const session = await response.json();
@@ -107,13 +141,18 @@ serve(async (req) => {
             subscriptionStatus = 'inactive';
           }
           // Convert UNIX timestamp to ISO string
-          subscriptionExpiry = new Date(subscription.current_period_end * 1000).toISOString();
-          console.log('Subscription details:', {
-            status: subscriptionStatus,
-            expiry: subscriptionExpiry
-          });
+          if (subscription.current_period_end) {
+            subscriptionExpiry = new Date(subscription.current_period_end * 1000).toISOString();
+            console.log('Subscription details:', {
+              status: subscriptionStatus,
+              expiry: subscriptionExpiry
+            });
+          } else {
+            console.warn('Subscription does not have current_period_end:', subscription);
+          }
         } else {
-          console.error('Failed to fetch subscription details:', await subscriptionResponse.text());
+          const subscriptionErrorText = await subscriptionResponse.text();
+          console.error('Failed to fetch subscription details:', subscriptionErrorText);
         }
       } catch (subError) {
         console.error('Error fetching subscription:', subError);
@@ -200,14 +239,19 @@ serve(async (req) => {
       console.log('Updating existing profile with premium status');
       console.log('Current premium status:', existingProfile?.is_premium);
       
+      // Define what we want to update
+      const updateData: Record<string, any> = {
+        is_premium: true
+      };
+      
+      // Only add these fields if they have values
+      if (subscriptionId) updateData.subscription_id = subscriptionId;
+      if (subscriptionStatus) updateData.subscription_status = subscriptionStatus;
+      if (subscriptionExpiry) updateData.subscription_expiry = subscriptionExpiry;
+      
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({
-          is_premium: true,
-          subscription_id: subscriptionId || null,
-          subscription_status: subscriptionStatus,
-          subscription_expiry: subscriptionExpiry
-        })
+        .update(updateData)
         .eq('id', userId);
 
       if (updateError) {
@@ -226,7 +270,7 @@ serve(async (req) => {
     while (retries < 3 && !verificationSuccess) {
       const { data: profile, error: verifyError } = await supabase
         .from('profiles')
-        .select('is_premium, subscription_status')
+        .select('is_premium, subscription_status, subscription_expiry')
         .eq('id', userId)
         .single();
         
