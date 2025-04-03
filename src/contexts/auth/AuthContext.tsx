@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/integrations/supabase/client'
@@ -23,6 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isPremium, setIsPremium] = useState(false)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [authInitialized, setAuthInitialized] = useState(false)
+  const [localStoragePremiumChecked, setLocalStoragePremiumChecked] = useState(false)
   const { 
     testUser, 
     testSession, 
@@ -31,21 +33,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setTestUserState 
   } = useTestUser()
 
-  useEffect(() => {
-    const premiumBackup = localStorage.getItem('premium_backup') === 'true';
-    const premiumTimestamp = localStorage.getItem('premium_timestamp');
-    
-    if (premiumBackup && premiumTimestamp) {
-      const timestamp = new Date(premiumTimestamp);
-      const now = new Date();
-      const hoursDiff = (now.getTime() - timestamp.getTime()) / (1000 * 60 * 60);
+  // Function to validate if localStorage premium backup is valid
+  const validateLocalStoragePremium = () => {
+    try {
+      const premiumBackup = localStorage.getItem('premium_backup') === 'true';
+      const premiumTimestamp = localStorage.getItem('premium_timestamp');
       
-      if (hoursDiff < 24) {
-        console.log('[AUTH] Using backup premium status from localStorage');
+      if (premiumBackup && premiumTimestamp) {
+        const timestamp = new Date(premiumTimestamp);
+        const now = new Date();
+        const hoursDiff = (now.getTime() - timestamp.getTime()) / (1000 * 60 * 60);
+        
+        // Only trust localStorage backup if it's less than 24 hours old
+        if (hoursDiff < 24) {
+          console.log('[AUTH] Using backup premium status from localStorage');
+          return true;
+        } else {
+          console.log('[AUTH] localStorage premium backup expired');
+          localStorage.removeItem('premium_backup');
+          localStorage.removeItem('premium_timestamp');
+        }
+      }
+      return false;
+    } catch (e) {
+      console.error('[AUTH] Error validating localStorage premium:', e);
+      return false;
+    }
+  };
+
+  // When auth loads, check localStorage for premium status as a first check
+  useEffect(() => {
+    if (!localStoragePremiumChecked) {
+      const localPremium = validateLocalStoragePremium();
+      if (localPremium) {
         setIsPremium(true);
       }
+      setLocalStoragePremiumChecked(true);
     }
-  }, []);
+  }, [localStoragePremiumChecked]);
 
   useEffect(() => {
     console.log("[AUTH] Setting up auth state listener");
@@ -130,6 +155,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const handleUserAuthenticated = async (userId: string) => {
     try {
       console.log('[AUTH] Handling authenticated user:', userId);
+      
+      // Reset premium state until verified from database
+      setIsPremium(false);
+      
+      // Fetch user profile
       const userProfile = await fetchProfile(userId);
       console.log('[AUTH] User profile after fetch:', userProfile);
       setProfile(userProfile);
@@ -143,20 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
       
-      const premiumBackup = localStorage.getItem('premium_backup') === 'true';
-      const premiumTimestamp = localStorage.getItem('premium_timestamp');
-      
-      if (premiumBackup && premiumTimestamp) {
-        const timestamp = new Date(premiumTimestamp);
-        const now = new Date();
-        const hoursDiff = (now.getTime() - timestamp.getTime()) / (1000 * 60 * 60);
-        
-        if (hoursDiff < 24) {
-          console.log('[AUTH] Setting premium status from localStorage backup');
-          setIsPremium(true);
-        }
-      }
-      
+      // FIRST SOURCE OF TRUTH: Check database directly for premium status
       const { data: latestProfile, error: profileError } = await supabase
         .from('profiles')
         .select('is_premium, subscription_id, subscription_status, subscription_expiry')
@@ -168,52 +185,98 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         console.log('[AUTH] Latest profile data from database:', latestProfile);
         
+        // Update profile state with latest data
+        if (userProfile && latestProfile) {
+          setProfile({
+            ...userProfile,
+            is_premium: latestProfile.is_premium,
+            subscription_id: latestProfile.subscription_id,
+            subscription_status: latestProfile.subscription_status,
+            subscription_expiry: latestProfile.subscription_expiry
+          });
+        }
+        
+        // Only set premium if database explicitly says so
         if (latestProfile?.is_premium) {
           console.log('[AUTH] User has premium status according to database');
           setIsPremium(true);
-          if (userProfile) {
-            setProfile({
-              ...userProfile,
-              is_premium: true,
-              subscription_id: latestProfile.subscription_id,
-              subscription_status: latestProfile.subscription_status,
-              subscription_expiry: latestProfile.subscription_expiry
-            });
-          }
-        } else {
-          try {
-            const { data: paymentLogs, error: logsError } = await supabase
-              .from('payment_logs')
-              .select('*')
-              .eq('user_id', userId)
-              .order('timestamp', { ascending: false })
-              .limit(1);
-              
-            if (!logsError && paymentLogs && paymentLogs.length > 0) {
-              console.log('[AUTH] Found payment logs, assuming premium status');
-              setIsPremium(true);
-              
-              await supabase
-                .from('profiles')
-                .update({ 
-                  is_premium: true,
-                  subscription_status: 'active',
-                  updated_at: new Date().toISOString()
-                })
-                .eq('id', userId);
-            } else {
-              const isPremiumStatus = await checkPremiumStatus(userId);
-              console.log('[AUTH] Premium status after check:', isPremiumStatus);
-              setIsPremium(isPremiumStatus);
-            }
-          } catch (logsError) {
-            console.error('[AUTH] Error checking payment logs:', logsError);
-            
-            const isPremiumStatus = await checkPremiumStatus(userId);
-            console.log('[AUTH] Premium status after check:', isPremiumStatus);
-            setIsPremium(isPremiumStatus);
-          }
+          
+          // Update localStorage backup
+          localStorage.setItem('premium_backup', 'true');
+          localStorage.setItem('premium_timestamp', new Date().toISOString());
+          
+          return; // Early return as we have confirmed premium status
         }
+      }
+      
+      // SECOND SOURCE OF TRUTH: Check for payment logs as proof of purchase
+      try {
+        console.log('[AUTH] Checking payment logs for premium confirmation');
+        const { data: paymentLogs, error: logsError } = await supabase
+          .from('payment_logs')
+          .select('*')
+          .eq('user_id', userId)
+          .order('timestamp', { ascending: false })
+          .limit(1);
+          
+        if (!logsError && paymentLogs && paymentLogs.length > 0) {
+          console.log('[AUTH] Found payment logs, assuming premium status');
+          
+          // Update profile in database to ensure consistency
+          await supabase
+            .from('profiles')
+            .update({ 
+              is_premium: true,
+              subscription_status: 'active',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', userId);
+          
+          // Update local state
+          setIsPremium(true);
+          
+          // Update localStorage backup
+          localStorage.setItem('premium_backup', 'true');
+          localStorage.setItem('premium_timestamp', new Date().toISOString());
+          
+          return; // Early return as we have confirmed premium status
+        }
+      } catch (logsError) {
+        console.error('[AUTH] Error checking payment logs:', logsError);
+      }
+      
+      // THIRD SOURCE OF TRUTH: Check localStorage backup if it exists
+      const localPremium = validateLocalStoragePremium();
+      if (localPremium) {
+        console.log('[AUTH] Setting premium status from validated localStorage backup');
+        
+        // Also update database to ensure consistency
+        try {
+          await supabase
+            .from('profiles')
+            .update({ 
+              is_premium: true,
+              subscription_status: 'active',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', userId);
+          
+          setIsPremium(true);
+          return;
+        } catch (e) {
+          console.error('[AUTH] Error updating database from localStorage backup:', e);
+        }
+      }
+      
+      // FINAL CHECK: Use the edge function as a last resort
+      const isPremiumStatus = await checkPremiumStatus(userId);
+      console.log('[AUTH] Premium status after final edge function check:', isPremiumStatus);
+      setIsPremium(isPremiumStatus);
+      
+      // If premium was found, update localStorage backup
+      if (isPremiumStatus) {
+        localStorage.setItem('premium_backup', 'true');
+        localStorage.setItem('premium_timestamp', new Date().toISOString());
       }
     } catch (error) {
       console.error('[AUTH] Error in handleUserAuthenticated:', error);
@@ -224,6 +287,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       console.log('[AUTH] Manual premium status check for user:', userId);
       
+      // Check database directly first
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('is_premium, subscription_id, subscription_status, subscription_expiry')
@@ -251,6 +315,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             };
           });
           
+          // Update localStorage backup
+          localStorage.setItem('premium_backup', 'true');
+          localStorage.setItem('premium_timestamp', new Date().toISOString());
+          
           if (showToast) {
             toast.success('Twoje konto ma status Premium!', {
               dismissible: true
@@ -261,6 +329,77 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
       
+      // Check for payment logs as evidence
+      try {
+        const { data: paymentLogs, error: logsError } = await supabase
+          .from('payment_logs')
+          .select('*')
+          .eq('user_id', userId)
+          .order('timestamp', { ascending: false })
+          .limit(1);
+          
+        if (!logsError && paymentLogs && paymentLogs.length > 0) {
+          console.log('[AUTH] Found payment logs, setting premium status');
+          
+          // Update profile to ensure consistency
+          await supabase
+            .from('profiles')
+            .update({ 
+              is_premium: true,
+              subscription_status: 'active',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', userId);
+            
+          setIsPremium(true);
+          
+          // Update localStorage backup
+          localStorage.setItem('premium_backup', 'true');
+          localStorage.setItem('premium_timestamp', new Date().toISOString());
+          
+          if (showToast) {
+            toast.success('Znaleziono płatność! Twoje konto ma status Premium!', {
+              dismissible: true
+            });
+          }
+          
+          return true;
+        }
+      } catch (logsError) {
+        console.error('[AUTH] Error checking payment logs:', logsError);
+      }
+      
+      // Check localStorage backup
+      const localPremium = validateLocalStoragePremium();
+      if (localPremium) {
+        console.log('[AUTH] Using validated localStorage premium backup');
+        
+        // Update database for consistency
+        try {
+          await supabase
+            .from('profiles')
+            .update({ 
+              is_premium: true,
+              subscription_status: 'active',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', userId);
+            
+          setIsPremium(true);
+          
+          if (showToast) {
+            toast.success('Twoje konto ma status Premium!', {
+              dismissible: true
+            });
+          }
+          
+          return true;
+        } catch (e) {
+          console.error('[AUTH] Error updating database from localStorage backup:', e);
+        }
+      }
+      
+      // Fall back to edge function check
       const isPremiumStatus = await checkPremiumStatus(userId, showToast);
       
       console.log('[AUTH] Setting isPremium state to:', isPremiumStatus);
@@ -272,6 +411,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.log('[AUTH] Updating profile state with latest data:', updatedProfile);
           setProfile(updatedProfile);
         }
+        
+        // Update localStorage backup
+        localStorage.setItem('premium_backup', 'true');
+        localStorage.setItem('premium_timestamp', new Date().toISOString());
+      } else {
+        // If all checks failed, ensure localStorage backup is cleared
+        localStorage.removeItem('premium_backup');
+        localStorage.removeItem('premium_timestamp');
       }
       
       return isPremiumStatus;
@@ -295,26 +442,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('[AUTH] Manually refreshing session');
       
       if (user?.id) {
-        console.log('[AUTH] Direct premium status update in refreshSession');
+        console.log('[AUTH] Checking current premium status before refresh');
         
-        try {
-          const { error: directError } = await supabase
-            .from('profiles')
-            .update({ 
-              is_premium: true,
-              subscription_status: 'active',
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', user.id);
-            
-          if (directError) {
-            console.error('[AUTH] Error in direct premium update:', directError);
-          } else {
-            console.log('[AUTH] Direct premium update successful');
-            setIsPremium(true);
+        // Check current database state
+        const { data: currentProfile, error: currentProfileError } = await supabase
+          .from('profiles')
+          .select('is_premium, subscription_id, subscription_status, subscription_expiry')
+          .eq('id', user.id)
+          .single();
+          
+        if (currentProfileError) {
+          console.error('[AUTH] Error checking current profile:', currentProfileError);
+        } else if (currentProfile?.is_premium) {
+          console.log('[AUTH] User already has premium status in database, no need to update');
+          setIsPremium(true);
+        } else {
+          // Check payment logs for evidence of premium purchase
+          try {
+            const { data: paymentLogs } = await supabase
+              .from('payment_logs')
+              .select('*')
+              .eq('user_id', user.id)
+              .order('timestamp', { ascending: false })
+              .limit(1);
+              
+            if (paymentLogs && paymentLogs.length > 0) {
+              console.log('[AUTH] Found payment logs, updating premium status');
+              
+              try {
+                await supabase
+                  .from('profiles')
+                  .update({ 
+                    is_premium: true,
+                    subscription_status: 'active',
+                    updated_at: new Date().toISOString()
+                  })
+                  .eq('id', user.id);
+                  
+                setIsPremium(true);
+              } catch (updateErr) {
+                console.error('[AUTH] Error updating premium from logs:', updateErr);
+              }
+            }
+          } catch (logsErr) {
+            console.error('[AUTH] Error checking payment logs:', logsErr);
           }
-        } catch (directError) {
-          console.error('[AUTH] Exception in direct premium update:', directError);
         }
       }
       
@@ -332,47 +504,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         if (data.session.user) {
           try {
-            const { data: latestProfile, error: profileError } = await supabase
-              .from('profiles')
-              .select('is_premium, subscription_id, subscription_status, subscription_expiry, updated_at')
-              .eq('id', data.session.user.id)
-              .single();
-            
-            if (profileError) {
-              console.error('[AUTH] Error getting profile in session refresh:', profileError);
-            } else {
-              console.log('[AUTH] Latest profile from refresh:', latestProfile);
-              
-              if (latestProfile && latestProfile.is_premium) {
-                console.log('[AUTH] Setting isPremium to true based on database');
-                setIsPremium(true);
-              }
-              
-              if (latestProfile) {
-                const fullProfile = await fetchProfile(data.session.user.id);
-                if (fullProfile) {
-                  console.log('[AUTH] Setting updated profile with premium data:', {
-                    isPremium: latestProfile.is_premium,
-                    subscriptionId: latestProfile.subscription_id,
-                    subscriptionStatus: latestProfile.subscription_status || 'active',
-                    subscriptionExpiry: latestProfile.subscription_expiry
-                  });
-                  
-                  setProfile({
-                    ...fullProfile,
-                    is_premium: latestProfile.is_premium,
-                    subscription_id: latestProfile.subscription_id,
-                    subscription_status: latestProfile.subscription_status || 'active',
-                    subscription_expiry: latestProfile.subscription_expiry
-                  });
-                }
-              }
-            }
-            
-            const premiumCheckResult = await checkPremiumStatus(data.session.user.id, false);
-            console.log('[AUTH] Premium check in session refresh:', premiumCheckResult);
-          } catch (profileError) {
-            console.error('[AUTH] Error refreshing profile in session refresh:', profileError);
+            await handleUserAuthenticated(data.session.user.id);
+          } catch (e) {
+            console.error('[AUTH] Error in handleUserAuthenticated after refresh:', e);
           }
         }
         

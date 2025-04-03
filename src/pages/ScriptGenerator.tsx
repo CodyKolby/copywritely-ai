@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
@@ -14,14 +14,36 @@ import TargetAudienceDialog from '@/components/scripts/TargetAudienceDialog';
 import { scriptTemplates } from '@/data/scriptTemplates';
 
 const ScriptGenerator = () => {
-  const { isPremium, user } = useAuth();
+  const { isPremium, user, checkPremiumStatus } = useAuth();
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [targetAudienceDialogOpen, setTargetAudienceDialogOpen] = useState(false);
   const [currentTemplateId, setCurrentTemplateId] = useState<string>('');
+  const [localPremiumStatus, setLocalPremiumStatus] = useState<boolean | null>(null);
+  const premiumCheckedRef = useRef<boolean>(false);
 
+  // On mount, scroll to top and perform premium status check
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, []);
+    
+    // Check if localStorage indicates premium
+    const premiumBackup = localStorage.getItem('premium_backup') === 'true';
+    if (premiumBackup) {
+      setLocalPremiumStatus(true);
+    }
+    
+    // If user exists, double-check premium status once on mount
+    if (user?.id && !premiumCheckedRef.current) {
+      premiumCheckedRef.current = true;
+      checkPremiumStatus(user.id, false).then(status => {
+        setLocalPremiumStatus(status);
+      });
+    }
+  }, [user, checkPremiumStatus]);
+
+  // Sync localPremiumStatus with isPremium when it changes
+  useEffect(() => {
+    setLocalPremiumStatus(isPremium);
+  }, [isPremium]);
 
   const handleTemplateSelect = (templateId: string) => {
     // Check if template is "landing" which is marked as coming soon
@@ -37,8 +59,34 @@ const ScriptGenerator = () => {
     
     setCurrentTemplateId(templateId);
     setSelectedTemplate(templateId);
+    
+    // If either isPremium or localPremiumStatus is true, allow access
+    const hasPremium = isPremium || localPremiumStatus;
+    
+    if (!hasPremium) {
+      toast.error('Ta funkcja wymaga konta Premium', {
+        description: 'Wykup subskrypcję, aby uzyskać dostęp do tej funkcji.',
+        dismissible: true
+      });
+      
+      // Verify premium status one more time in background
+      if (user?.id) {
+        checkPremiumStatus(user.id, false).then(status => {
+          if (status) {
+            setLocalPremiumStatus(true);
+            setTargetAudienceDialogOpen(true);
+          }
+        });
+      }
+      return;
+    }
+    
     setTargetAudienceDialogOpen(true);
   };
+
+  // Determine if we should show the premium feature alert
+  // Only show it if BOTH isPremium and localPremiumStatus are false
+  const shouldShowPremiumAlert = isPremium === false && localPremiumStatus === false;
 
   return (
     <div className="pt-24 pb-16 px-6">
@@ -57,7 +105,7 @@ const ScriptGenerator = () => {
           </p>
         </motion.div>
 
-        {!isPremium && (
+        {shouldShowPremiumAlert && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -84,7 +132,7 @@ const ScriptGenerator = () => {
           onOpenChange={setTargetAudienceDialogOpen}
           templateId={currentTemplateId}
           userId={user?.id || ''}
-          isPremium={isPremium}
+          isPremium={isPremium || !!localPremiumStatus}
         />
       </div>
     </div>

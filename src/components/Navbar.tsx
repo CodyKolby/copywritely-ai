@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -19,9 +20,10 @@ import SubscriptionModal from './subscription/SubscriptionModal';
 const Navbar = () => {
   const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
-  const { user, signOut, isPremium, profile } = useAuth();
+  const { user, signOut, isPremium, profile, checkPremiumStatus } = useAuth();
   const [subscriptionModalOpen, setSubscriptionModalOpen] = useState(false);
   const [localPremium, setLocalPremium] = useState(false);
+  const [premiumChecked, setPremiumChecked] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -32,21 +34,52 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
   
+  // Check localStorage for premium status backup
   useEffect(() => {
-    const premiumBackup = localStorage.getItem('premium_backup') === 'true';
-    const premiumTimestamp = localStorage.getItem('premium_timestamp');
+    const validateLocalStorage = () => {
+      try {
+        const premiumBackup = localStorage.getItem('premium_backup') === 'true';
+        const premiumTimestamp = localStorage.getItem('premium_timestamp');
+        
+        if (premiumBackup && premiumTimestamp) {
+          const timestamp = new Date(premiumTimestamp);
+          const now = new Date();
+          const hoursDiff = (now.getTime() - timestamp.getTime()) / (1000 * 60 * 60);
+          
+          if (hoursDiff < 24) {
+            console.log('[NAVBAR] Using backup premium status from localStorage');
+            setLocalPremium(true);
+            return true;
+          } else {
+            localStorage.removeItem('premium_backup');
+            localStorage.removeItem('premium_timestamp');
+          }
+        }
+        return false;
+      } catch (e) {
+        console.error('[NAVBAR] Error checking localStorage premium:', e);
+        return false;
+      }
+    };
     
-    if (premiumBackup && premiumTimestamp) {
-      const timestamp = new Date(premiumTimestamp);
-      const now = new Date();
-      const hoursDiff = (now.getTime() - timestamp.getTime()) / (1000 * 60 * 60);
+    if (!premiumChecked) {
+      const hasLocalPremium = validateLocalStorage();
+      setPremiumChecked(true);
       
-      if (hoursDiff < 24) {
-        console.log('[NAVBAR] Using backup premium status from localStorage');
-        setLocalPremium(true);
+      // If a user is logged in but we don't have isPremium from context,
+      // but we have localStorage premium, verify with database
+      if (user?.id && !isPremium && hasLocalPremium) {
+        checkPremiumStatus(user.id);
       }
     }
-  }, []);
+  }, [user, isPremium, premiumChecked, checkPremiumStatus]);
+
+  // When isPremium changes, update localPremium
+  useEffect(() => {
+    if (isPremium) {
+      setLocalPremium(true);
+    }
+  }, [isPremium]);
 
   useEffect(() => {
     console.log('Navbar premium status:', {
@@ -70,6 +103,7 @@ const Navbar = () => {
     return user.email.charAt(0).toUpperCase();
   };
 
+  // User has premium if any of the premium indicators are true
   const userHasPremium = isPremium || profile?.is_premium || localPremium;
 
   return (
@@ -140,7 +174,15 @@ const Navbar = () => {
                     <span>Subskrypcja</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={signOut} className="gap-2 text-red-500">
+                  <DropdownMenuItem 
+                    onClick={() => {
+                      // Clear localStorage premium backup on logout
+                      localStorage.removeItem('premium_backup');
+                      localStorage.removeItem('premium_timestamp');
+                      signOut();
+                    }} 
+                    className="gap-2 text-red-500"
+                  >
                     <LogOut size={16} /> 
                     <span>Wyloguj</span>
                   </DropdownMenuItem>

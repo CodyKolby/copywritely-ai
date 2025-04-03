@@ -71,6 +71,46 @@ serve(async (req) => {
         console.error('Exception creating profile:', createError);
       }
       
+      // Also check payment logs before returning - this deals with "ghost premium" issue
+      try {
+        const { data: paymentLogs, error: logsError } = await supabase
+          .from('payment_logs')
+          .select('*')
+          .eq('user_id', userId)
+          .limit(1);
+          
+        if (logsError) {
+          console.error('Error checking payment logs:', logsError);
+        } else if (paymentLogs && paymentLogs.length > 0) {
+          console.log('Found payment logs but no profile, creating premium profile');
+          
+          // User has payment but no profile or premium status
+          try {
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .upsert({ 
+                id: userId,
+                is_premium: true,
+                subscription_status: 'active',
+                updated_at: new Date().toISOString()
+              });
+              
+            if (updateError) {
+              console.error('Error creating payment-based profile:', updateError);
+            } else {
+              return new Response(
+                JSON.stringify({ isPremium: true }),
+                { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
+            }
+          } catch (updateError) {
+            console.error('Exception creating payment-based profile:', updateError);
+          }
+        }
+      } catch (logsError) {
+        console.error('Exception checking payment logs:', logsError);
+      }
+      
       return new Response(
         JSON.stringify({ isPremium: false }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -144,6 +184,37 @@ serve(async (req) => {
             subscription_status: 'inactive'
           })
           .eq('id', userId);
+      }
+    }
+    
+    // One final check - if premium is false but payment logs exist, override
+    if (!isPremium) {
+      try {
+        const { data: paymentLogs, error: logsError } = await supabase
+          .from('payment_logs')
+          .select('*')
+          .eq('user_id', userId)
+          .limit(1);
+          
+        if (logsError) {
+          console.error('Error checking payment logs:', logsError);
+        } else if (paymentLogs && paymentLogs.length > 0) {
+          console.log('Found payment logs - overriding subscription status to active');
+          
+          // User has payment but premium status is false
+          await supabase
+            .from('profiles')
+            .update({ 
+              is_premium: true,
+              subscription_status: 'active',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', userId);
+            
+          isPremium = true;
+        }
+      } catch (logsError) {
+        console.error('Exception checking payment logs:', logsError);
       }
     }
 
