@@ -5,6 +5,7 @@ import { DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/co
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
+import { Loader2 } from 'lucide-react';
 
 export type EmailStyle = 'direct-sales' | 'educational' | 'story' | 'relationship';
 
@@ -41,9 +42,10 @@ interface EmailStyleDialogProps {
   onSubmit: (style: EmailStyle) => void;
   onBack: () => void;
   onCancel: () => void;
+  isProcessing: boolean; // Added isProcessing prop
 }
 
-const EmailStyleDialog = ({ onSubmit, onBack, onCancel }: EmailStyleDialogProps) => {
+const EmailStyleDialog = ({ onSubmit, onBack, onCancel, isProcessing }: EmailStyleDialogProps) => {
   const [selectedStyle, setSelectedStyle] = React.useState<EmailStyle | null>(null);
 
   const handleSubmit = () => {
@@ -83,20 +85,27 @@ const EmailStyleDialog = ({ onSubmit, onBack, onCancel }: EmailStyleDialogProps)
 
       <DialogFooter className="flex justify-between">
         <div className="flex gap-2">
-          <Button type="button" variant="outline" onClick={onCancel}>
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isProcessing}>
             Anuluj
           </Button>
-          <Button type="button" variant="outline" onClick={onBack}>
+          <Button type="button" variant="outline" onClick={onBack} disabled={isProcessing}>
             Wstecz
           </Button>
         </div>
         <Button 
           type="button" 
           className="bg-copywrite-teal hover:bg-copywrite-teal-dark text-white"
-          disabled={!selectedStyle}
+          disabled={!selectedStyle || isProcessing}
           onClick={handleSubmit}
         >
-          Dalej
+          {isProcessing ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Przetwarzanie...
+            </>
+          ) : (
+            "Dalej"
+          )}
         </Button>
       </DialogFooter>
     </div>

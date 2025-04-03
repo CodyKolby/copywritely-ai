@@ -7,12 +7,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { HelpCircle } from 'lucide-react';
+import { HelpCircle, Loader2 } from 'lucide-react';
 
 interface AdvertisingGoalDialogProps {
   onSubmit: (goal: string) => void;
   onBack: () => void;
   onCancel: () => void;
+  isProcessing: boolean; // Added isProcessing prop
 }
 
 const formSchema = z.object({
@@ -21,7 +22,7 @@ const formSchema = z.object({
   }),
 });
 
-const AdvertisingGoalDialog = ({ onSubmit, onBack, onCancel }: AdvertisingGoalDialogProps) => {
+const AdvertisingGoalDialog = ({ onSubmit, onBack, onCancel, isProcessing }: AdvertisingGoalDialogProps) => {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -69,15 +70,26 @@ const AdvertisingGoalDialog = ({ onSubmit, onBack, onCancel }: AdvertisingGoalDi
 
           <DialogFooter className="flex justify-between">
             <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={onCancel}>
+              <Button type="button" variant="outline" onClick={onCancel} disabled={isProcessing}>
                 Anuluj
               </Button>
-              <Button type="button" variant="outline" onClick={onBack}>
+              <Button type="button" variant="outline" onClick={onBack} disabled={isProcessing}>
                 Wstecz
               </Button>
             </div>
-            <Button type="submit" className="bg-copywrite-teal hover:bg-copywrite-teal-dark text-white">
-              Dalej
+            <Button 
+              type="submit" 
+              className="bg-copywrite-teal hover:bg-copywrite-teal-dark text-white"
+              disabled={isProcessing}
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Przetwarzanie...
+                </>
+              ) : (
+                "Dalej"
+              )}
             </Button>
           </DialogFooter>
         </form>

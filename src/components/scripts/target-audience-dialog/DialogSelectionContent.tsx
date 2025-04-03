@@ -12,6 +12,7 @@ interface DialogSelectionContentProps {
   existingAudiences: TargetAudience[];
   selectedAudienceId: string | null;
   audienceChoice: string | null;
+  isProcessing: boolean; // Added isProcessing prop
   handleExistingAudienceSelect: (audienceId: string) => void;
   handleChoiceSelection: (choice: string) => void;
   handleCreateNewAudience: () => void;
