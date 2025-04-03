@@ -119,7 +119,7 @@ const Login = () => {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="w-full md:w-1/2 bg-copywrite-teal-light flex items-center justify-center p-6"
+            className="w-full md:w-1/2 flex items-center justify-center p-6"
           >
             <div className="rounded-xl overflow-hidden w-full h-full">
               <img 
