@@ -57,42 +57,6 @@ serve(async (req) => {
 
 Pamiętaj o prostym języku i emocjach. Twoje tytuły powinny wyróżniać się na tle innych maili. Unikaj pustych fraz jak „Poznaj sposób na sukces” czy „Zacznij już dziś”. Zamiast tego stawiaj na pytania, zakazy, kontrowersje, liczby, czy storytelling.
 
-Przykłady tytułów, które Cię inspirują:
-
-"NIE kontaktuj się z żadnym klientem, dopóki tego nie zobaczysz…"
-
-Dlaczego działa: Silny zakaz i napięcie – wywołuje uczucie strachu przed popełnieniem błędu. Odbiorca natychmiast chce dowiedzieć się, co jest tak ważnego, że nie można tego przeoczyć.
-
-"Czy naprawdę da się zdobyć klienta w miesiąc?"
-
-Dlaczego działa: Pytanie, które wzbudza wątpliwości, ale też nadzieję. Klasyczny przykład „curiosity gap”, czyli luki w ciekawości, która zmusza odbiorcę do kliknięcia, by poznać odpowiedź.
-
-"IMIE, nie pozwól mi tego usunąć"
-
-Dlaczego działa: Osobisty, pilny ton – sprawia wrażenie, że wiadomość dotyczy bezpośrednio odbiorcy. Zwiększa poczucie bliskości i sprawia, że odbiorca nie chce tego zignorować.
-
-"Dlaczego inne kursy z copywritingu NIE uczyniły Cię bogatym?"
-
-Dlaczego działa: Podważa wcześniejsze decyzje odbiorcy, wprowadza element rozczarowania, ale też obiecuje rozwiązanie. To typowy sposób na wzbudzenie frustracji i przekonanie, że trzeba zmienić podejście.
-
-"1 wideo o copywritingu warte więcej niż 10 poradników"
-
-Dlaczego działa: Kontrast i liczby – oszczędność czasu i większa wartość w krótszym czasie. Minimalistyczny i konkretny tytuł, który obiecuje dużą wartość w jednym prostym działaniu.
-
-Jak wykorzystywać te przykłady:
-
-Analiza struktury tytułów: Zwróć uwagę na strukturę tytułów i ich elementy: mocne słowa (np. "NIE", "Dlaczego", "IMIE"), pytania, zakazy, kontrast, osobiste wezwania. Każdy z tych elementów pełni określoną funkcję, na przykład wzbudza napięcie, ciekawość lub poczucie pilności.
-
-Techniki emocjonalne: Wykorzystaj techniki, które wywołują emocje, takie jak strach, ciekawość, zaskoczenie czy rozczarowanie. Tytuły muszą angażować odbiorcę emocjonalnie, np. poprzez zakazy, pytania, osobiste wezwania lub obietnice rozwiązania problemu.
-
-Używanie kontrastów i liczb: Zwróć uwagę na sposób, w jaki przykłady używają kontrastów lub liczb, by podkreślić wartość (np. "1 wideo warte więcej niż 10 poradników"). Liczby i zestawienia pomagają skupić uwagę na korzyściach wynikających z danego działania.
-
-Eksperymentowanie z formą i stylem: Przykłady pokazują różne style i formy tytułów: od prostych zakazów, przez pytania, po bezpośrednie wezwania. Dostosuj formę tytułu do tematyki maila, ale zachowaj spójność z emocjonalnym tonem, który ma wywołać reakcję.
-
-Zastosowanie "curiosity gap": Twórz tytuły, które pozostawiają odbiorcę z pytaniem, na które odpowiedź jest dostępna tylko po otwarciu maila. Pozostawiając niedopowiedzenia, zmuszasz odbiorcę do kliknięcia, by poznać całą historię.
-
-Unikanie banałów: Unikaj ogólnych fraz i bezpiecznych tytułów, które są przewidywalne i nie przyciągają uwagi. Inspirując się przykładami, twórz tytuły, które są zaskakujące i inne niż standardowe hasła marketingowe.
-
 Zasady, których musisz bezwzględnie przestrzegać:
 
 Maksymalna długość tytułu to 55 znaków. Nigdy nie przekraczaj tej liczby.
@@ -107,7 +71,29 @@ Tytuły mają być spójne z emocjonalnym blueprintem, jaki otrzymasz z wcześni
 
 Jeśli zdecydujesz się użyć imienia odbiorcy, zawsze używaj placeholdera: IMIE.
 
-Pamiętaj, by tworzyć dwa różne tytuły na podstawie tematu maila, ale w różnych formach i stylach.
+Ważne: Tytuły, które tworzysz, muszą być spójne ze stylem maila (${narrativeBlueprint.stylmaila}), oprócz tego wzoruj się na następujących przykładach, które pokazują odpowiednią formę i ton:
+
+"Jak strach przed stratą blokuje Twoje możliwości w świecie kryptowalut"
+
+Odkrywanie ukrytych przyczyn opóźniających decyzje inwestycyjne.
+
+"Mój pierwszy błąd w kryptowalutach - czego nauczyłem się na własnej skórze"
+
+Osobista historia, która buduje zaufanie do eksperta.
+
+"5 mitów o inwestowaniu w kryptowaluty, które mogą Cię kosztować fortunę"
+
+Liczbowe podejście do najczęstszych błędów początkujących inwestorów.
+
+Jak wykorzystywać te przykłady:
+
+Analiza struktury tytułów: Zwróć uwagę na strukturę tytułów i ich elementy: mocne słowa (np. "NIE", "Dlaczego", "IMIE"), pytania, zakazy, kontrast, osobiste wezwania. Każdy z tych elementów pełni określoną funkcję, na przykład wzbudza napięcie, ciekawość lub poczucie pilności.
+
+Techniki emocjonalne: Wykorzystaj techniki, które wywołują emocje, takie jak strach, ciekawość, zaskoczenie czy rozczarowanie. Tytuły muszą angażować odbiorcę emocjonalnie, np. poprzez zakazy, pytania, osobiste wezwania lub obietnice rozwiązania problemu.
+
+Używanie kontrastów i liczb: Zwróć uwagę na sposób, w jaki przykłady używają kontrastów lub liczb, by podkreślić wartość (np. "1 wideo warte więcej niż 10 poradników"). Liczby i zestawienia pomagają skupić uwagę na korzyściach wynikających z danego działania.
+
+Eksperymentowanie z formą i stylem: Przykłady pokazują różne style i formy tytułów: od prostych zakazów, przez pytania, po bezpośrednie wezwania. Dostosuj formę tytułu do tematyki maila, ale zachowaj spójność z emocjonalnym tonem, który ma wywołać reakcję.
           },
           { 
             role: 'user', 
