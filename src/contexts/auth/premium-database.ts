@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { updateAllPremiumStorages } from './local-storage-utils';
 import { toast } from 'sonner';
@@ -76,7 +75,7 @@ export const verifyWithDatabaseInBackground = async (userId: string) => {
       
       if (data?.isPremium) {
         // Edge function says premium, so update database and storage
-        await updatePremiumStatus(userId, true);
+        await updateProfilePremiumStatus(userId, true);
         updateAllPremiumStorages(true);
       } else {
         // Final check - payment logs
@@ -109,7 +108,7 @@ export const updateProfileFromPaymentLogs = async (userId: string) => {
   try {
     console.log(`[PREMIUM-DB] Updating profile from payment logs for user: ${userId}`);
     
-    await updatePremiumStatus(userId, true);
+    await updateProfilePremiumStatus(userId, true);
     console.log('[PREMIUM-DB] Profile updated from payment logs');
   } catch (error) {
     console.error('[PREMIUM-DB] Error updating profile from payment logs:', error);
@@ -118,8 +117,9 @@ export const updateProfileFromPaymentLogs = async (userId: string) => {
 
 /**
  * Update premium status in the profiles table
+ * This is renamed from updatePremiumStatus to updateProfilePremiumStatus to avoid conflict
  */
-export const updatePremiumStatus = async (userId: string, isPremium: boolean) => {
+export const updateProfilePremiumStatus = async (userId: string, isPremium: boolean) => {
   try {
     await supabase
       .from('profiles')
@@ -145,7 +145,7 @@ export const forcePremiumStatusUpdate = async (userId: string): Promise<boolean>
     console.log(`[PREMIUM-DB] Force updating premium status for user: ${userId}`);
     
     // Try to update profile first
-    const success = await updatePremiumStatus(userId, true);
+    const success = await updateProfilePremiumStatus(userId, true);
     
     if (!success) {
       console.error('[PREMIUM-DB] Error updating profile');
