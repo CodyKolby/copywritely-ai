@@ -41,7 +41,10 @@ export async function generateSubjectLines(blueprint: NarrativeBlueprint, target
     
     if (error) throw new Error(`Error invoking generate-subject-lines: ${error.message}`);
     
-    console.log('Subject lines generated successfully:', data);
+    console.log('Subject lines generated successfully:');
+    console.log('Subject 1:', data.subject1);
+    console.log('Subject 2:', data.subject2);
+    
     return {
       subject1: data.subject1,
       subject2: data.subject2

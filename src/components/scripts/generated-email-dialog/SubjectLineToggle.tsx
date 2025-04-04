@@ -16,6 +16,15 @@ const SubjectLineToggle = ({
   isShowingAlternative,
   onToggle
 }: SubjectLineToggleProps) => {
+  // Log subject lines to console for debugging
+  React.useEffect(() => {
+    console.log("Generated subject lines:", {
+      subject1: currentSubject,
+      subject2: alternativeSubject,
+      currentlyShowing: isShowingAlternative ? "Alternative" : "Primary"
+    });
+  }, [currentSubject, alternativeSubject, isShowingAlternative]);
+  
   return (
     <div className="mb-4 p-4 rounded-lg border border-amber-200 bg-amber-50">
       <div className="flex flex-col space-y-3">
