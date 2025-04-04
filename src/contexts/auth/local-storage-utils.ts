@@ -1,6 +1,7 @@
 
 /**
  * Validate premium status stored in localStorage
+ * This is only used as a backup when server validation is not available
  */
 export const validateLocalStoragePremium = (): boolean => {
   try {
@@ -22,6 +23,8 @@ export const validateLocalStoragePremium = (): boolean => {
       return false;
     }
     
+    // This is a backup only - log that we're using it
+    console.log('[LOCAL-STORAGE] Using premium backup from localStorage - this should only happen during initial load');
     return true;
   } catch (e) {
     console.error('[LOCAL-STORAGE] Error validating premium status:', e);
@@ -31,13 +34,14 @@ export const validateLocalStoragePremium = (): boolean => {
 
 /**
  * Store premium status in localStorage as backup
+ * This should only be used after server verification confirms premium status
  */
 export const storePremiumInLocalStorage = (isPremium: boolean) => {
   try {
     if (isPremium) {
       localStorage.setItem('premium_backup', 'true');
       localStorage.setItem('premium_timestamp', new Date().toISOString());
-      console.log('[LOCAL-STORAGE] Premium status stored in localStorage');
+      console.log('[LOCAL-STORAGE] Premium status stored in localStorage as backup');
     } else {
       clearPremiumFromLocalStorage();
     }
@@ -62,6 +66,7 @@ export const clearPremiumFromLocalStorage = () => {
 
 /**
  * Update the premium status in localStorage and create a session flag
+ * This is a backup mechanism only - premium status should be validated from server
  */
 export const updateAllPremiumStorages = (isPremium: boolean) => {
   storePremiumInLocalStorage(isPremium);
@@ -80,11 +85,13 @@ export const updateAllPremiumStorages = (isPremium: boolean) => {
 
 /**
  * Check all storage locations for premium status
+ * This is only a fallback and should not be the primary source of truth
  */
 export const checkAllPremiumStorages = (): boolean => {
   try {
     // Check session storage first (fastest)
     if (sessionStorage.getItem('premium_session') === 'true') {
+      console.log('[LOCAL-STORAGE] Using premium status from sessionStorage (backup)');
       return true;
     }
     

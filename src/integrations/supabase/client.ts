@@ -13,3 +13,6 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: localStorage,
   }
 });
+
+// Log initialization to help with debugging
+console.log('[SUPABASE] Client initialized with URL:', SUPABASE_URL);

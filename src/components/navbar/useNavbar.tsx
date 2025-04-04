@@ -18,6 +18,7 @@ export const useNavbar = (): UseNavbarReturn => {
   const [subscriptionModalOpen, setSubscriptionModalOpen] = useState(false);
   const { user, isPremium, profile, checkPremiumStatus } = useAuth();
 
+  // Handle window scroll
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 10);
@@ -27,42 +28,39 @@ export const useNavbar = (): UseNavbarReturn => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
   
-  // Check localStorage for premium status backup
-  useEffect(() => {
-    const validateLocalStorage = () => {
-      try {
-        const localStoragePremium = validateLocalStoragePremium();
-        if (localStoragePremium) {
-          console.log('[NAVBAR] Using backup premium status from localStorage');
-          setLocalPremium(true);
-          return true;
-        }
-        return false;
-      } catch (e) {
-        console.error('[NAVBAR] Error checking localStorage premium:', e);
-        return false;
-      }
-    };
-    
-    if (!premiumChecked) {
-      const hasLocalPremium = validateLocalStorage();
-      setPremiumChecked(true);
-      
-      // If a user is logged in but we don't have isPremium from context,
-      // but we have localStorage premium, verify with database
-      if (user?.id && !isPremium && hasLocalPremium) {
-        checkPremiumStatus(user.id);
-      }
-    }
-  }, [user, isPremium, premiumChecked, checkPremiumStatus]);
-
-  // When isPremium changes, update localPremium
+  // Check for premium status whenever auth context changes
+  // This is critical for premium features to work properly
   useEffect(() => {
     if (isPremium) {
       setLocalPremium(true);
+    } else if (profile?.is_premium) {
+      setLocalPremium(true);
+    } else if (!premiumChecked) {
+      // Only check localStorage once
+      const localStoragePremium = validateLocalStoragePremium();
+      if (localStoragePremium) {
+        console.log('[NAVBAR] Using backup premium status from localStorage');
+        setLocalPremium(true);
+        
+        // Verify with server if we have a user ID
+        if (user?.id) {
+          checkPremiumStatus(user.id);
+        }
+      }
+      setPremiumChecked(true);
     }
-  }, [isPremium]);
+  }, [user, isPremium, profile, premiumChecked, checkPremiumStatus]);
 
+  // If user is logged in but we don't have premium status or profile yet,
+  // verify with server
+  useEffect(() => {
+    if (user?.id && !isPremium && !profile?.is_premium && premiumChecked) {
+      console.log('[NAVBAR] User logged in but no premium status, checking with server');
+      checkPremiumStatus(user.id);
+    }
+  }, [user, isPremium, profile, premiumChecked, checkPremiumStatus]);
+
+  // Log current premium status indicators
   useEffect(() => {
     console.log('Navbar premium status:', {
       isPremium,

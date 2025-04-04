@@ -15,7 +15,7 @@ import {
   DropdownMenuLabel
 } from "@/components/ui/dropdown-menu";
 import SubscriptionModal from '../subscription/SubscriptionModal';
-import { checkAllPremiumStorages, clearPremiumFromLocalStorage } from '@/contexts/auth/local-storage-utils';
+import { clearPremiumFromLocalStorage } from '@/contexts/auth/local-storage-utils';
 
 interface UserMenuProps {
   user: User;
@@ -29,16 +29,12 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
   const [subscriptionModalOpen, setSubscriptionModalOpen] = useState(false);
   const [storagePremium, setStoragePremium] = useState(false);
 
-  // Check localStorage on mount
+  // Update premium status indicators whenever props change
   useEffect(() => {
-    const premiumFromStorage = checkAllPremiumStorages();
-    setStoragePremium(premiumFromStorage);
-  }, []);
-
-  // Update storage premium when props change
-  useEffect(() => {
-    if (isPremium || profile?.is_premium || localPremium) {
+    if (isPremium || profile?.is_premium) {
       setStoragePremium(true);
+    } else {
+      setStoragePremium(localPremium);
     }
   }, [isPremium, profile, localPremium]);
 
