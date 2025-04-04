@@ -24,7 +24,6 @@ const TermsOfService = () => {
           <p>
             PROFITFLOW SPÓŁKA Z OGRANICZONĄ ODPOWIEDZIALNOŚCIĄ<br />
             UL. OGRODOWA 3, 32-652 BULOWICE<br />
-            NIP: (tutaj możesz dodać numer jeśli chcesz)<br />
             E-mail kontaktowy: support@copility.com
           </p>
 
