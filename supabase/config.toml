@@ -10,3 +10,9 @@ verify_jwt = false
 verify_jwt = false
 [functions.generate-email]
 verify_jwt = false
+[functions.narrative-blueprint]
+verify_jwt = false
+[functions.check-session-details]
+verify_jwt = false
+[functions.verify-payment-session]
+verify_jwt = false

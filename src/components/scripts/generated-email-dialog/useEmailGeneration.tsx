@@ -169,7 +169,7 @@ Z pozdrowieniami,
         subject: generatedSubject,
         user_id: userId,
         type: 'email',
-        status: 'Draft',
+        status: 'Draft' as 'Draft' | 'Completed' | 'Reviewed', // Fix: Explicitly set as enum type
         target_audience_id: targetAudienceId
       };
       

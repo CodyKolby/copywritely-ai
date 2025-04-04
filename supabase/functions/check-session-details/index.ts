@@ -1,6 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { corsHeaders } from "../verify-payment-session/utils.ts";
+import { corsHeaders } from "./utils.ts";
 import { getStripeSession, getSubscriptionDetails } from "../verify-payment-session/stripe.ts";
 
 serve(async (req) => {
