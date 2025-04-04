@@ -114,8 +114,7 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
         console.log("Form submitted, target audience ID:", targetAudienceId);
         
         if (targetAudienceId) {
-          toast.success('Dane grupy docelowej zostały zapisane');
-          // Pass the ID and form data to the parent component
+          // Wywołaj funkcję onSubmit z ID grupy docelowej
           onSubmit(formDataWithName, targetAudienceId);
         } else {
           toast.warning('Brak ID grupy docelowej, używam tymczasowego ID');

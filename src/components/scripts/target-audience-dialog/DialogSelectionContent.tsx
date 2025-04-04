@@ -2,6 +2,7 @@
 import React from 'react';
 import { DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
 import ExistingAudiencesList from './ExistingAudiencesList';
 import PremiumAlert from './PremiumAlert';
 import { TargetAudience } from './types';
@@ -12,7 +13,7 @@ interface DialogSelectionContentProps {
   existingAudiences: TargetAudience[];
   selectedAudienceId: string | null;
   audienceChoice: string | null;
-  isProcessing: boolean; // Added isProcessing prop
+  isProcessing: boolean;
   handleExistingAudienceSelect: (audienceId: string) => void;
   handleChoiceSelection: (choice: string) => void;
   handleCreateNewAudience: () => void;
@@ -26,6 +27,7 @@ const DialogSelectionContent = ({
   existingAudiences,
   selectedAudienceId,
   audienceChoice,
+  isProcessing,
   handleExistingAudienceSelect,
   handleChoiceSelection,
   handleCreateNewAudience,
@@ -62,10 +64,17 @@ const DialogSelectionContent = ({
             </Button>
             <Button 
               onClick={handleContinue}
-              disabled={!audienceChoice}
+              disabled={!audienceChoice || isProcessing}
               className="bg-copywrite-teal hover:bg-copywrite-teal-dark text-white rounded-full px-6 font-medium"
             >
-              Dalej
+              {isProcessing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Przetwarzanie...
+                </>
+              ) : (
+                'Dalej'
+              )}
             </Button>
           </DialogFooter>
         </div>

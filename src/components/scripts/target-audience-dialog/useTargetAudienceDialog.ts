@@ -28,7 +28,9 @@ export const useTargetAudienceDialog = ({
     setAudienceChoice: dialogState.setAudienceChoice,
     setShowForm: dialogState.setShowForm,
     setShowGoalDialog: dialogState.setShowGoalDialog,
-    setIsProcessing: dialogState.setIsProcessing
+    setIsProcessing: dialogState.setIsProcessing,
+    audienceChoice: dialogState.audienceChoice,
+    selectedAudienceId: dialogState.selectedAudienceId
   });
   
   // Use the separate hook for dialog navigation

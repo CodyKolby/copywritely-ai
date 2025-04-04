@@ -14,6 +14,8 @@ export const useAudienceManagement = (
     setShowForm: (show: boolean) => void;
     setShowGoalDialog: (show: boolean) => void;
     setIsProcessing: (processing: boolean) => void;
+    audienceChoice: 'existing' | 'new' | null;
+    selectedAudienceId: string | null;
   }
 ) => {
   const {
@@ -23,7 +25,9 @@ export const useAudienceManagement = (
     setAudienceChoice,
     setShowForm,
     setShowGoalDialog,
-    setIsProcessing
+    setIsProcessing,
+    audienceChoice,
+    selectedAudienceId
   } = state;
 
   // Load existing target audiences for the user
@@ -62,11 +66,12 @@ export const useAudienceManagement = (
 
   // Handle continue button click in selection screen
   const handleContinue = () => {
-    const choice = state.setAudienceChoice as any;
-    if (choice === 'new') {
+    if (audienceChoice === 'new') {
       setShowForm(true);
-    } else if (choice === 'existing' && state.setSelectedAudienceId) {
+    } else if (audienceChoice === 'existing' && selectedAudienceId) {
       setShowGoalDialog(true);
+    } else {
+      toast.error('Wybierz grupę docelową lub utwórz nową');
     }
   };
 
@@ -78,20 +83,17 @@ export const useAudienceManagement = (
 
   // Handle form submission (create new target audience)
   const handleFormSubmit = async (data: FormValues, targetAudienceId?: string) => {
-    if (state.setIsProcessing) {
+    if (!targetAudienceId) {
+      toast.error('Nie udało się pobrać ID grupy docelowej');
       return;
     }
     
     try {
       setIsProcessing(true);
-      
-      if (targetAudienceId) {
-        setSelectedAudienceId(targetAudienceId);
-        setShowForm(false);
-        setShowGoalDialog(true);
-      } else {
-        toast.error('Nie udało się pobrać ID grupy docelowej');
-      }
+      setSelectedAudienceId(targetAudienceId);
+      setShowForm(false);
+      setShowGoalDialog(true);
+      toast.success('Grupa docelowa została utworzona');
     } catch (error) {
       console.error('Error handling form submission:', error);
       toast.error('Wystąpił błąd podczas przetwarzania formularza');
