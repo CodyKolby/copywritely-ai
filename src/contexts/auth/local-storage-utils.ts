@@ -50,6 +50,20 @@ export const storePremiumInLocalStorage = (isPremium: boolean) => {
 };
 
 /**
+ * Clear premium status from localStorage
+ */
+export const clearPremiumFromLocalStorage = () => {
+  try {
+    localStorage.removeItem('premium_backup');
+    localStorage.removeItem('premium_timestamp');
+    sessionStorage.removeItem('premium_session');
+    console.log('[LOCAL-STORAGE] Premium status cleared from storage');
+  } catch (e) {
+    console.error('[LOCAL-STORAGE] Error clearing premium status:', e);
+  }
+};
+
+/**
  * Update the premium status in localStorage and create a session flag
  */
 export const updateAllPremiumStorages = (isPremium: boolean) => {

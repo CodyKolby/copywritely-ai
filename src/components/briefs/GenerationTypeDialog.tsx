@@ -1,38 +1,31 @@
+
+import React from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter
-} from '@/components/ui/dialog';
-import { Form, FormField, FormItem, FormControl, FormDescription } from '@/components/ui/form';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { ExclamationTriangleIcon } from '@radix-ui/react-icons';
+import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { Loader2 } from 'lucide-react';
 
-export const formSchema = z.object({
-  generationType: z.enum(['ai', 'guided']),
-  guidanceText: z.string().optional(),
-});
-
-export type FormValues = z.infer<typeof formSchema>;
+export type GenerationType = 'ai' | 'guided';
 
 interface GenerationTypeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (values: FormValues) => void;
+  onSubmit: (values: { generationType: GenerationType; guidanceText?: string }) => void;
   isPremium: boolean;
 }
 
+const formSchema = z.object({
+  generationType: z.enum(['ai', 'guided']),
+  guidanceText: z.string().optional(),
+});
+
 const GenerationTypeDialog = ({ open, onOpenChange, onSubmit, isPremium }: GenerationTypeDialogProps) => {
-  const form = useForm<FormValues>({
+  const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       generationType: 'ai',
@@ -40,116 +33,93 @@ const GenerationTypeDialog = ({ open, onOpenChange, onSubmit, isPremium }: Gener
     },
   });
 
-  const watchGenerationType = form.watch('generationType');
+  const handleSubmit = (values: z.infer<typeof formSchema>) => {
+    if (!isPremium) {
+      onOpenChange(false);
+      return;
+    }
+    
+    onSubmit(values);
+  };
+
+  const generationType = form.watch('generationType');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>How would you like to generate your brief?</DialogTitle>
+          <DialogTitle className="text-xl font-semibold">Wybierz metodę tworzenia briefu</DialogTitle>
           <DialogDescription>
-            Choose between a fully AI-generated brief or provide guidance on what you'd like to include.
+            Wybierz sposób, w jaki chcesz stworzyć swój brief.
           </DialogDescription>
         </DialogHeader>
-        
-        {!isPremium ? (
-          <div className="py-4">
-            <Alert variant="premium" className="mb-6">
-              <ExclamationTriangleIcon className="h-5 w-5 text-white" />
-              <AlertTitle className="text-white text-xl font-semibold">Premium feature</AlertTitle>
-              <AlertDescription className="text-white">
-                Brief generation is only available for premium users. Upgrade your account to access this feature.
-              </AlertDescription>
-            </Alert>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                className="rounded-full border-2 font-medium"
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={() => window.location.href = '/pricing'} 
-                className="bg-copywrite-teal hover:bg-copywrite-teal-dark transition-colors rounded-full font-medium"
-              >
-                View Pricing
-              </Button>
-            </DialogFooter>
-          </div>
-        ) : (
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="generationType"
-                render={({ field }) => (
-                  <FormItem className="space-y-1">
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+            <FormField
+              control={form.control}
+              name="generationType"
+              render={({ field }) => (
+                <FormItem className="space-y-3">
+                  <FormControl>
                     <RadioGroup
                       onValueChange={field.onChange}
                       defaultValue={field.value}
-                      className="gap-6"
+                      className="space-y-2"
                     >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="ai" id="ai" />
-                        <Label htmlFor="ai" className="font-medium">Fully AI-generated</Label>
-                      </div>
-                      <FormDescription className="ml-6">
-                        AI will generate a complete brief based on the selected template.
-                      </FormDescription>
-                      
-                      <div className="flex items-center space-x-2 mt-4">
-                        <RadioGroupItem value="guided" id="guided" />
-                        <Label htmlFor="guided" className="font-medium">User-guided generation</Label>
-                      </div>
-                      <FormDescription className="ml-6">
-                        Provide specific details about your target audience, product, or campaign goals.
-                      </FormDescription>
+                      <FormItem className="flex items-center space-x-3 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value="ai" />
+                        </FormControl>
+                        <FormLabel className="font-normal cursor-pointer">
+                          Generacja AI - automatyczne stworzenie briefu
+                        </FormLabel>
+                      </FormItem>
+                      <FormItem className="flex items-center space-x-3 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value="guided" />
+                        </FormControl>
+                        <FormLabel className="font-normal cursor-pointer">
+                          Tryb asystowany - z Twoimi wskazówkami
+                        </FormLabel>
+                      </FormItem>
                     </RadioGroup>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {generationType === 'guided' && (
+              <FormField
+                control={form.control}
+                name="guidanceText"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Twoje wytyczne do briefu</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Opisz swoje oczekiwania, np. firma, branża, produkt, charakterystyka, grupa docelowa..."
+                        className="min-h-[80px] resize-none"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
-              
-              {watchGenerationType === 'guided' && (
-                <FormField
-                  control={form.control}
-                  name="guidanceText"
-                  render={({ field }) => (
-                    <FormItem>
-                      <Label htmlFor="guidanceText">Describe what you need</Label>
-                      <FormControl>
-                        <Textarea
-                          id="guidanceText"
-                          placeholder="Example: I need a brief for a fitness business targeting women over 30..."
-                          className="min-h-[100px]"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Be specific about your audience, product details, or any particular messages you want to include.
-                      </FormDescription>
-                    </FormItem>
-                  )}
-                />
-              )}
-              
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => onOpenChange(false)}
-                  className="rounded-full border-2 font-medium"
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" className="bg-copywrite-teal hover:bg-copywrite-teal-dark transition-colors rounded-full font-medium">
-                  Generate Brief
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        )}
+            )}
+
+            <DialogFooter>
+              <Button
+                type="submit"
+                className="bg-copywrite-teal hover:bg-copywrite-teal-dark text-white"
+              >
+                Generuj brief
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

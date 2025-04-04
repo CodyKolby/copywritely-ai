@@ -14,6 +14,9 @@ import BriefGeneratorHeader from '@/components/briefs/BriefGeneratorHeader';
 import PremiumFeatureAlert from '@/components/briefs/PremiumFeatureAlert';
 import { useBriefGenerator } from '@/components/briefs/useBriefGenerator';
 
+// Import templates data
+import { briefTemplates } from '@/data/briefTemplates';
+
 const BriefGenerator = () => {
   const { isPremium, user, checkPremiumStatus } = useAuth();
   const [localPremiumStatus, setLocalPremiumStatus] = useState<boolean | null>(null);
@@ -143,12 +146,17 @@ const BriefGenerator = () => {
         {shouldShowPremiumAlert && !generatedBrief && <PremiumFeatureAlert />}
 
         {!generatedBrief ? (
-          <BriefTemplateGrid onSelectTemplate={handleTemplateSelect} />
+          <BriefTemplateGrid 
+            templates={briefTemplates} 
+            onSelectTemplate={handleTemplateSelect} 
+          />
         ) : (
           <GeneratedBriefDisplay 
-            brief={generatedBrief} 
-            onReset={resetBrief}
+            isLoading={isLoading}
+            generatedBrief={generatedBrief} 
+            onResetBrief={resetBrief}
             projectSaved={projectSaved}
+            projectId={projectId}
             onViewProject={handleViewProject}
           />
         )}
@@ -157,13 +165,13 @@ const BriefGenerator = () => {
           open={dialogOpen} 
           onOpenChange={setDialogOpen}
           onSubmit={handleGenerationTypeSubmit}
+          isPremium={effectivePremiumStatus}
         />
 
         <AdObjectiveDialog
           open={adObjectiveDialogOpen}
           onOpenChange={setAdObjectiveDialogOpen}
           onSubmit={handleAdObjectiveSubmit}
-          isLoading={isLoading}
         />
       </div>
     </div>
