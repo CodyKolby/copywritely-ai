@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { BadgePlus, SwitchIcon } from 'lucide-react';
+import { BadgePlus, ArrowLeftRight } from 'lucide-react';
 
 interface SubjectLineToggleProps {
   currentSubject: string;
@@ -32,7 +32,7 @@ const SubjectLineToggle = ({
             onClick={onToggle}
             className="text-xs border-amber-300 hover:bg-amber-100 text-amber-700"
           >
-            <SwitchIcon className="w-3 h-3 mr-1" />
+            <ArrowLeftRight className="w-3 h-3 mr-1" />
             Zamień
           </Button>
         </div>

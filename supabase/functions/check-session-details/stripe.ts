@@ -1,86 +1,80 @@
 
-// Function to get stripe session by ID
-export async function getStripeSession(sessionId: string, stripeSecretKey: string) {
+import Stripe from "stripe";
+import { corsHeaders } from './utils';
+
+// Initialize Stripe with the API key from environment variables
+const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
+  apiVersion: '2022-11-15',
+});
+
+export async function getStripeSession(sessionId: string) {
+  if (!sessionId) {
+    return { error: { message: 'No session ID provided' } };
+  }
+
   try {
-    const response = await fetch(`https://api.stripe.com/v1/checkout/sessions/${sessionId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${stripeSecretKey}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Stripe API error: ${errorText}`);
-    }
-    
-    return await response.json();
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    return { data: session };
   } catch (error) {
-    console.error("Error in getStripeSession:", error);
-    throw error;
+    console.error('Error retrieving Stripe session:', error);
+    return { error };
   }
 }
 
-// Function to get a subscription details from Stripe
-export async function getStripeSubscription(subscriptionId: string, stripeSecretKey: string) {
+export async function getStripeSubscription(subscriptionId: string) {
+  if (!subscriptionId) {
+    return { error: { message: 'No subscription ID provided' } };
+  }
+
   try {
-    const response = await fetch(`https://api.stripe.com/v1/subscriptions/${subscriptionId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${stripeSecretKey}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Stripe API error: ${errorText}`);
-    }
-    
-    return await response.json();
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    return { data: subscription };
   } catch (error) {
-    console.error("Error in getStripeSubscription:", error);
-    throw error;
+    console.error('Error retrieving Stripe subscription:', error);
+    return { error };
   }
 }
 
-// Get subscription details and format them for our application
-export async function getSubscriptionDetails(session: any, stripeSecretKey: string) {
-  // If the session doesn't have a subscription field, return a default error response
-  if (!session.subscription) {
-    return {
-      subscriptionId: null,
-      subscriptionStatus: null,
-      subscriptionExpiry: null,
-      error: 'No subscription found in session'
-    };
+export async function getSubscriptionDetails(subscriptionId: string) {
+  const { data, error } = await getStripeSubscription(subscriptionId);
+  
+  if (error || !data) {
+    return { error };
   }
   
   try {
-    // Get the subscription details from Stripe
-    const subscription = await getStripeSubscription(
-      session.subscription,
-      stripeSecretKey
-    );
+    const subscription = data;
+    const currentPeriodEnd = new Date(subscription.current_period_end * 1000).toISOString();
+    const cancelAtPeriodEnd = subscription.cancel_at_period_end;
+    const status = subscription.status;
+    const trialEnd = subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null;
     
-    // Format the subscription expiry date
-    const subscriptionExpiry = subscription.current_period_end 
-      ? new Date(subscription.current_period_end * 1000).toISOString()
-      : null;
+    // Calculate days until renewal
+    const now = new Date();
+    const endDate = new Date(subscription.current_period_end * 1000);
+    const daysUntilRenewal = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    
+    // Determine plan type (monthly/annual)
+    let plan = 'Pro';
+    if (subscription.items.data[0]?.price.recurring?.interval === 'year') {
+      plan = 'Pro (roczny)';
+    } else if (subscription.items.data[0]?.price.recurring?.interval === 'month') {
+      plan = 'Pro (miesięczny)';
+    }
     
     return {
-      subscriptionId: subscription.id,
-      subscriptionStatus: subscription.status,
-      subscriptionExpiry
+      data: {
+        subscriptionId: subscription.id,
+        status,
+        currentPeriodEnd,
+        daysUntilRenewal,
+        cancelAtPeriodEnd,
+        trialEnd,
+        plan
+      }
     };
   } catch (error) {
-    console.error("Error getting subscription details:", error);
-    return {
-      subscriptionId: session.subscription,
-      subscriptionStatus: 'error',
-      subscriptionExpiry: null,
-      error: 'Failed to fetch subscription details'
-    };
+    console.error('Error processing subscription details:', error);
+    return { error };
   }
 }
