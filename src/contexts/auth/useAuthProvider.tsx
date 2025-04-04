@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,7 +17,7 @@ import {
   checkPremiumStatusFallback 
 } from './premium-verification';
 import { 
-  updatePremiumStatus 
+  updateProfilePremiumStatus 
 } from './premium-database';
 import { 
   validateLocalStoragePremium, 
@@ -30,7 +29,6 @@ import { useTestUser } from './use-test-user';
 import { toast } from 'sonner';
 
 export const useAuthProvider = () => {
-  // State
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -39,7 +37,6 @@ export const useAuthProvider = () => {
   const [authInitialized, setAuthInitialized] = useState(false);
   const [premiumChecked, setPremiumChecked] = useState(false);
   
-  // Test user state
   const { 
     testUser, 
     testSession, 
@@ -48,7 +45,6 @@ export const useAuthProvider = () => {
     setTestUserState 
   } = useTestUser();
 
-  // Only check localStorage once on initial mount to prevent flicker
   useEffect(() => {
     if (!premiumChecked) {
       const localPremium = validateLocalStoragePremium();
@@ -60,17 +56,14 @@ export const useAuthProvider = () => {
     }
   }, [premiumChecked]);
 
-  // Process authenticated user - fetch profile, check premium status
   const handleUserAuthenticated = useCallback(async (userId: string) => {
     try {
       console.log('[AUTH] Handling authenticated user:', userId);
       
-      // First, attempt to fetch the user profile
       const userProfile = await fetchProfile(userId);
       console.log('[AUTH] User profile after fetch:', userProfile);
       setProfile(userProfile);
       
-      // Create a profile if none exists
       if (!userProfile) {
         console.warn('[AUTH] No profile found or created for user:', userId);
         const retryProfile = await createProfile(userId);
@@ -80,18 +73,16 @@ export const useAuthProvider = () => {
         }
       }
       
-      // CRITICAL: Always check premium status with server first
       const serverPremiumStatus = await checkPremiumStatus(userId);
       console.log('[AUTH] Server premium status:', serverPremiumStatus);
       
       if (serverPremiumStatus) {
         console.log('[AUTH] Setting premium status from server verification');
         setIsPremium(true);
-        updateAllPremiumStorages(true); // Update localStorage as backup only
+        updateAllPremiumStorages(true);
         return;
       }
       
-      // If server check shows not premium, fallback to direct database check
       const { data: latestProfile, error: profileError } = await supabase
         .from('profiles')
         .select('is_premium, subscription_id, subscription_status, subscription_expiry')
@@ -116,7 +107,7 @@ export const useAuthProvider = () => {
         if (latestProfile?.is_premium) {
           console.log('[AUTH] User has premium status according to database');
           setIsPremium(true);
-          updateAllPremiumStorages(true); // Update localStorage as backup only
+          updateAllPremiumStorages(true);
           return;
         } else {
           console.log('[AUTH] User does not have premium status according to database');
@@ -127,15 +118,13 @@ export const useAuthProvider = () => {
     } catch (error) {
       console.error('[AUTH] Error in handleUserAuthenticated:', error);
       
-      // Last resort: check localStorage if server checks fail
       const localPremium = checkAllPremiumStorages();
       if (localPremium) {
         console.log('[AUTH] Using backup premium status from localStorage after server error');
         setIsPremium(true);
         
-        // Try to update the database based on localStorage backup
         try {
-          await updatePremiumStatus(userId, true);
+          await updateProfilePremiumStatus(userId, true);
         } catch (e) {
           console.error('[AUTH] Error updating database from localStorage backup:', e);
         }
@@ -143,12 +132,10 @@ export const useAuthProvider = () => {
     }
   }, []);
 
-  // Function to manually check premium status
   const checkUserPremiumStatus = useCallback(async (userId: string, showToast = false) => {
     try {
       console.log('[AUTH] Manual premium status check for user:', userId);
       
-      // CRITICAL: Always prioritize server check first
       const serverPremiumStatus = await checkPremiumStatus(userId, false);
       console.log('[AUTH] Server premium status check result:', serverPremiumStatus);
       
@@ -165,7 +152,6 @@ export const useAuthProvider = () => {
         return true;
       }
       
-      // If server check fails, try direct database check
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('is_premium, subscription_id, subscription_status, subscription_expiry')
@@ -205,12 +191,10 @@ export const useAuthProvider = () => {
         }
       }
       
-      // Additional fallback checks are in a separate function now
       return fallbackPremiumChecks(userId, showToast, setIsPremium);
     } catch (error) {
       console.error('[AUTH] Error checking premium status:', error);
       
-      // Last attempt with fallback method
       const fallbackResult = await checkPremiumStatusFallback(userId, false);
       setIsPremium(fallbackResult);
       
@@ -222,13 +206,11 @@ export const useAuthProvider = () => {
     }
   }, []);
 
-  // Function to refresh session data and premium status
   const refreshSession = useCallback(async () => {
     try {
       console.log('[AUTH] Manually refreshing session');
       
       if (user?.id) {
-        // First priority: server check for premium status
         const serverPremiumStatus = await checkPremiumStatus(user.id, false);
         
         if (serverPremiumStatus) {
@@ -240,7 +222,6 @@ export const useAuthProvider = () => {
         }
       }
       
-      // Refresh the Supabase session
       const { data, error } = await supabase.auth.refreshSession();
       
       if (error) {
@@ -254,8 +235,13 @@ export const useAuthProvider = () => {
         setUser(data.session.user);
         
         if (data.session.user) {
-          // Recheck profile and premium status
-          await handleUserAuthenticated(data.session.user.id);
+          setTimeout(() => {
+            handleUserAuthenticated(data.session.user.id);
+          }, 0);
+        } else {
+          setIsPremium(false);
+          setProfile(null);
+          clearPremiumFromLocalStorage();
         }
         
         return true;
@@ -268,16 +254,13 @@ export const useAuthProvider = () => {
     }
   }, [user, handleUserAuthenticated]);
 
-  // Set up auth state change listener and initialize
   useEffect(() => {
     console.log("[AUTH] Setting up auth state listener");
     
-    // Set up the auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
       console.log("[AUTH] Auth state changed", event, !!newSession?.user);
       
       if (!testUser) {
-        // Update basic session state immediately
         setSession(newSession);
         setUser(newSession?.user ?? null);
         
@@ -286,12 +269,10 @@ export const useAuthProvider = () => {
             localStorage.setItem('userEmail', newSession.user.email);
           }
           
-          // Process the authenticated user (fetch profile, check premium, etc)
           setTimeout(() => {
             handleUserAuthenticated(newSession.user.id);
           }, 0);
         } else {
-          // User logged out
           setIsPremium(false);
           setProfile(null);
           clearPremiumFromLocalStorage();
@@ -299,7 +280,6 @@ export const useAuthProvider = () => {
       }
     });
 
-    // Check for existing session
     const initializeAuth = async () => {
       try {
         console.log('[AUTH] Initializing auth state');
@@ -314,7 +294,6 @@ export const useAuthProvider = () => {
           return;
         }
 
-        // Check if user is already logged in
         const { data: { session: currentSession }, error } = await supabase.auth.getSession();
         
         if (error) {
@@ -328,11 +307,9 @@ export const useAuthProvider = () => {
             localStorage.setItem('userEmail', currentSession.user.email);
           }
           
-          // Update basic session state
           setSession(currentSession);
           setUser(currentSession.user);
           
-          // Process the authenticated user (fetch profile, check premium, etc)
           await handleUserAuthenticated(currentSession.user.id);
         } else {
           console.log('[AUTH] No active session found');
@@ -358,7 +335,6 @@ export const useAuthProvider = () => {
     };
   }, [testUser, testSession, testIsPremium, testProfile, handleUserAuthenticated]);
 
-  // Clean up on unmount
   useEffect(() => {
     return () => {
       console.log('[AUTH] Cleaning up AuthProvider');
@@ -376,7 +352,6 @@ export const useAuthProvider = () => {
     signInWithEmail,
     signUpWithEmail,
     signOut: () => {
-      // Clear localStorage premium backup on logout
       clearPremiumFromLocalStorage();
       return signOut();
     },
@@ -386,15 +361,12 @@ export const useAuthProvider = () => {
   };
 };
 
-// Helper functions to reduce complexity
-
 async function fallbackPremiumChecks(
   userId: string, 
   showToast: boolean, 
   setIsPremium: (isPremium: boolean) => void
 ): Promise<boolean> {
   try {
-    // Check payment logs as final resort
     const { data: paymentLogs, error: logsError } = await supabase
       .from('payment_logs')
       .select('*')
@@ -405,12 +377,10 @@ async function fallbackPremiumChecks(
     if (!logsError && paymentLogs && paymentLogs.length > 0) {
       console.log('[AUTH] Found payment logs, setting premium status');
       
-      // Update database
-      await updatePremiumStatus(userId, true);
+      await updateProfilePremiumStatus(userId, true);
         
       setIsPremium(true);
       
-      // Update storage as backup only
       updateAllPremiumStorages(true);
       
       if (showToast) {
@@ -425,15 +395,13 @@ async function fallbackPremiumChecks(
     console.error('[AUTH] Error checking payment logs:', logsError);
   }
   
-  // Last resort: check localStorage
   const localPremium = checkAllPremiumStorages();
   if (localPremium) {
     console.log('[AUTH] Using backup premium status from localStorage for UI');
     setIsPremium(true);
     
-    // Try to update database from localStorage
     try {
-      await updatePremiumStatus(userId, true);
+      await updateProfilePremiumStatus(userId, true);
     } catch (e) {
       console.error('[AUTH] Error updating database from localStorage backup:', e);
     }
@@ -447,7 +415,6 @@ async function fallbackPremiumChecks(
     return true;
   }
   
-  // All checks failed - user does not have premium
   console.log('[AUTH] All premium checks failed - user is not premium');
   setIsPremium(false);
   updateAllPremiumStorages(false);
@@ -466,7 +433,6 @@ async function checkDatabasePremiumStatus(
   setIsPremium: (isPremium: boolean) => void
 ): Promise<boolean> {
   try {
-    // Check database directly
     const { data: currentProfile, error: currentProfileError } = await supabase
       .from('profiles')
       .select('is_premium, subscription_id, subscription_status, subscription_expiry')
@@ -481,7 +447,6 @@ async function checkDatabasePremiumStatus(
       updateAllPremiumStorages(true);
       return true;
     } else {
-      // Not premium in database, check payment logs
       try {
         const { data: paymentLogs } = await supabase
           .from('payment_logs')
@@ -492,12 +457,11 @@ async function checkDatabasePremiumStatus(
             
         if (paymentLogs && paymentLogs.length > 0) {
           console.log('[AUTH] Found payment logs, updating premium status');
-          await updatePremiumStatus(userId, true);
+          await updateProfilePremiumStatus(userId, true);
           setIsPremium(true);
           updateAllPremiumStorages(true);
           return true;
         } else {
-          // No premium indicators found
           setIsPremium(false);
           updateAllPremiumStorages(false);
           return false;
