@@ -36,7 +36,11 @@ const AdObjectiveDialog = ({ open, onOpenChange, onSubmit }: AdObjectiveDialogPr
   });
 
   const handleSubmit = (values: z.infer<typeof formSchema>) => {
-    onSubmit(values);
+    // Ensure objective is always a string before submitting
+    const formattedValues = {
+      objective: values.objective as string
+    };
+    onSubmit(formattedValues);
   };
 
   return (

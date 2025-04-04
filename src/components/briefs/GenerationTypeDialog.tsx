@@ -39,7 +39,12 @@ const GenerationTypeDialog = ({ open, onOpenChange, onSubmit, isPremium }: Gener
       return;
     }
     
-    onSubmit(values);
+    // Ensure generationType is always a valid enum value before submitting
+    const formattedValues = {
+      generationType: values.generationType as GenerationType,
+      guidanceText: values.guidanceText
+    };
+    onSubmit(formattedValues);
   };
 
   const generationType = form.watch('generationType');
