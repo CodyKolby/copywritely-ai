@@ -2,7 +2,8 @@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+// Using environment variable from Vite instead of Deno
+const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY || '';
 
 // Typy pól, które mogą być kompresowane
 export type CompressibleField = 
@@ -44,50 +45,37 @@ export const compressField = async (field: CompressibleField, content: string): 
     // Pobierz odpowiedni prompt dla pola
     const prompt = compressionPrompts[field];
     
-    // Wywołaj API OpenAI
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { 
-            role: 'system', 
-            content: 'Jesteś agentem kompresującym dane. Zwracaj tylko skompresowany tekst, bez dodatkowych komentarzy czy objaśnień. Nigdy nie używaj zwrotów takich jak "Skompresowana treść:", "Oto skrócona wersja:" itp. Zwróć po prostu skompresowany tekst.'
-          },
-          { 
-            role: 'user', 
-            content: `${prompt}\n\nTreść do skompresowania:\n${textContent}`
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 500
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
+    // Wywołaj funkcję edge OpenAI używając supabase
+    try {
+      const { data, error } = await supabase.functions.invoke('compress-text', {
+        body: {
+          text: textContent,
+          prompt: prompt,
+          field: field
+        }
+      });
+      
+      if (error) {
+        throw new Error(`Błąd kompresji: ${error.message}`);
+      }
+      
+      const compressedContent = data.compressedText;
+      console.log(`Kompresja pola ${field} zakończona pomyślnie`);
+      
+      // Dla pól tablicowych, przekształć spowrotem na tablicę
+      if (Array.isArray(content)) {
+        // Zakładamy, że kompresowany tekst będzie zawierał elementy oddzielone nową linią lub przecinkami
+        return compressedContent
+          .split(/[\n,]+/)
+          .map(item => item.trim())
+          .filter(item => item.length > 0);
+      }
+      
+      return compressedContent;
+    } catch (error) {
+      console.error(`Błąd podczas wywołania funkcji kompresji: ${error}`);
+      return content; // W razie błędu zwracamy oryginalną treść
     }
-    
-    const data = await response.json();
-    const compressedContent = data.choices[0].message.content;
-    
-    console.log(`Kompresja pola ${field} zakończona pomyślnie`);
-    
-    // Dla pól tablicowych, przekształć spowrotem na tablicę
-    if (Array.isArray(content)) {
-      // Zakładamy, że kompresowany tekst będzie zawierał elementy oddzielone nową linią lub przecinkami
-      return compressedContent
-        .split(/[\n,]+/)
-        .map(item => item.trim())
-        .filter(item => item.length > 0);
-    }
-    
-    return compressedContent;
   } catch (error) {
     console.error(`Błąd kompresji pola ${field}:`, error);
     // W razie błędu zwracamy oryginalną treść
