@@ -28,7 +28,7 @@ const GenerationTypeDialog = ({ open, onOpenChange, onSubmit, isPremium }: Gener
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      generationType: 'ai',
+      generationType: 'ai' as const, // Use 'as const' to ensure it's the correct type
       guidanceText: '',
     },
   });

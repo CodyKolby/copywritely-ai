@@ -31,7 +31,7 @@ const AdObjectiveDialog = ({ open, onOpenChange, onSubmit }: AdObjectiveDialogPr
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      objective: '',
+      objective: 'awareness', // Set a default value instead of empty string
     },
   });
 
