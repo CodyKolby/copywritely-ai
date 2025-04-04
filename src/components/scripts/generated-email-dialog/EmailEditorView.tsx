@@ -33,12 +33,14 @@ const EmailEditorView = ({
       <EmailToolbar />
       
       {/* Content Area */}
-      <Textarea 
-        value={emailContent} 
-        onChange={(e) => onEmailContentChange(e.target.value)}
-        className="min-h-[300px] border-none p-4 focus-visible:ring-0 resize-none rounded-none"
-        placeholder="Wpisz treść emaila..."
-      />
+      <div className="max-h-[400px] overflow-y-auto">
+        <Textarea 
+          value={emailContent} 
+          onChange={(e) => onEmailContentChange(e.target.value)}
+          className="min-h-[300px] border-none p-4 focus-visible:ring-0 resize-none rounded-none w-full"
+          placeholder="Wpisz treść emaila..."
+        />
+      </div>
     </div>
   );
 };

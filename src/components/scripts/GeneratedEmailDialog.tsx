@@ -51,7 +51,7 @@ const GeneratedEmailDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-auto p-0 rounded-xl">
+      <DialogContent className="sm:max-w-[800px] p-0 rounded-xl overflow-hidden">
         <DialogHeader isLoading={isLoading} />
 
         {isLoading ? (
@@ -59,7 +59,7 @@ const GeneratedEmailDialog = ({
         ) : error ? (
           <ErrorState error={error} onRetry={handleRetry} />
         ) : (
-          <div className="p-6">
+          <div className="p-6 max-h-[calc(90vh-100px)] overflow-y-auto">
             <EmailDisplay 
               subject={generatedSubject} 
               emailContent={generatedEmail} 
