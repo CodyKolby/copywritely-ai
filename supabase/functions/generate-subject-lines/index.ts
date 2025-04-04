@@ -102,8 +102,8 @@ Eksperymentowanie z formą i stylem: Przykłady pokazują różne style i formy 
 Punkty emocjonalne:
 ${narrativeBlueprint.punktyemocjonalne}
 
-Styl maila:
-${narrativeBlueprint.stylmaila}
+/*Styl maila:
+${narrativeBlueprint.stylmaila}*/
 
 Oś narracyjna:
 ${narrativeBlueprint.osnarracyjna}
