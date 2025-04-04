@@ -6,7 +6,8 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { ExclamationTriangleIcon } from '@radix-ui/react-icons';
 import { useAuth } from '@/contexts/auth/AuthContext';
 import { checkAllPremiumStorages, updateAllPremiumStorages } from '@/contexts/auth/local-storage-utils';
-import { forcePremiumStatusUpdate } from '@/contexts/auth/premium-utils';
+import { forcePremiumStatusUpdate, checkPremiumStatus } from '@/contexts/auth/premium-utils';
+import { supabase } from '@/integrations/supabase/client';
 
 // Import components
 import ScriptTemplateGrid from '@/components/scripts/ScriptTemplateGrid';
@@ -23,11 +24,21 @@ const ScriptGenerator = () => {
   const [localPremiumStatus, setLocalPremiumStatus] = useState<boolean | null>(null);
   const [isCheckingPremium, setIsCheckingPremium] = useState(false);
   const premiumCheckedRef = useRef<boolean>(false);
+  const isMountedRef = useRef<boolean>(true);
 
   // On mount, scroll to top and perform premium status check
   useEffect(() => {
     window.scrollTo(0, 0);
     
+    isMountedRef.current = true;
+    
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+  
+  // Verify premium status when component mounts or user changes
+  useEffect(() => {
     // Check storage for premium status immediately
     const storagePremium = checkAllPremiumStorages();
     if (storagePremium) {
@@ -40,17 +51,45 @@ const ScriptGenerator = () => {
       setIsCheckingPremium(true);
       premiumCheckedRef.current = true;
       
-      checkPremiumStatus(user.id, false)
-        .then(status => {
-          console.log('[SCRIPT-GENERATOR] Premium status after check:', status);
-          setLocalPremiumStatus(status);
-          if (status) {
-            updateAllPremiumStorages(true);
+      // Extra verification for premium status - first check profiles table directly
+      const verifyWithDatabase = async () => {
+        try {
+          const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('is_premium, subscription_status, subscription_expiry')
+            .eq('id', user.id)
+            .single();
+            
+          if (!error && profile?.is_premium) {
+            console.log('[SCRIPT-GENERATOR] Found premium status in database');
+            if (isMountedRef.current) {
+              setLocalPremiumStatus(true);
+              updateAllPremiumStorages(true);
+            }
+            setIsCheckingPremium(false);
+            return;
           }
-        })
-        .finally(() => {
-          setIsCheckingPremium(false);
-        });
+          
+          // If database check didn't confirm premium, use the check function
+          const status = await checkPremiumStatus(user.id, false);
+          console.log('[SCRIPT-GENERATOR] Premium status after check:', status);
+          
+          if (isMountedRef.current) {
+            setLocalPremiumStatus(status);
+            if (status) {
+              updateAllPremiumStorages(true);
+            }
+            setIsCheckingPremium(false);
+          }
+        } catch (e) {
+          console.error('[SCRIPT-GENERATOR] Error checking premium status:', e);
+          if (isMountedRef.current) {
+            setIsCheckingPremium(false);
+          }
+        }
+      };
+      
+      verifyWithDatabase();
     }
   }, [user, checkPremiumStatus]);
 
@@ -72,19 +111,35 @@ const ScriptGenerator = () => {
       return true;
     }
     
-    // Then check with server if needed
+    // Then check with database directly for fastest response
     setIsCheckingPremium(true);
     try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('is_premium')
+        .eq('id', user.id)
+        .single();
+        
+      if (!error && profile?.is_premium) {
+        console.log('[SCRIPT-GENERATOR] Premium confirmed from database');
+        updateAllPremiumStorages(true);
+        setIsCheckingPremium(false);
+        return true;
+      }
+      
+      // If not found in database, check with server function
       const serverPremium = await checkPremiumStatus(user.id, false);
       if (serverPremium) {
         updateAllPremiumStorages(true);
       }
+      setIsCheckingPremium(false);
       return serverPremium;
     } catch (e) {
       console.error('[SCRIPT-GENERATOR] Error checking premium:', e);
-      return isPremium || localPremiumStatus || false;
-    } finally {
       setIsCheckingPremium(false);
+      
+      // Fallback to context state if available
+      return isPremium || localPremiumStatus || false;
     }
   };
 
@@ -104,7 +159,9 @@ const ScriptGenerator = () => {
     setSelectedTemplate(templateId);
     
     // Thoroughly check premium status before proceeding
+    setIsCheckingPremium(true);
     const hasPremium = await validatePremiumStatus();
+    setIsCheckingPremium(false);
     
     if (!hasPremium) {
       toast.error('Ta funkcja wymaga konta Premium', {
@@ -114,16 +171,23 @@ const ScriptGenerator = () => {
       
       // One final verification attempt
       if (user?.id) {
+        setIsCheckingPremium(true);
+        
         // Force update premium status
         const forceResult = await forcePremiumStatusUpdate(user.id);
+        setIsCheckingPremium(false);
+        
         if (forceResult) {
           setLocalPremiumStatus(true);
           setTargetAudienceDialogOpen(true);
           return;
         }
         
-        // If force update fails, try normal check
+        // If force update fails, try normal check one more time
+        setIsCheckingPremium(true);
         const finalCheck = await checkPremiumStatus(user.id, false);
+        setIsCheckingPremium(false);
+        
         if (finalCheck) {
           setLocalPremiumStatus(true);
           setTargetAudienceDialogOpen(true);
@@ -187,13 +251,15 @@ const ScriptGenerator = () => {
           onSelectTemplate={handleTemplateSelect}
         />
 
-        <TargetAudienceDialog
-          open={targetAudienceDialogOpen}
-          onOpenChange={handleDialogOpenChange}
-          templateId={currentTemplateId}
-          userId={user?.id || ''}
-          isPremium={isPremium || !!localPremiumStatus}
-        />
+        {!isCheckingPremium && (
+          <TargetAudienceDialog
+            open={targetAudienceDialogOpen}
+            onOpenChange={handleDialogOpenChange}
+            templateId={currentTemplateId}
+            userId={user?.id || ''}
+            isPremium={isPremium || !!localPremiumStatus}
+          />
+        )}
       </div>
     </div>
   );

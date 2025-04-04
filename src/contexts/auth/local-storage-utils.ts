@@ -18,8 +18,7 @@ export const validateLocalStoragePremium = (): boolean => {
     
     if (isNaN(timestamp.getTime()) || (now.getTime() - timestamp.getTime() > thirtyDaysMs)) {
       // Clear invalid data
-      localStorage.removeItem('premium_backup');
-      localStorage.removeItem('premium_timestamp');
+      clearPremiumFromLocalStorage();
       return false;
     }
     
@@ -40,9 +39,7 @@ export const storePremiumInLocalStorage = (isPremium: boolean) => {
       localStorage.setItem('premium_timestamp', new Date().toISOString());
       console.log('[LOCAL-STORAGE] Premium status stored in localStorage');
     } else {
-      localStorage.removeItem('premium_backup');
-      localStorage.removeItem('premium_timestamp');
-      console.log('[LOCAL-STORAGE] Premium status removed from localStorage');
+      clearPremiumFromLocalStorage();
     }
   } catch (e) {
     console.error('[LOCAL-STORAGE] Error storing premium status:', e);

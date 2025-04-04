@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import { LogOut, User as UserIcon, FolderOpen, CreditCard, Shield } from 'lucide-react';
 import { Profile } from '@/contexts/auth/types';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from '@/components/ui/button';
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,7 +15,7 @@ import {
   DropdownMenuLabel
 } from "@/components/ui/dropdown-menu";
 import SubscriptionModal from '../subscription/SubscriptionModal';
-import { checkAllPremiumStorages } from '@/contexts/auth/local-storage-utils';
+import { checkAllPremiumStorages, clearPremiumFromLocalStorage } from '@/contexts/auth/local-storage-utils';
 
 interface UserMenuProps {
   user: User;
@@ -52,9 +52,7 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
 
   const handleSignOut = () => {
     // Clear localStorage premium backup on logout
-    localStorage.removeItem('premium_backup');
-    localStorage.removeItem('premium_timestamp');
-    sessionStorage.removeItem('premium_session');
+    clearPremiumFromLocalStorage();
     signOut();
   };
 

@@ -1,19 +1,15 @@
 
+import { updateAllPremiumStorages } from '@/contexts/auth/local-storage-utils';
+
 /**
  * Update localStorage premium backup
  */
 export const updateLocalStoragePremium = (isPremium: boolean) => {
   try {
-    if (isPremium) {
-      localStorage.setItem('premium_backup', 'true');
-      localStorage.setItem('premium_timestamp', new Date().toISOString());
-      console.log('[STRIPE-LOCAL] Updated localStorage premium backup');
-    } else {
-      localStorage.removeItem('premium_backup');
-      localStorage.removeItem('premium_timestamp');
-      console.log('[STRIPE-LOCAL] Removed localStorage premium backup');
-    }
+    // Use the centralized function to update all storage
+    updateAllPremiumStorages(isPremium);
+    console.log('[STRIPE-LOCAL] Updated premium status in storage');
   } catch (e) {
-    console.error('[STRIPE-LOCAL] Error updating localStorage premium:', e);
+    console.error('[STRIPE-LOCAL] Error updating premium in storage:', e);
   }
 };

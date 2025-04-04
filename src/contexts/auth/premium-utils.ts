@@ -10,24 +10,33 @@ export const checkPremiumStatus = async (userId: string, showToast = false): Pro
   try {
     console.log(`[PREMIUM-UTILS] Checking subscription status for user: ${userId}`);
     
-    // First check if we have premium status in storage
-    if (checkAllPremiumStorages()) {
-      console.log('[PREMIUM-UTILS] Found premium status in storage, verifying with database');
-      
-      // Verify with database in background but return true immediately
-      // to avoid blocking the UI while waiting for the request
-      verifyWithDatabaseAndUpdate(userId);
-      
-      if (showToast) {
-        toast.success('Twoje konto ma status Premium!', {
-          dismissible: true
-        });
+    // First check profile directly for faster response
+    try {
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('is_premium, subscription_status, subscription_expiry')
+        .eq('id', userId)
+        .single();
+        
+      if (!profileError && profile?.is_premium) {
+        console.log('[PREMIUM-UTILS] User has premium status according to profile');
+        
+        // Update storage and return immediately
+        updateAllPremiumStorages(true);
+        
+        if (showToast) {
+          toast.success('Twoje konto ma status Premium!', {
+            dismissible: true
+          });
+        }
+        
+        return true;
       }
-      
-      return true;
+    } catch (profileError) {
+      console.error('[PREMIUM-UTILS] Error checking profile directly:', profileError);
     }
     
-    // If not in storage, check with edge function
+    // If profile check didn't confirm premium, try the edge function
     const { data, error } = await supabase.functions.invoke('check-subscription-status', {
       body: { userId }
     });
@@ -64,10 +73,115 @@ export const checkPremiumStatus = async (userId: string, showToast = false): Pro
 };
 
 /**
- * Verify premium status with database and update storage if needed
- * This is a background operation that doesn't block the UI
+ * Fallback when edge function fails
  */
-const verifyWithDatabaseAndUpdate = async (userId: string) => {
+export const checkPremiumStatusFallback = async (userId: string, showToast = false): Promise<boolean> => {
+  try {
+    console.log(`[PREMIUM-UTILS] Using fallback premium check for user: ${userId}`);
+    
+    // Check storage first in case we already have a valid premium status
+    if (checkAllPremiumStorages()) {
+      console.log('[PREMIUM-UTILS] Found premium status in storage');
+      
+      // Verify with database in background
+      verifyWithDatabaseInBackground(userId);
+      
+      if (showToast) {
+        toast.success('Twoje konto ma status Premium!', {
+          dismissible: true
+        });
+      }
+      
+      return true;
+    }
+    
+    // Check profile directly
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('is_premium, subscription_status, subscription_expiry')
+      .eq('id', userId)
+      .single();
+      
+    if (profileError) {
+      console.error('[PREMIUM-UTILS] Error in fallback profile check:', profileError);
+      
+      // Check payment logs as last resort
+      return checkPaymentLogsForPremium(userId, showToast);
+    }
+    
+    const isPremium = profile?.is_premium || false;
+    
+    console.log('[PREMIUM-UTILS] Fallback premium status from profile:', isPremium);
+    
+    if (isPremium) {
+      // Update all storage locations
+      updateAllPremiumStorages(true);
+      
+      if (showToast) {
+        toast.success('Twoje konto ma status Premium!', {
+          dismissible: true
+        });
+      }
+    } else {
+      // Check payment logs as last resort
+      return checkPaymentLogsForPremium(userId, showToast);
+    }
+    
+    return isPremium;
+  } catch (error) {
+    console.error('[PREMIUM-UTILS] Exception in fallback premium check:', error);
+    return false;
+  }
+};
+
+/**
+ * Check payment logs as a last resort
+ */
+const checkPaymentLogsForPremium = async (userId: string, showToast = false): Promise<boolean> => {
+  try {
+    console.log(`[PREMIUM-UTILS] Checking payment logs for user: ${userId}`);
+    
+    const { data: paymentLogs, error } = await supabase
+      .from('payment_logs')
+      .select('*')
+      .eq('user_id', userId)
+      .order('timestamp', { ascending: false })
+      .limit(1);
+      
+    if (error) {
+      console.error('[PREMIUM-UTILS] Error checking payment logs:', error);
+      return false;
+    }
+    
+    const hasPremium = paymentLogs && paymentLogs.length > 0;
+    
+    if (hasPremium) {
+      console.log('[PREMIUM-UTILS] Payment logs indicate premium status');
+      
+      // Update profile in background
+      updateProfileFromPaymentLogs(userId);
+      
+      // Update storage
+      updateAllPremiumStorages(true);
+      
+      if (showToast) {
+        toast.success('Znaleziono płatność! Twoje konto ma status Premium!', {
+          dismissible: true
+        });
+      }
+    }
+    
+    return hasPremium;
+  } catch (error) {
+    console.error('[PREMIUM-UTILS] Error checking payment logs:', error);
+    return false;
+  }
+};
+
+/**
+ * Verify premium status with database and update storage if needed (background operation)
+ */
+const verifyWithDatabaseInBackground = async (userId: string) => {
   try {
     // Check profile directly
     const { data: profile, error: profileError } = await supabase
@@ -104,8 +218,22 @@ const verifyWithDatabaseAndUpdate = async (userId: string) => {
           
         updateAllPremiumStorages(true);
       } else {
-        // Neither database nor edge function says premium, so clear storage
-        updateAllPremiumStorages(false);
+        // Final check - payment logs
+        const { data: paymentLogs } = await supabase
+          .from('payment_logs')
+          .select('*')
+          .eq('user_id', userId)
+          .order('timestamp', { ascending: false })
+          .limit(1);
+          
+        if (paymentLogs && paymentLogs.length > 0) {
+          // Found payment logs, update profile
+          updateProfileFromPaymentLogs(userId);
+          updateAllPremiumStorages(true);
+        } else {
+          // Neither database nor edge function says premium, so clear storage
+          updateAllPremiumStorages(false);
+        }
       }
     }
   } catch (error) {
@@ -114,60 +242,24 @@ const verifyWithDatabaseAndUpdate = async (userId: string) => {
 };
 
 /**
- * Fallback when edge function fails
+ * Update profile based on payment logs
  */
-export const checkPremiumStatusFallback = async (userId: string, showToast = false): Promise<boolean> => {
+const updateProfileFromPaymentLogs = async (userId: string) => {
   try {
-    console.log(`[PREMIUM-UTILS] Using fallback premium check for user: ${userId}`);
+    console.log(`[PREMIUM-UTILS] Updating profile from payment logs for user: ${userId}`);
     
-    // Check storage first
-    if (checkAllPremiumStorages()) {
-      console.log('[PREMIUM-UTILS] Found premium status in storage');
-      
-      if (showToast) {
-        toast.success('Twoje konto ma status Premium!', {
-          dismissible: true
-        });
-      }
-      
-      return true;
-    }
-    
-    // Check profile directly
-    const { data: profile, error: profileError } = await supabase
+    await supabase
       .from('profiles')
-      .select('is_premium, subscription_status, subscription_expiry')
-      .eq('id', userId)
-      .single();
+      .update({ 
+        is_premium: true,
+        subscription_status: 'active',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId);
       
-    if (profileError) {
-      console.error('[PREMIUM-UTILS] Error in fallback profile check:', profileError);
-      return false;
-    }
-    
-    const isPremium = profile?.is_premium || false;
-    
-    console.log('[PREMIUM-UTILS] Fallback premium status:', isPremium);
-    
-    if (isPremium) {
-      // Update all storage locations
-      updateAllPremiumStorages(true);
-      
-      if (showToast) {
-        toast.success('Twoje konto ma status Premium!', {
-          dismissible: true
-        });
-      }
-    } else if (showToast) {
-      toast.info('Twoje konto nie ma statusu Premium.', {
-        dismissible: true
-      });
-    }
-    
-    return isPremium;
+    console.log('[PREMIUM-UTILS] Profile updated from payment logs');
   } catch (error) {
-    console.error('[PREMIUM-UTILS] Exception in fallback premium check:', error);
-    return false;
+    console.error('[PREMIUM-UTILS] Error updating profile from payment logs:', error);
   }
 };
 
@@ -178,11 +270,8 @@ export const forcePremiumStatusUpdate = async (userId: string): Promise<boolean>
   try {
     console.log(`[PREMIUM-UTILS] Force updating premium status for user: ${userId}`);
     
-    // Try to update all storage locations immediately
-    updateAllPremiumStorages(true);
-    
-    // Also update database
-    await supabase
+    // Try to update profile first
+    const { error: updateError } = await supabase
       .from('profiles')
       .update({ 
         is_premium: true,
@@ -191,9 +280,22 @@ export const forcePremiumStatusUpdate = async (userId: string): Promise<boolean>
       })
       .eq('id', userId);
     
+    if (updateError) {
+      console.error('[PREMIUM-UTILS] Error updating profile:', updateError);
+      
+      // Even if profile update fails, update storage
+      updateAllPremiumStorages(true);
+      return true;
+    }
+    
+    // Update local storage regardless
+    updateAllPremiumStorages(true);
+    
     return true;
   } catch (error) {
     console.error('[PREMIUM-UTILS] Exception in force premium update:', error);
-    return false;
+    // Even if there's an error, try to update storage
+    updateAllPremiumStorages(true);
+    return true;
   }
 };
