@@ -1,8 +1,8 @@
 
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Copy, Download, CheckCircle2, Save } from 'lucide-react';
+import React from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import EmailEditorView from './EmailEditorView';
+import EmailToolbar from './EmailToolbar';
 
 interface EmailDisplayProps {
   subject: string;
@@ -12,6 +12,7 @@ interface EmailDisplayProps {
   onSaveToProject: () => void;
   isSaving: boolean;
   projectSaved: boolean;
+  onViewProject?: () => void;
 }
 
 const EmailDisplay = ({
@@ -21,70 +22,42 @@ const EmailDisplay = ({
   onEmailContentChange,
   onSaveToProject,
   isSaving,
-  projectSaved
+  projectSaved,
+  onViewProject
 }: EmailDisplayProps) => {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    try {
-      const textToCopy = `Temat: ${subject}\n\n${emailContent}`;
-
-      await navigator.clipboard.writeText(textToCopy);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy text: ', err);
-    }
-  };
-
-  const handleDownload = () => {
-    const fullEmail = `Temat: ${subject}\n\n${emailContent}`;
-    const element = document.createElement('a');
-    const file = new Blob([fullEmail], { type: 'text/plain' });
-    element.href = URL.createObjectURL(file);
-    element.download = 'wygenerowany-email.txt';
-    document.body.appendChild(element);
-    element.click();
-    document.body.removeChild(element);
-  };
-
   return (
-    <div className="space-y-6">
-      <EmailEditorView
-        subject={subject}
-        emailContent={emailContent}
-        onSubjectChange={onSubjectChange}
-        onEmailContentChange={onEmailContentChange}
-      />
+    <div className="space-y-4">
+      <Tabs defaultValue="editor">
+        <div className="flex justify-between items-center mb-4">
+          <TabsList>
+            <TabsTrigger value="editor">Edytor</TabsTrigger>
+            <TabsTrigger value="preview" disabled>Podgląd (wkrótce)</TabsTrigger>
+          </TabsList>
+          
+          <EmailToolbar 
+            onSaveToProject={onSaveToProject}
+            isSaving={isSaving}
+            projectSaved={projectSaved}
+            onViewProject={onViewProject}
+          />
+        </div>
 
-      <div className="flex justify-end space-x-3">
-        <Button variant="outline" onClick={handleCopy} className="flex items-center gap-2">
-          {copied ? (
-            <>
-              <CheckCircle2 className="h-4 w-4" />
-              Skopiowano
-            </>
-          ) : (
-            <>
-              <Copy className="h-4 w-4" />
-              Kopiuj
-            </>
-          )}
-        </Button>
-        <Button variant="outline" onClick={handleDownload} className="flex items-center gap-2">
-          <Download className="h-4 w-4" />
-          Pobierz
-        </Button>
-        <Button 
-          variant="default" 
-          onClick={onSaveToProject} 
-          disabled={isSaving || projectSaved}
-          className="flex items-center gap-2 bg-copywrite-teal hover:bg-copywrite-teal-dark text-white"
-        >
-          <Save className="h-4 w-4" />
-          {isSaving ? 'Zapisywanie...' : projectSaved ? 'Zapisano' : 'Zapisz w projektach'}
-        </Button>
-      </div>
+        <TabsContent value="editor" className="mt-0">
+          <EmailEditorView
+            subject={subject}
+            emailContent={emailContent}
+            onSubjectChange={onSubjectChange}
+            onEmailContentChange={onEmailContentChange}
+          />
+        </TabsContent>
+        
+        <TabsContent value="preview" className="mt-0">
+          <div className="p-8 bg-white border rounded-lg">
+            <h3 className="text-xl font-bold mb-4">{subject}</h3>
+            <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: emailContent.replace(/\n/g, '<br/>') }} />
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

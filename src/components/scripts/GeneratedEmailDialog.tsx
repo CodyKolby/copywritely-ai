@@ -39,7 +39,8 @@ const GeneratedEmailDialog = ({
     saveToProject,
     handleViewProject,
     setGeneratedSubject,
-    setGeneratedEmail
+    setGeneratedEmail,
+    narrativeBlueprint
   } = useEmailGeneration({
     open,
     targetAudienceId,
@@ -60,6 +61,29 @@ const GeneratedEmailDialog = ({
           <ErrorState error={error} onRetry={handleRetry} />
         ) : (
           <div className="p-6 max-h-[calc(90vh-100px)] overflow-y-auto">
+            {narrativeBlueprint && (
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">Blueprint narracyjny:</h3>
+                
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="text-xs font-medium text-gray-600">Punkty emocjonalne:</h4>
+                    <p className="text-sm whitespace-pre-line">{narrativeBlueprint.punktyemocjonalne}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-xs font-medium text-gray-600">Styl maila:</h4>
+                    <p className="text-sm whitespace-pre-line">{narrativeBlueprint.stylmaila}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-xs font-medium text-gray-600">Oś narracyjna:</h4>
+                    <p className="text-sm">{narrativeBlueprint.osnarracyjna}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             <EmailDisplay 
               subject={generatedSubject} 
               emailContent={generatedEmail} 
@@ -68,6 +92,7 @@ const GeneratedEmailDialog = ({
               onSaveToProject={saveToProject}
               isSaving={isSaving}
               projectSaved={projectSaved}
+              onViewProject={handleViewProject}
             />
           </div>
         )}
