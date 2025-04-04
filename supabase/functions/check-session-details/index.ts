@@ -1,7 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "./utils.ts";
-import { getStripeSession, getSubscriptionDetails } from "../verify-payment-session/stripe.ts";
+import { getStripeSession, getSubscriptionDetails } from "./stripe.ts";
 
 serve(async (req) => {
   // Handle CORS preflight requests
