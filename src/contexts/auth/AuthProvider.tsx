@@ -1,3 +1,4 @@
+
 import { useEffect, useState, ReactNode } from 'react'
 import { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/integrations/supabase/client'
@@ -15,11 +16,14 @@ import {
 } from './auth-methods'
 import { 
   checkPremiumStatus, 
-  checkPremiumStatusFallback 
+  checkPremiumStatusFallback,
+  forcePremiumStatusUpdate 
 } from './premium-utils'
 import { 
   validateLocalStoragePremium, 
-  storePremiumInLocalStorage 
+  storePremiumInLocalStorage,
+  updateAllPremiumStorages,
+  checkAllPremiumStorages
 } from './local-storage-utils'
 import { useTestUser } from './use-test-user'
 import { toast } from 'sonner'
@@ -135,7 +139,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       console.log('[AUTH] Handling authenticated user:', userId);
       
-      setIsPremium(false);
+      const localPremium = validateLocalStoragePremium();
+      if (localPremium) {
+        console.log('[AUTH] Setting premium status from validated localStorage backup');
+        setIsPremium(true);
+      } else {
+        setIsPremium(false);
+      }
       
       const userProfile = await fetchProfile(userId);
       console.log('[AUTH] User profile after fetch:', userProfile);
@@ -175,7 +185,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.log('[AUTH] User has premium status according to database');
           setIsPremium(true);
           
-          storePremiumInLocalStorage(true);
+          updateAllPremiumStorages(true);
           
           return;
         }
@@ -197,7 +207,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           
           setIsPremium(true);
           
-          storePremiumInLocalStorage(true);
+          updateAllPremiumStorages(true);
           
           return;
         }
@@ -205,10 +215,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error('[AUTH] Error checking payment logs:', logsError);
       }
       
-      const localPremium = validateLocalStoragePremium();
       if (localPremium) {
-        console.log('[AUTH] Setting premium status from validated localStorage backup');
-        
         try {
           await updatePremiumStatus(userId, true);
           
@@ -224,7 +231,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsPremium(isPremiumStatus);
       
       if (isPremiumStatus) {
-        storePremiumInLocalStorage(true);
+        updateAllPremiumStorages(true);
       }
     } catch (error) {
       console.error('[AUTH] Error in handleUserAuthenticated:', error);
@@ -234,6 +241,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const checkUserPremiumStatus = async (userId: string, showToast = false) => {
     try {
       console.log('[AUTH] Manual premium status check for user:', userId);
+      
+      const localPremium = checkAllPremiumStorages();
+      if (localPremium) {
+        console.log('[AUTH] Found premium status in storage');
+        
+        setIsPremium(true);
+        
+        if (showToast) {
+          toast.success('Twoje konto ma status Premium!', {
+            dismissible: true
+          });
+        }
+        
+        verifyPremiumWithDatabase(userId);
+        
+        return true;
+      }
       
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
@@ -262,7 +286,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             };
           });
           
-          storePremiumInLocalStorage(true);
+          updateAllPremiumStorages(true);
           
           if (showToast) {
             toast.success('Twoje konto ma status Premium!', {
@@ -289,7 +313,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             
           setIsPremium(true);
           
-          storePremiumInLocalStorage(true);
+          updateAllPremiumStorages(true);
           
           if (showToast) {
             toast.success('Znaleziono płatność! Twoje konto ma status Premium!', {
@@ -301,27 +325,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } catch (logsError) {
         console.error('[AUTH] Error checking payment logs:', logsError);
-      }
-      
-      const localPremium = validateLocalStoragePremium();
-      if (localPremium) {
-        console.log('[AUTH] Using validated localStorage premium backup');
-        
-        try {
-          await updatePremiumStatus(userId, true);
-            
-          setIsPremium(true);
-          
-          if (showToast) {
-            toast.success('Twoje konto ma status Premium!', {
-              dismissible: true
-            });
-          }
-          
-          return true;
-        } catch (e) {
-          console.error('[AUTH] Error updating database from localStorage backup:', e);
-        }
       }
       
       const isPremiumStatus = await checkPremiumStatus(userId, showToast);
@@ -336,9 +339,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setProfile(updatedProfile);
         }
         
-        storePremiumInLocalStorage(true);
+        updateAllPremiumStorages(true);
       } else {
-        storePremiumInLocalStorage(false);
+        updateAllPremiumStorages(false);
       }
       
       return isPremiumStatus;
@@ -349,11 +352,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const fallbackResult = await checkPremiumStatusFallback(userId, false);
         console.log('[AUTH] Fallback premium check result:', fallbackResult);
         setIsPremium(fallbackResult);
+        
+        if (fallbackResult) {
+          updateAllPremiumStorages(true);
+        }
+        
         return fallbackResult;
       } catch (fallbackError) {
         console.error('[AUTH] Fallback premium check also failed:', fallbackError);
         return false;
       }
+    }
+  };
+
+  const verifyPremiumWithDatabase = async (userId: string) => {
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_premium')
+        .eq('id', userId)
+        .single();
+        
+      if (!profile?.is_premium) {
+        await updatePremiumStatus(userId, true);
+      }
+    } catch (e) {
+      console.error('[AUTH] Error verifying premium with database:', e);
     }
   };
 
@@ -363,6 +387,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (user?.id) {
         console.log('[AUTH] Checking current premium status before refresh');
+        
+        const localPremium = checkAllPremiumStorages();
+        if (localPremium) {
+          console.log('[AUTH] Found premium status in storage');
+          setIsPremium(true);
+          
+          verifyPremiumWithDatabase(user.id);
+        }
         
         const { data: currentProfile, error: currentProfileError } = await supabase
           .from('profiles')
@@ -375,6 +407,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else if (currentProfile?.is_premium) {
           console.log('[AUTH] User already has premium status in database, no need to update');
           setIsPremium(true);
+          
+          updateAllPremiumStorages(true);
         } else {
           try {
             const { data: paymentLogs } = await supabase
@@ -391,6 +425,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 await updatePremiumStatus(user.id, true);
                   
                 setIsPremium(true);
+                
+                updateAllPremiumStorages(true);
               } catch (updateErr) {
                 console.error('[AUTH] Error updating premium from logs:', updateErr);
               }

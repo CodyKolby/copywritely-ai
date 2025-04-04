@@ -1,5 +1,6 @@
 
 import { User } from '@supabase/supabase-js';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { LogOut, User as UserIcon, FolderOpen, CreditCard, Shield } from 'lucide-react';
 import { Profile } from '@/contexts/auth/types';
@@ -13,8 +14,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel
 } from "@/components/ui/dropdown-menu";
-import { useState } from 'react';
 import SubscriptionModal from '../subscription/SubscriptionModal';
+import { checkAllPremiumStorages } from '@/contexts/auth/local-storage-utils';
 
 interface UserMenuProps {
   user: User;
@@ -26,6 +27,20 @@ interface UserMenuProps {
 
 export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: UserMenuProps) => {
   const [subscriptionModalOpen, setSubscriptionModalOpen] = useState(false);
+  const [storagePremium, setStoragePremium] = useState(false);
+
+  // Check localStorage on mount
+  useEffect(() => {
+    const premiumFromStorage = checkAllPremiumStorages();
+    setStoragePremium(premiumFromStorage);
+  }, []);
+
+  // Update storage premium when props change
+  useEffect(() => {
+    if (isPremium || profile?.is_premium || localPremium) {
+      setStoragePremium(true);
+    }
+  }, [isPremium, profile, localPremium]);
 
   const getInitials = () => {
     if (!user?.email) return 'U';
@@ -33,12 +48,13 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
   };
 
   // User has premium if any of the premium indicators are true
-  const userHasPremium = isPremium || profile?.is_premium || localPremium;
+  const userHasPremium = isPremium || profile?.is_premium || localPremium || storagePremium;
 
   const handleSignOut = () => {
     // Clear localStorage premium backup on logout
     localStorage.removeItem('premium_backup');
     localStorage.removeItem('premium_timestamp');
+    sessionStorage.removeItem('premium_session');
     signOut();
   };
 
