@@ -32,11 +32,13 @@ export const useEmailGeneration = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [generatedSubject, setGeneratedSubject] = useState<string>('');
+  const [alternativeSubject, setAlternativeSubject] = useState<string>('');
   const [generatedEmail, setGeneratedEmail] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
   const [projectSaved, setProjectSaved] = useState(false);
   const [projectId, setProjectId] = useState<string | null>(null);
   const [narrativeBlueprint, setNarrativeBlueprint] = useState<NarrativeBlueprint | null>(null);
+  const [isShowingAlternative, setIsShowingAlternative] = useState(false);
   
   const navigate = useNavigate();
 
@@ -64,6 +66,29 @@ export const useEmailGeneration = ({
     } catch (err: any) {
       console.error('Failed to generate narrative blueprint:', err);
       throw new Error('Nie udało się wygenerować blueprint narracyjnego');
+    }
+  };
+
+  const generateSubjectLines = async (blueprint: NarrativeBlueprint, targetAudienceData: any) => {
+    console.log('Generating subject lines...');
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-subject-lines', {
+        body: {
+          narrativeBlueprint: blueprint,
+          surveyData: targetAudienceData
+        }
+      });
+      
+      if (error) throw new Error(`Error invoking generate-subject-lines: ${error.message}`);
+      
+      console.log('Subject lines generated successfully:', data);
+      return {
+        subject1: data.subject1,
+        subject2: data.subject2
+      };
+    } catch (err: any) {
+      console.error('Failed to generate subject lines:', err);
+      throw new Error('Nie udało się wygenerować tytułów maila');
     }
   };
 
@@ -98,10 +123,16 @@ export const useEmailGeneration = ({
       
       console.log('Blueprint narracyjny wygenerowany:', blueprint);
       
+      // Generate subject lines using the narrative blueprint
+      const subjectLines = await generateSubjectLines(blueprint, targetAudienceData);
+      setGeneratedSubject(subjectLines.subject1);
+      setAlternativeSubject(subjectLines.subject2);
+      
+      console.log('Tytuły maila wygenerowane:', subjectLines);
+      
       // For now, we'll use mock data for the email content
       // In the future, this would be replaced with another Edge Function call
       // that would use the narrative blueprint to generate the actual email
-      setGeneratedSubject('Rewolucyjne rozwiązanie do [Problem] - Poznaj naszą ofertę');
       setGeneratedEmail(`Drogi [Imię],
 
 Czy zmagasz się z [problem]? ${blueprint.punktyemocjonalne.split('\n')[0]}
@@ -150,6 +181,17 @@ Z pozdrowieniami,
     }
   };
 
+  const toggleSubjectLine = () => {
+    setIsShowingAlternative(!isShowingAlternative);
+    if (isShowingAlternative) {
+      setGeneratedSubject(alternativeSubject);
+    } else {
+      const temp = generatedSubject;
+      setGeneratedSubject(alternativeSubject);
+      setAlternativeSubject(temp);
+    }
+  };
+
   const handleRetry = () => {
     generateEmail();
   };
@@ -181,7 +223,8 @@ Z pozdrowieniami,
               punktyEmocjonalne: narrativeBlueprint.punktyemocjonalne,
               stylMaila: narrativeBlueprint.stylmaila,
               osNarracyjna: narrativeBlueprint.osnarracyjna
-            }
+            },
+            alternativeSubject: alternativeSubject
           }
         });
       }
@@ -214,6 +257,9 @@ Z pozdrowieniami,
   return {
     isLoading,
     generatedSubject,
+    alternativeSubject,
+    isShowingAlternative,
+    toggleSubjectLine,
     generatedEmail,
     error,
     isSaving,

@@ -8,6 +8,7 @@ import DialogHeader from './generated-email-dialog/DialogHeader';
 import ErrorState from './generated-email-dialog/ErrorState';
 import { useEmailGeneration } from './generated-email-dialog/useEmailGeneration';
 import { EmailStyle } from './EmailStyleDialog';
+import SubjectLineToggle from './generated-email-dialog/SubjectLineToggle';
 
 interface GeneratedEmailDialogProps {
   open: boolean;
@@ -31,6 +32,9 @@ const GeneratedEmailDialog = ({
   const {
     isLoading,
     generatedSubject,
+    alternativeSubject,
+    isShowingAlternative,
+    toggleSubjectLine,
     generatedEmail,
     error,
     isSaving,
@@ -82,6 +86,15 @@ const GeneratedEmailDialog = ({
                   </div>
                 </div>
               </div>
+            )}
+            
+            {alternativeSubject && (
+              <SubjectLineToggle 
+                currentSubject={generatedSubject}
+                alternativeSubject={alternativeSubject}
+                isShowingAlternative={isShowingAlternative}
+                onToggle={toggleSubjectLine}
+              />
             )}
             
             <EmailDisplay 
