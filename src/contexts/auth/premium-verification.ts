@@ -2,6 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { updateAllPremiumStorages } from './local-storage-utils';
+import { checkPaymentLogsForPremium } from './premium-database';
 
 /**
  * Checks premium status via Edge Function
