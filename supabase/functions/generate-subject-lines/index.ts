@@ -61,9 +61,31 @@ Zasady, których musisz bezwzględnie przestrzegać:
 2. Tytuł musi być napisany możliwie prostym językiem – tak, by zrozumiał go 4-latek.
 3. Unikaj branżowego żargonu, ogólników i niejasnych metafor.
 4. Tytuł musi natychmiast komunikować, o co chodzi i dlaczego warto kliknąć.
-5. Twoim celem jest wyróżnienie się na tle setek innych maili. Użytkownik musi poczuć, że to „nie kolejny nudny newsletter".
+5. Twoim celem jest wyróżnienie się na tle setek innych maili. Użytkownik musi poczuć, że to „nie kolejny nudny newsletter”.
 6. Tytuły powinny korzystać z technik przyciągania uwagi: kontrowersja, liczby, pytania, ostrzeżenia, presja czasu, storytelling.
-7. Tytuły mają być spójne z emocjonalnym blueprintem, jaki otrzymasz z wcześniejszego etapu.`
+7. Tytuły mają być spójne z emocjonalnym blueprintem, jaki otrzymasz z wcześniejszego etapu.
+
+Dla lepszego zrozumienia skutecznych tytułów, oto 5 przykładów i ich analiza:
+
+1. "NIE kontaktuj się z żadnym klientem, dopóki tego nie zobaczysz…"  
+– Silny zakaz, napięcie, strach przed błędem. Użytkownik od razu chce wiedzieć, o co chodzi.
+
+2. "Czy naprawdę da się zdobyć klienta w miesiąc (nawet jeśli dopiero zaczynasz)?"  
+– Pytanie, które uderza w marzenie i jednocześnie wzbudza niedowierzanie — klasyczny „curiosity gap”.
+
+3. "IMIE, nie pozwól mi tego usunąć"  
+– Wygląda jak coś pilnego i osobistego, co może dotyczyć konkretnej osoby — wzbudza emocje i poczucie bliskości.
+
+4. "Dlaczego inne kursy z copywritingu NIE uczyniły Cię bogatym?"  
+– Podważa wcześniejsze wybory odbiorcy — łączy rozczarowanie z obietnicą wyjścia z problemu.
+
+5. "1 wideo o copywritingu warte więcej niż 10 poradników"  
+– Minimalistyczny, ale konkretny. Użycie liczby oraz kontrastu pokazuje dużą wartość i oszczędność czasu.
+
+Dodatkowe zasady:
+
+- Jeśli zdecydujesz się użyć imienia odbiorcy, zawsze używaj placeholdera: IMIE.
+- Tytuł 1 i tytuł 2 muszą być różne stylistycznie, ale mówić o tym samym — tak, aby mogły posłużyć jako test A/B dla jednej treści maila.
           },
           { 
             role: 'user', 
