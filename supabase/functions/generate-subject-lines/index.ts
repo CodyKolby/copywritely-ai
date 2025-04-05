@@ -53,7 +53,7 @@ serve(async (req) => {
         messages: [
           { 
             role: 'system', 
-            content: `Twoim zadaniem jest po prostu w miejsca subject1 i subject2 wpisać słowo : TEST
+            content: 'Twoim zadaniem jest po prostu w miejsca subject1 i subject2 wpisać słowo : TEST'
           },
           { 
             role: 'user', 
