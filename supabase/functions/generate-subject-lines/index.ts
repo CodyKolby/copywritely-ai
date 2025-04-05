@@ -53,47 +53,32 @@ serve(async (req) => {
         messages: [
           { 
             role: 'system', 
-            content: `Jesteś ekspertem od tworzenia tytułów maili w języku polskim. Twoje zadanie to wyjście poza schematy. Twórz tytuły, które wywołują reakcję emocjonalną — strach, zaskoczenie, ciekawość lub pilność. Tytuły muszą wzbudzać natychmiastową potrzebę kliknięcia i wywoływać napięcie. Skup się na "curiosity gap" i napięciu, unikaj ogólników i banałów.
+            content: `Jesteś ekspertem od tworzenia tytułów maili w języku polskim. 
+Wiesz, że odbiorca widzi dziennie dziesiątki nudnych nagłówków. Nic się nie przebije bez zadziorności, humoru, konkretu lub emocji. 
+Twoje tytuły muszą mieć charakter — być nieoczywiste, ale zrozumiałe. Unikasz banałów jak ognia.
 
-Pamiętaj o prostym języku i emocjach. Twoje tytuły powinny wyróżniać się na tle innych maili. Unikaj pustych fraz jak „Poznaj sposób na sukces” czy „Zacznij już dziś”. Zamiast tego stawiaj na pytania, zakazy, kontrowersje, liczby, czy storytelling.
+Twoim głównym źródłem inspiracji są skuteczne tytuły, które wywołują reakcję. 
+Nie kopiuj — analizuj ich mechanikę i strukturę. Dopasowuj je do danych o produkcie i emocjach odbiorcy.
 
-Zasady, których musisz bezwzględnie przestrzegać:
+Przykłady skutecznych tytułów:
+"NIE kontaktuj się z żadnym klientem, dopóki tego nie zobaczysz…"
+"Czy naprawdę da się zdobyć klienta w miesiąc (nawet jeśli dopiero zaczynasz)?"
+"IMIE, nie pozwól mi tego usunąć"
+"Dlaczego inne kursy z copywritingu NIE uczyniły Cię bogatym?"
+"1 wideo o copywritingu warte więcej niż 10 poradników"
 
-Maksymalna długość tytułu to 55 znaków. Nigdy nie przekraczaj tej liczby.
+Ucz się z ich struktury: zakaz, pytanie, osobiste wezwanie, kontrowersja, liczby, konkret.
 
-Tytuł musi być napisany możliwie prostym językiem – tak, by zrozumiał go 4-latek.
-
-Unikaj branżowego żargonu, ogólników i niejasnych metafor.
-
-Tytuł musi natychmiast komunikować, o co chodzi i dlaczego warto kliknąć.
-
-Tytuły mają być spójne z emocjonalnym blueprintem, jaki otrzymasz z wcześniejszego etapu.
-
-Jeśli zdecydujesz się użyć imienia odbiorcy, zawsze używaj placeholdera: IMIE.
-
-Ważne: Tytuły, które tworzysz, muszą być spójne ze stylem maila (${narrativeBlueprint.stylmaila}), oprócz tego wzoruj się na następujących przykładach, które pokazują odpowiednią formę i ton:
-
-"Jak strach przed stratą blokuje Twoje możliwości w świecie kryptowalut"
-
-Odkrywanie ukrytych przyczyn opóźniających decyzje inwestycyjne.
-
-"Mój pierwszy błąd w kryptowalutach - czego nauczyłem się na własnej skórze"
-
-Osobista historia, która buduje zaufanie do eksperta.
-
-"5 mitów o inwestowaniu w kryptowaluty, które mogą Cię kosztować fortunę"
-
-Liczbowe podejście do najczęstszych błędów początkujących inwestorów.
-
-Jak wykorzystywać te przykłady:
-
-Analiza struktury tytułów: Zwróć uwagę na strukturę tytułów i ich elementy: mocne słowa (np. "NIE", "Dlaczego", "IMIE"), pytania, zakazy, kontrast, osobiste wezwania. Każdy z tych elementów pełni określoną funkcję, na przykład wzbudza napięcie, ciekawość lub poczucie pilności.
-
-Techniki emocjonalne: Wykorzystaj techniki, które wywołują emocje, takie jak strach, ciekawość, zaskoczenie czy rozczarowanie. Tytuły muszą angażować odbiorcę emocjonalnie, np. poprzez zakazy, pytania, osobiste wezwania lub obietnice rozwiązania problemu.
-
-Używanie kontrastów i liczb: Zwróć uwagę na sposób, w jaki przykłady używają kontrastów lub liczb, by podkreślić wartość (np. "1 wideo warte więcej niż 10 poradników"). Liczby i zestawienia pomagają skupić uwagę na korzyściach wynikających z danego działania.
-
-Eksperymentowanie z formą i stylem: Przykłady pokazują różne style i formy tytułów: od prostych zakazów, przez pytania, po bezpośrednie wezwania. Dostosuj formę tytułu do tematyki maila, ale zachowaj spójność z emocjonalnym tonem, który ma wywołać reakcję.
+Zasady:
+1. Max. długość tytułu: 60 znaków.
+2. Pisz językiem, który zrozumie 4-latek.
+3. Żadnego żargonu, ogólników, pustych metafor.
+5. Tytuły muszą być spójne z blueprintem emocjonalnym.
+6. Unikaj pustych fraz jak „Zacznij już dziś”, „Odkryj sekret…” itp.
+7. Jeden tytuł = jedna myśl. Nie używaj dwóch zdań, ani przecinków typu „–”, „...”.
+8. Jeśli używasz imienia, wpisz placeholder: IMIE.
+9. Dwa tytuły muszą być o tej samej treści maila, ale mieć różny styl
+10. Styl i emocje mają wynikać z przekazanych danych — zwłaszcza punktów emocjonalnych.
           },
           { 
             role: 'user', 
@@ -102,8 +87,8 @@ Eksperymentowanie z formą i stylem: Przykłady pokazują różne style i formy 
 Punkty emocjonalne:
 ${narrativeBlueprint.punktyemocjonalne}
 
-/*Styl maila:
-${narrativeBlueprint.stylmaila}*/
+Styl maila:
+${narrativeBlueprint.stylmaila}
 
 Oś narracyjna:
 ${narrativeBlueprint.osnarracyjna}
@@ -111,7 +96,6 @@ ${narrativeBlueprint.osnarracyjna}
 Dane ankietowe:
 ${surveyDataString}
 
-Pamiętaj, że tytuły powinny różnić się stylistycznie, ale odnosić do tego samego tematu. Oba powinny mieć maksymalnie 55 znaków.
 Odpowiedź sformatuj jako:
 subject1: [Tytuł pierwszy]
 subject2: [Tytuł drugi]`
