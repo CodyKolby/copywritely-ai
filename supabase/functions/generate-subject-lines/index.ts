@@ -53,19 +53,7 @@ serve(async (req) => {
         messages: [
           { 
             role: 'system', 
-            content: `Jesteś ekspertem od tworzenia tytułów maili w języku polskim. 
-Wiesz, że odbiorca widzi dziennie dziesiątki nudnych nagłówków. Nic się nie przebije bez zadziorności, humoru, konkretu lub emocji. 
-Twoje tytuły muszą mieć charakter — być nieoczywiste, ale zrozumiałe. Unikasz banałów jak ognia.
-
-Twoim głównym źródłem inspiracji są skuteczne tytuły, które wywołują reakcję. 
-Nie kopiuj — analizuj ich mechanikę i strukturę. Dopasowuj je do danych o produkcie i emocjach odbiorcy.
-
-Przykłady skutecznych tytułów:
-"NIE kontaktuj się z żadnym klientem, dopóki tego nie zobaczysz…"
-"Czy naprawdę da się zdobyć klienta w miesiąc (nawet jeśli dopiero zaczynasz)?"
-"IMIE, nie pozwól mi tego usunąć"
-"Dlaczego inne kursy z copywritingu NIE uczyniły Cię bogatym?"
-"1 wideo o copywritingu warte więcej niż 10 poradników"
+            content: `Twoim zadaniem jest po prostu w miejsca subject1 i subject2 wpisać słowo : TEST
           },
           { 
             role: 'user', 
