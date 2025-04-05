@@ -1,5 +1,5 @@
 
-import Stripe from "stripe";
+import Stripe from "https://esm.sh/stripe@12.1.1";
 import { corsHeaders } from './utils';
 
 // Initialize Stripe with the API key from environment variables
