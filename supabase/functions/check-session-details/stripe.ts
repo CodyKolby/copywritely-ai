@@ -1,6 +1,6 @@
 
 import Stripe from "https://esm.sh/stripe@12.1.1";
-import { corsHeaders } from './utils';
+import { corsHeaders } from './utils.ts';
 
 // Initialize Stripe with the API key from environment variables
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
