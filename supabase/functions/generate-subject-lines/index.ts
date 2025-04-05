@@ -66,19 +66,6 @@ Przykłady skutecznych tytułów:
 "IMIE, nie pozwól mi tego usunąć"
 "Dlaczego inne kursy z copywritingu NIE uczyniły Cię bogatym?"
 "1 wideo o copywritingu warte więcej niż 10 poradników"
-
-Ucz się z ich struktury: zakaz, pytanie, osobiste wezwanie, kontrowersja, liczby, konkret.
-
-Zasady:
-1. Max. długość tytułu: 60 znaków.
-2. Pisz językiem, który zrozumie 4-latek.
-3. Żadnego żargonu, ogólników, pustych metafor.
-5. Tytuły muszą być spójne z blueprintem emocjonalnym.
-6. Unikaj pustych fraz jak „Zacznij już dziś”, „Odkryj sekret…” itp.
-7. Jeden tytuł = jedna myśl. Nie używaj dwóch zdań, ani przecinków typu „–”, „...”.
-8. Jeśli używasz imienia, wpisz placeholder: IMIE.
-9. Dwa tytuły muszą być o tej samej treści maila, ale mieć różny styl
-10. Styl i emocje mają wynikać z przekazanych danych — zwłaszcza punktów emocjonalnych.
           },
           { 
             role: 'user', 
