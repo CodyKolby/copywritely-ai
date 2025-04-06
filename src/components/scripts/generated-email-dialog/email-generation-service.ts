@@ -13,23 +13,10 @@ export interface NarrativeBlueprint {
 }
 
 // Default prompt template that can be customized
-const DEFAULT_SUBJECT_LINE_PROMPT = `Twoim zadaniem jest utworzenie dwóch chwytliwych tytułów (subject lines) dla emaila marketingowego na podstawie poniższych informacji o grupie docelowej i blueprint:
-
-BLUEPRINT NARRACYJNY:
-Punkty emocjonalne: {{punktyemocjonalne}}
-Styl maila: {{stylmaila}}
-Oś narracyjna: {{osnarracyjna}}
-
-DODATKOWE INFORMACJE:
-{{surveyData}}
-
-Utwórz dwa różne, chwytliwe tytuły emaila (subject lines), które przyciągną uwagę odbiorcy i zachęcą do otwarcia wiadomości.
-Format odpowiedzi musi być dokładnie taki:
+const DEFAULT_SUBJECT_LINE_PROMPT = `Twoim zadaniem jest utworzenie dwóch tytułów (subject lines), które oba mają brzmieć dokładnie tak "TEST1" oraz "TEST2"
 
 subject1: [Pierwszy tytuł emaila]
-subject2: [Drugi tytuł emaila]
-
-Nie dodawaj żadnych dodatkowych informacji ani objaśnień.`;
+subject2: [Drugi tytuł emaila]`;
 
 export async function generateNarrativeBlueprint(targetAudienceData: any, emailStyle: EmailStyle, advertisingGoal: string): Promise<NarrativeBlueprint> {
   console.log('Generating narrative blueprint...');
