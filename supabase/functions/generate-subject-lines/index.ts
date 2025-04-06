@@ -110,27 +110,117 @@ serve(async (req) => {
     
     console.log(`[${requestId}] 🤖 Raw AI output:`, aiOutput);
     
-    // Parse the subject lines from the AI output
+    // Parse the subject lines from the AI output with improved regex patterns
     let subject1 = "Default subject 1";
     let subject2 = "Default subject 2";
     
     try {
-      // Extract subject lines using regex
-      const subject1Match = aiOutput.match(/subject1:\s*(.+?)($|\n)/i);
-      const subject2Match = aiOutput.match(/subject2:\s*(.+?)($|\n)/i);
+      // Enhanced regex for more flexible parsing
+      // Look for patterns like "Subject 1: ...", "Subject1: ...", "1. ..." or explicit labels
+      const subject1Patterns = [
+        /subject\s*1\s*[:=]\s*(.+?)(?=$|\n|\r|subject\s*2)/i,
+        /subject1\s*[:=]\s*(.+?)(?=$|\n|\r|subject2)/i,
+        /1\.\s*(.+?)(?=$|\n|\r|2\.)/i,
+        /pierwszy\s+tytu[łl]\s*[:=]\s*(.+?)(?=$|\n|\r)/i,
+        /first\s+subject\s*[:=]\s*(.+?)(?=$|\n|\r)/i,
+      ];
       
-      if (subject1Match && subject1Match[1]) {
-        subject1 = subject1Match[1].trim();
+      const subject2Patterns = [
+        /subject\s*2\s*[:=]\s*(.+?)(?=$|\n|\r)/i,
+        /subject2\s*[:=]\s*(.+?)(?=$|\n|\r)/i,
+        /2\.\s*(.+?)(?=$|\n|\r)/i,
+        /drugi\s+tytu[łl]\s*[:=]\s*(.+?)(?=$|\n|\r)/i,
+        /second\s+subject\s*[:=]\s*(.+?)(?=$|\n|\r)/i,
+      ];
+      
+      // Try all patterns for subject 1
+      for (const pattern of subject1Patterns) {
+        const match = aiOutput.match(pattern);
+        if (match && match[1]) {
+          subject1 = match[1].trim();
+          console.log(`[${requestId}] Found subject1 with pattern:`, pattern);
+          break;
+        }
       }
       
-      if (subject2Match && subject2Match[1]) {
-        subject2 = subject2Match[1].trim();
+      // Try all patterns for subject 2
+      for (const pattern of subject2Patterns) {
+        const match = aiOutput.match(pattern);
+        if (match && match[1]) {
+          subject2 = match[1].trim();
+          console.log(`[${requestId}] Found subject2 with pattern:`, pattern);
+          break;
+        }
       }
       
-      console.log(`[${requestId}] Extracted subject lines successfully`);
+      // Special case: if the response is very short and clearly formatted
+      if (aiOutput.split('\n').length <= 3) {
+        const lines = aiOutput.split('\n').filter(line => line.trim().length > 0);
+        if (lines.length >= 2 && !subject1.includes("Default")) {
+          subject1 = lines[0].replace(/^[^:]*:\s*/, '').trim();
+          subject2 = lines[1].replace(/^[^:]*:\s*/, '').trim();
+          console.log(`[${requestId}] Using simple line-based extraction for subjects`);
+        }
+      }
+      
+      // If we have just two lines and nothing worked, use them directly
+      if ((subject1 === "Default subject 1" || subject2 === "Default subject 2") && aiOutput.split('\n').length <= 3) {
+        const lines = aiOutput.split('\n').filter(line => line.trim().length > 0);
+        if (lines.length >= 2) {
+          if (subject1 === "Default subject 1") subject1 = lines[0].trim();
+          if (subject2 === "Default subject 2") subject2 = lines[1].trim();
+          console.log(`[${requestId}] Fallback to direct line extraction`);
+        }
+      }
+      
+      // Handle the case where the subject is the entire output and doesn't contain any identifiers
+      if (subject1 === "Default subject 1" && subject2 === "Default subject 2" && aiOutput.trim().length < 200) {
+        // If it's a short output with no identifiers, try to split it intelligently
+        const possibleSubjects = aiOutput.split(/\n|\.|\?|!/);
+        const filteredSubjects = possibleSubjects.filter(s => s.trim().length > 5);
+        
+        if (filteredSubjects.length >= 2) {
+          subject1 = filteredSubjects[0].trim();
+          subject2 = filteredSubjects[1].trim();
+          console.log(`[${requestId}] Using intelligent splitting for subjects`);
+        } else if (filteredSubjects.length === 1) {
+          // If there's only one good sentence, use it for both (better than nothing)
+          subject1 = filteredSubjects[0].trim();
+          subject2 = filteredSubjects[0].trim();
+          console.log(`[${requestId}] Only found one good subject, duplicating it`);
+        }
+      }
+      
+      // Final check - if we still have defaults but have content, just use the first 100 chars
+      if (subject1 === "Default subject 1" && aiOutput.trim().length > 0) {
+        subject1 = aiOutput.trim().substring(0, 100);
+        console.log(`[${requestId}] Falling back to raw output substring for subject1`);
+      }
+      
+      if (subject2 === "Default subject 2" && aiOutput.trim().length > 0) {
+        const secondHalf = aiOutput.trim().substring(aiOutput.length / 2);
+        subject2 = secondHalf.substring(0, 100);
+        console.log(`[${requestId}] Falling back to raw output substring for subject2`);
+      }
+      
+      console.log(`[${requestId}] Successfully extracted subject lines`);
     } catch (parseError) {
       console.error(`[${requestId}] Failed to parse subject lines from AI output:`, parseError);
-      console.log(`[${requestId}] Using default subject lines`);
+      console.log(`[${requestId}] Raw AI output that failed parsing:`, aiOutput);
+      
+      // Last resort: if parsing failed completely, use a portion of the raw output
+      if (aiOutput && aiOutput.trim().length > 0) {
+        // Split the output in half and use as subjects
+        const midpoint = Math.floor(aiOutput.length / 2);
+        subject1 = aiOutput.substring(0, midpoint).split('\n')[0].trim();
+        subject2 = aiOutput.substring(midpoint).split('\n')[0].trim();
+        
+        // Truncate if too long
+        if (subject1.length > 100) subject1 = subject1.substring(0, 97) + '...';
+        if (subject2.length > 100) subject2 = subject2.substring(0, 97) + '...';
+        
+        console.log(`[${requestId}] Using emergency fallback for subject extraction`);
+      }
     }
     
     console.log(`[${requestId}] 📋 Final subject lines:`);

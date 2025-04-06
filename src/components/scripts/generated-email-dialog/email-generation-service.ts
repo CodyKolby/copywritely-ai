@@ -22,22 +22,22 @@ Twoje tytuły powinny:
 - być jednoznaczne, chwytliwe i składać się z jednej, mocnej myśli,
 - angażować odbiorcę natychmiastową obietnicą, ostrzeżeniem, pytaniem lub wyzwaniem,
 - bazować na kontrastach (np. porównanie dwóch opcji, przeciwieństw),
-- unikać ogólników i pustych fraz jak „Odkryj sekret…” czy „Zacznij już dziś”.
+- unikać ogólników i pustych fraz jak „Odkryj sekret…" czy „Zacznij już dziś".
 
 **Zasady tworzenia tytułów:**
 
 1. **Zadziorność i kontrowersja**: Tytuł ma być mocny, zaskakujący, pełen emocji. Może zawierać elementy podważające powszechne przekonania (np. pytanie lub ostrzeżenie).
-2. **Personalizacja**: Używaj imienia odbiorcy, jeśli to możliwe, np. „IMIE, nie pozwól mi tego usunąć”.
-3. **Porównania i kontrasty**: Stwórz kontrast między „dobrym” a „złym” podejściem, np. „Dlaczego inne kursy Cię nie wzbogaciły?”.
+2. **Personalizacja**: Używaj imienia odbiorcy, jeśli to możliwe, np. „IMIE, nie pozwól mi tego usunąć".
+3. **Porównania i kontrasty**: Stwórz kontrast między „dobrym" a „złym" podejściem, np. „Dlaczego inne kursy Cię nie wzbogaciły?".
 4. **Pytanie vs. rozkaz**: Jeden tytuł ma być pytaniem, a drugi – rozkazem lub stwierdzeniem wywołującym kontrowersję.
-5. **Jasność i jednoznaczność**: Tytuł ma składać się z jednej mocnej myśli, angażującej od razu. Unikaj używania dwóch zdań ani przecinków typu „–” czy „...”.
-6. **Unikaj pustych fraz**: Tytuł nie może zawierać ogólników takich jak „Zacznij już dziś” czy „Odkryj sekret…”. Musi mówić od razu, dlaczego warto kliknąć.
+5. **Jasność i jednoznaczność**: Tytuł ma składać się z jednej mocnej myśli, angażującej od razu. Unikaj używania dwóch zdań ani przecinków typu „–" czy „...".
+6. **Unikaj pustych fraz**: Tytuł nie może zawierać ogólników takich jak „Zacznij już dziś" czy „Odkryj sekret…". Musi mówić od razu, dlaczego warto kliknąć.
 7. **Jasna struktura**: Pisz językiem zrozumiałym dla każdego (np. 4-latka). Tytuł musi być prosty i natychmiast zrozumiały.
 
 **Wskazówki do tworzenia tytułów**:
 
 - Przeczytaj styl maila z blueprintu, zrozum jego ton, cel i sposób prowadzenia narracji.
-- Zastosuj mechanizm emocji i kontrastów, np. używając słów jak „NIE”, „nie rób tego”, „zanim”, „dlaczego” lub „czy”.
+- Zastosuj mechanizm emocji i kontrastów, np. używając słów jak „NIE", „nie rób tego", „zanim", „dlaczego" lub „czy".
 - Tytuły muszą być natychmiastowe w odbiorze, a jednocześnie wywoływać poczucie, że coś ważnego jest w środku, co można stracić.
 
 **Styl maila**: {{stylmaila}}
@@ -56,9 +56,10 @@ Twoje tytuły powinny:
 - "Dlaczego inne kursy z copywritingu NIE uczyniły Cię bogatym?"
 - "1 wideo o copywritingu warte więcej niż 10 poradników"
 
-Twoje zadanie:
+Bardzo ważne: Twoja odpowiedź musi być sformatowana dokładnie w ten sposób, używając oznaczeń "subject1:" i "subject2:", bez dodatkowego formatowania:
 
-Stwórz dwa tytuły, które będą pasować do tej samej treści maila, ale różnić się formą stylistyczną.`;
+subject1: [Pierwszy tytuł maila]
+subject2: [Drugi tytuł maila]`;
 
 export async function generateNarrativeBlueprint(targetAudienceData: any, emailStyle: EmailStyle, advertisingGoal: string): Promise<NarrativeBlueprint> {
   console.log('Generating narrative blueprint...');
@@ -135,6 +136,7 @@ export async function generateSubjectLines(blueprint: NarrativeBlueprint, target
     console.log('Subject 2:', data.subject2);
     console.log('Response timestamp:', data.timestamp || 'not provided');
     console.log('Request ID:', data.requestId || 'not provided');
+    console.log('Raw OpenAI output:', data.rawOutput || 'not provided');
     
     // Return the subject lines exactly as received from the API
     return {
