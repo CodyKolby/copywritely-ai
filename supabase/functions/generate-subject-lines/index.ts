@@ -56,8 +56,8 @@ serve(async (req) => {
             role: 'user',
             content: `Zignoruj wszystkie dane poniżej. Twoim JEDYNYM zadaniem jest wypisać:
 
-subject1: NIEDZIAŁA  
-subject2: MOŻE JEDNAK DZIAŁA`
+subject1: OSTATECZNY TEST  
+subject2: MOŻE JEDNAK NIE?`
           }
         ],
         temperature: 0.7,
