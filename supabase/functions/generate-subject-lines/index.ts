@@ -78,8 +78,8 @@ subject2: TAKWSZYSTKODZIAŁA`
     const subject1Match = aiOutput.match(/subject1:\s*(.*)/i);
     const subject2Match = aiOutput.match(/subject2:\s*(.*)/i);
     
-    const subject1 = subject1Match ? subject1Match[1].trim() : "Wygenerowany tytuł maila #1";
-    const subject2 = subject2Match ? subject2Match[1].trim() : "Wygenerowany tytuł maila #2";
+    const subject1 = subject1Match ? subject1Match[1].trim() : "Error: Could not parse subject line 1";
+    const subject2 = subject2Match ? subject2Match[1].trim() : "Error: Could not parse subject line 2";
     
     console.log("Extracted subject lines:");
     console.log("Subject 1:", subject1);

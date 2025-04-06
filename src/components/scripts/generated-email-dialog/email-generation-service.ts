@@ -41,10 +41,19 @@ export async function generateSubjectLines(blueprint: NarrativeBlueprint, target
     
     if (error) throw new Error(`Error invoking generate-subject-lines: ${error.message}`);
     
+    console.log('Raw subject line data received:', data);
+    
+    // Ensure we have both subject lines
+    if (!data.subject1 || !data.subject2) {
+      console.error('Missing subject lines in response:', data);
+      throw new Error('Incomplete subject lines returned from API');
+    }
+    
     console.log('Subject lines generated successfully:');
     console.log('Subject 1:', data.subject1);
     console.log('Subject 2:', data.subject2);
     
+    // Return the subject lines exactly as received from the API
     return {
       subject1: data.subject1,
       subject2: data.subject2

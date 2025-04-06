@@ -77,6 +77,7 @@ export const useEmailGeneration = ({
       const subjectLines = await generateSubjectLines(blueprint, targetAudienceData);
       console.log('Otrzymane tytuły maila:', subjectLines);
       
+      // Set the subject lines directly from the API response without any modifications
       setGeneratedSubject(subjectLines.subject1);
       setAlternativeSubject(subjectLines.subject2);
       
@@ -111,13 +112,10 @@ Z pozdrowieniami,
 
   const toggleSubjectLine = () => {
     setIsShowingAlternative(!isShowingAlternative);
-    if (isShowingAlternative) {
-      setGeneratedSubject(alternativeSubject);
-    } else {
-      const temp = generatedSubject;
-      setGeneratedSubject(alternativeSubject);
-      setAlternativeSubject(temp);
-    }
+    // Swap the subject lines
+    const temp = generatedSubject;
+    setGeneratedSubject(alternativeSubject);
+    setAlternativeSubject(temp);
   };
 
   const handleRetry = () => {
