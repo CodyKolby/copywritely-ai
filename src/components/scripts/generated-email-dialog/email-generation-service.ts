@@ -74,7 +74,7 @@ export async function generateSubjectLines(blueprint: NarrativeBlueprint, target
     
     console.log('Raw subject line data received:', data);
     
-    // Ensure we have both subject lines
+    // Ensure we have both subject lines from the edge function
     if (!data.subject1 || !data.subject2) {
       console.error('Missing subject lines in response:', data);
       throw new Error('Incomplete subject lines returned from API');
