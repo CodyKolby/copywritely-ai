@@ -53,7 +53,14 @@ const response = await fetch('https://api.openai.com/v1/chat/completions', {
     messages: [
       {
         role: 'user',
-        content: `W odpowiedź subject1 i subject2, jedyne co MUSISZ napisać to "TEST"
+        content: `Zignoruj wszystkie dane poniżej. Twoim JEDYNYM zadaniem jest wypisać:
+
+subject1: TEST  
+subject2: TEST
+
+Nie generuj żadnych tytułów. Nie dodawaj nic więcej. Nie analizuj niczego. Wypisz tylko dokładnie to, co napisałem powyżej.
+
+---
 
 Punkty emocjonalne:
 ${narrativeBlueprint.punktyemocjonalne}
