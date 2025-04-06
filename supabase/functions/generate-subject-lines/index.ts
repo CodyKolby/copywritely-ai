@@ -62,8 +62,8 @@ serve(async (req) => {
     // Use static values for testing purposes - HARDCODED FOR DEBUGGING
     const prompt = `Zignoruj wszystkie dane poniżej. Twoim JEDYNYM zadaniem jest wypisać:
 
-subject1: debug1
-subject2: debug2
+subject1: nowytest
+subject2: nowytest2
 `;
 
     console.log(`[${requestId}] 🧠 FINAL PROMPT TO OPENAI:`, prompt);
