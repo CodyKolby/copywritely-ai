@@ -6,10 +6,19 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   generateNarrativeBlueprint, 
-  generateSubjectLines,
-  saveEmailToProject,
-  NarrativeBlueprint
-} from './email-generation-service';
+  type NarrativeBlueprint
+} from './services/narrative-blueprint-service';
+import {
+  generateSubjectLines
+} from './services/subject-line-service';
+import {
+  generateEmailContent,
+  selectRandomEmailStructure,
+  type EmailStructure
+} from './services/email-content-service';
+import { 
+  saveEmailToProject
+} from './services/email-project-service';
 import { 
   UseEmailGenerationProps, 
   EmailGenerationHookReturn 
@@ -35,6 +44,7 @@ export const useEmailGeneration = ({
   const [isShowingAlternative, setIsShowingAlternative] = useState(false);
   const [requestTimestamp, setRequestTimestamp] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<any>(null);
+  const [emailStructure, setEmailStructure] = useState<EmailStructure>('PAS');
   
   const navigate = useNavigate();
 
@@ -82,34 +92,35 @@ export const useEmailGeneration = ({
       console.log('Otrzymane tytuły maila w useEmailGeneration:', subjectLinesResponse);
       console.log('Subject line response timestamp:', subjectLinesResponse.timestamp || 'not provided');
       console.log('Raw output from OpenAI:', subjectLinesResponse.rawOutput || 'not provided');
-      console.log('Raw prompt to OpenAI:', subjectLinesResponse.rawPrompt || 'not provided');
       
       // Store debug info
-      setDebugInfo(subjectLinesResponse.debugInfo);
+      setDebugInfo({
+        subjectLines: subjectLinesResponse.debugInfo,
+        emailStructure: emailStructure
+      });
       
       // Set the subject lines exactly as received from the API
       setGeneratedSubject(subjectLinesResponse.subject1);
       setAlternativeSubject(subjectLinesResponse.subject2);
       
-      // For now, we'll use mock data for the email content
-      setGeneratedEmail(`Drogi [Imię],
-
-Czy zmagasz się z [problem]? ${blueprint.punktyemocjonalne.split('\n')[0]}
-
-${blueprint.punktyemocjonalne.split('\n')[1] || 'Wiele osób takich jak Ty każdego dnia traci czas i pieniądze przez nieefektywne rozwiązania.'}
-
-Nasz produkt [Nazwa] został zaprojektowany specjalnie, aby rozwiązać ten problem raz na zawsze. ${blueprint.osnarracyjna}
-
-Oto co oferujemy:
-- [Korzyść 1]
-- [Korzyść 2]
-- [Korzyść 3]
-
-${blueprint.stylmaila.split('\n')[0] || 'Nie czekaj dłużej! Kliknij poniższy link, aby dowiedzieć się więcej i skorzystać z naszej specjalnej oferty:'}
-[Przycisk CTA]
-
-Z pozdrowieniami,
-[Twoje imię]`);
+      // Randomly select email structure (PAS or CJN)
+      const selectedStructure = selectRandomEmailStructure();
+      setEmailStructure(selectedStructure);
+      console.log(`Wylosowana struktura emaila: ${selectedStructure}`);
+      
+      // Generate email content based on narrative blueprint and selected structure
+      const emailContentResponse = await generateEmailContent(blueprint, targetAudienceData, selectedStructure);
+      console.log(`Email wygenerowany z użyciem struktury: ${emailContentResponse.structureUsed}`);
+      
+      // Set the generated email content
+      setGeneratedEmail(emailContentResponse.emailContent);
+      
+      // Update debug info with email content generation details
+      setDebugInfo(prev => ({
+        ...prev,
+        emailContent: emailContentResponse.debugInfo,
+        structureUsed: emailContentResponse.structureUsed
+      }));
 
     } catch (err: any) {
       console.error('Error generating email:', err);
@@ -202,6 +213,7 @@ Z pozdrowieniami,
     handleViewProject,
     setGeneratedSubject,
     setGeneratedEmail,
-    debugInfo
+    debugInfo,
+    emailStructure
   };
 };

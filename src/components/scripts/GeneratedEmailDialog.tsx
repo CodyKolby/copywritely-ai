@@ -9,6 +9,7 @@ import ErrorState from './generated-email-dialog/ErrorState';
 import { useEmailGeneration } from './generated-email-dialog/useEmailGeneration';
 import { EmailStyle } from './EmailStyleDialog';
 import SubjectLineToggle from './generated-email-dialog/SubjectLineToggle';
+import { Badge } from '@/components/ui/badge';
 
 interface GeneratedEmailDialogProps {
   open: boolean;
@@ -44,7 +45,8 @@ const GeneratedEmailDialog = ({
     handleViewProject,
     setGeneratedSubject,
     setGeneratedEmail,
-    narrativeBlueprint
+    narrativeBlueprint,
+    emailStructure
   } = useEmailGeneration({
     open,
     targetAudienceId,
@@ -76,7 +78,12 @@ const GeneratedEmailDialog = ({
           <div className="p-6 max-h-[calc(90vh-100px)] overflow-y-auto">
             {narrativeBlueprint && (
               <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <h3 className="text-sm font-semibold text-gray-700 mb-2">Blueprint narracyjny:</h3>
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-sm font-semibold text-gray-700">Blueprint narracyjny:</h3>
+                  <Badge variant={emailStructure === 'PAS' ? 'default' : 'secondary'} className="ml-2">
+                    Struktura: {emailStructure === 'PAS' ? 'Problem-Agitacja-Rozwiązanie' : 'Customer Journey Narrative'}
+                  </Badge>
+                </div>
                 
                 <div className="space-y-3">
                   <div>

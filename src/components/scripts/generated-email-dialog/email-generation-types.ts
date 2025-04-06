@@ -1,6 +1,7 @@
 
 import { EmailStyle } from '../EmailStyleDialog';
-import { NarrativeBlueprint } from './email-generation-service';
+import { NarrativeBlueprint } from './services/narrative-blueprint-service';
+import { EmailStructure } from './services/email-content-service';
 
 export interface UseEmailGenerationProps {
   open: boolean;
@@ -22,6 +23,7 @@ export interface EmailGenerationState {
   projectId: string | null;
   narrativeBlueprint: NarrativeBlueprint | null;
   isShowingAlternative: boolean;
+  emailStructure: EmailStructure;
 }
 
 export interface EmailGenerationActions {

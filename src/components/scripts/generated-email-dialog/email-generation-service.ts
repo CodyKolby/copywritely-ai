@@ -1,7 +1,7 @@
 
 import { 
   generateNarrativeBlueprint,
-  NarrativeBlueprint
+  type NarrativeBlueprint
 } from './services/narrative-blueprint-service';
 
 import { 
@@ -18,11 +18,16 @@ import { EmailStyle } from '../EmailStyleDialog';
 
 // Re-export the key types and functions for backward compatibility
 export { 
-  NarrativeBlueprint,
-  DEFAULT_SUBJECT_LINE_PROMPT,
   generateNarrativeBlueprint,
   generateSubjectLines,
-  saveEmailToProject
+  saveEmailToProject,
+  DEFAULT_SUBJECT_LINE_PROMPT
+};
+
+// Re-export types using export type
+export type { 
+  NarrativeBlueprint,
+  SubjectLinesResponse
 };
 
 // Additional exports if needed in the future
