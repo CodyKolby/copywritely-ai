@@ -60,20 +60,6 @@ subject2: TEST
 
 Nie generuj żadnych tytułów. Nie dodawaj nic więcej. Nie analizuj niczego. Wypisz tylko dokładnie to, co napisałem powyżej.
 
----
-
-Punkty emocjonalne:
-${narrativeBlueprint.punktyemocjonalne}
-
-Styl maila:
-${narrativeBlueprint.stylmaila}
-
-Oś narracyjna:
-${narrativeBlueprint.osnarracyjna}
-
-Dane ankietowe:
-${surveyDataString}
-
 Odpowiedź sformatuj jako:
 subject1: [Tytuł pierwszy]
 subject2: [Tytuł drugi]`
