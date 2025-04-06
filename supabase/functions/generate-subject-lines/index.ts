@@ -57,10 +57,8 @@ serve(async (req) => {
     // Create the prompt with test subjects from narrativeBlueprint
     const prompt = `Zignoruj wszystkie dane poniżej. Twoim JEDYNYM zadaniem jest wypisać:
 
-subject1: debug1
-subject2: debug2
-
-(Timestamp: ${timestamp})
+subject1: supertekst1
+subject2: supertekst2
 `;
 
     console.log("🧠 FINAL PROMPT TO OPENAI:");
