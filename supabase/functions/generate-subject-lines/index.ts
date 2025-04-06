@@ -6,63 +6,54 @@ const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, cache-control, pragma, x-no-cache',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS, GET',
+  'Access-Control-Max-Age': '86400',
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
-
   const requestId = crypto.randomUUID();
   const timestamp = new Date().toISOString();
   
   console.log(`🚀 Request received [${timestamp}] Request ID: ${requestId}`);
   
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    console.log(`[${requestId}] Handling OPTIONS preflight request`);
+    return new Response(null, { 
+      headers: corsHeaders,
+      status: 204
+    });
+  }
+
   try {
     // Read raw body as text first for debugging
     const rawBody = await req.text();
-    console.log("🧾 RAW REQUEST BODY:", rawBody);
+    console.log(`[${requestId}] 🧾 RAW REQUEST BODY:`, rawBody);
 
     // Parse JSON manually after logging raw body
     const { narrativeBlueprint, surveyData } = JSON.parse(rawBody);
     
     if (!narrativeBlueprint) {
+      console.log(`[${requestId}] Missing narrative blueprint`);
       return new Response(
         JSON.stringify({ error: 'Narrative blueprint is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`📦 Blueprint size: ${JSON.stringify(narrativeBlueprint).length}`);
-    console.log(`📊 Survey size: ${JSON.stringify(surveyData || {}).length}`);
-    console.log(`🆔 DebugFlag from frontend:`, narrativeBlueprint?.debugFlag || 'brak');
-    console.log(`⏰ Processing timestamp: ${timestamp}`);
+    console.log(`[${requestId}] 📦 Blueprint size: ${JSON.stringify(narrativeBlueprint).length}`);
+    console.log(`[${requestId}] 📊 Survey size: ${JSON.stringify(surveyData || {}).length}`);
+    console.log(`[${requestId}] 🆔 DebugFlag from frontend:`, narrativeBlueprint?.debugFlag || 'none');
     
-    // Format survey data for the prompt
-    let surveyDataString = "";
-    if (typeof surveyData === 'object') {
-      Object.entries(surveyData).forEach(([key, value]) => {
-        if (Array.isArray(value)) {
-          surveyDataString += `${key}: ${value.join(", ")}\n`;
-        } else if (value) {
-          surveyDataString += `${key}: ${value}\n`;
-        }
-      });
-    } else {
-      surveyDataString = String(surveyData || '');
-    }
-
-    // Create the prompt with test subjects from narrativeBlueprint
+    // Use static values for testing purposes
     const prompt = `Zignoruj wszystkie dane poniżej. Twoim JEDYNYM zadaniem jest wypisać:
 
-subject1: supertekst1
-subject2: supertekst2
+subject1: debug1
+subject2: debug2
 `;
 
-    console.log("🧠 FINAL PROMPT TO OPENAI:");
-    console.log(prompt);
+    console.log(`[${requestId}] 🧠 FINAL PROMPT TO OPENAI:`, prompt);
 
     // Call OpenAI API with the Subject Line prompt
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -70,7 +61,10 @@ subject2: supertekst2
       headers: {
         'Authorization': `Bearer ${OPENAI_API_KEY}`,
         'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'X-Request-ID': requestId,
       },
       body: JSON.stringify({
         model: 'gpt-4o-mini',
@@ -87,13 +81,14 @@ subject2: supertekst2
 
     if (!response.ok) {
       const errorData = await response.json();
+      console.error(`[${requestId}] OpenAI API error:`, errorData);
       throw new Error(`OpenAI API error: ${errorData.error?.message || JSON.stringify(errorData)}`);
     }
     
     const data = await response.json();
     const aiOutput = data.choices[0].message.content;
     
-    console.log("🤖 Raw AI output:", aiOutput);
+    console.log(`[${requestId}] 🤖 Raw AI output:`, aiOutput);
     
     // Parse the output to extract the two subject lines - use more precise regex
     const subject1Match = aiOutput.match(/subject1:\s*(.*?)(?:\s*\n|\s*$)/i);
@@ -103,9 +98,9 @@ subject2: supertekst2
     const subject1 = subject1Match && subject1Match[1] ? subject1Match[1].trim() : "Failed to parse subject1";
     const subject2 = subject2Match && subject2Match[1] ? subject2Match[1].trim() : "Failed to parse subject2";
     
-    console.log("📋 Parsed subject lines:");
-    console.log("Subject 1:", subject1);
-    console.log("Subject 2:", subject2);
+    console.log(`[${requestId}] 📋 Parsed subject lines:`);
+    console.log(`[${requestId}] Subject 1:`, subject1);
+    console.log(`[${requestId}] Subject 2:`, subject2);
     
     // Return a response with a timestamp and all debug info to help debug caching issues
     return new Response(
@@ -113,7 +108,6 @@ subject2: supertekst2
         subject1, 
         subject2,
         rawPrompt: prompt,
-        rawRequestBody: rawBody,
         timestamp: timestamp,
         requestId: requestId,
         rawOutput: aiOutput

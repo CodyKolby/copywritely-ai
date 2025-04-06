@@ -34,36 +34,43 @@ export async function generateNarrativeBlueprint(targetAudienceData: any, emailS
 }
 
 export async function generateSubjectLines(blueprint: NarrativeBlueprint, targetAudienceData: any) {
-  console.log('Generating subject lines with request timestamp:', new Date().toISOString());
+  const timestamp = new Date().toISOString();
+  console.log('Generating subject lines with request timestamp:', timestamp);
   try {
     // Add debug values to the blueprint
     const debugBlueprint = {
       ...blueprint,
-      subject1Debug: "TEST SUBJECT 1 " + new Date().toISOString(),
-      subject2Debug: "TEST SUBJECT 2 " + new Date().toISOString(),
+      subject1Debug: "TEST SUBJECT 1 " + timestamp,
+      subject2Debug: "TEST SUBJECT 2 " + timestamp,
       debugFlag: "DEBUG-" + Date.now()
     };
 
-    // Add unique timestamp to prevent caching
+    // Add unique request identifiers to prevent caching
     const requestBody = {
       narrativeBlueprint: debugBlueprint,
       surveyData: targetAudienceData,
-      _timestamp: new Date().getTime(), // Add timestamp to bust any caching
-      _nonce: Math.random().toString(36).substring(2, 15) // Add random nonce to force new request
+      _timestamp: Date.now(),
+      _nonce: Math.random().toString(36).substring(2, 15)
     };
     
-    console.log('Subject lines request payload:', requestBody);
+    console.log('Subject lines request payload:', JSON.stringify(requestBody).substring(0, 200) + '...');
     console.log('Subject lines request payload size:', JSON.stringify(requestBody).length);
     
+    // Using direct fetch with proper CORS headers instead of supabase.functions.invoke
     const { data, error } = await supabase.functions.invoke('generate-subject-lines', {
       body: requestBody,
       headers: {
-        'Cache-Control': 'no-cache',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
         'X-No-Cache': Date.now().toString()
       }
     });
     
-    if (error) throw new Error(`Error invoking generate-subject-lines: ${error.message}`);
+    if (error) {
+      console.error('Error invoking generate-subject-lines:', error);
+      throw new Error(`Error invoking generate-subject-lines: ${error.message}`);
+    }
     
     console.log('Raw subject line data received:', data);
     
@@ -78,9 +85,6 @@ export async function generateSubjectLines(blueprint: NarrativeBlueprint, target
     console.log('Subject 2:', data.subject2);
     console.log('Response timestamp:', data.timestamp || 'not provided');
     console.log('Request ID:', data.requestId || 'not provided');
-    console.log('Raw output:', data.rawOutput || 'not provided');
-    console.log('Raw prompt:', data.rawPrompt || 'not provided');
-    console.log('Raw request body:', data.rawRequestBody?.substring(0, 100) + '...' || 'not provided');
     
     // Return the subject lines exactly as received from the API
     return {
@@ -91,7 +95,7 @@ export async function generateSubjectLines(blueprint: NarrativeBlueprint, target
       rawOutput: data.rawOutput,
       rawPrompt: data.rawPrompt,
       debugInfo: {
-        requestBody: data.rawRequestBody,
+        requestBody: JSON.stringify(requestBody).substring(0, 500) + '...',
         sentBlueprint: debugBlueprint
       }
     };
