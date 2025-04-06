@@ -40,8 +40,6 @@ export async function generateSubjectLines(blueprint: NarrativeBlueprint, target
     // Add debug values to the blueprint
     const debugBlueprint = {
       ...blueprint,
-      subject1Debug: "TEST SUBJECT 1 " + timestamp,
-      subject2Debug: "TEST SUBJECT 2 " + timestamp,
       debugFlag: "DEBUG-" + Date.now()
     };
 

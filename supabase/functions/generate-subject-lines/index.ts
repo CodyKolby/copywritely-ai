@@ -59,11 +59,18 @@ serve(async (req) => {
     console.log(`[${requestId}] 📊 Survey size: ${JSON.stringify(surveyData || {}).length}`);
     console.log(`[${requestId}] 🆔 DebugFlag from frontend:`, narrativeBlueprint?.debugFlag || 'none');
     
-    // Use static values for testing purposes - HARDCODED FOR DEBUGGING
-    const prompt = `Zignoruj wszystkie dane poniżej. Twoim JEDYNYM zadaniem jest wypisać:
+    // Construct a prompt using the narrative blueprint
+    // This is a simplified version - you would typically use more sophisticated prompt engineering
+    const prompt = `Based on the following narrative blueprint:
+- Emotional points: ${narrativeBlueprint.punktyemocjonalne}
+- Email style: ${narrativeBlueprint.stylmaila}
+- Narrative axis: ${narrativeBlueprint.osnarracyjna}
 
-subject1: nowytest
-subject2: nowytest2
+Generate two compelling email subject lines that will attract the attention of the target audience.
+Format your response exactly as follows (replace examples with your generated content):
+
+subject1: Your first compelling subject line here
+subject2: Your second compelling subject line here
 `;
 
     console.log(`[${requestId}] 🧠 FINAL PROMPT TO OPENAI:`, prompt);
@@ -103,11 +110,30 @@ subject2: nowytest2
     
     console.log(`[${requestId}] 🤖 Raw AI output:`, aiOutput);
     
-    // Extract hard-coded values for testing - fix the bug with not returning debug1/debug2
-    const subject1 = "debug1";
-    const subject2 = "debug2";
+    // Parse the subject lines from the AI output
+    let subject1 = "Default subject 1";
+    let subject2 = "Default subject 2";
     
-    console.log(`[${requestId}] 📋 Using hardcoded subject lines for testing:`);
+    try {
+      // Extract subject lines using regex
+      const subject1Match = aiOutput.match(/subject1:\s*(.+?)($|\n)/i);
+      const subject2Match = aiOutput.match(/subject2:\s*(.+?)($|\n)/i);
+      
+      if (subject1Match && subject1Match[1]) {
+        subject1 = subject1Match[1].trim();
+      }
+      
+      if (subject2Match && subject2Match[1]) {
+        subject2 = subject2Match[1].trim();
+      }
+      
+      console.log(`[${requestId}] Extracted subject lines successfully`);
+    } catch (parseError) {
+      console.error(`[${requestId}] Failed to parse subject lines from AI output:`, parseError);
+      console.log(`[${requestId}] Using default subject lines`);
+    }
+    
+    console.log(`[${requestId}] 📋 Final subject lines:`);
     console.log(`[${requestId}] Subject 1:`, subject1);
     console.log(`[${requestId}] Subject 2:`, subject2);
     
