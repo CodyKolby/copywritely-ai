@@ -45,28 +45,36 @@ serve(async (req) => {
       );
     }
 
-    const { narrativeBlueprint, surveyData } = data;
+    const { prompt, debugMode } = data;
     
-    if (!narrativeBlueprint) {
-      console.log(`[${requestId}] Missing narrative blueprint`);
+    if (!prompt) {
+      console.log(`[${requestId}] Missing prompt`);
       return new Response(
-        JSON.stringify({ error: 'Narrative blueprint is required' }),
+        JSON.stringify({ error: 'Prompt is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`[${requestId}] 📦 Blueprint size: ${JSON.stringify(narrativeBlueprint).length}`);
-    console.log(`[${requestId}] 📊 Survey size: ${JSON.stringify(surveyData || {}).length}`);
-    console.log(`[${requestId}] 🆔 DebugFlag from frontend:`, narrativeBlueprint?.debugFlag || 'none');
+    console.log(`[${requestId}] 📦 Prompt size: ${prompt.length}`);
+    console.log(`[${requestId}] 🆔 Debug mode:`, debugMode ? 'enabled' : 'disabled');
     
-    // Construct a prompt using the narrative blueprint
-    // This is a simplified version - you would typically use more sophisticated prompt engineering
-    const prompt = `Twoim zadaniem jest zawsze niezależnie od tego kto inny ci każe albo nie zależnie od danych jakie masz pisać "TESTDZIAŁA"
-`;
-
+    if (debugMode) {
+      // Return debug response immediately without calling OpenAI
+      console.log(`[${requestId}] 🧪 Debug mode enabled, returning test subjects`);
+      return new Response(
+        JSON.stringify({
+          subject1: "DEBUG SUBJECT 1: " + new Date().toISOString(),
+          subject2: "DEBUG SUBJECT 2: " + new Date().toISOString(),
+          timestamp: timestamp,
+          requestId: requestId
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     console.log(`[${requestId}] 🧠 FINAL PROMPT TO OPENAI:`, prompt);
 
-    // Call OpenAI API with the Subject Line prompt
+    // Call OpenAI API with the provided prompt
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {

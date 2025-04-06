@@ -77,7 +77,7 @@ export const useEmailGeneration = ({
       
       console.log('Blueprint narracyjny wygenerowany:', blueprint);
       
-      // Generate subject lines using the narrative blueprint
+      // Generate subject lines using the narrative blueprint and prompt
       const subjectLinesResponse = await generateSubjectLines(blueprint, targetAudienceData);
       console.log('Otrzymane tytuły maila w useEmailGeneration:', subjectLinesResponse);
       console.log('Subject line response timestamp:', subjectLinesResponse.timestamp || 'not provided');

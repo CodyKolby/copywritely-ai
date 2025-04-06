@@ -12,6 +12,25 @@ export interface NarrativeBlueprint {
   debugFlag?: string;
 }
 
+// Default prompt template that can be customized
+const DEFAULT_SUBJECT_LINE_PROMPT = `Twoim zadaniem jest utworzenie dwóch chwytliwych tytułów (subject lines) dla emaila marketingowego na podstawie poniższych informacji o grupie docelowej i blueprint:
+
+BLUEPRINT NARRACYJNY:
+Punkty emocjonalne: {{punktyemocjonalne}}
+Styl maila: {{stylmaila}}
+Oś narracyjna: {{osnarracyjna}}
+
+DODATKOWE INFORMACJE:
+{{surveyData}}
+
+Utwórz dwa różne, chwytliwe tytuły emaila (subject lines), które przyciągną uwagę odbiorcy i zachęcą do otwarcia wiadomości.
+Format odpowiedzi musi być dokładnie taki:
+
+subject1: [Pierwszy tytuł emaila]
+subject2: [Drugi tytuł emaila]
+
+Nie dodawaj żadnych dodatkowych informacji ani objaśnień.`;
+
 export async function generateNarrativeBlueprint(targetAudienceData: any, emailStyle: EmailStyle, advertisingGoal: string): Promise<NarrativeBlueprint> {
   console.log('Generating narrative blueprint...');
   try {
@@ -37,22 +56,26 @@ export async function generateSubjectLines(blueprint: NarrativeBlueprint, target
   const timestamp = new Date().toISOString();
   console.log('Generating subject lines with request timestamp:', timestamp);
   try {
-    // Add debug values to the blueprint
-    const debugBlueprint = {
-      ...blueprint,
-      debugFlag: "DEBUG-" + Date.now()
-    };
-
+    // Create a formatted version of the survey data for the prompt
+    const formattedSurveyData = JSON.stringify(targetAudienceData, null, 2);
+    
+    // Replace template variables with actual values
+    let finalPrompt = DEFAULT_SUBJECT_LINE_PROMPT
+      .replace('{{punktyemocjonalne}}', blueprint.punktyemocjonalne)
+      .replace('{{stylmaila}}', blueprint.stylmaila)
+      .replace('{{osnarracyjna}}', blueprint.osnarracyjna)
+      .replace('{{surveyData}}', formattedSurveyData);
+    
     // Add unique request identifiers to prevent caching
     const requestBody = {
-      narrativeBlueprint: debugBlueprint,
-      surveyData: targetAudienceData,
+      prompt: finalPrompt,
+      debugMode: false, // Set to true to get debug responses without calling OpenAI
       _timestamp: Date.now(),
       _nonce: Math.random().toString(36).substring(2, 15)
     };
     
-    console.log('Subject lines request payload:', JSON.stringify(requestBody).substring(0, 200) + '...');
     console.log('Subject lines request payload size:', JSON.stringify(requestBody).length);
+    console.log('Final prompt for subject lines (first 200 chars):', finalPrompt.substring(0, 200) + '...');
     
     // Using supabase.functions.invoke with explicit cache-busting headers
     const { data, error } = await supabase.functions.invoke('generate-subject-lines', {
@@ -94,7 +117,7 @@ export async function generateSubjectLines(blueprint: NarrativeBlueprint, target
       rawPrompt: data.rawPrompt,
       debugInfo: {
         requestBody: JSON.stringify(requestBody).substring(0, 500) + '...',
-        sentBlueprint: debugBlueprint
+        sentPrompt: finalPrompt
       }
     };
   } catch (err: any) {
