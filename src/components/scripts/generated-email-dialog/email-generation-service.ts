@@ -35,11 +35,21 @@ Zasady:
 3. Żadnego żargonu, ogólników, pustych metafor.
 4. Tytuł ma natychmiast mówić, dlaczego warto go kliknąć.
 5. Tytuły muszą być spójne z blueprintem emocjonalnym.
-6. Unikaj pustych fraz jak „Zacznij już dziś”, „Odkryj sekret…” itp.
-7. Jeden tytuł = jedna myśl. Nie używaj dwóch zdań, ani przecinków typu „–”, „...”.
+6. Unikaj pustych fraz jak „Zacznij już dziś", „Odkryj sekret…" itp.
+7. Jeden tytuł = jedna myśl. Nie używaj dwóch zdań, ani przecinków typu „–", „...".
 8. Jeśli używasz imienia, wpisz placeholder: IMIE.
 9. Dwa tytuły muszą być o tej samej treści maila, ale mieć różny styl (np. pytanie vs. rozkaz).
 10. Styl i emocje mają wynikać z przekazanych danych — zwłaszcza punktów emocjonalnych.
+
+Kontekst z blueprintu:
+Punkty emocjonalne: {{punktyemocjonalne}}
+Styl maila: {{stylmaila}}
+Oś narracyjna: {{osnarracyjna}}
+
+Dane z ankiety klienta:
+{{surveyData}}
+
+Wygeneruj dwa tytuły emaila:
 
 subject1: [Pierwszy tytuł emaila]
 subject2: [Drugi tytuł emaila]`;
@@ -119,7 +129,6 @@ export async function generateSubjectLines(blueprint: NarrativeBlueprint, target
     console.log('Subject 2:', data.subject2);
     console.log('Response timestamp:', data.timestamp || 'not provided');
     console.log('Request ID:', data.requestId || 'not provided');
-    console.log({{surveyData}});
     
     // Return the subject lines exactly as received from the API
     return {

@@ -66,7 +66,8 @@ serve(async (req) => {
           subject1: "DEBUG SUBJECT 1: " + new Date().toISOString(),
           subject2: "DEBUG SUBJECT 2: " + new Date().toISOString(),
           timestamp: timestamp,
-          requestId: requestId
+          requestId: requestId,
+          rawPrompt: prompt
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
