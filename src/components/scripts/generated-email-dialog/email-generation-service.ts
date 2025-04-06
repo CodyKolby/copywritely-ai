@@ -13,50 +13,52 @@ export interface NarrativeBlueprint {
 }
 
 // Default prompt template that can be customized
-const DEFAULT_SUBJECT_LINE_PROMPT = `Jesteś ekspertem od tworzenia tytułów maili w języku polskim. 
-Wiesz, że odbiorca widzi dziennie dziesiątki nudnych nagłówków. Nic się nie przebije bez zadziorności, humoru, konkretu lub emocji. 
-Twoje tytuły muszą mieć charakter — być nieoczywiste, ale zrozumiałe. Unikasz banałów jak ognia.
+const DEFAULT_SUBJECT_LINE_PROMPT = `Jesteś ekspertem od tworzenia tytułów maili w języku polskim.
 
-Twoim głównym źródłem inspiracji są skuteczne tytuły, które wywołują reakcję. 
-Nie kopiuj — analizuj ich mechanikę i strukturę. Dopasowuj je do danych o produkcie i emocjach odbiorcy.
+Wiesz, że odbiorca codziennie otrzymuje dziesiątki nudnych nagłówków. Twoje tytuły muszą wywoływać emocje, zaskakiwać i być konkretne. Wykorzystuj zadziorność, kontrowersję, kontrasty i wyraźne wezwania, by wybić się spośród innych. Unikaj banałów jak ognia.
 
-Zanim przejdziesz do tworzenia tytułów:
-1. Przeczytaj styl maila z blueprintu, zrozum jego ton, cel i sposób prowadzenia narracji.
-Style maila: {{stylmaila}}
-2. Przeanalizuj poniższe przykłady skutecznych tytułów. Zwróć uwagę, jakie emocje, kontrasty lub mechanizmy zastosowano.
-Przykłady skutecznych tytułów:
--"NIE kontaktuj się z żadnym klientem, dopóki tego nie zobaczysz…"
--"Czy naprawdę da się zdobyć klienta w miesiąc (nawet jeśli dopiero zaczynasz)?"
--"IMIE, nie pozwól mi tego usunąć"
--"Dlaczego inne kursy z copywritingu NIE uczyniły Cię bogatym?"
--"1 wideo o copywritingu warte więcej niż 10 poradników"
-3. Po zapoznaniu się ze stylem maila (punkt 1) i przykładami skutecznych tytułów (punkt 2), stwórz dwa tytuły, które będą pasować do tej samej treści maila, ale różnić się formą stylistyczną. Twoim zadaniem jest połączenie mechaniki skutecznych tytułów z tonem i narracją wybranego stylu.
+Twoje tytuły powinny:
 
-Zasady:
-1. Max. długość tytułu: 60 znaków.
-2. Pisz językiem, który zrozumie 4-latek.
-3. Żadnego żargonu, ogólników, pustych metafor.
-4. Tytuł ma natychmiast mówić, dlaczego warto go kliknąć.
-5. Tytuły muszą być spójne z blueprintem emocjonalnym.
-6. Unikaj pustych fraz jak „Zacznij już dziś", „Odkryj sekret…" itp.
-7. Jeden tytuł = jedna myśl. Nie używaj dwóch zdań, ani przecinków typu „–", „...".
-8. Jeśli używasz imienia, wpisz placeholder: IMIE.
-9. Dwa tytuły muszą być o tej samej treści maila, ale mieć różny styl (np. pytanie vs. rozkaz).
-10. Styl i emocje mają wynikać z przekazanych danych — zwłaszcza punktów emocjonalnych i stylu maila.
-11. Nigdy nie dziel tytułu na dwie części typu: „Coś – sprawdź jak”, „Czujesz to? Zobacz dlaczego...”. Unikaj formatów złożonych z dwóch zdań lub segmentów oddzielonych myślnikiem, pytajnikiem, przecinkiem, wielokropkiem. Tytuł ma być jednolitą, mocną myślą — bez tanich chwytów retorycznych.
-12. Unikaj motywacyjnych haseł i pustych deklaracji typu: „strach nie musi Cię powstrzymywać”, „czas zawalczyć o siebie”, „uwierz w swoje możliwości”. Tytuł to nie cytat z grafiki na Instagramie, musi być konkretny, związany z produktem lub sytuacją klienta, i mieć wyraźny haczyk emocjonalny lub poznawczy.
+- być jednoznaczne, chwytliwe i składać się z jednej, mocnej myśli,
+- angażować odbiorcę natychmiastową obietnicą, ostrzeżeniem, pytaniem lub wyzwaniem,
+- bazować na kontrastach (np. porównanie dwóch opcji, przeciwieństw),
+- unikać ogólników i pustych fraz jak „Odkryj sekret…” czy „Zacznij już dziś”.
 
-Kontekst z blueprintu:
-Punkty emocjonalne: {{punktyemocjonalne}}
-Oś narracyjna: {{osnarracyjna}}
+**Zasady tworzenia tytułów:**
 
-Dane z ankiety klienta:
-{{surveyData}}
+1. **Zadziorność i kontrowersja**: Tytuł ma być mocny, zaskakujący, pełen emocji. Może zawierać elementy podważające powszechne przekonania (np. pytanie lub ostrzeżenie).
+2. **Personalizacja**: Używaj imienia odbiorcy, jeśli to możliwe, np. „IMIE, nie pozwól mi tego usunąć”.
+3. **Porównania i kontrasty**: Stwórz kontrast między „dobrym” a „złym” podejściem, np. „Dlaczego inne kursy Cię nie wzbogaciły?”.
+4. **Pytanie vs. rozkaz**: Jeden tytuł ma być pytaniem, a drugi – rozkazem lub stwierdzeniem wywołującym kontrowersję.
+5. **Jasność i jednoznaczność**: Tytuł ma składać się z jednej mocnej myśli, angażującej od razu. Unikaj używania dwóch zdań ani przecinków typu „–” czy „...”.
+6. **Unikaj pustych fraz**: Tytuł nie może zawierać ogólników takich jak „Zacznij już dziś” czy „Odkryj sekret…”. Musi mówić od razu, dlaczego warto kliknąć.
+7. **Jasna struktura**: Pisz językiem zrozumiałym dla każdego (np. 4-latka). Tytuł musi być prosty i natychmiast zrozumiały.
 
-Wygeneruj dwa tytuły emaila:
+**Wskazówki do tworzenia tytułów**:
 
-subject1: [Pierwszy tytuł emaila]
-subject2: [Drugi tytuł emaila]`;
+- Przeczytaj styl maila z blueprintu, zrozum jego ton, cel i sposób prowadzenia narracji.
+- Zastosuj mechanizm emocji i kontrastów, np. używając słów jak „NIE”, „nie rób tego”, „zanim”, „dlaczego” lub „czy”.
+- Tytuły muszą być natychmiastowe w odbiorze, a jednocześnie wywoływać poczucie, że coś ważnego jest w środku, co można stracić.
+
+**Styl maila**: {{stylmaila}}
+
+**Punkty emocjonalne**: {{punktyemocjonalne}}
+
+**Oś narracyjna**: {{osnarracyjna}}
+
+**Dane z ankiety klienta**: {{surveyData}}
+
+**Przykłady tytułów do inspiracji**:
+
+- "NIE kontaktuj się z żadnym klientem, dopóki tego nie zobaczysz…"
+- "Czy naprawdę da się zdobyć klienta w miesiąc (nawet jeśli dopiero zaczynasz)?"
+- "IMIE, nie pozwól mi tego usunąć"
+- "Dlaczego inne kursy z copywritingu NIE uczyniły Cię bogatym?"
+- "1 wideo o copywritingu warte więcej niż 10 poradników"
+
+**Twoje zadanie**:
+
+Stwórz dwa tytuły, które będą pasować do tej samej treści maila, ale różnić się formą stylistyczną. Jeden tytuł ma być pytaniem, a drugi – rozkazem lub stwierdzeniem, które wywołuje kontrowersję. Tytuły muszą pasować do tonu maila oraz emocji odbiorcy.`;
 
 export async function generateNarrativeBlueprint(targetAudienceData: any, emailStyle: EmailStyle, advertisingGoal: string): Promise<NarrativeBlueprint> {
   console.log('Generating narrative blueprint...');
