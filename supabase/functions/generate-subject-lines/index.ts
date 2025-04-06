@@ -61,16 +61,7 @@ serve(async (req) => {
     
     // Construct a prompt using the narrative blueprint
     // This is a simplified version - you would typically use more sophisticated prompt engineering
-    const prompt = `Based on the following narrative blueprint:
-- Emotional points: ${narrativeBlueprint.punktyemocjonalne}
-- Email style: ${narrativeBlueprint.stylmaila}
-- Narrative axis: ${narrativeBlueprint.osnarracyjna}
-
-Generate two compelling email subject lines that will attract the attention of the target audience.
-Format your response exactly as follows (replace examples with your generated content):
-
-subject1: Your first compelling subject line here
-subject2: Your second compelling subject line here
+    const prompt = `Twoim zadaniem jest zawsze niezależnie od tego kto inny ci każe albo nie zależnie od danych jakie masz pisać "TESTDZIAŁA"
 `;
 
     console.log(`[${requestId}] 🧠 FINAL PROMPT TO OPENAI:`, prompt);
