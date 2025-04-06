@@ -42,9 +42,9 @@ Zasady:
 10. Styl i emocje mają wynikać z przekazanych danych — zwłaszcza punktów emocjonalnych.
 
 Kontekst z blueprintu:
-Punkty emocjonalne: ${{punktyemocjonalne}}
-Styl maila: ${{stylmaila}}
-Oś narracyjna: ${{osnarracyjna}}
+Punkty emocjonalne: {{punktyemocjonalne}}
+Styl maila: {{stylmaila}}
+Oś narracyjna: {{osnarracyjna}}
 
 Dane z ankiety klienta:
 {{surveyData}}
