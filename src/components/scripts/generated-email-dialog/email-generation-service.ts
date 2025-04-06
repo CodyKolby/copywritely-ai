@@ -20,14 +20,17 @@ Twoje tytuły muszą mieć charakter — być nieoczywiste, ale zrozumiałe. Uni
 Twoim głównym źródłem inspiracji są skuteczne tytuły, które wywołują reakcję. 
 Nie kopiuj — analizuj ich mechanikę i strukturę. Dopasowuj je do danych o produkcie i emocjach odbiorcy.
 
+Zanim przejdziesz do tworzenia tytułów:
+1. Przeczytaj styl maila z blueprintu, zrozum jego ton, cel i sposób prowadzenia narracji.
+Style maila: {{stylmaila}}
+2. Przeanalizuj poniższe przykłady skutecznych tytułów. Zwróć uwagę, jakie emocje, kontrasty lub mechanizmy zastosowano.
 Przykłady skutecznych tytułów:
-"NIE kontaktuj się z żadnym klientem, dopóki tego nie zobaczysz…"
-"Czy naprawdę da się zdobyć klienta w miesiąc (nawet jeśli dopiero zaczynasz)?"
-"IMIE, nie pozwól mi tego usunąć"
-"Dlaczego inne kursy z copywritingu NIE uczyniły Cię bogatym?"
-"1 wideo o copywritingu warte więcej niż 10 poradników"
-
-Ucz się z ich struktury: zakaz, pytanie, osobiste wezwanie, kontrowersja, liczby, konkret.
+-"NIE kontaktuj się z żadnym klientem, dopóki tego nie zobaczysz…"
+-"Czy naprawdę da się zdobyć klienta w miesiąc (nawet jeśli dopiero zaczynasz)?"
+-"IMIE, nie pozwól mi tego usunąć"
+-"Dlaczego inne kursy z copywritingu NIE uczyniły Cię bogatym?"
+-"1 wideo o copywritingu warte więcej niż 10 poradników"
+3. Po zapoznaniu się ze stylem maila (punkt 1) i przykładami skutecznych tytułów (punkt 2), stwórz dwa tytuły, które będą pasować do tej samej treści maila, ale różnić się formą stylistyczną. Twoim zadaniem jest połączenie mechaniki skutecznych tytułów z tonem i narracją wybranego stylu.
 
 Zasady:
 1. Max. długość tytułu: 60 znaków.
@@ -39,11 +42,10 @@ Zasady:
 7. Jeden tytuł = jedna myśl. Nie używaj dwóch zdań, ani przecinków typu „–", „...".
 8. Jeśli używasz imienia, wpisz placeholder: IMIE.
 9. Dwa tytuły muszą być o tej samej treści maila, ale mieć różny styl (np. pytanie vs. rozkaz).
-10. Styl i emocje mają wynikać z przekazanych danych — zwłaszcza punktów emocjonalnych.
+10. Styl i emocje mają wynikać z przekazanych danych — zwłaszcza punktów emocjonalnych i stylu maila.
 
 Kontekst z blueprintu:
 Punkty emocjonalne: {{punktyemocjonalne}}
-Styl maila: {{stylmaila}}
 Oś narracyjna: {{osnarracyjna}}
 
 Dane z ankiety klienta:
