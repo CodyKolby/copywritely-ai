@@ -56,7 +56,7 @@ const response = await fetch('https://api.openai.com/v1/chat/completions', {
         content: `Zignoruj wszystkie dane poniżej. Twoim JEDYNYM zadaniem jest wypisać:
 
 subject1: TEST  
-subject2: TEST
+subject2: TEST`
       }
     ],
     temperature: 0.7,
