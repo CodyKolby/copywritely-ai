@@ -56,9 +56,9 @@ Twoje tytuły powinny:
 - "Dlaczego inne kursy z copywritingu NIE uczyniły Cię bogatym?"
 - "1 wideo o copywritingu warte więcej niż 10 poradników"
 
-**Twoje zadanie**:
+Twoje zadanie:
 
-Stwórz dwa tytuły, które będą pasować do tej samej treści maila, ale różnić się formą stylistyczną. Jeden tytuł ma być pytaniem, a drugi – rozkazem lub stwierdzeniem, które wywołuje kontrowersję. Tytuły muszą pasować do tonu maila oraz emocji odbiorcy.`;
+Stwórz dwa tytuły, które będą pasować do tej samej treści maila, ale różnić się formą stylistyczną.`;
 
 export async function generateNarrativeBlueprint(targetAudienceData: any, emailStyle: EmailStyle, advertisingGoal: string): Promise<NarrativeBlueprint> {
   console.log('Generating narrative blueprint...');
