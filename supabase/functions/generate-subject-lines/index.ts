@@ -4,9 +4,10 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 
+// Enhanced CORS headers with all required fields
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, cache-control, pragma, x-no-cache',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, cache-control, pragma, expires, x-no-cache',
   'Access-Control-Allow-Methods': 'POST, OPTIONS, GET',
   'Access-Control-Max-Age': '86400',
 };
@@ -32,7 +33,19 @@ serve(async (req) => {
     console.log(`[${requestId}] 🧾 RAW REQUEST BODY:`, rawBody);
 
     // Parse JSON manually after logging raw body
-    const { narrativeBlueprint, surveyData } = JSON.parse(rawBody);
+    let data;
+    try {
+      data = JSON.parse(rawBody);
+      console.log(`[${requestId}] JSON parsing successful`);
+    } catch (parseError) {
+      console.error(`[${requestId}] Failed to parse JSON:`, parseError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { narrativeBlueprint, surveyData } = data;
     
     if (!narrativeBlueprint) {
       console.log(`[${requestId}] Missing narrative blueprint`);
@@ -46,7 +59,7 @@ serve(async (req) => {
     console.log(`[${requestId}] 📊 Survey size: ${JSON.stringify(surveyData || {}).length}`);
     console.log(`[${requestId}] 🆔 DebugFlag from frontend:`, narrativeBlueprint?.debugFlag || 'none');
     
-    // Use static values for testing purposes
+    // Use static values for testing purposes - HARDCODED FOR DEBUGGING
     const prompt = `Zignoruj wszystkie dane poniżej. Twoim JEDYNYM zadaniem jest wypisać:
 
 subject1: debug1
@@ -85,8 +98,8 @@ subject2: debug2
       throw new Error(`OpenAI API error: ${errorData.error?.message || JSON.stringify(errorData)}`);
     }
     
-    const data = await response.json();
-    const aiOutput = data.choices[0].message.content;
+    const responseData = await response.json();
+    const aiOutput = responseData.choices[0].message.content;
     
     console.log(`[${requestId}] 🤖 Raw AI output:`, aiOutput);
     

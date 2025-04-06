@@ -56,7 +56,7 @@ export async function generateSubjectLines(blueprint: NarrativeBlueprint, target
     console.log('Subject lines request payload:', JSON.stringify(requestBody).substring(0, 200) + '...');
     console.log('Subject lines request payload size:', JSON.stringify(requestBody).length);
     
-    // Using direct fetch with proper CORS headers instead of supabase.functions.invoke
+    // Using supabase.functions.invoke with explicit cache-busting headers
     const { data, error } = await supabase.functions.invoke('generate-subject-lines', {
       body: requestBody,
       headers: {
