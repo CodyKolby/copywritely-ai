@@ -80,8 +80,9 @@ export const useEmailGeneration = ({
       const subjectLines = await generateSubjectLines(blueprint, targetAudienceData);
       console.log('Otrzymane tytuły maila w useEmailGeneration:', subjectLines);
       console.log('Subject line response timestamp:', subjectLines.timestamp || 'not provided');
+      console.log('Raw output from OpenAI:', subjectLines.rawOutput || 'not provided');
       
-      // Set the subject lines directly from the API response
+      // Set the subject lines exactly as received from the API
       setGeneratedSubject(subjectLines.subject1);
       setAlternativeSubject(subjectLines.subject2);
       

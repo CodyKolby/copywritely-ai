@@ -60,13 +60,15 @@ export async function generateSubjectLines(blueprint: NarrativeBlueprint, target
     console.log('Subject 2:', data.subject2);
     console.log('Response timestamp:', data.timestamp || 'not provided');
     console.log('Request ID:', data.requestId || 'not provided');
+    console.log('Raw output:', data.rawOutput || 'not provided');
     
     // Return the subject lines exactly as received from the API
     return {
       subject1: data.subject1,
       subject2: data.subject2,
       timestamp: data.timestamp,
-      requestId: data.requestId
+      requestId: data.requestId,
+      rawOutput: data.rawOutput
     };
   } catch (err: any) {
     console.error('Failed to generate subject lines:', err);

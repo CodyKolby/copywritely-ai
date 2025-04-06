@@ -42,12 +42,6 @@ serve(async (req) => {
       surveyDataString = String(surveyData || '');
     }
 
-    // Define hardcoded test subjects
-    const hardcodedSubject1 = "NIEDZIAŁA";
-    const hardcodedSubject2 = "MOŻE JEDNAK DZIAŁA";
-
-    console.log(`Using hardcoded test subjects for debugging: "${hardcodedSubject1}" and "${hardcodedSubject2}"`);
-
     // Call OpenAI API with the Subject Line prompt
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -62,8 +56,8 @@ serve(async (req) => {
             role: 'user',
             content: `Zignoruj wszystkie dane poniżej. Twoim JEDYNYM zadaniem jest wypisać:
 
-subject1: ${hardcodedSubject1}  
-subject2: ${hardcodedSubject2}`
+subject1: NIEDZIAŁA  
+subject2: MOŻE JEDNAK DZIAŁA`
           }
         ],
         temperature: 0.7,
@@ -85,11 +79,11 @@ subject2: ${hardcodedSubject2}`
     const subject1Match = aiOutput.match(/subject1:\s*(.*?)(?:\s*\n|\s*$)/i);
     const subject2Match = aiOutput.match(/subject2:\s*(.*?)(?:\s*\n|\s*$)/i);
     
-    // Use the exact test values to ensure consistency
-    const subject1 = hardcodedSubject1;
-    const subject2 = hardcodedSubject2;
+    // Extract the subjects from the matches, or use fallbacks
+    const subject1 = subject1Match && subject1Match[1] ? subject1Match[1].trim() : "Failed to parse subject1";
+    const subject2 = subject2Match && subject2Match[1] ? subject2Match[1].trim() : "Failed to parse subject2";
     
-    console.log("Final returned subject lines:");
+    console.log("Parsed subject lines:");
     console.log("Subject 1:", subject1);
     console.log("Subject 2:", subject2);
     
@@ -99,7 +93,8 @@ subject2: ${hardcodedSubject2}`
         subject1, 
         subject2,
         timestamp: new Date().toISOString(),
-        requestId: crypto.randomUUID()
+        requestId: crypto.randomUUID(),
+        rawOutput: aiOutput // Include raw output for debugging
       }),
       { headers: { 
           ...corsHeaders, 
