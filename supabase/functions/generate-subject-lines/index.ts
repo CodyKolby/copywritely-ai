@@ -15,8 +15,18 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const requestId = crypto.randomUUID();
+  const timestamp = new Date().toISOString();
+  
+  console.log(`🚀 Request received [${timestamp}] Request ID: ${requestId}`);
+  
   try {
-    const { narrativeBlueprint, surveyData } = await req.json();
+    // Read raw body as text first for debugging
+    const rawBody = await req.text();
+    console.log("🧾 RAW REQUEST BODY:", rawBody);
+
+    // Parse JSON manually after logging raw body
+    const { narrativeBlueprint, surveyData } = JSON.parse(rawBody);
     
     if (!narrativeBlueprint) {
       return new Response(
@@ -25,8 +35,10 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Processing subject lines for email with timestamp: ${new Date().toISOString()}`);
-    console.log(`Request data hash: ${JSON.stringify(narrativeBlueprint).length}-${JSON.stringify(surveyData || {}).length}`);
+    console.log(`📦 Blueprint size: ${JSON.stringify(narrativeBlueprint).length}`);
+    console.log(`📊 Survey size: ${JSON.stringify(surveyData || {}).length}`);
+    console.log(`🆔 DebugFlag from frontend:`, narrativeBlueprint?.debugFlag || 'brak');
+    console.log(`⏰ Processing timestamp: ${timestamp}`);
     
     // Format survey data for the prompt
     let surveyDataString = "";
@@ -42,6 +54,18 @@ serve(async (req) => {
       surveyDataString = String(surveyData || '');
     }
 
+    // Create the prompt with test subjects from narrativeBlueprint
+    const prompt = `Zignoruj wszystkie dane poniżej. Twoim JEDYNYM zadaniem jest wypisać:
+
+subject1: ${narrativeBlueprint.subject1Debug || 'BRAK subject1Debug'}  
+subject2: ${narrativeBlueprint.subject2Debug || 'BRAK subject2Debug'}
+
+(Timestamp: ${timestamp})
+`;
+
+    console.log("🧠 FINAL PROMPT TO OPENAI:");
+    console.log(prompt);
+
     // Call OpenAI API with the Subject Line prompt
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -54,10 +78,7 @@ serve(async (req) => {
         messages: [
           {
             role: 'user',
-            content: `Zignoruj wszystkie dane poniżej. Twoim JEDYNYM zadaniem jest wypisać:
-
-subject1: OSTATECZNY TEST  
-subject2: MOŻE JEDNAK NIE?`
+            content: prompt
           }
         ],
         temperature: 0.7,
@@ -73,7 +94,7 @@ subject2: MOŻE JEDNAK NIE?`
     const data = await response.json();
     const aiOutput = data.choices[0].message.content;
     
-    console.log("Raw AI output:", aiOutput);
+    console.log("🤖 Raw AI output:", aiOutput);
     
     // Parse the output to extract the two subject lines - use more precise regex
     const subject1Match = aiOutput.match(/subject1:\s*(.*?)(?:\s*\n|\s*$)/i);
@@ -83,18 +104,20 @@ subject2: MOŻE JEDNAK NIE?`
     const subject1 = subject1Match && subject1Match[1] ? subject1Match[1].trim() : "Failed to parse subject1";
     const subject2 = subject2Match && subject2Match[1] ? subject2Match[1].trim() : "Failed to parse subject2";
     
-    console.log("Parsed subject lines:");
+    console.log("📋 Parsed subject lines:");
     console.log("Subject 1:", subject1);
     console.log("Subject 2:", subject2);
     
-    // Return a response with a timestamp to help debug caching issues
+    // Return a response with a timestamp and all debug info to help debug caching issues
     return new Response(
       JSON.stringify({ 
         subject1, 
         subject2,
-        timestamp: new Date().toISOString(),
-        requestId: crypto.randomUUID(),
-        rawOutput: aiOutput // Include raw output for debugging
+        rawPrompt: prompt,
+        rawRequestBody: rawBody,
+        timestamp: timestamp,
+        requestId: requestId,
+        rawOutput: aiOutput
       }),
       { headers: { 
           ...corsHeaders, 
@@ -106,18 +129,22 @@ subject2: MOŻE JEDNAK NIE?`
       }
     );
   } catch (error) {
-    console.error(`Error in generate-subject-lines function: ${error.message}`);
+    console.error(`❌ Error in generate-subject-lines function [${timestamp}] [${requestId}]: ${error.message}`);
+    console.error(error.stack);
     return new Response(
       JSON.stringify({ 
         error: error.message,
-        timestamp: new Date().toISOString()
+        timestamp: timestamp,
+        requestId: requestId
       }),
       { 
         status: 500, 
         headers: { 
           ...corsHeaders, 
           'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache, no-store, must-revalidate' 
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
         } 
       }
     );

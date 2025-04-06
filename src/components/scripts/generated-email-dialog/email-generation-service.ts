@@ -6,6 +6,10 @@ export interface NarrativeBlueprint {
   punktyemocjonalne: string;
   stylmaila: string;
   osnarracyjna: string;
+  // Add debug fields
+  subject1Debug?: string;
+  subject2Debug?: string;
+  debugFlag?: string;
 }
 
 export async function generateNarrativeBlueprint(targetAudienceData: any, emailStyle: EmailStyle, advertisingGoal: string): Promise<NarrativeBlueprint> {
@@ -32,13 +36,22 @@ export async function generateNarrativeBlueprint(targetAudienceData: any, emailS
 export async function generateSubjectLines(blueprint: NarrativeBlueprint, targetAudienceData: any) {
   console.log('Generating subject lines with request timestamp:', new Date().toISOString());
   try {
+    // Add debug values to the blueprint
+    const debugBlueprint = {
+      ...blueprint,
+      subject1Debug: "TEST SUBJECT 1 " + new Date().toISOString(),
+      subject2Debug: "TEST SUBJECT 2 " + new Date().toISOString(),
+      debugFlag: "DEBUG-" + Date.now()
+    };
+
     // Add unique timestamp to prevent caching
     const requestBody = {
-      narrativeBlueprint: blueprint,
+      narrativeBlueprint: debugBlueprint,
       surveyData: targetAudienceData,
       _timestamp: new Date().getTime() // Add timestamp to bust any caching
     };
     
+    console.log('Subject lines request payload:', requestBody);
     console.log('Subject lines request payload size:', JSON.stringify(requestBody).length);
     
     const { data, error } = await supabase.functions.invoke('generate-subject-lines', {
@@ -61,6 +74,8 @@ export async function generateSubjectLines(blueprint: NarrativeBlueprint, target
     console.log('Response timestamp:', data.timestamp || 'not provided');
     console.log('Request ID:', data.requestId || 'not provided');
     console.log('Raw output:', data.rawOutput || 'not provided');
+    console.log('Raw prompt:', data.rawPrompt || 'not provided');
+    console.log('Raw request body:', data.rawRequestBody?.substring(0, 100) + '...' || 'not provided');
     
     // Return the subject lines exactly as received from the API
     return {
@@ -68,7 +83,12 @@ export async function generateSubjectLines(blueprint: NarrativeBlueprint, target
       subject2: data.subject2,
       timestamp: data.timestamp,
       requestId: data.requestId,
-      rawOutput: data.rawOutput
+      rawOutput: data.rawOutput,
+      rawPrompt: data.rawPrompt,
+      debugInfo: {
+        requestBody: data.rawRequestBody,
+        sentBlueprint: debugBlueprint
+      }
     };
   } catch (err: any) {
     console.error('Failed to generate subject lines:', err);

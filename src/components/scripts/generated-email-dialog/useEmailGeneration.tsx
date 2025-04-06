@@ -34,6 +34,7 @@ export const useEmailGeneration = ({
   const [narrativeBlueprint, setNarrativeBlueprint] = useState<NarrativeBlueprint | null>(null);
   const [isShowingAlternative, setIsShowingAlternative] = useState(false);
   const [requestTimestamp, setRequestTimestamp] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<any>(null);
   
   const navigate = useNavigate();
 
@@ -77,14 +78,18 @@ export const useEmailGeneration = ({
       console.log('Blueprint narracyjny wygenerowany:', blueprint);
       
       // Generate subject lines using the narrative blueprint
-      const subjectLines = await generateSubjectLines(blueprint, targetAudienceData);
-      console.log('Otrzymane tytuły maila w useEmailGeneration:', subjectLines);
-      console.log('Subject line response timestamp:', subjectLines.timestamp || 'not provided');
-      console.log('Raw output from OpenAI:', subjectLines.rawOutput || 'not provided');
+      const subjectLinesResponse = await generateSubjectLines(blueprint, targetAudienceData);
+      console.log('Otrzymane tytuły maila w useEmailGeneration:', subjectLinesResponse);
+      console.log('Subject line response timestamp:', subjectLinesResponse.timestamp || 'not provided');
+      console.log('Raw output from OpenAI:', subjectLinesResponse.rawOutput || 'not provided');
+      console.log('Raw prompt to OpenAI:', subjectLinesResponse.rawPrompt || 'not provided');
+      
+      // Store debug info
+      setDebugInfo(subjectLinesResponse.debugInfo);
       
       // Set the subject lines exactly as received from the API
-      setGeneratedSubject(subjectLines.subject1);
-      setAlternativeSubject(subjectLines.subject2);
+      setGeneratedSubject(subjectLinesResponse.subject1);
+      setAlternativeSubject(subjectLinesResponse.subject2);
       
       // For now, we'll use mock data for the email content
       setGeneratedEmail(`Drogi [Imię],
@@ -196,6 +201,7 @@ Z pozdrowieniami,
     saveToProject,
     handleViewProject,
     setGeneratedSubject,
-    setGeneratedEmail
+    setGeneratedEmail,
+    debugInfo
   };
 };
