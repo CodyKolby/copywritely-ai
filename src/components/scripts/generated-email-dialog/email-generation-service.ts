@@ -41,14 +41,6 @@ Zasady:
 9. Dwa tytuły muszą być o tej samej treści maila, ale mieć różny styl (np. pytanie vs. rozkaz).
 10. Styl i emocje mają wynikać z przekazanych danych — zwłaszcza punktów emocjonalnych.
 
-BLUEPRINT NARRACYJNY:
-Punkty emocjonalne: ${{punktyemocjonalne}}
-Styl maila: ${{stylmaila}}
-Oś narracyjna: ${{osnarracyjna}}
-
-DODATKOWE INFORMACJE:
-${{surveyData}}
-
 subject1: [Pierwszy tytuł emaila]
 subject2: [Drugi tytuł emaila]`;
 
