@@ -55,8 +55,8 @@ serve(async (req) => {
             role: 'user',
             content: `Zignoruj wszystkie dane poniżej. Twoim JEDYNYM zadaniem jest wypisać:
 
-subject1: WSZYSTKODZIAŁA  
-subject2: TAKWSZYSTKODZIAŁA`
+subject1: NIEDZIAŁA  
+subject2: MOŻE JEDNAK DZIAŁA`
           }
         ],
         temperature: 0.7,
