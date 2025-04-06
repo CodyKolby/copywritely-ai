@@ -18,7 +18,7 @@ const SubjectLineToggle = ({
 }: SubjectLineToggleProps) => {
   // Log subject lines to console for debugging
   React.useEffect(() => {
-    console.log("Generated subject lines:", {
+    console.log("Subject lines received by component:", {
       subject1: currentSubject,
       subject2: alternativeSubject,
       currentlyShowing: isShowingAlternative ? "Alternative" : "Primary"

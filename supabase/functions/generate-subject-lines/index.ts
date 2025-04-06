@@ -42,27 +42,27 @@ serve(async (req) => {
     }
 
     // Call OpenAI API with the Subject Line prompt
-const response = await fetch('https://api.openai.com/v1/chat/completions', {
-  method: 'POST',
-  headers: {
-    'Authorization': `Bearer ${OPENAI_API_KEY}`,
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({
-    model: 'gpt-4o-mini',
-    messages: [
-      {
-        role: 'user',
-        content: `Zignoruj wszystkie dane poniżej. Twoim JEDYNYM zadaniem jest wypisać:
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'user',
+            content: `Zignoruj wszystkie dane poniżej. Twoim JEDYNYM zadaniem jest wypisać:
 
 subject1: TEST  
 subject2: TEST`
-      }
-    ],
-    temperature: 0.7,
-    max_tokens: 300
-  }),
-});
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 300
+      }),
+    });
 
     if (!response.ok) {
       const errorData = await response.json();
@@ -72,6 +72,8 @@ subject2: TEST`
     const data = await response.json();
     const aiOutput = data.choices[0].message.content;
     
+    console.log("Raw AI output:", aiOutput);
+    
     // Parse the output to extract the two subject lines
     const subject1Match = aiOutput.match(/subject1:\s*(.*)/i);
     const subject2Match = aiOutput.match(/subject2:\s*(.*)/i);
@@ -79,7 +81,7 @@ subject2: TEST`
     const subject1 = subject1Match ? subject1Match[1].trim() : "Wygenerowany tytuł maila #1";
     const subject2 = subject2Match ? subject2Match[1].trim() : "Wygenerowany tytuł maila #2";
     
-    console.log("Subject lines generated successfully:");
+    console.log("Extracted subject lines:");
     console.log("Subject 1:", subject1);
     console.log("Subject 2:", subject2);
     

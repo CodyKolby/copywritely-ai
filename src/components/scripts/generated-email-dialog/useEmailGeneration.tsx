@@ -75,10 +75,10 @@ export const useEmailGeneration = ({
       
       // Generate subject lines using the narrative blueprint
       const subjectLines = await generateSubjectLines(blueprint, targetAudienceData);
+      console.log('Otrzymane tytuły maila:', subjectLines);
+      
       setGeneratedSubject(subjectLines.subject1);
       setAlternativeSubject(subjectLines.subject2);
-      
-      console.log('Tytuły maila wygenerowane:', subjectLines);
       
       // For now, we'll use mock data for the email content
       setGeneratedEmail(`Drogi [Imię],
