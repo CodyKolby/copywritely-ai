@@ -54,6 +54,15 @@ const GeneratedEmailDialog = ({
     userId: user?.id
   });
 
+  // Debug log when subject lines change
+  React.useEffect(() => {
+    console.log("GeneratedEmailDialog received subject lines:", {
+      generatedSubject,
+      alternativeSubject,
+      timestamp: new Date().toISOString()
+    });
+  }, [generatedSubject, alternativeSubject]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[800px] p-0 rounded-xl overflow-hidden">

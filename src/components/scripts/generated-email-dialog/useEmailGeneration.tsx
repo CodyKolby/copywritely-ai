@@ -33,6 +33,7 @@ export const useEmailGeneration = ({
   const [projectId, setProjectId] = useState<string | null>(null);
   const [narrativeBlueprint, setNarrativeBlueprint] = useState<NarrativeBlueprint | null>(null);
   const [isShowingAlternative, setIsShowingAlternative] = useState(false);
+  const [requestTimestamp, setRequestTimestamp] = useState<string | null>(null);
   
   const navigate = useNavigate();
 
@@ -50,11 +51,13 @@ export const useEmailGeneration = ({
 
     setIsLoading(true);
     setError(null);
+    setRequestTimestamp(new Date().toISOString());
 
     try {
       console.log('Rozpoczynam generowanie emaila dla grupy docelowej:', targetAudienceId);
       console.log('Styl emaila:', emailStyle);
       console.log('Cel reklamy:', advertisingGoal);
+      console.log('Timestamp żądania:', requestTimestamp);
 
       // First, fetch the target audience data
       const { data: targetAudienceData, error: targetAudienceError } = await supabase
@@ -75,9 +78,10 @@ export const useEmailGeneration = ({
       
       // Generate subject lines using the narrative blueprint
       const subjectLines = await generateSubjectLines(blueprint, targetAudienceData);
-      console.log('Otrzymane tytuły maila:', subjectLines);
+      console.log('Otrzymane tytuły maila w useEmailGeneration:', subjectLines);
+      console.log('Subject line response timestamp:', subjectLines.timestamp || 'not provided');
       
-      // Set the subject lines directly from the API response without any modifications
+      // Set the subject lines directly from the API response
       setGeneratedSubject(subjectLines.subject1);
       setAlternativeSubject(subjectLines.subject2);
       
@@ -111,11 +115,28 @@ Z pozdrowieniami,
   };
 
   const toggleSubjectLine = () => {
+    console.log('Toggling subject lines:', {
+      before: {
+        current: generatedSubject,
+        alternative: alternativeSubject,
+        isShowingAlternative
+      }
+    });
+    
     setIsShowingAlternative(!isShowingAlternative);
+    
     // Swap the subject lines
     const temp = generatedSubject;
     setGeneratedSubject(alternativeSubject);
     setAlternativeSubject(temp);
+    
+    console.log('Subject lines after toggle:', {
+      after: {
+        current: alternativeSubject, // This will be the new current
+        alternative: temp, // This will be the new alternative
+        isShowingAlternative: !isShowingAlternative
+      }
+    });
   };
 
   const handleRetry = () => {

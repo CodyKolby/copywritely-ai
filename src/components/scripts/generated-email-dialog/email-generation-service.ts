@@ -30,13 +30,19 @@ export async function generateNarrativeBlueprint(targetAudienceData: any, emailS
 }
 
 export async function generateSubjectLines(blueprint: NarrativeBlueprint, targetAudienceData: any) {
-  console.log('Generating subject lines...');
+  console.log('Generating subject lines with request timestamp:', new Date().toISOString());
   try {
+    // Add unique timestamp to prevent caching
+    const requestBody = {
+      narrativeBlueprint: blueprint,
+      surveyData: targetAudienceData,
+      _timestamp: new Date().getTime() // Add timestamp to bust any caching
+    };
+    
+    console.log('Subject lines request payload size:', JSON.stringify(requestBody).length);
+    
     const { data, error } = await supabase.functions.invoke('generate-subject-lines', {
-      body: {
-        narrativeBlueprint: blueprint,
-        surveyData: targetAudienceData
-      }
+      body: requestBody
     });
     
     if (error) throw new Error(`Error invoking generate-subject-lines: ${error.message}`);
@@ -52,11 +58,15 @@ export async function generateSubjectLines(blueprint: NarrativeBlueprint, target
     console.log('Subject lines generated successfully:');
     console.log('Subject 1:', data.subject1);
     console.log('Subject 2:', data.subject2);
+    console.log('Response timestamp:', data.timestamp || 'not provided');
+    console.log('Request ID:', data.requestId || 'not provided');
     
     // Return the subject lines exactly as received from the API
     return {
       subject1: data.subject1,
-      subject2: data.subject2
+      subject2: data.subject2,
+      timestamp: data.timestamp,
+      requestId: data.requestId
     };
   } catch (err: any) {
     console.error('Failed to generate subject lines:', err);

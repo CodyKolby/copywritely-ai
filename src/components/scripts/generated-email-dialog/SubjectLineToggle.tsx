@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { BadgePlus, ArrowLeftRight } from 'lucide-react';
 
@@ -17,11 +17,12 @@ const SubjectLineToggle = ({
   onToggle
 }: SubjectLineToggleProps) => {
   // Log subject lines to console for debugging
-  React.useEffect(() => {
-    console.log("Subject lines received by component:", {
+  useEffect(() => {
+    console.log("Subject lines received by SubjectLineToggle component:", {
       subject1: currentSubject,
       subject2: alternativeSubject,
-      currentlyShowing: isShowingAlternative ? "Alternative" : "Primary"
+      currentlyShowing: isShowingAlternative ? "Alternative" : "Primary",
+      timestamp: new Date().toISOString()
     });
   }, [currentSubject, alternativeSubject, isShowingAlternative]);
   
