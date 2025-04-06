@@ -33,4 +33,6 @@ export interface EmailGenerationActions {
   setGeneratedEmail: (email: string) => void;
 }
 
-export type EmailGenerationHookReturn = EmailGenerationState & EmailGenerationActions;
+export type EmailGenerationHookReturn = EmailGenerationState & EmailGenerationActions & {
+  debugInfo: any;  // Adding debugInfo to the return type
+};
