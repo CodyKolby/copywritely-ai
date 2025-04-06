@@ -48,14 +48,19 @@ export async function generateSubjectLines(blueprint: NarrativeBlueprint, target
     const requestBody = {
       narrativeBlueprint: debugBlueprint,
       surveyData: targetAudienceData,
-      _timestamp: new Date().getTime() // Add timestamp to bust any caching
+      _timestamp: new Date().getTime(), // Add timestamp to bust any caching
+      _nonce: Math.random().toString(36).substring(2, 15) // Add random nonce to force new request
     };
     
     console.log('Subject lines request payload:', requestBody);
     console.log('Subject lines request payload size:', JSON.stringify(requestBody).length);
     
     const { data, error } = await supabase.functions.invoke('generate-subject-lines', {
-      body: requestBody
+      body: requestBody,
+      headers: {
+        'Cache-Control': 'no-cache',
+        'X-No-Cache': Date.now().toString()
+      }
     });
     
     if (error) throw new Error(`Error invoking generate-subject-lines: ${error.message}`);

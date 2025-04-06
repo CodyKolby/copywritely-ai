@@ -72,6 +72,7 @@ subject2: debug2
       headers: {
         'Authorization': `Bearer ${OPENAI_API_KEY}`,
         'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
       },
       body: JSON.stringify({
         model: 'gpt-4o-mini',
