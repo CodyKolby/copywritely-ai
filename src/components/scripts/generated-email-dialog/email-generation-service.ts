@@ -43,6 +43,8 @@ Zasady:
 8. Jeśli używasz imienia, wpisz placeholder: IMIE.
 9. Dwa tytuły muszą być o tej samej treści maila, ale mieć różny styl (np. pytanie vs. rozkaz).
 10. Styl i emocje mają wynikać z przekazanych danych — zwłaszcza punktów emocjonalnych i stylu maila.
+11. Nigdy nie dziel tytułu na dwie części typu: „Coś – sprawdź jak”, „Czujesz to? Zobacz dlaczego...”. Unikaj formatów złożonych z dwóch zdań lub segmentów oddzielonych myślnikiem, pytajnikiem, przecinkiem, wielokropkiem. Tytuł ma być jednolitą, mocną myślą — bez tanich chwytów retorycznych.
+12. Unikaj motywacyjnych haseł i pustych deklaracji typu: „strach nie musi Cię powstrzymywać”, „czas zawalczyć o siebie”, „uwierz w swoje możliwości”. Tytuł to nie cytat z grafiki na Instagramie, musi być konkretny, związany z produktem lub sytuacją klienta, i mieć wyraźny haczyk emocjonalny lub poznawczy.
 
 Kontekst z blueprintu:
 Punkty emocjonalne: {{punktyemocjonalne}}
