@@ -57,8 +57,8 @@ serve(async (req) => {
     // Create the prompt with test subjects from narrativeBlueprint
     const prompt = `Zignoruj wszystkie dane poniżej. Twoim JEDYNYM zadaniem jest wypisać:
 
-subject1: ${narrativeBlueprint.subject1Debug || 'BRAK subject1Debug'}  
-subject2: ${narrativeBlueprint.subject2Debug || 'BRAK subject2Debug'}
+subject1: debug1
+subject2: debug2
 
 (Timestamp: ${timestamp})
 `;
