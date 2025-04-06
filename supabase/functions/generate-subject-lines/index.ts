@@ -42,22 +42,18 @@ serve(async (req) => {
     }
 
     // Call OpenAI API with the Subject Line prompt
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { 
-            role: 'system', 
-            content: 'Twoim zadaniem jest po prostu w miejsca subject1 i subject2 wpisać słowo : TEST'
-          },
-          { 
-            role: 'user', 
-            content: `Wygeneruj dwa alternatywne tytuły dla maila marketingowego na podstawie poniższych danych:
+const response = await fetch('https://api.openai.com/v1/chat/completions', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${OPENAI_API_KEY}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    model: 'gpt-4o-mini',
+    messages: [
+      {
+        role: 'user',
+        content: `W odpowiedź subject1 i subject2, jedyne co MUSISZ napisać to "TEST"
 
 Punkty emocjonalne:
 ${narrativeBlueprint.punktyemocjonalne}
@@ -74,12 +70,12 @@ ${surveyDataString}
 Odpowiedź sformatuj jako:
 subject1: [Tytuł pierwszy]
 subject2: [Tytuł drugi]`
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 300
-      }),
-    });
+      }
+    ],
+    temperature: 0.7,
+    max_tokens: 300
+  }),
+});
 
     if (!response.ok) {
       const errorData = await response.json();
