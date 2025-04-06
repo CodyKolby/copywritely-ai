@@ -57,12 +57,6 @@ const response = await fetch('https://api.openai.com/v1/chat/completions', {
 
 subject1: TEST  
 subject2: TEST
-
-Nie generuj żadnych tytułów. Nie dodawaj nic więcej. Nie analizuj niczego. Wypisz tylko dokładnie to, co napisałem powyżej.
-
-Odpowiedź sformatuj jako:
-subject1: [Tytuł pierwszy]
-subject2: [Tytuł drugi]`
       }
     ],
     temperature: 0.7,
