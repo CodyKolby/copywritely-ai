@@ -16,6 +16,7 @@ const GeneratedScriptDialog = ({
   targetAudienceId,
   templateId,
   advertisingGoal = '',
+  socialMediaPlatform,
 }: GeneratedScriptDialogProps) => {
   const { user } = useAuth();
   
@@ -33,7 +34,7 @@ const GeneratedScriptDialog = ({
     handleRetry,
     handleGenerateWithNextHook,
     handleViewProject
-  } = useScriptGeneration(open, targetAudienceId, templateId, advertisingGoal, user?.id);
+  } = useScriptGeneration(open, targetAudienceId, templateId, advertisingGoal, user?.id, socialMediaPlatform);
   
   const showLoading = isLoading || isGeneratingNewScript;
 

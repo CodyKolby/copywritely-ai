@@ -5,4 +5,5 @@ export interface GeneratedScriptDialogProps {
   targetAudienceId: string;
   templateId: string;
   advertisingGoal?: string;
+  socialMediaPlatform?: SocialMediaPlatform;
 }

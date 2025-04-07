@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { generateScript, saveScriptAsProject } from './script-utils';
 import { toast } from 'sonner';
@@ -8,8 +9,8 @@ export const useScriptGeneration = (
   targetAudienceId: string,
   templateId: string,
   advertisingGoal: string = '',
-  socialMediaPlatform?: SocialMediaPlatform,
-  userId: string | undefined
+  userId: string | undefined,
+  socialMediaPlatform?: SocialMediaPlatform
 ) => {
   const [isLoading, setIsLoading] = useState(true);
   const [generatedScript, setGeneratedScript] = useState<string>('');
