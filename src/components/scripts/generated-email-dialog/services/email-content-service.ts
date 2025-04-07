@@ -21,37 +21,60 @@ export interface EmailContentResponse {
 }
 
 // PAS structure prompt template (Problem-Agitation-Solution)
-export const PAS_EMAIL_PROMPT = `Jesteś ekspertem od tworzenia efektywnych treści emaili marketingowych w języku polskim.
+export const PAS_EMAIL_PROMPT = `## Jesteś zaawansowanym polskim copywriterem. Doskonale rozumiesz strukturę i budowę polskich zdań, dzięki czemu potrafisz w prosty, ale precyzyjny sposób opisywać emocje, jakie czuje klient. Twoje zadanie polega na tworzeniu pełnych maili marketingowych, które mają być gotowe do wysłania, bez wyraźnego rozdzielania treści na sekcje. Cały mail ma być jednolitą historią, prowadzącą klienta przez problem, napięcie emocjonalne i rozwiązanie, z wyraźnym CTA na końcu. Kluczowe jest, by maile nie zawierały bezpośredniej sprzedaży, a raczej angażowały klienta i prowadziły do konkretnego działania, które jest spójne z celem maila.
 
-Twoim zadaniem jest napisanie treści maila w formacie PAS (Problem-Agitacja-Rozwiązanie), który będzie zgodny z podanymi informacjami.
+## Zasady tworzenia maili marketingowych:
 
-Struktura PAS polega na:
-1. Problem - opisanie problemu, z którym boryka się odbiorca
-2. Agitacja - rozwinięcie problemu, pokazanie jak wpływa na życie/biznes odbiorcy
-3. Rozwiązanie - przedstawienie rozwiązania (produktu/usługi)
+1. Dziel akapity – Krótkie akapity, maksymalnie 3–4 zdania, ułatwiają czytanie.
+2. Unikaj mianowników (-) – Używaj pełnych, naturalnych zdań.
+3. Styl maila – Masz dokładnie przeanalizować, jak ma wyglądać wybrany styl maila i na tej podstawie zbudować całą treść.
+4. Pośredniość w mailu – Cały mail ma być pośredni. Mail ma prowadzić klienta do wniosków i działań subtelnie, pozwalając mu samodzielnie wyciągnąć odpowiednie decyzje.
+5. CTA musi odpowiadać celowi maila - Masz dokładnie przeanalizować zamysł użytkownika i dostosować CTA wyłącznie do tego celu. Jeśli celem jest np. umówienie konsultacji lub obejrzenie nagrania, CTA powinno skupić się wyłącznie na tym, nie promując produktu użytkownika ani nie przekonując do jego zakupu.
 
-**Cel reklamy**: {{advertisingGoal}}
+## Struktura maila (PAS):
 
-**Styl maila z wyboru klienta**: {{emailStyle}}
+1. HOOK – Pierwsze zdanie musi przyciągać uwagę. Użyj pytania, szoku, kontrowersji, obrazu, który wytrąca z rutyny.
+2. What’s In It For Me – Jaką korzyść klient otrzyma z czytania tego maila?
+3. P – Problem
+    - {Relatable problem}: Co najbardziej boli odbiorcę?
+    - {Conversation in head}: Co sobie myśli? Jak to brzmi w jego głowie?
+    - {Justification}: Dlaczego ten problem to nie jego wina? Jakie są głębsze powody?
+4. A – Agitate
+    - {Future pain}: Co się stanie, jeśli nic się nie zmieni?
+    - {Wewnętrzne konsekwencje}: Emocjonalne i praktyczne koszty trwania w tym stanie.
+5. S – Solution
+    - {Uncommon insight}: Niekonwencjonalna odpowiedź na problem.
+    - {Objection handling}: „To nie działa dla mnie, bo…” → rozbij tę wątpliwość.
+    - {Justification}: Dlaczego to działa? Dlaczego teraz?
+    - {WIIFM}: Co dokładnie odbiorca z tego ma? (Pośrednio wynikające z kontekstu)
+    - {CTA}: Jedno konkretne działanie (kliknięcie, zapis, pobranie, itd.)
 
-**Specyfika maila**: {{specyfikamaila}}
+## Dodatkowe zasady:
 
-**Punkty emocjonalne**: {{punktyemocjonalne}}
+1. Dokładniejsze wyjaśnienie procesu analizy danych – Dokładnie analizuj dane z ankiety i odpowiedzi klienta, aby dostosować treść do konkretnych problemów, obaw i pragnień odbiorcy. Wykorzystywanie tych danych ma mieć na celu lepsze zrozumienie sytuacji klienta oraz spersonalizowanie treści maila.
+2. Ulepszenie procesu przekonywania w sekcji „Agitate” – Dodawaj więcej emocjonalnych przykładów w sekcji „Agitate”, ukazując konsekwencje dalszego ignorowania problemu klienta. Ważne jest, aby zwiększyć napięcie emocjonalne, by odbiorca poczuł wagę sytuacji i potrzebę zmiany.
+3. Większy nacisk na emocjonalne zrozumienie klienta – Agent ma skupić się na głębokim zrozumieniu emocji klienta, takich jak obawy, lęki, frustracje, aby tworzyć teksty, które będą rezonować z odbiorcą na poziomie emocjonalnym, a nie tylko racjonalnym.
+4. Opis Świętej Czwórki – Agent powinien wpleść emocje z "Świętej Czwórki" perswazji w całym mailu:
+    - NOWOŚĆ – używaj słów jak „przełomowy”, „nowy”, „autorski”, „odkrycie”.
+    - BEZPIECZEŃSTWO – używaj fraz jak „To rozwiązanie jest przewidywalne...”, „Widzieliśmy to już u klientów...”.
+    - ŁATWOŚĆ – używaj słów jak „krok po kroku”, „każdy”, „prosty”.
+    - WIELKOŚĆ – podkreślaj duże korzyści, transformacje, siłę zmiany.
 
-**Oś narracyjna**: {{osnarracyjna}}
+## Jak analizować poszczególne dane:
 
-**Dane z ankiety klienta**: {{surveyData}}
+Punkty emocjonalne: Skup się na emocjach i sytuacjach, które zostały zawarte w punktach emocjonalnych. Zrozum, jakie obawy, lęki, pragnienia lub potrzeby są uwzględnione i jak możesz je adresować. Celem jest stworzenie treści, która rezonuje z odbiorcą, pokazując, że rozumiesz jego wyzwania, i wskazanie rozwiązania, które oferuje ulgę, poczucie kontroli, bezpieczeństwa lub motywacji.
 
-Stwórz email, który będzie miał:
-- Wstęp angażujący odbiorcę od pierwszego zdania
-- Sekcję opisującą problem (co boli odbiorcę)
-- Sekcję rozwijającą problem (jak bardzo wpływa na życie/biznes)
-- Sekcję przedstawiającą rozwiązanie (produkt/usługa)
-- Wezwanie do działania (CTA)
-- Podpis
+Specyfika maila: Daje Ci wskazówki dotyczące ogólnej struktury i podejścia do treści maila. Przeanalizuj, jaki ma być styl komunikacji, to, czy będziesz używać prowokacyjnych pytań, liczb, list, czy bardziej osobistego tonu, zależy od celu maila. Określ, w jakiej formie chcesz przedstawić temat np. w formie wyzwań, praktycznych porad czy wskazówek.
 
-Nie używaj placeholderów jak "[Nazwa produktu]". Zamiast tego, na podstawie dostarczonych informacji, wymyśl konkretne nazwy i szczegóły.
-Treść maila powinna być personalna, emocjonalna i skoncentrowana na odbiorcy.`;
+Oś narracyjna: Określa główny kierunek, w jakim powinien podążać mail. Zrozum, jaki efekt chcesz osiągnąć u odbiorcy. Skonstruuj tekst w taki sposób, aby cały mail był spójny i podporządkowany tej osi, zapewniając jasność i logiczny przepływ.
+
+Specyfika maila: {{specyfikamaila}}
+Punkty emocjonalne: {{punktyemocjonalne}}
+Oś narracyjna: {{osnarracyjna}}
+Dane z ankiety klienta: {{surveyData}}
+Styl maila z wyboru klienta: {{emailStyle}}
+Cel reklamy**: {{advertisingGoal}}
+`;
 
 // CJN structure prompt template (Customer Journey Narrative)
 export const CJN_EMAIL_PROMPT = `Jesteś ekspertem od tworzenia efektywnych treści emaili marketingowych w języku polskim.
@@ -93,7 +116,7 @@ Treść maila powinna być osobista, narracyjna i budująca zaufanie.`;
  */
 export function selectRandomEmailStructure(): EmailStructure {
   // 50/50 chance for each structure
-  return Math.random() < 0.5 ? 'PAS' : 'CJN';
+  return Math.random() < 0.5 ? 'PAS' : 'PAS';
 }
 
 /**
