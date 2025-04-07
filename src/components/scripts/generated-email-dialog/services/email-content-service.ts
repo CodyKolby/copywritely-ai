@@ -95,7 +95,7 @@ export const CJN_EMAIL_PROMPT = `Jesteś zaawansowanym polskim copywriterem. Dos
 
 1. **HOOK** – Pierwsze zdanie musi przyciągnąć uwagę. Użyj pytania, szoku, kontrowersyjnej tezy lub obrazu, który wyrwie odbiorcę z rutyny i sprawi, że będzie chciał przeczytać dalej.
 2. **What's In It For Me** – Jaką korzyść klient otrzyma z czytania tego maila? Co zmieni się po zapoznaniu z jego treścią? Dlaczego warto poświęcić czas na ten materiał?
-3. **Podważenie popularnego przekonania** – Zidentyfikuj powszechnie akceptowane przekonanie lub nawyk, który jest uznawany za „normę” przez większość odbiorców. Zasiej w odbiorcy wątpliwość, pokazując, że to podejście nie tylko nie pomaga, ale wręcz utrudnia osiągnięcie celu. To ma być subtelne, nie atakujące, ale skłaniające do refleksji.
+3. **Podważenie popularnego przekonania** – Zidentyfikuj powszechnie akceptowane przekonanie lub nawyk, który jest uznawany za „normę" przez większość odbiorców. Zasiej w odbiorcy wątpliwość, pokazując, że to podejście nie tylko nie pomaga, ale wręcz utrudnia osiągnięcie celu. To ma być subtelne, nie atakujące, ale skłaniające do refleksji.
 4. **Uzasadnienie nowego podejścia** – Wyjaśnij, dlaczego dotychczasowe podejście nie działa. Pokaż logiczne powody (fakty, konsekwencje) i emocjonalne (frustracja, zmęczenie), które udowadniają, że zmiana jest potrzebna. Zaprezentuj nową, bardziej realistyczną drogę jako alternatywę. Pamiętaj, nie skupiaj się na szczegółach produktu/usługi, ale na efektach zmiany myślenia.
 5. **Potrzeba i następny krok** – Kiedy klient zacznie dostrzegać, że dotychczasowa droga nie działa, pojawia się potrzeba działania. Zbuduj w odbiorcy wewnętrzną gotowość do podjęcia kolejnego kroku, bez nacisku. CTA ma naturalnie wynikać z wcześniejszej narracji – nie opisuj rozwiązania szczegółowo, ale zaznacz, że ono istnieje i czeka na klienta, jeśli ten zdecyduje się po nie sięgnąć.
 
@@ -132,8 +132,8 @@ Cel reklamy**: {{advertisingGoal}}`;
  * Randomly selects an email structure (PAS or CJN)
  */
 export function selectRandomEmailStructure(): EmailStructure {
-  // Zawsze zwracaj PAS zgodnie z żądaniem
-  return 'CJN';
+  // Randomly choose between PAS and CJN with a 50/50 probability
+  return Math.random() < 0.5 ? 'PAS' : 'CJN';
 }
 
 /**
