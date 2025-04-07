@@ -40,7 +40,7 @@ const LoadingState = ({ stage = 'hooks' }: LoadingStateProps) => {
   }, [stage]);
   
   return (
-    <div className="py-8 flex flex-col items-center justify-center min-h-[400px]">
+    <div className="py-8 flex flex-col items-center justify-center min-h-[400px] bg-white rounded-xl">
       <HexagonalLoading progress={progress} />
       
       <div className="flex justify-center space-x-2 mt-6">

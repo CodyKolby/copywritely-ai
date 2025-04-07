@@ -24,7 +24,7 @@ const LoadingState = () => {
   }, []);
   
   return (
-    <div className="p-6 flex flex-col items-center justify-center min-h-[400px]">
+    <div className="p-6 flex flex-col items-center justify-center min-h-[400px] bg-white rounded-xl">
       <HexagonalLoading progress={progress} />
     </div>
   );
