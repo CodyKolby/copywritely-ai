@@ -93,7 +93,7 @@ const GeneratedEmailDialog = ({
                   
                   <div>
                     <h4 className="text-xs font-medium text-gray-600">Styl maila:</h4>
-                    <p className="text-sm whitespace-pre-line">{narrativeBlueprint.stylmaila}</p>
+                    <p className="text-sm whitespace-pre-line">{narrativeBlueprint.specyfikamaila}</p>
                   </div>
                   
                   <div>

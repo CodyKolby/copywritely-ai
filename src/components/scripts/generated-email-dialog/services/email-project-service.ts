@@ -28,7 +28,7 @@ export async function saveEmailToProject(
       metadata: {
         narrativeBlueprint: {
           punktyEmocjonalne: narrativeBlueprint.punktyemocjonalne,
-          stylMaila: narrativeBlueprint.stylmaila,
+          specyfikaMaila: narrativeBlueprint.specyfikamaila,
           osNarracyjna: narrativeBlueprint.osnarracyjna
         },
         alternativeSubject: alternativeSubject

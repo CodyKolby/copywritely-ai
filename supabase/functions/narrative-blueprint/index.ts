@@ -88,8 +88,8 @@ Zachowuj maksymalną zwięzłość. Nie powtarzaj informacji z danych wejściowy
 
 Wynik powinien mieć format:
 punktyemocjonalne: [tutaj punkty emocjonalne]
-stylmaila: [tutaj pomysły na styl maila]
-ośnarracyjna: [tutaj oś narracyjną]`
+specyfikamaila: [tutaj pomysły na styl maila]
+osnarracyjna: [tutaj oś narracyjną]`
           }
         ],
         temperature: 0.7,
@@ -108,22 +108,22 @@ ośnarracyjna: [tutaj oś narracyjną]`
     // Parse the AI output to extract the three sections
     const parseOutput = (output: string): {
       punktyemocjonalne: string,
-      stylmaila: string,
+      specyfikamaila: string,
       osnarracyjna: string
     } => {
       const result = {
         punktyemocjonalne: "",
-        stylmaila: "",
+        specyfikamaila: "",
         osnarracyjna: ""
       };
 
       // Extract the three sections using regex
-      const punktyMatch = output.match(/punktyemocjonalne:\s*([\s\S]*?)(?=stylmaila:|$)/i);
-      const stylMatch = output.match(/stylmaila:\s*([\s\S]*?)(?=ośnarracyjna:|osnarracyjna:|$)/i);
+      const punktyMatch = output.match(/punktyemocjonalne:\s*([\s\S]*?)(?=specyfikamaila:|$)/i);
+      const stylMatch = output.match(/specyfikamaila:\s*([\s\S]*?)(?=ośnarracyjna:|osnarracyjna:|$)/i);
       const osMatch = output.match(/(ośnarracyjna|osnarracyjna):\s*([\s\S]*?)$/i);
 
       if (punktyMatch && punktyMatch[1]) result.punktyemocjonalne = punktyMatch[1].trim();
-      if (stylMatch && stylMatch[1]) result.stylmaila = stylMatch[1].trim();
+      if (stylMatch && stylMatch[1]) result.specyfikamaila = stylMatch[1].trim();
       if (osMatch && osMatch[2]) result.osnarracyjna = osMatch[2].trim();
 
       return result;
@@ -133,7 +133,7 @@ ośnarracyjna: [tutaj oś narracyjną]`
     
     console.log("Narrative blueprint generated successfully");
     console.log("Punkty emocjonalne:", parsedOutput.punktyemocjonalne.substring(0, 100) + "...");
-    console.log("Styl maila:", parsedOutput.stylmaila.substring(0, 100) + "...");
+    console.log("Specyfika maila:", parsedOutput.specyfikamaila.substring(0, 100) + "...");
     console.log("Oś narracyjna:", parsedOutput.osnarracyjna);
     
     return new Response(

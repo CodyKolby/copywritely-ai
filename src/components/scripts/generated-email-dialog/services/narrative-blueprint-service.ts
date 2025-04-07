@@ -4,7 +4,7 @@ import { EmailStyle } from '../../EmailStyleDialog';
 
 export interface NarrativeBlueprint {
   punktyemocjonalne: string;
-  stylmaila: string;
+  specyfikamaila: string;
   osnarracyjna: string;
   // Debug fields
   subject1Debug?: string;
