@@ -123,7 +123,9 @@ export const HexagonalLoading: React.FC<HexagonalLoadingProps> = ({
         <Progress value={progress} className="h-1.5" />
       </div>
 
-      <style jsx>{`
+      {/* Using CSS in JSX without the jsx attribute */}
+      <style>
+        {`
         .hexagon {
           width: 120px;
           height: calc(120px * 0.866);
@@ -188,7 +190,8 @@ export const HexagonalLoading: React.FC<HexagonalLoadingProps> = ({
           justify-content: center;
           align-items: center;
         }
-      `}</style>
+        `}
+      </style>
     </div>
   );
 };
