@@ -5,10 +5,10 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 // Configuration
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
-// CORS headers
+// CORS headers - Updated to include cache-control, pragma, expires, and x-no-cache headers
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, cache-control, pragma, expires, x-no-cache',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
