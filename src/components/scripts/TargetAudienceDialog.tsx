@@ -65,9 +65,12 @@ const TargetAudienceDialog = ({
     onOpenChange(false);
   };
 
+  // Hide the audience dialog when script/email dialog is shown
+  const shouldShowAudienceDialog = open && !showScriptDialog && !showEmailDialog;
+
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={shouldShowAudienceDialog} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
           {!showForm && !showGoalDialog && !showEmailStyleDialog ? (
             <DialogSelectionContent

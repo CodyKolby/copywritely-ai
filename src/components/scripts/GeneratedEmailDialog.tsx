@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import LoadingState from './generated-email-dialog/LoadingState';
@@ -57,7 +58,7 @@ const GeneratedEmailDialog = ({
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`sm:max-w-[800px] p-0 rounded-xl overflow-hidden ${isLoading ? 'bg-white' : ''}`}>
+      <DialogContent className={`max-w-[700px] p-0 rounded-xl overflow-hidden ${isLoading ? 'bg-white' : ''}`}>
         {!isLoading && <DialogHeader isLoading={isLoading} />}
 
         {isLoading ? (

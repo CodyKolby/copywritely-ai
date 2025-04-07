@@ -39,7 +39,7 @@ const GeneratedScriptDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`sm:max-w-[800px] max-h-[90vh] overflow-auto p-0 ${showLoading ? 'bg-white' : ''}`}>
+      <DialogContent className={`max-w-[700px] p-0 rounded-xl overflow-hidden ${showLoading ? 'bg-white' : ''}`}>
         {/* Show DialogHeader only when not loading */}
         {!showLoading && (
           <DialogHeader 
