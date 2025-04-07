@@ -62,6 +62,7 @@ Każdy akapit = 1 zdanie lub 1 myśl. Unikaj bloków dłuższych niż 2 linijki.
     - BEZPIECZEŃSTWO – używaj fraz jak „To rozwiązanie jest przewidywalne...", „Widzieliśmy to już u klientów...".
     - ŁATWOŚĆ – używaj słów jak „krok po kroku", „każdy", „prosty".
     - WIELKOŚĆ – podkreślaj duże korzyści, transformacje, siłę zmiany.
+5. Końcówka maila – narracyjne przejście do CTA - unikaj streszczania oferty lub argumentów w ostatnich zdaniach. Nie traktuj zakończenia jak miejsca na nadrabianie zaległości. Przejście do CTA powinno wynikać naturalnie z emocjonalnego napięcia i wniosków płynących z całej historii. Zamiast streszczać, domykaj – delikatnie, z przestrzenią dla odbiorcy na refleksję i decyzję.
 
 ## Jak analizować poszczególne dane:
 
