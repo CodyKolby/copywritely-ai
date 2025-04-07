@@ -25,7 +25,7 @@ export const PAS_EMAIL_PROMPT = `## Jesteś zaawansowanym polskim copywriterem. 
 
 ## Zasady tworzenia maili marketingowych:
 
-1. Dziel akapity – Krótkie akapity, maksymalnie 3–4 zdania, ułatwiają czytanie.
+1. Dziel akapity – Pisz jak do znajomego – jeden akapit = jedna myśl. Stosuj krótkie bloki po 1–2 zdania. Każda emocja, wątek lub zmiana tempa = nowy akapit. Zostaw pustą linijkę między akapitami.
 2. Unikaj mianowników (-) – Używaj pełnych, naturalnych zdań.
 3. Styl maila – Masz dokładnie przeanalizować, jak ma wyglądać wybrany styl maila i na tej podstawie zbudować całą treść.
 4. Pośredniość w mailu – Cały mail ma być pośredni. Mail ma prowadzić klienta do wniosków i działań subtelnie, pozwalając mu samodzielnie wyciągnąć odpowiednie decyzje.
