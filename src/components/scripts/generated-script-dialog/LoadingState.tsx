@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { Activity } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Activity, FileText, Rocket, Target, Briefcase } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { useInterval } from '@/hooks/use-interval';
 
@@ -10,20 +10,86 @@ interface LoadingStateProps {
 
 const LoadingState = ({ stage = 'hooks' }: LoadingStateProps) => {
   let baseProgress = 0;
-  let stageText = '';
   
   if (stage === 'hooks') {
     baseProgress = 10;
-    stageText = 'Generowanie hooków i angles';
   } else if (stage === 'script') {
     baseProgress = 40;
-    stageText = 'Tworzenie głównej treści';
   } else if (stage === 'finalization') {
     baseProgress = 75;
-    stageText = 'Finalizacja skryptu';
   }
   
   const [progress, setProgress] = useState(baseProgress);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  
+  const loadingSteps = {
+    hooks: [
+      {
+        icon: Activity,
+        text: "Generowanie hooków i angles"
+      },
+      {
+        icon: Target,
+        text: "Analizowanie grupy docelowej"
+      },
+      {
+        icon: Rocket,
+        text: "Przygotowanie strategii"
+      },
+      {
+        icon: FileText,
+        text: "Tworzenie wstępnych koncepcji"
+      },
+      {
+        icon: Briefcase,
+        text: "Dobieranie najlepszych rozwiązań"
+      }
+    ],
+    script: [
+      {
+        icon: FileText,
+        text: "Tworzenie głównej treści"
+      },
+      {
+        icon: Activity,
+        text: "Optymalizowanie przekazu"
+      },
+      {
+        icon: Target,
+        text: "Dostosowywanie do odbiorcy"
+      },
+      {
+        icon: Briefcase,
+        text: "Wzmacnianie argumentacji"
+      },
+      {
+        icon: Rocket,
+        text: "Dopracowywanie szczegółów"
+      }
+    ],
+    finalization: [
+      {
+        icon: Rocket,
+        text: "Finalizacja skryptu"
+      },
+      {
+        icon: FileText,
+        text: "Sprawdzanie poprawności"
+      },
+      {
+        icon: Target,
+        text: "Optymalizacja perswazji"
+      },
+      {
+        icon: Activity,
+        text: "Przygotowanie do publikacji"
+      },
+      {
+        icon: Briefcase,
+        text: "Ostatnie szlify"
+      }
+    ]
+  };
   
   // Simulate loading progress within the current stage
   useInterval(() => {
@@ -31,16 +97,25 @@ const LoadingState = ({ stage = 'hooks' }: LoadingStateProps) => {
     setProgress((prev) => Math.min(prev + 3, maxForStage));
   }, 1000);
   
+  // Cycle through different icons and texts
+  useInterval(() => {
+    setCurrentStepIndex((prev) => (prev + 1) % loadingSteps[stage].length);
+  }, 3000);
+  
+  const currentStepList = loadingSteps[stage];
+  const currentStep = currentStepList[currentStepIndex];
+  const IconComponent = currentStep.icon;
+  
   return (
     <div className="flex flex-col items-center justify-center min-h-[250px] py-8 bg-white rounded-xl">
       <div className="mb-6">
         <div className="flex items-center justify-center p-6 rounded-full bg-copywrite-teal bg-opacity-10 h-24 w-24">
-          <Activity className="h-12 w-12 text-copywrite-teal animate-pulse" />
+          <IconComponent className="h-12 w-12 text-copywrite-teal animate-pulse" />
         </div>
       </div>
       
       <div className="text-center mb-6">
-        <p className="text-gray-600 text-sm">{stageText}</p>
+        <p className="text-gray-600 text-sm">{currentStep.text}</p>
       </div>
       
       <div className="w-48 mt-2">
