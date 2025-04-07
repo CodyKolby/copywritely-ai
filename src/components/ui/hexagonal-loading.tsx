@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useInterval } from '@/hooks/use-interval';
 import { Progress } from '@/components/ui/progress';
@@ -63,7 +63,7 @@ export const HexagonalLoading: React.FC<HexagonalLoadingProps> = ({
   const Icon = currentStep.icon;
 
   return (
-    <div className="flex flex-col items-center justify-center w-full max-w-md mx-auto p-6 bg-white rounded-xl">
+    <div className="flex flex-col items-center justify-center w-full max-w-md mx-auto">
       {/* Hexagon container */}
       <div className="relative mb-8">
         <div className="flex justify-center">
@@ -74,7 +74,7 @@ export const HexagonalLoading: React.FC<HexagonalLoadingProps> = ({
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.5 }}
           >
-            <div className="hexagon bg-white shadow-lg border-2 border-copywrite-teal flex items-center justify-center">
+            <div className="hexagon bg-white flex items-center justify-center">
               <motion.div
                 key={currentStepIndex}
                 initial={{ scale: 0, opacity: 0 }}
@@ -92,7 +92,7 @@ export const HexagonalLoading: React.FC<HexagonalLoadingProps> = ({
             {[...Array(6)].map((_, index) => (
               <motion.div
                 key={`hex-${index}`}
-                className="hex-background bg-gray-50 border border-copywrite-teal"
+                className="hex-background bg-gray-50"
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ duration: 0.5, delay: 0.1 * index }}
@@ -123,13 +123,11 @@ export const HexagonalLoading: React.FC<HexagonalLoadingProps> = ({
         <Progress value={progress} className="h-1.5" />
       </div>
 
-      {/* Using CSS in JSX without the jsx attribute */}
       <style>
         {`
         .hexagon {
           width: 120px;
           height: calc(120px * 0.866);
-          background-color: #fff;
           position: relative;
           display: flex;
           align-items: center;
@@ -191,28 +189,17 @@ export const HexagonalLoading: React.FC<HexagonalLoadingProps> = ({
           align-items: center;
         }
 
-        /* Add green border to hexagon before/after */
-        .hexagon:before {
-          border-color: transparent transparent #fff transparent;
-        }
-        
-        .hexagon:after {
-          border-color: #fff transparent transparent transparent;
+        /* Hexagon main shape - green border */
+        .hexagon {
+          position: relative;
         }
 
-        /* Adding border for hexagon before and after pseudo elements */
         .hexagon::before {
-          top: -30px;
-          border-width: 0 60px 30px 60px;
           border-color: transparent transparent #10b981 transparent;
-          z-index: -1;
         }
         
         .hexagon::after {
-          bottom: -30px;
-          border-width: 30px 60px 0 60px;
           border-color: #10b981 transparent transparent transparent;
-          z-index: -1;
         }
 
         /* Small hexagon borders */

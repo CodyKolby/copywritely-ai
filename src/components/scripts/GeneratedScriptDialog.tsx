@@ -34,19 +34,24 @@ const GeneratedScriptDialog = ({
     handleGenerateWithNextHook,
     handleViewProject
   } = useScriptGeneration(open, targetAudienceId, templateId, advertisingGoal, user?.id);
+  
+  const showLoading = isLoading || isGeneratingNewScript;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-auto p-0">
-        <DialogHeader 
-          currentHookIndex={currentHookIndex}
-          totalHooks={totalHooks}
-          isLoading={isLoading}
-          isGeneratingNewScript={isGeneratingNewScript}
-        />
+      <DialogContent className={`sm:max-w-[800px] max-h-[90vh] overflow-auto p-0 ${showLoading ? 'bg-white' : ''}`}>
+        {/* Show DialogHeader only when not loading */}
+        {!showLoading && (
+          <DialogHeader 
+            currentHookIndex={currentHookIndex}
+            totalHooks={totalHooks}
+            isLoading={isLoading}
+            isGeneratingNewScript={isGeneratingNewScript}
+          />
+        )}
 
-        {isLoading || isGeneratingNewScript ? (
-          <LoadingState />
+        {showLoading ? (
+          <LoadingState stage={isGeneratingNewScript ? 'script' : undefined} />
         ) : error ? (
           <ErrorState error={error} onRetry={handleRetry} />
         ) : (

@@ -7,16 +7,19 @@ interface DialogHeaderProps {
 }
 
 const DialogHeader = ({ isLoading }: DialogHeaderProps) => {
+  // When loading, return nothing so no header shows
+  if (isLoading) {
+    return null;
+  }
+  
+  // Only show header when not loading
   return (
     <div className="p-6 border-b border-gray-100">
       <DialogTitle className="text-2xl font-semibold">
-        {isLoading ? 'Generowanie emaila...' : 'Wygenerowany email'}
+        Wygenerowany email
       </DialogTitle>
       <DialogDescription>
-        {isLoading 
-          ? 'To może potrwać kilka sekund, proszę czekać...' 
-          : 'Możesz edytować temat i treść emaila bezpośrednio tutaj.'
-        }
+        Możesz edytować temat i treść emaila bezpośrednio tutaj.
       </DialogDescription>
     </div>
   );
