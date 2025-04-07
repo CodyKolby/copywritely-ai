@@ -37,7 +37,7 @@ Każdy akapit = 1 zdanie lub 1 myśl. Unikaj bloków dłuższych niż 2 linijki.
 ## Struktura maila (PAS):
 
 1. HOOK – Pierwsze zdanie musi przyciągać uwagę. Użyj pytania, szoku, kontrowersji, obrazu, który wytrąca z rutyny.
-2. What’s In It For Me – Jaką korzyść klient otrzyma z czytania tego maila?
+2. What's In It For Me – Jaką korzyść klient otrzyma z czytania tego maila?
 3. P – Problem
     - {Relatable problem}: Co najbardziej boli odbiorcę?
     - {Conversation in head}: Co sobie myśli? Jak to brzmi w jego głowie?
@@ -47,7 +47,7 @@ Każdy akapit = 1 zdanie lub 1 myśl. Unikaj bloków dłuższych niż 2 linijki.
     - {Wewnętrzne konsekwencje}: Emocjonalne i praktyczne koszty trwania w tym stanie.
 5. S – Solution
     - {Uncommon insight}: Niekonwencjonalna odpowiedź na problem.
-    - {Objection handling}: „To nie działa dla mnie, bo…” → rozbij tę wątpliwość.
+    - {Objection handling}: „To nie działa dla mnie, bo…" → rozbij tę wątpliwość.
     - {Justification}: Dlaczego to działa? Dlaczego teraz?
     - {WIIFM}: Co dokładnie odbiorca z tego ma? (Pośrednio wynikające z kontekstu)
     - {CTA}: Jedno konkretne działanie (kliknięcie, zapis, pobranie, itd.)
@@ -55,12 +55,12 @@ Każdy akapit = 1 zdanie lub 1 myśl. Unikaj bloków dłuższych niż 2 linijki.
 ## Dodatkowe zasady:
 
 1. Dokładniejsze wyjaśnienie procesu analizy danych – Dokładnie analizuj dane z ankiety i odpowiedzi klienta, aby dostosować treść do konkretnych problemów, obaw i pragnień odbiorcy. Wykorzystywanie tych danych ma mieć na celu lepsze zrozumienie sytuacji klienta oraz spersonalizowanie treści maila.
-2. Ulepszenie procesu przekonywania w sekcji „Agitate” – Dodawaj więcej emocjonalnych przykładów w sekcji „Agitate”, ukazując konsekwencje dalszego ignorowania problemu klienta. Ważne jest, aby zwiększyć napięcie emocjonalne, by odbiorca poczuł wagę sytuacji i potrzebę zmiany.
+2. Ulepszenie procesu przekonywania w sekcji „Agitate" – Dodawaj więcej emocjonalnych przykładów w sekcji „Agitate", ukazując konsekwencje dalszego ignorowania problemu klienta. Ważne jest, aby zwiększyć napięcie emocjonalne, by odbiorca poczuł wagę sytuacji i potrzebę zmiany.
 3. Większy nacisk na emocjonalne zrozumienie klienta – Agent ma skupić się na głębokim zrozumieniu emocji klienta, takich jak obawy, lęki, frustracje, aby tworzyć teksty, które będą rezonować z odbiorcą na poziomie emocjonalnym, a nie tylko racjonalnym.
 4. Opis Świętej Czwórki – Agent powinien wpleść emocje z "Świętej Czwórki" perswazji w całym mailu:
-    - NOWOŚĆ – używaj słów jak „przełomowy”, „nowy”, „autorski”, „odkrycie”.
-    - BEZPIECZEŃSTWO – używaj fraz jak „To rozwiązanie jest przewidywalne...”, „Widzieliśmy to już u klientów...”.
-    - ŁATWOŚĆ – używaj słów jak „krok po kroku”, „każdy”, „prosty”.
+    - NOWOŚĆ – używaj słów jak „przełomowy", „nowy", „autorski", „odkrycie".
+    - BEZPIECZEŃSTWO – używaj fraz jak „To rozwiązanie jest przewidywalne...", „Widzieliśmy to już u klientów...".
+    - ŁATWOŚĆ – używaj słów jak „krok po kroku", „każdy", „prosty".
     - WIELKOŚĆ – podkreślaj duże korzyści, transformacje, siłę zmiany.
 
 ## Jak analizować poszczególne dane:
@@ -118,8 +118,8 @@ Treść maila powinna być osobista, narracyjna i budująca zaufanie.`;
  * Randomly selects an email structure (PAS or CJN)
  */
 export function selectRandomEmailStructure(): EmailStructure {
-  // 50/50 chance for each structure
-  return Math.random() < 0.5 ? 'PAS' : 'PAS';
+  // Zawsze zwracaj PAS zgodnie z żądaniem
+  return 'PAS';
 }
 
 /**

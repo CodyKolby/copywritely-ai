@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
@@ -49,10 +48,30 @@ export const useEmailGeneration = ({
   const navigate = useNavigate();
 
   useEffect(() => {
+    if (!open) {
+      resetState();
+    }
+  }, [open]);
+
+  useEffect(() => {
     if (open && targetAudienceId && !generatedEmail) {
       generateEmail();
     }
   }, [open, targetAudienceId]);
+
+  const resetState = () => {
+    setError(null);
+    setGeneratedSubject('');
+    setAlternativeSubject('');
+    setGeneratedEmail('');
+    setProjectSaved(false);
+    setProjectId(null);
+    setNarrativeBlueprint(null);
+    setIsShowingAlternative(false);
+    setRequestTimestamp(null);
+    setDebugInfo(null);
+    setEmailStructure('PAS');
+  };
 
   const generateEmail = async () => {
     if (!targetAudienceId) {
