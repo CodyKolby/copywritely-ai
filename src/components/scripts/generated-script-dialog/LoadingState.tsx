@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Activity, FileText, Rocket, Target, Briefcase } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { useInterval } from '@/hooks/use-interval';
