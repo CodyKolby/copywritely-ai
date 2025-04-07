@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 /**
  * System prompt for the UI Cleaner AI
  */
-const UI_CLEANER_PROMPT = `Twoim zadaniem jest wzięcie całego tekstu, który otrzymasz, usunięcie go i zamiast tego napisanie jednego słowa "TEST"`;
+const UI_CLEANER_PROMPT = `Twoim zadaniem jest wzięcie całego tekstu, który otrzymasz, usunięcie go i zamiast tego napisanie jednego słowa "DZIAŁA"`;
 
 /**
  * Sends the generated email content through the UI Cleaner AI
