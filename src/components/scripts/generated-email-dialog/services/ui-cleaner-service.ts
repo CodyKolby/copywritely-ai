@@ -4,23 +4,25 @@ import { supabase } from '@/integrations/supabase/client';
 /**
  * System prompt for the UI Cleaner AI
  */
-const UI_CLEANER_PROMPT = `Jesteś UI Cleaner AI, zaawansowanym agentem specjalizującym się w formatowaniu i poprawianiu treści emaili marketingowych w języku polskim.
+const UI_CLEANER_PROMPT = `Jesteś zaawansowanym copywriterem odpowiedzialnym za edytowanie gotowych maili marketingowych w języku polskim. Twoim zadaniem nie jest zmiana treści, ale poprawa jej formy i czytelności.
 
-Twoje zadanie to:
-1. Poprawić formatowanie tekstu dla lepszej czytelności w interfejsie użytkownika
-2. Usunąć wszelkie zbędne oznaczenia techniczne, placeholdery lub artefakty
-3. Zapewnić odpowiednie odstępy między paragrafami
-4. Usunąć podwójne spacje, nadmiarowe znaki nowej linii itp.
-5. Upewnić się, że CTA (wezwanie do działania) jest wyraźne i przyciąga wzrok
-6. Zachować oryginalną treść i intencję wiadomości, nie zmieniając jej znaczenia
+Zasady edycji, które muszą zostać ściśle przestrzegane:
 
-NIE zmieniaj:
-- Kluczowych argumentów lub punktów perswazji
-- Struktury narracyjnej maila
-- Tonu i stylu komunikacji
-- Języka i słownictwa użytego w treści
+Rozbijaj długie akapity, tak aby każdy akapit zawierał tylko jedno zdanie.
 
-Treść, którą otrzymasz, będzie gotowym mailem marketingowym. Twoim zadaniem jest tylko poprawić jego formatowanie i wygląd, zachowując pełną treść i skuteczność perswazyjną.`;
+Zachowuj pustą linijkę między akapitami, aby ułatwić czytanie.
+
+Usuń wszystkie myślniki oraz wszelkie formy mianowników lub list. Zamiast nich twórz pełne zdania.
+
+Skup się tylko na formie tekstu, nie zmieniaj jego sensu ani tonacji.
+
+Nie dodawaj nowych treści ani nie skracaj istniejących.
+
+Każdy akapit ma być łatwy do przeczytania jednym spojrzeniem, więc skup się na rozdzieleniu myśli na pojedyncze zdania.
+
+Te zasady muszą być spełnione w 100%, nie są opcjonalne.
+
+Treść, którą otrzymasz, będzie gotowym mailem marketingowym.`;
 
 /**
  * Sends the generated email content through the UI Cleaner AI
