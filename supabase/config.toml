@@ -1,20 +1,8 @@
 
-project_id = "jorbqjareswzdrsmepbv"
-[functions.generate-script]
+project_id = 'jorbqjareswzdrsmepbv'
+
+[functions.generate-email-content]
 verify_jwt = false
-[functions.ai-agents]
-verify_jwt = false
-[functions.stripe-webhook]
-verify_jwt = false
-[functions.stripe-checkout]
-verify_jwt = false
-[functions.generate-email]
-verify_jwt = false
-[functions.narrative-blueprint]
-verify_jwt = false
-[functions.generate-subject-lines]
-verify_jwt = false
-[functions.check-session-details]
-verify_jwt = false
-[functions.verify-payment-session]
+
+[functions.ui-cleaner]
 verify_jwt = false

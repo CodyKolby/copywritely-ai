@@ -2,6 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { NarrativeBlueprint } from './narrative-blueprint-service';
 import { EmailStyle } from '../../EmailStyleDialog';
+import { cleanEmailContentForUI } from './ui-cleaner-service';
 
 // Email content structure types
 export type EmailStructure = 'PAS' | 'CJN';
@@ -193,9 +194,12 @@ export async function generateEmailContent(
     console.log('Response timestamp:', data.timestamp || 'not provided');
     console.log('Request ID:', data.requestId || 'not provided');
     
-    // Return the email content response
+    // Pass the generated email content through the UI cleaner
+    const cleanedEmailContent = await cleanEmailContentForUI(data.emailContent);
+    
+    // Return the email content response with cleaned content
     return {
-      emailContent: data.emailContent,
+      emailContent: cleanedEmailContent,
       structureUsed: selectedStructure,
       timestamp: data.timestamp,
       requestId: data.requestId,
