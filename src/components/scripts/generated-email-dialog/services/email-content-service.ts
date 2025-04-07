@@ -120,7 +120,7 @@ Treść maila powinna być osobista, narracyjna i budująca zaufanie.`;
  */
 export function selectRandomEmailStructure(): EmailStructure {
   // Zawsze zwracaj PAS zgodnie z żądaniem
-  return 'PAS';
+  return 'CJN';
 }
 
 /**
