@@ -41,6 +41,7 @@ serve(async (req) => {
     // Log received data
     console.log(`Długość treści email: ${emailContent.length} znaków`);
     console.log(`Fragment treści (pierwsze 100 znaków): ${emailContent.substring(0, 100)}...`);
+    console.log(`Otrzymany prompt: ${prompt.substring(0, 100)}...`);
     
     // Validate OpenAI API key
     if (!openAIApiKey) {
@@ -54,15 +55,8 @@ serve(async (req) => {
     // Log that we're about to call OpenAI
     console.log(`Wysyłam zapytanie do OpenAI dla UI Cleaner`);
     
-    // Prepare system prompt and user content
-    const systemPrompt = "Jesteś UI Cleaner AI - ekspertem od formatowania i poprawiania treści emaili marketingowych. Formatujesz tekst tak, aby był czytelny w interfejsie aplikacji, nie zmieniając jego znaczenia ani tonu.";
-    const userContent = `Poniżej znajduje się treść maila marketingowego, którą należy sformatować dla lepszej czytelności w interfejsie aplikacji:
-    
-${emailContent}
-
-Popraw formatowanie tego tekstu, usuń zbędne oznaczenia techniczne i placeholdery, zapewnij odpowiednie odstępy między paragrafami, ujednolić odstępy między wierszami i upewnij się, że CTA jest wyraźne. Nie zmieniaj treści, znaczenia ani tonu wiadomości.`;
-    
     // Call OpenAI to clean and format the email content
+    // Use the provided prompt directly as the system prompt
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -72,8 +66,8 @@ Popraw formatowanie tego tekstu, usuń zbędne oznaczenia techniczne i placehold
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userContent }
+          { role: 'system', content: prompt },
+          { role: 'user', content: emailContent }
         ],
         temperature: 0.3, // Lower temperature for more consistent formatting
         max_tokens: 2000,
