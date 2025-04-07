@@ -1,18 +1,15 @@
 
 import { useState } from 'react';
-import { AudienceChoice } from '../types';
 import { EmailStyle } from '../../EmailStyleDialog';
 import { SocialMediaPlatform } from '../../SocialMediaPlatformDialog';
+import { TargetAudience } from '../types';
 
-/**
- * Hook for managing the state of the target audience dialog
- */
 export const useDialogState = () => {
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [existingAudiences, setExistingAudiences] = useState<any[]>([]);
-  const [selectedAudienceId, setSelectedAudienceId] = useState<string | null>(null);
-  const [audienceChoice, setAudienceChoice] = useState<AudienceChoice>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [showForm, setShowForm] = useState<boolean>(false);
+  const [audienceChoice, setAudienceChoice] = useState<'existing' | 'new' | null>(null);
+  const [selectedAudienceId, setSelectedAudienceId] = useState<string | null>(null);
+  const [existingAudiences, setExistingAudiences] = useState<TargetAudience[]>([]);
   const [showScriptDialog, setShowScriptDialog] = useState<boolean>(false);
   const [showEmailDialog, setShowEmailDialog] = useState<boolean>(false);
   const [showGoalDialog, setShowGoalDialog] = useState<boolean>(false);
@@ -24,14 +21,16 @@ export const useDialogState = () => {
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
 
   const resetState = () => {
+    setIsLoading(false);
     setShowForm(false);
+    setAudienceChoice(null);
+    setSelectedAudienceId(null);
+    setExistingAudiences([]);
     setShowScriptDialog(false);
     setShowEmailDialog(false);
     setShowGoalDialog(false);
     setShowEmailStyleDialog(false);
     setShowSocialMediaPlatformDialog(false);
-    setAudienceChoice(null);
-    setSelectedAudienceId(null);
     setAdvertisingGoal('');
     setEmailStyle(null);
     setSocialMediaPlatform(null);
@@ -41,14 +40,14 @@ export const useDialogState = () => {
   return {
     isLoading,
     setIsLoading,
-    existingAudiences,
-    setExistingAudiences,
-    selectedAudienceId,
-    setSelectedAudienceId,
-    audienceChoice,
-    setAudienceChoice,
     showForm,
     setShowForm,
+    audienceChoice,
+    setAudienceChoice,
+    selectedAudienceId,
+    setSelectedAudienceId,
+    existingAudiences,
+    setExistingAudiences,
     showScriptDialog,
     setShowScriptDialog,
     showEmailDialog,

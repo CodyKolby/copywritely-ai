@@ -1,4 +1,6 @@
 
+import { SocialMediaPlatform } from '../SocialMediaPlatformDialog';
+
 export interface GeneratedScriptDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;

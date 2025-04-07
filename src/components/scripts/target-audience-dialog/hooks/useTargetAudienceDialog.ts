@@ -1,8 +1,10 @@
+
 import { useEffect } from 'react';
 import { toast } from 'sonner';
 import { checkAllPremiumStorages, updateAllPremiumStorages } from '@/contexts/auth/local-storage-utils';
 import { forcePremiumStatusUpdate, checkPremiumStatus } from '@/contexts/auth/premium-utils';
 import { EmailStyle } from '../../EmailStyleDialog';
+import { SocialMediaPlatform } from '../../SocialMediaPlatformDialog';
 import { useDialogState } from './useDialogState';
 import { useAudienceManagement } from './useAudienceManagement';
 import { useDialogNavigation } from './useDialogNavigation';
@@ -50,10 +52,12 @@ export const useTargetAudienceDialog = ({
     setShowForm: dialogState.setShowForm,
     setShowGoalDialog: dialogState.setShowGoalDialog,
     setShowEmailStyleDialog: dialogState.setShowEmailStyleDialog,
+    setShowSocialMediaPlatformDialog: dialogState.setShowSocialMediaPlatformDialog,
     setShowScriptDialog: dialogState.setShowScriptDialog,
     setShowEmailDialog: dialogState.setShowEmailDialog,
     setAdvertisingGoal: dialogState.setAdvertisingGoal,
-    setEmailStyle: dialogState.setEmailStyle
+    setEmailStyle: dialogState.setEmailStyle,
+    setSocialMediaPlatform: dialogState.setSocialMediaPlatform
   }, templateId);
 
   // Reset state when dialog opens/closes
@@ -112,8 +116,10 @@ export const useTargetAudienceDialog = ({
     showEmailDialog: dialogState.showEmailDialog,
     showGoalDialog: dialogState.showGoalDialog,
     showEmailStyleDialog: dialogState.showEmailStyleDialog,
+    showSocialMediaPlatformDialog: dialogState.showSocialMediaPlatformDialog,
     advertisingGoal: dialogState.advertisingGoal,
     emailStyle: dialogState.emailStyle,
+    socialMediaPlatform: dialogState.socialMediaPlatform,
     isProcessing: dialogState.isProcessing,
     
     // Methods from audienceManagement
@@ -129,6 +135,8 @@ export const useTargetAudienceDialog = ({
     handleGoalBack: dialogNavigation.handleGoalBack,
     handleEmailStyleSubmit: dialogNavigation.handleEmailStyleSubmit,
     handleEmailStyleBack: dialogNavigation.handleEmailStyleBack,
+    handleSocialMediaPlatformSubmit: dialogNavigation.handleSocialMediaPlatformSubmit,
+    handleSocialMediaPlatformBack: dialogNavigation.handleSocialMediaPlatformBack,
     handleScriptDialogClose: dialogNavigation.handleScriptDialogClose,
     handleEmailDialogClose: dialogNavigation.handleEmailDialogClose,
     
