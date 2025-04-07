@@ -88,7 +88,13 @@ export const useEmailGeneration = ({
       console.log('Blueprint narracyjny wygenerowany:', blueprint);
       
       // Generate subject lines using the narrative blueprint and prompt
-      const subjectLinesResponse = await generateSubjectLines(blueprint, targetAudienceData);
+      const subjectLinesResponse = await generateSubjectLines(
+        blueprint, 
+        targetAudienceData, 
+        advertisingGoal, 
+        emailStyle
+      );
+      
       console.log('Otrzymane tytuły maila w useEmailGeneration:', subjectLinesResponse);
       console.log('Subject line response timestamp:', subjectLinesResponse.timestamp || 'not provided');
       console.log('Raw output from OpenAI:', subjectLinesResponse.rawOutput || 'not provided');
@@ -109,7 +115,14 @@ export const useEmailGeneration = ({
       console.log(`Wylosowana struktura emaila: ${selectedStructure}`);
       
       // Generate email content based on narrative blueprint and selected structure
-      const emailContentResponse = await generateEmailContent(blueprint, targetAudienceData, selectedStructure);
+      const emailContentResponse = await generateEmailContent(
+        blueprint, 
+        targetAudienceData, 
+        selectedStructure, 
+        advertisingGoal, 
+        emailStyle
+      );
+      
       console.log(`Email wygenerowany z użyciem struktury: ${emailContentResponse.structureUsed}`);
       
       // Set the generated email content

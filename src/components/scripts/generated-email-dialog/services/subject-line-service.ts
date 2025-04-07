@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { NarrativeBlueprint } from './narrative-blueprint-service';
+import { EmailStyle } from '../../EmailStyleDialog';
 
 // Default prompt template that can be customized
 export const DEFAULT_SUBJECT_LINE_PROMPT = `Jesteś ekspertem od tworzenia tytułów maili w języku polskim.
@@ -30,7 +31,11 @@ Twoje tytuły powinny:
 - Zastosuj mechanizm emocji i kontrastów, np. używając słów jak „NIE", „nie rób tego", „zanim", „dlaczego" lub „czy".
 - Tytuły muszą być natychmiastowe w odbiorze, a jednocześnie wywoływać poczucie, że coś ważnego jest w środku, co można stracić.
 
-**Styl maila**: {{stylmaila}}
+**Cel reklamy**: {{advertisingGoal}}
+
+**Styl maila z wyboru klienta**: {{emailStyle}}
+
+**Specyfika maila**: {{specyfikamaila}}
 
 **Punkty emocjonalne**: {{punktyemocjonalne}}
 
@@ -66,7 +71,9 @@ export interface SubjectLinesResponse {
 
 export async function generateSubjectLines(
   blueprint: NarrativeBlueprint, 
-  targetAudienceData: any
+  targetAudienceData: any,
+  advertisingGoal?: string,
+  emailStyle?: EmailStyle
 ): Promise<SubjectLinesResponse> {
   const timestamp = new Date().toISOString();
   console.log('Generating subject lines with request timestamp:', timestamp);
@@ -78,9 +85,11 @@ export async function generateSubjectLines(
     // Replace template variables with actual values
     let finalPrompt = DEFAULT_SUBJECT_LINE_PROMPT
       .replace('{{punktyemocjonalne}}', blueprint.punktyemocjonalne)
-      .replace('{{stylmaila}}', blueprint.specyfikamaila)
+      .replace('{{specyfikamaila}}', blueprint.specyfikamaila)
       .replace('{{osnarracyjna}}', blueprint.osnarracyjna)
-      .replace('{{surveyData}}', formattedSurveyData);
+      .replace('{{surveyData}}', formattedSurveyData)
+      .replace('{{advertisingGoal}}', advertisingGoal || 'Nie określono')
+      .replace('{{emailStyle}}', emailStyle || 'Nie określono');
     
     // Add unique request identifiers to prevent caching
     const requestBody = {

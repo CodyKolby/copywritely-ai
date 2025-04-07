@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { NarrativeBlueprint } from './narrative-blueprint-service';
+import { EmailStyle } from '../../EmailStyleDialog';
 
 // Email content structure types
 export type EmailStructure = 'PAS' | 'CJN';
@@ -29,7 +30,11 @@ Struktura PAS polega na:
 2. Agitacja - rozwinięcie problemu, pokazanie jak wpływa na życie/biznes odbiorcy
 3. Rozwiązanie - przedstawienie rozwiązania (produktu/usługi)
 
-**Styl maila**: {{stylmaila}}
+**Cel reklamy**: {{advertisingGoal}}
+
+**Styl maila z wyboru klienta**: {{emailStyle}}
+
+**Specyfika maila**: {{specyfikamaila}}
 
 **Punkty emocjonalne**: {{punktyemocjonalne}}
 
@@ -60,7 +65,11 @@ Struktura CJN polega na:
 4. Plan - pokazanie jasnego planu działania
 5. Wezwanie do działania - zachęta do podjęcia konkretnego kroku
 
-**Styl maila**: {{stylmaila}}
+**Cel reklamy**: {{advertisingGoal}}
+
+**Styl maila z wyboru klienta**: {{emailStyle}}
+
+**Specyfika maila**: {{specyfikamaila}}
 
 **Punkty emocjonalne**: {{punktyemocjonalne}}
 
@@ -94,7 +103,9 @@ export function selectRandomEmailStructure(): EmailStructure {
 export async function generateEmailContent(
   blueprint: NarrativeBlueprint,
   targetAudienceData: any,
-  forcedStructure?: EmailStructure // Optional parameter to force a specific structure
+  forcedStructure?: EmailStructure, // Optional parameter to force a specific structure
+  advertisingGoal?: string,
+  emailStyle?: EmailStyle
 ): Promise<EmailContentResponse> {
   const timestamp = new Date().toISOString();
   console.log('Generating email content with request timestamp:', timestamp);
@@ -113,9 +124,11 @@ export async function generateEmailContent(
     // Replace template variables with actual values
     let finalPrompt = promptTemplate
       .replace('{{punktyemocjonalne}}', blueprint.punktyemocjonalne)
-      .replace('{{stylmaila}}', blueprint.specyfikamaila)
+      .replace('{{specyfikamaila}}', blueprint.specyfikamaila)
       .replace('{{osnarracyjna}}', blueprint.osnarracyjna)
-      .replace('{{surveyData}}', formattedSurveyData);
+      .replace('{{surveyData}}', formattedSurveyData)
+      .replace('{{advertisingGoal}}', advertisingGoal || 'Nie określono')
+      .replace('{{emailStyle}}', emailStyle || 'Nie określono');
     
     // Add unique request identifiers to prevent caching
     const requestBody = {
