@@ -113,7 +113,7 @@ export async function generateEmailContent(
     // Replace template variables with actual values
     let finalPrompt = promptTemplate
       .replace('{{punktyemocjonalne}}', blueprint.punktyemocjonalne)
-      .replace('{{stylmaila}}', blueprint.stylmaila)
+      .replace('{{stylmaila}}', blueprint.specyfikamaila)
       .replace('{{osnarracyjna}}', blueprint.osnarracyjna)
       .replace('{{surveyData}}', formattedSurveyData);
     

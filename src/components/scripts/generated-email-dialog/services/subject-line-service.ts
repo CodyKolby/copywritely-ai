@@ -17,11 +17,11 @@ Twoje tytuły powinny:
 **Zasady tworzenia tytułów:**
 
 1. **Zadziorność i kontrowersja**: Tytuł ma być mocny, zaskakujący, pełen emocji. Może zawierać pytania lub ostrzeżenia, które zmuszają do kliknięcia.
-2. **Personalizacja**: Jeśli to możliwe, używaj imienia odbiorcy (np. „IMIE, nie pozwól mi tego usunąć”).
-3. **Porównania i kontrasty**: Stwórz kontrast między „dobrym” a „złym” podejściem, np. „Dlaczego inne kursy Cię nie wzbogaciły?”.
+2. **Personalizacja**: Jeśli to możliwe, używaj imienia odbiorcy (np. „IMIE, nie pozwól mi tego usunąć").
+3. **Porównania i kontrasty**: Stwórz kontrast między „dobrym" a „złym" podejściem, np. „Dlaczego inne kursy Cię nie wzbogaciły?".
 4. **Pytanie vs. rozkaz**: Jeden tytuł ma być pytaniem, a drugi – rozkazem lub stwierdzeniem wywołującym kontrowersję.
-5. Tytuł musi być bardzo prosty i zrozumiały od razu. Unikaj zdań złożonych i skomplikowanych struktur. Nie używaj przecinków typu „–” ani wielokropków („...”). Tytuł powinien składać się z jednej krótkiej myśli, którą odbiorca zrozumie w sekundę. Używaj prostych słów i naturalnego, płynnego języka. Unikaj zbytniego komplikowania tytułu.
-6. **Unikaj pustych fraz**: Tytuł nie może zawierać ogólników takich jak „Zacznij już dziś” czy „Odkryj sekret…”. Musi mówić od razu, dlaczego warto kliknąć.
+5. Tytuł musi być bardzo prosty i zrozumiały od razu. Unikaj zdań złożonych i skomplikowanych struktur. Nie używaj przecinków typu „–" ani wielokropków („..."). Tytuł powinien składać się z jednej krótkiej myśli, którą odbiorca zrozumie w sekundę. Używaj prostych słów i naturalnego, płynnego języka. Unikaj zbytniego komplikowania tytułu.
+6. **Unikaj pustych fraz**: Tytuł nie może zawierać ogólników takich jak „Zacznij już dziś" czy „Odkryj sekret…". Musi mówić od razu, dlaczego warto kliknąć.
 7. Maksymalna długość tytułu: Tytuł nie może przekroczyć 60 znaków.
 
 **Wskazówki do tworzenia tytułów**:
@@ -78,7 +78,7 @@ export async function generateSubjectLines(
     // Replace template variables with actual values
     let finalPrompt = DEFAULT_SUBJECT_LINE_PROMPT
       .replace('{{punktyemocjonalne}}', blueprint.punktyemocjonalne)
-      .replace('{{stylmaila}}', blueprint.stylmaila)
+      .replace('{{stylmaila}}', blueprint.specyfikamaila)
       .replace('{{osnarracyjna}}', blueprint.osnarracyjna)
       .replace('{{surveyData}}', formattedSurveyData);
     
