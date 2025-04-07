@@ -1,8 +1,13 @@
 
-project_id = 'jorbqjareswzdrsmepbv'
+# A string used to distinguish different Supabase projects on the same host. Defaults to the working
+# directory name when running `supabase init`.
+project_id = "jorbqjareswzdrsmepbv"
 
-[functions.generate-email-content]
+[functions.stripe-webhook]
 verify_jwt = false
 
-[functions.ui-cleaner]
-verify_jwt = false
+[functions.ai-agents/posthook-agent]
+verify_jwt = true
+
+[functions.ai-agents/postscript-agent]
+verify_jwt = true

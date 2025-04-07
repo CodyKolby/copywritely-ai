@@ -5,11 +5,13 @@ import TargetAudienceForm from './TargetAudienceForm';
 import GeneratedScriptDialog from './GeneratedScriptDialog';
 import AdvertisingGoalDialog from './AdvertisingGoalDialog';
 import EmailStyleDialog from './EmailStyleDialog';
+import SocialMediaPlatformDialog from './SocialMediaPlatformDialog';
 import GeneratedEmailDialog from './GeneratedEmailDialog';
 import { TargetAudienceDialogProps } from './target-audience-dialog/types';
 import { useTargetAudienceDialog } from './target-audience-dialog/useTargetAudienceDialog';
 import DialogSelectionContent from './target-audience-dialog/DialogSelectionContent';
 import { EmailStyle } from './EmailStyleDialog';
+import { SocialMediaPlatform } from './SocialMediaPlatformDialog';
 
 const TargetAudienceDialog = ({
   open,
@@ -28,8 +30,10 @@ const TargetAudienceDialog = ({
     showEmailDialog,
     showGoalDialog,
     showEmailStyleDialog,
+    showSocialMediaPlatformDialog,
     advertisingGoal,
     emailStyle,
+    socialMediaPlatform,
     isProcessing,
     handleChoiceSelection,
     handleExistingAudienceSelect,
@@ -41,6 +45,8 @@ const TargetAudienceDialog = ({
     handleGoalBack,
     handleEmailStyleSubmit,
     handleEmailStyleBack,
+    handleSocialMediaPlatformSubmit,
+    handleSocialMediaPlatformBack,
     handleScriptDialogClose,
     handleEmailDialogClose,
   } = useTargetAudienceDialog({
@@ -72,7 +78,7 @@ const TargetAudienceDialog = ({
     <>
       <Dialog open={shouldShowAudienceDialog} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
-          {!showForm && !showGoalDialog && !showEmailStyleDialog ? (
+          {!showForm && !showGoalDialog && !showEmailStyleDialog && !showSocialMediaPlatformDialog ? (
             <DialogSelectionContent
               isPremium={isPremium}
               isLoading={isLoading}
@@ -100,6 +106,13 @@ const TargetAudienceDialog = ({
               onCancel={handleDialogClose}
               isProcessing={isProcessing}
             />
+          ) : showSocialMediaPlatformDialog ? (
+            <SocialMediaPlatformDialog
+              onSubmit={handleSocialMediaPlatformSubmit}
+              onBack={handleSocialMediaPlatformBack}
+              onCancel={handleDialogClose}
+              isProcessing={isProcessing}
+            />
           ) : (
             <TargetAudienceForm 
               onSubmit={handleFormSubmit}
@@ -118,6 +131,7 @@ const TargetAudienceDialog = ({
           targetAudienceId={selectedAudienceId || ''}
           templateId={templateId}
           advertisingGoal={advertisingGoal}
+          socialMediaPlatform={templateId === 'social' ? socialMediaPlatform : undefined}
         />
       )}
 

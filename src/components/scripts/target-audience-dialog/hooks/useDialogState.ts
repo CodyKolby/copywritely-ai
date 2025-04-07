@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { AudienceChoice } from '../types';
 import { EmailStyle } from '../../EmailStyleDialog';
+import { SocialMediaPlatform } from '../../SocialMediaPlatformDialog';
 
 /**
  * Hook for managing the state of the target audience dialog
@@ -16,8 +17,10 @@ export const useDialogState = () => {
   const [showEmailDialog, setShowEmailDialog] = useState<boolean>(false);
   const [showGoalDialog, setShowGoalDialog] = useState<boolean>(false);
   const [showEmailStyleDialog, setShowEmailStyleDialog] = useState<boolean>(false);
+  const [showSocialMediaPlatformDialog, setShowSocialMediaPlatformDialog] = useState<boolean>(false);
   const [advertisingGoal, setAdvertisingGoal] = useState<string>('');
   const [emailStyle, setEmailStyle] = useState<EmailStyle | null>(null);
+  const [socialMediaPlatform, setSocialMediaPlatform] = useState<SocialMediaPlatform | null>(null);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
 
   const resetState = () => {
@@ -26,10 +29,12 @@ export const useDialogState = () => {
     setShowEmailDialog(false);
     setShowGoalDialog(false);
     setShowEmailStyleDialog(false);
+    setShowSocialMediaPlatformDialog(false);
     setAudienceChoice(null);
     setSelectedAudienceId(null);
     setAdvertisingGoal('');
     setEmailStyle(null);
+    setSocialMediaPlatform(null);
     setIsProcessing(false);
   };
 
@@ -52,10 +57,14 @@ export const useDialogState = () => {
     setShowGoalDialog,
     showEmailStyleDialog,
     setShowEmailStyleDialog,
+    showSocialMediaPlatformDialog,
+    setShowSocialMediaPlatformDialog,
     advertisingGoal,
     setAdvertisingGoal,
     emailStyle,
     setEmailStyle,
+    socialMediaPlatform,
+    setSocialMediaPlatform,
     isProcessing,
     setIsProcessing,
     resetState

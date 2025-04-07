@@ -1,175 +1,208 @@
 
-import { supabase } from '@/integrations/supabase/client';
-import { GenerateScriptResponse } from './ai-agents-service';
+import { supabase } from "@/lib/supabase";
 import { v4 as uuidv4 } from 'uuid';
+import { SocialMediaPlatform } from '../SocialMediaPlatformDialog';
 
-/**
- * Wersja utylity do generowania skryptów
- */
-export const SCRIPT_UTILS_VERSION = '1.15.0';
+// Helper function to fetch target audience details
+export async function fetchTargetAudience(audienceId: string) {
+  try {
+    const { data, error } = await supabase
+      .from('target_audiences')
+      .select('*')
+      .eq('id', audienceId)
+      .single();
 
-/**
- * Generuje skrypt na podstawie szablonu i grupy docelowej
- */
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error fetching target audience:', error);
+    throw new Error('Failed to fetch target audience data');
+  }
+}
+
+// Main function to generate script
 export async function generateScript(
   templateId: string,
-  targetAudienceId: string,
+  audienceId: string,
   advertisingGoal: string = '',
-  hookIndex: number = 0
-): Promise<GenerateScriptResponse> {
-  console.log(`[script-utils v${SCRIPT_UTILS_VERSION}] Generowanie skryptu`, {
-    templateId,
-    targetAudienceId,
-    advertisingGoal,
-    hookIndex
-  });
-
+  hookIndex: number = 0,
+  socialMediaPlatform?: SocialMediaPlatform
+) {
   try {
-    // Wywołanie funkcji Edge za pomocą supabase.functions.invoke
-    const { data, error } = await supabase.functions.invoke('generate-script', {
+    console.log(`Generating script for template: ${templateId}, audience: ${audienceId}, goal: ${advertisingGoal}`);
+
+    // Fetch target audience first
+    const targetAudience = await fetchTargetAudience(audienceId);
+    if (!targetAudience) {
+      throw new Error('Target audience not found');
+    }
+
+    // Add the advertising goal to the target audience data
+    const audienceWithGoal = {
+      ...targetAudience,
+      advertisingGoal
+    };
+
+    // For social media posts, use the specialized agents
+    if (templateId === 'social') {
+      return await generateSocialMediaPost(audienceWithGoal, advertisingGoal, hookIndex, socialMediaPlatform);
+    }
+
+    // For other templates, call the hook-angle-generator and script-generator
+    // Generate hooks and angles with first agent
+    const { data: hooksData } = await supabase.functions.invoke('ai-agents/hook-angle-generator', {
       body: {
-        templateId,
-        targetAudienceId,
-        advertisingGoal,
-        hookIndex,
-        debugInfo: true
-      },
+        targetAudience: audienceWithGoal,
+        templateType: templateId,
+      }
     });
-    
-    if (error) {
-      console.error('Błąd wywołania funkcji Edge:', error);
-      throw new Error(`Nie udało się wygenerować skryptu: ${error.message}`);
+
+    if (!hooksData || !Array.isArray(hooksData.hooks) || hooksData.hooks.length === 0) {
+      throw new Error('Failed to generate hooks');
     }
-    
-    if (!data) {
-      console.error('Funkcja Edge nie zwróciła żadnych danych');
-      throw new Error('Otrzymano pustą odpowiedź z funkcji generowania skryptu');
+
+    // Calculate the actual hook index to use
+    const actualHookIndex = Math.min(hookIndex, hooksData.hooks.length - 1);
+    const selectedHook = hooksData.hooks[actualHookIndex];
+
+    // Generate the main script with second agent
+    const { data: scriptData } = await supabase.functions.invoke('ai-agents/script-generator', {
+      body: {
+        targetAudience: audienceWithGoal,
+        templateType: templateId,
+        selectedHook,
+      }
+    });
+
+    if (!scriptData || !scriptData.script) {
+      throw new Error('Failed to generate script');
     }
-    
-    const response = data as GenerateScriptResponse;
-    
-    console.log(`[script-utils v${SCRIPT_UTILS_VERSION}] Skrypt wygenerowany pomyślnie`);
-    console.log(`[script-utils v${SCRIPT_UTILS_VERSION}] Wybrany hook (indeks ${hookIndex}):`, response.bestHook || '(brak)');
-    console.log(`[script-utils v${SCRIPT_UTILS_VERSION}] Liczba dostępnych hooków:`, response.allHooks?.length || 0);
-    
+
+    // Return the complete result
     return {
-      script: response.script || '',
-      bestHook: response.bestHook || '',
-      allHooks: response.allHooks || [],
-      currentHookIndex: response.currentHookIndex || 0,
-      totalHooks: response.totalHooks || 0,
-      debug: response.debug
+      script: scriptData.script,
+      bestHook: selectedHook,
+      allHooks: hooksData.hooks,
+      currentHookIndex: actualHookIndex,
+      totalHooks: hooksData.hooks.length
     };
   } catch (error) {
-    console.error(`[script-utils v${SCRIPT_UTILS_VERSION}] Błąd generowania skryptu:`, error);
-    // Rzucamy błąd na górę, aby komponent mógł go obsłużyć
+    console.error('Error in generateScript:', error);
     throw error;
   }
 }
 
-/**
- * Zapisuje wygenerowany skrypt jako projekt
- */
-export async function saveScriptAsProject(
-  script: string, 
-  hookText: string, 
-  templateId: string, 
-  user_id: string
-): Promise<{id: string, title: string} | null> {
+// Function to generate social media posts
+async function generateSocialMediaPost(
+  targetAudience: any, 
+  advertisingGoal: string, 
+  hookIndex: number = 0, 
+  platform: SocialMediaPlatform = 'meta'
+) {
   try {
-    console.log('[script-utils] Rozpoczęcie zapisywania skryptu...');
-    
-    if (!user_id || !script) {
-      console.error('[script-utils] Nie można zapisać skryptu: brak id użytkownika lub treści skryptu');
-      return null;
-    }
-    
-    // Generowanie tytułu na podstawie contentu
-    const title = generateTitleFromScript(script, hookText, templateId);
-    
-    console.log('[script-utils] Zapisywanie skryptu jako projekt...', {
-      userId: user_id,
-      title,
-      contentLength: script.length
+    // First use PosthookAgent to generate hooks and theme
+    const { data: posthookData } = await supabase.functions.invoke('ai-agents/posthook-agent', {
+      body: {
+        targetAudience,
+        advertisingGoal,
+        platform
+      }
     });
-    
-    const id = uuidv4();
-    const type = 'script';
-    
-    const { data, error } = await supabase
-      .from('projects')
-      .insert({
-        id,
-        user_id,
-        title,
-        content: script,
-        status: 'Completed',
-        type, // Dodajemy pole type
-        title_auto_generated: true
-      })
-      .select('id, title')
-      .single();
-    
-    if (error) {
-      console.error('[script-utils] Błąd zapisywania skryptu:', error);
-      throw error;
+
+    if (!posthookData || !posthookData.hooks || posthookData.hooks.length === 0) {
+      throw new Error('Failed to generate social media hooks');
     }
-    
-    console.log('[script-utils] Skrypt zapisany pomyślnie jako projekt:', data);
-    return data;
+
+    // Calculate the actual hook index to use
+    const actualHookIndex = Math.min(hookIndex, posthookData.hooks.length - 1);
+    const selectedHook = posthookData.hooks[actualHookIndex];
+
+    // Then use PostscriptAgent to generate the full content
+    const { data: postscriptData } = await supabase.functions.invoke('ai-agents/postscript-agent', {
+      body: {
+        targetAudience,
+        advertisingGoal,
+        platform,
+        posthookOutput: posthookData
+      }
+    });
+
+    if (!postscriptData || !postscriptData.content) {
+      throw new Error('Failed to generate social media content');
+    }
+
+    return {
+      script: postscriptData.content,
+      bestHook: selectedHook,
+      allHooks: posthookData.hooks,
+      currentHookIndex: actualHookIndex,
+      totalHooks: posthookData.hooks.length,
+      cta: postscriptData.cta,
+      theme: posthookData.theme,
+      form: posthookData.form
+    };
   } catch (error) {
-    console.error('[script-utils] Błąd podczas zapisywania skryptu:', error);
-    throw error; // Propagate the error so we can handle it in the calling function
+    console.error('Error in generateSocialMediaPost:', error);
+    throw error;
   }
 }
 
-/**
- * Generuje tytuł projektu na podstawie skryptu
- */
-function generateTitleFromScript(
-  script: string,
-  hookText: string = '',
-  templateId: string = ''
-): string {
-  // Określenie typu skryptu na podstawie templateId
-  let scriptType = '';
-  switch (templateId) {
-    case 'pas':
-      scriptType = 'Skrypt PAS';
-      break;
-    case 'aida':
-      scriptType = 'Skrypt AIDA';
-      break;
-    case 'social':
-      scriptType = 'Skrypt Social Media';
-      break;
-    case 'ad':
-      scriptType = 'Skrypt reklamowy';
-      break;
+// Save script as a project in the database
+export async function saveScriptAsProject(
+  scriptContent: string, 
+  hookText: string, 
+  templateId: string, 
+  userId: string,
+  socialMediaPlatform?: SocialMediaPlatform
+) {
+  try {
+    const projectId = uuidv4();
+
+    const title = 
+      templateId === 'email' ? 'Email sprzedażowy' : 
+      templateId === 'social' ? `Post na ${getSocialMediaPlatformName(socialMediaPlatform)}` : 
+      templateId === 'ad' ? 'Reklama internetowa' : 
+      'Skrypt';
+
+    const projectData = {
+      id: projectId,
+      title: `${title}: ${hookText.substring(0, 30)}${hookText.length > 30 ? '...' : ''}`,
+      content: scriptContent,
+      hook: hookText,
+      user_id: userId,
+      type: templateId,
+      status: 'Draft' as 'Draft' | 'Completed' | 'Reviewed',
+      metadata: socialMediaPlatform ? { socialMediaPlatform } : null
+    };
+
+    const { data, error } = await supabase
+      .from('projects')
+      .insert(projectData)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error saving script as project:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in saveScriptAsProject:', error);
+    throw error;
+  }
+}
+
+// Helper to get a friendly platform name
+function getSocialMediaPlatformName(platform?: SocialMediaPlatform): string {
+  switch (platform) {
+    case 'meta':
+      return 'Meta (Facebook/Instagram)';
+    case 'tiktok':
+      return 'TikTok';
+    case 'linkedin':
+      return 'LinkedIn';
     default:
-      scriptType = 'Skrypt';
+      return 'social media';
   }
-  
-  // Używamy fragmentu hooka jako części tytułu
-  let hookFragment = '';
-  if (hookText) {
-    // Wyciągnij pierwsze zdanie lub fragment hooka (maksymalnie 30 znaków)
-    const firstSentence = hookText.split(/[.!?]/, 1)[0].trim();
-    hookFragment = firstSentence.length > 30 
-      ? firstSentence.substring(0, 30) + '...'
-      : firstSentence;
-  }
-  
-  // Jeśli mamy fragment hooka, używamy go w tytule
-  if (hookFragment) {
-    return `${scriptType}: "${hookFragment}"`;
-  }
-  
-  // Jeśli nie mamy hooka, próbujemy wyciągnąć fragment z początku skryptu
-  const scriptStart = script.split(/[.!?]/, 1)[0].trim();
-  const scriptFragment = scriptStart.length > 30 
-    ? scriptStart.substring(0, 30) + '...'
-    : scriptStart;
-  
-  return `${scriptType}: "${scriptFragment}"`;
 }

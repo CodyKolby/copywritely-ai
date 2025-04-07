@@ -1,13 +1,14 @@
-
 import { useState, useEffect } from 'react';
 import { generateScript, saveScriptAsProject } from './script-utils';
 import { toast } from 'sonner';
+import { SocialMediaPlatform } from '../SocialMediaPlatformDialog';
 
 export const useScriptGeneration = (
   open: boolean,
   targetAudienceId: string,
   templateId: string,
   advertisingGoal: string = '',
+  socialMediaPlatform?: SocialMediaPlatform,
   userId: string | undefined
 ) => {
   const [isLoading, setIsLoading] = useState(true);
@@ -40,13 +41,22 @@ export const useScriptGeneration = (
       try {
         console.log("Weryfikacja ID grupy docelowej:", targetAudienceId);
         console.log("Cel reklamy:", advertisingGoal);
+        if (socialMediaPlatform) {
+          console.log("Platforma social media:", socialMediaPlatform);
+        }
         console.log("Generowanie skryptu #", generationCount + 1, "z hookiem o indeksie:", currentHookIndex);
         
         // If we have a verified audience ID, use it; otherwise, use the target audience ID
         const audienceId = verifiedAudienceId || targetAudienceId;
         
         // Generate the script
-        const result = await generateScript(templateId, audienceId, advertisingGoal, currentHookIndex);
+        const result = await generateScript(
+          templateId, 
+          audienceId, 
+          advertisingGoal, 
+          currentHookIndex, 
+          socialMediaPlatform
+        );
         
         if (isMounted) {
           setGeneratedScript(result.script);
@@ -84,7 +94,7 @@ export const useScriptGeneration = (
     return () => {
       isMounted = false;
     };
-  }, [open, targetAudienceId, templateId, advertisingGoal, currentHookIndex, isGeneratingNewScript, generationCount, verifiedAudienceId, userId]);
+  }, [open, targetAudienceId, templateId, advertisingGoal, socialMediaPlatform, currentHookIndex, isGeneratingNewScript, generationCount, verifiedAudienceId, userId]);
 
   const saveScriptToProject = async (scriptContent: string, hookText: string, uid: string) => {
     if (!scriptContent || isSaving || projectSaved || saveAttempted) return;
@@ -104,7 +114,8 @@ export const useScriptGeneration = (
         scriptContent,
         hookText,
         templateId,
-        uid
+        uid,
+        socialMediaPlatform
       );
       
       if (result && result.id) {
@@ -144,7 +155,13 @@ export const useScriptGeneration = (
     setProjectId(null);
     
     try {
-      const result = await generateScript(templateId, verifiedAudienceId || targetAudienceId, advertisingGoal, currentHookIndex);
+      const result = await generateScript(
+        templateId, 
+        verifiedAudienceId || targetAudienceId, 
+        advertisingGoal, 
+        currentHookIndex,
+        socialMediaPlatform
+      );
       setGeneratedScript(result.script);
       setCurrentHook(result.bestHook || '');
       setAllHooks(result.allHooks || []);

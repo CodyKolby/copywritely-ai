@@ -1,77 +1,72 @@
 
 import { EmailStyle } from '../../EmailStyleDialog';
+import { SocialMediaPlatform } from '../../SocialMediaPlatformDialog';
 
-/**
- * Hook for managing navigation between different dialog screens
- */
+interface DialogNavigationDeps {
+  setShowForm: (value: boolean) => void;
+  setShowGoalDialog: (value: boolean) => void;
+  setShowEmailStyleDialog: (value: boolean) => void;
+  setShowSocialMediaPlatformDialog: (value: boolean) => void;
+  setShowScriptDialog: (value: boolean) => void;
+  setShowEmailDialog: (value: boolean) => void;
+  setAdvertisingGoal: (value: string) => void;
+  setEmailStyle: (value: EmailStyle | null) => void;
+  setSocialMediaPlatform: (value: SocialMediaPlatform | null) => void;
+}
+
 export const useDialogNavigation = (
-  state: {
-    setShowForm: (show: boolean) => void;
-    setShowGoalDialog: (show: boolean) => void;
-    setShowEmailStyleDialog: (show: boolean) => void;
-    setShowScriptDialog: (show: boolean) => void;
-    setShowEmailDialog: (show: boolean) => void;
-    setAdvertisingGoal: (goal: string) => void;
-    setEmailStyle: (style: EmailStyle | null) => void;
-  },
+  deps: DialogNavigationDeps,
   templateId: string
 ) => {
-  const {
-    setShowForm,
-    setShowGoalDialog,
-    setShowEmailStyleDialog,
-    setShowScriptDialog,
-    setShowEmailDialog,
-    setAdvertisingGoal,
-    setEmailStyle
-  } = state;
-
-  // Handle back button click in form
   const handleBack = () => {
-    setShowForm(false);
+    deps.setShowForm(false);
   };
 
-  // Handle goal dialog submission
   const handleGoalSubmit = (goal: string) => {
-    setAdvertisingGoal(goal);
+    deps.setAdvertisingGoal(goal);
+    deps.setShowGoalDialog(false);
     
-    // If template is email, show email style dialog next
     if (templateId === 'email') {
-      setShowGoalDialog(false);
-      setShowEmailStyleDialog(true);
+      deps.setShowEmailStyleDialog(true);
+    } else if (templateId === 'social') {
+      deps.setShowSocialMediaPlatformDialog(true);
     } else {
-      // For other templates, show script dialog directly
-      setShowGoalDialog(false);
-      setShowScriptDialog(true);
+      deps.setShowScriptDialog(true);
     }
   };
 
-  // Handle back button click in goal dialog
   const handleGoalBack = () => {
-    setShowGoalDialog(false);
+    deps.setShowGoalDialog(false);
   };
 
-  // Handle email style dialog submission
   const handleEmailStyleSubmit = (style: EmailStyle) => {
-    setEmailStyle(style);
-    setShowEmailStyleDialog(false);
-    setShowEmailDialog(true);
+    deps.setEmailStyle(style);
+    deps.setShowEmailStyleDialog(false);
+    deps.setShowEmailDialog(true);
   };
 
-  // Handle back button click in email style dialog
   const handleEmailStyleBack = () => {
-    setShowEmailStyleDialog(false);
-    setShowGoalDialog(true);
+    deps.setShowEmailStyleDialog(false);
+    deps.setShowGoalDialog(true);
+  };
+  
+  const handleSocialMediaPlatformSubmit = (platform: SocialMediaPlatform) => {
+    deps.setSocialMediaPlatform(platform);
+    deps.setShowSocialMediaPlatformDialog(false);
+    deps.setShowScriptDialog(true);
+  };
+  
+  const handleSocialMediaPlatformBack = () => {
+    deps.setShowSocialMediaPlatformDialog(false);
+    deps.setShowGoalDialog(true);
   };
 
-  // Handle script dialog close
   const handleScriptDialogClose = () => {
-    setShowScriptDialog(false);
+    deps.setShowScriptDialog(false);
   };
 
-  // Handle email dialog close
   const handleEmailDialogClose = () => {
-    setShowEmailDialog(false);
+    deps.setShowEmailDialog(false);
   };
 
   return {
@@ -80,7 +75,9 @@ export const useDialogNavigation = (
     handleGoalBack,
     handleEmailStyleSubmit,
     handleEmailStyleBack,
+    handleSocialMediaPlatformSubmit,
+    handleSocialMediaPlatformBack,
     handleScriptDialogClose,
-    handleEmailDialogClose,
+    handleEmailDialogClose
   };
 };
