@@ -115,7 +115,7 @@ async function generateSocialMediaPost(
     console.log(`Generating social media post for platform: ${platform}`);
     
     // First use PosthookAgent to generate hooks and theme
-    const { data: posthookData, error: posthookError } = await supabase.functions.invoke('ai-agents/posthook-agent', {
+    const posthookResponse = await supabase.functions.invoke('ai-agents/posthook-agent', {
       body: {
         targetAudience,
         advertisingGoal,
@@ -123,48 +123,59 @@ async function generateSocialMediaPost(
       }
     });
 
-    if (posthookError) {
-      console.error('Error calling posthook-agent:', posthookError);
-      throw new Error(`Failed to generate social media hooks: ${posthookError.message}`);
+    if (posthookResponse.error) {
+      console.error('Error calling posthook-agent:', posthookResponse.error);
+      throw new Error(`Failed to generate social media hooks: ${posthookResponse.error.message}`);
     }
 
+    const posthookData = posthookResponse.data;
     console.log('PosthookAgent full response:', posthookData);
 
     if (!posthookData) {
       console.error('Empty response from posthook-agent');
       throw new Error('Failed to generate social media hooks: Empty response');
     }
-
-    if (!posthookData.hooks || !Array.isArray(posthookData.hooks) || posthookData.hooks.length === 0) {
+    
+    // Create fallback hooks if missing or invalid
+    let hooks = ["Nie udało się wygenerować automatycznego hooka"];
+    let theme = "Ogólna tematyka";
+    let form = "post tekstowy";
+    
+    if (posthookData.hooks && Array.isArray(posthookData.hooks) && posthookData.hooks.length > 0) {
+      hooks = posthookData.hooks;
+    } else {
       console.error('Invalid hooks in response from posthook-agent:', posthookData);
-      
-      // Create fallback hooks if missing
-      posthookData.hooks = ["Nie udało się wygenerować automatycznego hooka"];
-      posthookData.theme = posthookData.theme || "Ogólna tematyka";
-      posthookData.form = posthookData.form || "post tekstowy";
-      
-      console.log('Created fallback hooks:', posthookData);
     }
+    
+    theme = posthookData.theme || theme;
+    form = posthookData.form || form;
+    
+    console.log('Using hooks:', hooks);
 
     // Calculate the actual hook index to use
-    const actualHookIndex = Math.min(hookIndex, posthookData.hooks.length - 1);
-    const selectedHook = posthookData.hooks[actualHookIndex];
+    const actualHookIndex = Math.min(hookIndex, hooks.length - 1);
+    const selectedHook = hooks[actualHookIndex];
 
     // Then use PostscriptAgent to generate the full content
-    const { data: postscriptData, error: postscriptError } = await supabase.functions.invoke('ai-agents/postscript-agent', {
+    const postscriptResponse = await supabase.functions.invoke('ai-agents/postscript-agent', {
       body: {
         targetAudience,
         advertisingGoal,
         platform,
-        posthookOutput: posthookData
+        posthookOutput: {
+          hooks,
+          theme,
+          form
+        }
       }
     });
 
-    if (postscriptError) {
-      console.error('Error calling postscript-agent:', postscriptError);
-      throw new Error(`Failed to generate social media content: ${postscriptError.message}`);
+    if (postscriptResponse.error) {
+      console.error('Error calling postscript-agent:', postscriptResponse.error);
+      throw new Error(`Failed to generate social media content: ${postscriptResponse.error.message}`);
     }
 
+    const postscriptData = postscriptResponse.data;
     console.log('PostscriptAgent full response:', postscriptData);
 
     if (!postscriptData) {
@@ -172,22 +183,29 @@ async function generateSocialMediaPost(
       throw new Error('Failed to generate social media content: Empty response');
     }
 
-    // Create fallback if missing
-    if (!postscriptData.content) {
+    // Create fallback content if missing
+    let content = selectedHook + "\n\nTreść postu nie została wygenerowana.";
+    let cta = "Skontaktuj się z nami, aby dowiedzieć się więcej.";
+    
+    if (postscriptData.content) {
+      content = postscriptData.content;
+    } else {
       console.error('Missing content in response from postscript-agent:', postscriptData);
-      postscriptData.content = selectedHook + "\n\nTreść postu nie została wygenerowana.";
-      postscriptData.cta = postscriptData.cta || "Skontaktuj się z nami, aby dowiedzieć się więcej.";
+    }
+    
+    if (postscriptData.cta) {
+      cta = postscriptData.cta;
     }
 
     return {
-      script: postscriptData.content,
+      script: content,
       bestHook: selectedHook,
-      allHooks: posthookData.hooks,
+      allHooks: hooks,
       currentHookIndex: actualHookIndex,
-      totalHooks: posthookData.hooks.length,
-      cta: postscriptData.cta,
-      theme: posthookData.theme,
-      form: posthookData.form
+      totalHooks: hooks.length,
+      cta: cta,
+      theme: theme,
+      form: form
     };
   } catch (error) {
     console.error('Error in generateSocialMediaPost:', error);

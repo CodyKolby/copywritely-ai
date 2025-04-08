@@ -125,7 +125,7 @@ serve(async (req) => {
       console.error('Error parsing JSON response:', e);
       // If not parseable as JSON, create structure manually
       processedResponse = {
-        content: "Nie udało się wygenerować treści postu.",
+        content: `${selectedHook}\n\nNie udało się wygenerować treści postu.`,
         cta: "Skontaktuj się z nami, aby dowiedzieć się więcej."
       };
     }
