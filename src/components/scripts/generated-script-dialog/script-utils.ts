@@ -150,16 +150,16 @@ async function generateSocialMediaPost(
         console.warn(`Retry ${posthookRetryCount + 1}/${maxRetries} for posthook-agent:`, posthookResponse.error);
         posthookRetryCount++;
         
-        // Wait before retrying
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Wait before retrying - increased to 5 seconds
+        await new Promise(resolve => setTimeout(resolve, 5000));
       } catch (e) {
         console.error(`Posthook attempt ${posthookRetryCount + 1}/${maxRetries} failed:`, e);
         posthookRetryCount++;
         
         if (posthookRetryCount >= maxRetries) throw e;
         
-        // Wait before retrying
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Wait before retrying - increased to 5 seconds
+        await new Promise(resolve => setTimeout(resolve, 5000));
       }
     }
     
@@ -230,16 +230,16 @@ async function generateSocialMediaPost(
         console.warn(`Retry ${postscriptRetryCount + 1}/${maxRetries} for postscript-agent:`, postscriptResponse.error);
         postscriptRetryCount++;
         
-        // Wait before retrying
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Wait before retrying - increased to 5 seconds
+        await new Promise(resolve => setTimeout(resolve, 5000));
       } catch (e) {
         console.error(`Postscript attempt ${postscriptRetryCount + 1}/${maxRetries} failed:`, e);
         postscriptRetryCount++;
         
         if (postscriptRetryCount >= maxRetries) throw e;
         
-        // Wait before retrying
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Wait before retrying - increased to 5 seconds
+        await new Promise(resolve => setTimeout(resolve, 5000));
       }
     }
     
