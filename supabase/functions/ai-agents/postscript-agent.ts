@@ -1,16 +1,9 @@
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { corsHeaders } from "./cors.ts";
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-
-// Complete CORS headers configuration
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*', // Allow all origins
-  'Access-Control-Allow-Methods': 'POST, OPTIONS, GET',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, cache-control, pragma, expires, x-no-cache, Authorization',
-  'Access-Control-Max-Age': '86400', // 24 hours
-};
 
 // System prompt for PostscriptAgent
 const SYSTEM_PROMPT = `Jesteś PostscriptAgentem, ekspertem w tworzeniu angażujących treści i mocnych wezwań do działania (CTA) w postach w mediach społecznościowych.
