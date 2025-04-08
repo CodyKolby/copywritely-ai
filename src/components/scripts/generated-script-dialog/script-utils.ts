@@ -123,17 +123,43 @@ async function generateSocialMediaPost(
     
     // First use PosthookAgent to generate hooks and theme
     console.log("Calling posthook-agent edge function");
-    const posthookResponse = await supabase.functions.invoke('ai-agents/posthook-agent', {
-      body: {
-        targetAudience,
-        advertisingGoal,
-        platform
+    
+    // Add retry mechanism for posthook-agent call
+    let posthookResponse;
+    let posthookRetryCount = 0;
+    const maxRetries = 3;
+    
+    while (posthookRetryCount < maxRetries) {
+      try {
+        posthookResponse = await supabase.functions.invoke('ai-agents/posthook-agent', {
+          body: {
+            targetAudience,
+            advertisingGoal,
+            platform
+          }
+        });
+        
+        if (!posthookResponse.error) break;
+        
+        console.warn(`Retry ${posthookRetryCount + 1}/${maxRetries} for posthook-agent:`, posthookResponse.error);
+        posthookRetryCount++;
+        
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } catch (e) {
+        console.error(`Attempt ${posthookRetryCount + 1}/${maxRetries} failed:`, e);
+        posthookRetryCount++;
+        
+        if (posthookRetryCount >= maxRetries) throw e;
+        
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
-    });
-
-    if (posthookResponse.error) {
-      console.error('Error calling posthook-agent:', posthookResponse.error);
-      throw new Error(`Failed to generate social media hooks: ${posthookResponse.error.message}`);
+    }
+    
+    if (!posthookResponse || posthookResponse.error) {
+      console.error('All attempts to call posthook-agent failed:', posthookResponse?.error);
+      throw new Error(`Failed to generate social media hooks after ${maxRetries} attempts: ${posthookResponse?.error?.message || 'Unknown error'}`);
     }
 
     const posthookData = posthookResponse.data;
@@ -167,22 +193,57 @@ async function generateSocialMediaPost(
 
     // Then use PostscriptAgent to generate the full content
     console.log("Calling postscript-agent edge function");
-    const postscriptResponse = await supabase.functions.invoke('ai-agents/postscript-agent', {
-      body: {
-        targetAudience,
-        advertisingGoal,
-        platform,
-        posthookOutput: {
-          hooks,
-          theme,
-          form
-        }
+    
+    // Add retry mechanism for postscript-agent call
+    let postscriptResponse;
+    let postscriptRetryCount = 0;
+    
+    while (postscriptRetryCount < maxRetries) {
+      try {
+        postscriptResponse = await supabase.functions.invoke('ai-agents/postscript-agent', {
+          body: {
+            targetAudience,
+            advertisingGoal,
+            platform,
+            posthookOutput: {
+              hooks,
+              theme,
+              form
+            }
+          }
+        });
+        
+        if (!postscriptResponse.error) break;
+        
+        console.warn(`Retry ${postscriptRetryCount + 1}/${maxRetries} for postscript-agent:`, postscriptResponse.error);
+        postscriptRetryCount++;
+        
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } catch (e) {
+        console.error(`Attempt ${postscriptRetryCount + 1}/${maxRetries} failed:`, e);
+        postscriptRetryCount++;
+        
+        if (postscriptRetryCount >= maxRetries) throw e;
+        
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
-    });
-
-    if (postscriptResponse.error) {
-      console.error('Error calling postscript-agent:', postscriptResponse.error);
-      throw new Error(`Failed to generate social media content: ${postscriptResponse.error.message}`);
+    }
+    
+    if (!postscriptResponse || postscriptResponse.error) {
+      console.error('All attempts to call postscript-agent failed:', postscriptResponse?.error);
+      // Fallback to just using the hook as content if postscript-agent fails
+      return {
+        script: selectedHook + "\n\nTreść postu nie została wygenerowana z powodu błędu.",
+        bestHook: selectedHook,
+        allHooks: hooks,
+        currentHookIndex: actualHookIndex,
+        totalHooks: hooks.length,
+        cta: "Skontaktuj się z nami, aby dowiedzieć się więcej.",
+        theme: theme,
+        form: form
+      };
     }
 
     const postscriptData = postscriptResponse.data;

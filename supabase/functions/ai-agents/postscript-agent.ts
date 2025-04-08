@@ -4,7 +4,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
-// Enhanced CORS headers to ensure preflight requests work properly
+// POPRAWIONE nagłówki CORS dla wszystkich domen
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, cache-control, pragma, expires, x-no-cache, Authorization',
@@ -31,9 +31,11 @@ Zwróć pełną treść postu w formacie JSON z polami:
 - cta: wyraźne wezwanie do działania`;
 
 serve(async (req) => {
+  console.log("PostscriptAgent otrzymał żądanie:", req.method, req.url);
+  
   // Handle OPTIONS requests properly for CORS
   if (req.method === 'OPTIONS') {
-    console.log("Handling OPTIONS preflight request");
+    console.log("Obsługa preflight OPTIONS");
     return new Response(null, { 
       status: 204, 
       headers: corsHeaders 
