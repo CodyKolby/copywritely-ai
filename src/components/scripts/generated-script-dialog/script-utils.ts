@@ -100,8 +100,10 @@ async function generateSocialMediaPost(
   platform: SocialMediaPlatform = 'meta'
 ) {
   try {
+    console.log(`Generating social media post for platform: ${platform}`);
+    
     // First use PosthookAgent to generate hooks and theme
-    const { data: posthookData } = await supabase.functions.invoke('ai-agents/posthook-agent', {
+    const { data: posthookData, error: posthookError } = await supabase.functions.invoke('ai-agents/posthook-agent', {
       body: {
         targetAudience,
         advertisingGoal,
@@ -109,16 +111,24 @@ async function generateSocialMediaPost(
       }
     });
 
-    if (!posthookData || !posthookData.hooks || posthookData.hooks.length === 0) {
-      throw new Error('Failed to generate social media hooks');
+    if (posthookError) {
+      console.error('Error calling posthook-agent:', posthookError);
+      throw new Error(`Failed to generate social media hooks: ${posthookError.message}`);
     }
+
+    if (!posthookData || !posthookData.hooks || posthookData.hooks.length === 0) {
+      console.error('Invalid response from posthook-agent:', posthookData);
+      throw new Error('Failed to generate social media hooks: Invalid response format');
+    }
+
+    console.log('PosthookAgent response:', posthookData);
 
     // Calculate the actual hook index to use
     const actualHookIndex = Math.min(hookIndex, posthookData.hooks.length - 1);
     const selectedHook = posthookData.hooks[actualHookIndex];
 
     // Then use PostscriptAgent to generate the full content
-    const { data: postscriptData } = await supabase.functions.invoke('ai-agents/postscript-agent', {
+    const { data: postscriptData, error: postscriptError } = await supabase.functions.invoke('ai-agents/postscript-agent', {
       body: {
         targetAudience,
         advertisingGoal,
@@ -127,9 +137,17 @@ async function generateSocialMediaPost(
       }
     });
 
-    if (!postscriptData || !postscriptData.content) {
-      throw new Error('Failed to generate social media content');
+    if (postscriptError) {
+      console.error('Error calling postscript-agent:', postscriptError);
+      throw new Error(`Failed to generate social media content: ${postscriptError.message}`);
     }
+
+    if (!postscriptData || !postscriptData.content) {
+      console.error('Invalid response from postscript-agent:', postscriptData);
+      throw new Error('Failed to generate social media content: Invalid response format');
+    }
+
+    console.log('PostscriptAgent response:', postscriptData);
 
     return {
       script: postscriptData.content,
