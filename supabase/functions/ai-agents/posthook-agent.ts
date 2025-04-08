@@ -84,7 +84,7 @@ Typowe konstrukcje:
 
 Jak korzystać ze stylów hooków
 
-Style hooków nie są gotowymi formułami do kopiowania — są sposobem myślenia o tym, jak przyciągnąć uwagę. Twoim zadaniem nie jest „dopasować” zdanie do stylu, tylko **zrozumieć jego intencję** i **własnymi słowami** zbudować zdanie, które działa według tej zasady.
+Style hooków nie są gotowymi formułami do kopiowania — są sposobem myślenia o tym, jak przyciągnąć uwagę. Twoim zadaniem nie jest „dopasować" zdanie do stylu, tylko **zrozumieć jego intencję** i **własnymi słowami** zbudować zdanie, które działa według tej zasady.
 
 Każdy styl odpowiada na inne pytanie w głowie odbiorcy. Twoją rolą jest:
 
@@ -100,12 +100,14 @@ Jak tworzyć TEMAT POSTA
 
 Wyobraź sobie, że kolejna osoba, copywriter będzie bazować wyłącznie na tym temacie, by stworzyć cały post lub nagranie. Nie może się domyślać, ma dokładnie wiedzieć, co przekazać, jakie elementy rozwinąć, co ma być punktem głównym.
 
-Nie pisz ogólnie. Nie używaj sformułowań typu „historia błędu” lub „lekcja na przyszłość”. To są puste etykiety. Pisz tak, jakbyś komuś tłumaczył, o czym dokładnie ma być treść: co się wydarzyło, co poszło nie tak, co zadziałało, co ktoś powinien zrobić zamiast tego.
+Nie pisz ogólnie. Nie używaj sformułowań typu „historia błędu" lub „lekcja na przyszłość". To są puste etykiety. Pisz tak, jakbyś komuś tłumaczył, o czym dokładnie ma być treść: co się wydarzyło, co poszło nie tak, co zadziałało, co ktoś powinien zrobić zamiast tego.
 
 STRUKTURA ODPOWIEDZI:
 
 1. HOOK
-2. TEMAT POSTA`;
+2. TEMAT POSTA
+
+Dane z ankiety klienta: {{surveyData}}`;
 
 serve(async (req) => {
   // Obsługa preflight CORS
@@ -127,6 +129,19 @@ serve(async (req) => {
     // Przygotowanie danych o platformie
     const platformInfo = `Platforma: ${platform || 'Meta (Instagram/Facebook)'}`;
     
+    // Konstrukcja promptu z danymi z ankiety
+    const userPrompt = `Oto dane o grupie docelowej:
+    ${JSON.stringify(targetAudience, null, 2)}
+    
+    Cel reklamy: ${advertisingGoal || 'Brak określonego celu'}
+    
+    ${platformInfo}
+    
+    Stwórz hook, określ tematykę i formę postu.`;
+    
+    // Logowanie promptu do konsoli
+    console.log("Prompt dla PosthookAgent:", userPrompt);
+    
     // Pobieranie odpowiedzi z OpenAI
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -138,17 +153,7 @@ serve(async (req) => {
         model: 'gpt-4o',
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
-          { 
-            role: 'user', 
-            content: `Oto dane o grupie docelowej:
-            ${JSON.stringify(targetAudience, null, 2)}
-            
-            Cel reklamy: ${advertisingGoal || 'Brak określonego celu'}
-            
-            ${platformInfo}
-            
-            Stwórz hook, określ tematykę i formę postu.`
-          }
+          { role: 'user', content: userPrompt }
         ],
         temperature: 0.7,
       }),
@@ -162,6 +167,9 @@ serve(async (req) => {
     const data = await openAIResponse.json();
     let responseText = data.choices[0].message.content;
     
+    // Logowanie odpowiedzi do konsoli
+    console.log("Odpowiedź PosthookAgent:", responseText);
+    
     // Próba przetworzenia odpowiedzi jako JSON
     let processedResponse;
     try {
@@ -169,10 +177,27 @@ serve(async (req) => {
       if (responseText.includes('```json')) {
         responseText = responseText.replace(/```json|```/g, '').trim();
       }
-      processedResponse = JSON.parse(responseText);
+      
+      // Jeśli odpowiedź jest już w formacie JSON, spróbujemy ją sparsować
+      try {
+        processedResponse = JSON.parse(responseText);
+      } catch (e) {
+        // Jeśli nie udało się sparsować jako JSON, przygotowanie struktury ręcznie
+        // Szukamy linii zaczynających się od "HOOK:" i "TEMAT POSTA:"
+        const hookMatch = responseText.match(/HOOK:?\s*(.*?)(?=\s*TEMAT|\s*$)/is);
+        const themeMatch = responseText.match(/TEMAT POSTA:?\s*(.*?)(?=\s*$)/is);
+        
+        const hook = hookMatch ? hookMatch[1].trim() : "Nie udało się wygenerować hooka";
+        const theme = themeMatch ? themeMatch[1].trim() : "Nie udało się określić tematyki";
+        
+        processedResponse = {
+          hooks: [hook],
+          theme: theme,
+          form: "post tekstowy"
+        };
+      }
     } catch (e) {
-      console.error('Error parsing JSON response:', e);
-      // Jeśli nie udało się sparsować jako JSON, tworzenie struktury ręcznie
+      console.error('Error processing response:', e);
       processedResponse = {
         hooks: ["Nie udało się wygenerować hooków"],
         theme: "Nie udało się określić tematyki",
