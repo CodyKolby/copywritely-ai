@@ -50,15 +50,21 @@ export async function generateScript(
 
     // For other templates, call the hook-angle-generator and script-generator
     // Generate hooks and angles with first agent
-    const { data: hooksData } = await supabase.functions.invoke('ai-agents/hook-angle-generator', {
+    const { data: hooksData, error: hooksError } = await supabase.functions.invoke('ai-agents/hook-angle-generator', {
       body: {
         targetAudience: audienceWithGoal,
         templateType: templateId,
       }
     });
 
+    if (hooksError) {
+      console.error('Error calling hook-angle-generator:', hooksError);
+      throw new Error(`Failed to generate hooks: ${hooksError.message}`);
+    }
+
     if (!hooksData || !Array.isArray(hooksData.hooks) || hooksData.hooks.length === 0) {
-      throw new Error('Failed to generate hooks');
+      console.error('Invalid response from hook-angle-generator:', hooksData);
+      throw new Error('Failed to generate hooks: Invalid response format');
     }
 
     // Calculate the actual hook index to use
@@ -66,7 +72,7 @@ export async function generateScript(
     const selectedHook = hooksData.hooks[actualHookIndex];
 
     // Generate the main script with second agent
-    const { data: scriptData } = await supabase.functions.invoke('ai-agents/script-generator', {
+    const { data: scriptData, error: scriptError } = await supabase.functions.invoke('ai-agents/script-generator', {
       body: {
         targetAudience: audienceWithGoal,
         templateType: templateId,
@@ -74,8 +80,14 @@ export async function generateScript(
       }
     });
 
+    if (scriptError) {
+      console.error('Error calling script-generator:', scriptError);
+      throw new Error(`Failed to generate script: ${scriptError.message}`);
+    }
+
     if (!scriptData || !scriptData.script) {
-      throw new Error('Failed to generate script');
+      console.error('Invalid response from script-generator:', scriptData);
+      throw new Error('Failed to generate script: Invalid response format');
     }
 
     // Return the complete result
@@ -116,12 +128,23 @@ async function generateSocialMediaPost(
       throw new Error(`Failed to generate social media hooks: ${posthookError.message}`);
     }
 
-    if (!posthookData || !posthookData.hooks || posthookData.hooks.length === 0) {
-      console.error('Invalid response from posthook-agent:', posthookData);
-      throw new Error('Failed to generate social media hooks: Invalid response format');
+    console.log('PosthookAgent full response:', posthookData);
+
+    if (!posthookData) {
+      console.error('Empty response from posthook-agent');
+      throw new Error('Failed to generate social media hooks: Empty response');
     }
 
-    console.log('PosthookAgent response:', posthookData);
+    if (!posthookData.hooks || !Array.isArray(posthookData.hooks) || posthookData.hooks.length === 0) {
+      console.error('Invalid hooks in response from posthook-agent:', posthookData);
+      
+      // Create fallback hooks if missing
+      posthookData.hooks = ["Nie udało się wygenerować automatycznego hooka"];
+      posthookData.theme = posthookData.theme || "Ogólna tematyka";
+      posthookData.form = posthookData.form || "post tekstowy";
+      
+      console.log('Created fallback hooks:', posthookData);
+    }
 
     // Calculate the actual hook index to use
     const actualHookIndex = Math.min(hookIndex, posthookData.hooks.length - 1);
@@ -142,12 +165,19 @@ async function generateSocialMediaPost(
       throw new Error(`Failed to generate social media content: ${postscriptError.message}`);
     }
 
-    if (!postscriptData || !postscriptData.content) {
-      console.error('Invalid response from postscript-agent:', postscriptData);
-      throw new Error('Failed to generate social media content: Invalid response format');
+    console.log('PostscriptAgent full response:', postscriptData);
+
+    if (!postscriptData) {
+      console.error('Empty response from postscript-agent');
+      throw new Error('Failed to generate social media content: Empty response');
     }
 
-    console.log('PostscriptAgent response:', postscriptData);
+    // Create fallback if missing
+    if (!postscriptData.content) {
+      console.error('Missing content in response from postscript-agent:', postscriptData);
+      postscriptData.content = selectedHook + "\n\nTreść postu nie została wygenerowana.";
+      postscriptData.cta = postscriptData.cta || "Skontaktuj się z nami, aby dowiedzieć się więcej.";
+    }
 
     return {
       script: postscriptData.content,

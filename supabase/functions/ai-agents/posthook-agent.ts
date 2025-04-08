@@ -39,9 +39,9 @@ ZASADY KRYTYCZNE:
 Dane z ankiety klienta: {{surveyData}}`;
 
 serve(async (req) => {
-  // Obsługa preflight CORS - poprawiona wersja
+  // Handle OPTIONS requests properly for CORS
   if (req.method === 'OPTIONS') {
-    console.log("Obsługa zapytania preflight OPTIONS");
+    console.log("Handling OPTIONS preflight request");
     return new Response(null, { 
       status: 204, 
       headers: corsHeaders 
@@ -49,20 +49,27 @@ serve(async (req) => {
   }
 
   try {
-    // Parsowanie danych z zapytania
+    // Parse request data
     const { targetAudience, advertisingGoal, platform } = await req.json();
     
+    console.log("PosthookAgent received request:", { 
+      targetAudienceId: targetAudience?.id, 
+      advertisingGoal, 
+      platform 
+    });
+    
     if (!targetAudience) {
+      console.error("Missing target audience data");
       return new Response(
         JSON.stringify({ error: 'Brak danych o grupie docelowej' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
-    // Przygotowanie danych o platformie
+    // Prepare platform info
     const platformInfo = `Platforma: ${platform || 'Meta (Instagram/Facebook)'}`;
     
-    // Konstrukcja promptu z danymi z ankiety
+    // Construct prompt with survey data
     const userPrompt = `Oto dane o grupie docelowej:
     ${JSON.stringify(targetAudience, null, 2)}
     
@@ -72,10 +79,10 @@ serve(async (req) => {
     
     Stwórz hook, określ tematykę i formę postu.`;
     
-    // Logowanie promptu do konsoli
-    console.log("Prompt dla PosthookAgent:", userPrompt);
+    // Log the prompt for debugging
+    console.log("Prompt for PosthookAgent:", userPrompt);
     
-    // Pobieranie odpowiedzi z OpenAI
+    // Get response from OpenAI
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -85,7 +92,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: 'gpt-4o',
         messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'system', content: SYSTEM_PROMPT.replace('{{surveyData}}', JSON.stringify(targetAudience, null, 2)) },
           { role: 'user', content: userPrompt }
         ],
         temperature: 0.7,
@@ -94,29 +101,31 @@ serve(async (req) => {
 
     if (!openAIResponse.ok) {
       const errorData = await openAIResponse.json();
+      console.error("OpenAI API error:", errorData);
       throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
     }
 
     const data = await openAIResponse.json();
     let responseText = data.choices[0].message.content;
     
-    // Logowanie odpowiedzi do konsoli
-    console.log("Odpowiedź PosthookAgent:", responseText);
+    // Log complete response for debugging
+    console.log("Raw PosthookAgent response:", responseText);
     
-    // Próba przetworzenia odpowiedzi jako JSON
+    // Process response as JSON
     let processedResponse;
     try {
-      // Wyczyść tekst z markerów kodu, jeśli istnieją
+      // Clean text of code markers if they exist
       if (responseText.includes('```json')) {
         responseText = responseText.replace(/```json|```/g, '').trim();
       }
       
-      // Jeśli odpowiedź jest już w formacie JSON, spróbujemy ją sparsować
+      // Try to parse as JSON
       try {
         processedResponse = JSON.parse(responseText);
       } catch (e) {
-        // Jeśli nie udało się sparsować jako JSON, przygotowanie struktury ręcznie
-        // Szukamy linii zaczynających się od "HOOK:" i "TEMAT POSTA:"
+        console.error("Failed to parse JSON response:", e);
+        
+        // If not parseable as JSON, manually extract hooks and theme
         const hookMatch = responseText.match(/HOOK:?\s*(.*?)(?=\s*TEMAT|\s*$)/is);
         const themeMatch = responseText.match(/TEMAT POSTA:?\s*(.*?)(?=\s*$)/is);
         
@@ -138,13 +147,15 @@ serve(async (req) => {
       };
     }
     
+    console.log("Processed PosthookAgent response:", processedResponse);
+    
     return new Response(
       JSON.stringify(processedResponse),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
     
   } catch (error) {
-    console.error('Błąd w funkcji posthook-agent:', error);
+    console.error('Error in posthook-agent:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
