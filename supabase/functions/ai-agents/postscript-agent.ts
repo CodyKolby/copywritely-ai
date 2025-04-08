@@ -7,6 +7,7 @@ const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS, GET'
 };
 
 // System prompt for PostscriptAgent
@@ -28,9 +29,13 @@ Zwróć pełną treść postu w formacie JSON z polami:
 - cta: wyraźne wezwanie do działania`;
 
 serve(async (req) => {
-  // Obsługa preflight CORS
+  // Obsługa preflight CORS - poprawiona wersja
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    console.log("Obsługa zapytania preflight OPTIONS");
+    return new Response(null, { 
+      status: 204, 
+      headers: corsHeaders 
+    });
   }
 
   try {
@@ -51,6 +56,25 @@ serve(async (req) => {
     // Przygotowanie danych o platformie
     const platformInfo = `Platforma: ${platform || 'Meta (Instagram/Facebook)'}`;
     
+    // Konstrukcja promptu dla agenta
+    const userPrompt = `Oto dane o grupie docelowej:
+    ${JSON.stringify(targetAudience, null, 2)}
+    
+    Cel reklamy: ${advertisingGoal || 'Brak określonego celu'}
+    
+    Wybrany hook: ${selectedHook}
+    
+    Tematyka postu: ${posthookOutput.theme || 'Brak określonej tematyki'}
+    
+    Forma postu: ${posthookOutput.form || 'post tekstowy'}
+    
+    ${platformInfo}
+    
+    Stwórz pełną treść postu z wezwaniem do działania.`;
+    
+    // Logowanie promptu do konsoli
+    console.log("Prompt dla PostscriptAgent:", userPrompt);
+    
     // Pobieranie odpowiedzi z OpenAI
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -62,23 +86,7 @@ serve(async (req) => {
         model: 'gpt-4o',
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
-          { 
-            role: 'user', 
-            content: `Oto dane o grupie docelowej:
-            ${JSON.stringify(targetAudience, null, 2)}
-            
-            Cel reklamy: ${advertisingGoal || 'Brak określonego celu'}
-            
-            Wybrany hook: ${selectedHook}
-            
-            Tematyka postu: ${posthookOutput.theme || 'Brak określonej tematyki'}
-            
-            Forma postu: ${posthookOutput.form || 'post tekstowy'}
-            
-            ${platformInfo}
-            
-            Stwórz pełną treść postu z wezwaniem do działania.`
-          }
+          { role: 'user', content: userPrompt }
         ],
         temperature: 0.7,
       }),
@@ -91,6 +99,9 @@ serve(async (req) => {
 
     const data = await openAIResponse.json();
     let responseText = data.choices[0].message.content;
+    
+    // Logowanie odpowiedzi do konsoli
+    console.log("Odpowiedź PostscriptAgent:", responseText);
     
     // Próba przetworzenia odpowiedzi jako JSON
     let processedResponse;

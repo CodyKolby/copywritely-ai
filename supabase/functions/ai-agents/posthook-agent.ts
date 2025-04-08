@@ -7,6 +7,7 @@ const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS, GET'
 };
 
 // System prompt for PosthookAgent
@@ -110,9 +111,13 @@ STRUKTURA ODPOWIEDZI:
 Dane z ankiety klienta: {{surveyData}}`;
 
 serve(async (req) => {
-  // Obsługa preflight CORS
+  // Obsługa preflight CORS - poprawiona wersja
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    console.log("Obsługa zapytania preflight OPTIONS");
+    return new Response(null, { 
+      status: 204, 
+      headers: corsHeaders 
+    });
   }
 
   try {
