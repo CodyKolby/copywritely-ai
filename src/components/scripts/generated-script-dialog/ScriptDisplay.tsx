@@ -19,7 +19,7 @@ const ScriptDisplay = ({
   bestHook, 
   hookIndex = 0, 
   totalHooks = 0, 
-  adStructure = 'PAS', 
+  adStructure = '', 
   rawScript 
 }: ScriptDisplayProps) => {
   const [copied, setCopied] = useState(false);
@@ -61,6 +61,9 @@ const ScriptDisplay = ({
   // Łączymy hook i skrypt do wyświetlenia
   const displayScript = showRaw && rawScript ? rawScript : script;
 
+  // Sprawdź, czy to post na social media - jeśli nie ma struktury reklamowej, nie pokazuj jej
+  const isSocialMediaPost = !adStructure || adStructure.trim() === '';
+
   return (
     <div className="space-y-6">
       <div className="bg-copywrite-teal/10 p-4 rounded-md border border-copywrite-teal/20">
@@ -68,7 +71,7 @@ const ScriptDisplay = ({
           <h3 className="font-medium text-copywrite-teal">Szczegóły skryptu:</h3>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          {adStructure && (
+          {!isSocialMediaPost && adStructure && (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>

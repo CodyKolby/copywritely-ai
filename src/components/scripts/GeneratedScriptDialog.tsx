@@ -71,6 +71,7 @@ const GeneratedScriptDialog = ({
                 bestHook={currentHook} 
                 hookIndex={currentHookIndex}
                 totalHooks={totalHooks}
+                adStructure={templateId === 'social' ? '' : 'PAS'}
               />
             </div>
             

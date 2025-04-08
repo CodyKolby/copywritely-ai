@@ -103,7 +103,8 @@ export async function generateScript(
       bestHook: selectedHook,
       allHooks: hooksData.hooks,
       currentHookIndex: actualHookIndex,
-      totalHooks: hooksData.hooks.length
+      totalHooks: hooksData.hooks.length,
+      adStructure: 'PAS' // Tylko dla innych szablonów niż social media
     };
   } catch (error) {
     console.error('Error in generateScript:', error);
@@ -150,16 +151,16 @@ async function generateSocialMediaPost(
         console.warn(`Retry ${posthookRetryCount + 1}/${maxRetries} for posthook-agent:`, posthookResponse.error);
         posthookRetryCount++;
         
-        // Wait before retrying - increased to 5 seconds
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        // Wait before retrying - increased to 8 seconds
+        await new Promise(resolve => setTimeout(resolve, 8000));
       } catch (e) {
         console.error(`Posthook attempt ${posthookRetryCount + 1}/${maxRetries} failed:`, e);
         posthookRetryCount++;
         
         if (posthookRetryCount >= maxRetries) throw e;
         
-        // Wait before retrying - increased to 5 seconds
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        // Wait before retrying - increased to 8 seconds
+        await new Promise(resolve => setTimeout(resolve, 8000));
       }
     }
     
@@ -230,16 +231,16 @@ async function generateSocialMediaPost(
         console.warn(`Retry ${postscriptRetryCount + 1}/${maxRetries} for postscript-agent:`, postscriptResponse.error);
         postscriptRetryCount++;
         
-        // Wait before retrying - increased to 5 seconds
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        // Wait before retrying - increased to 8 seconds
+        await new Promise(resolve => setTimeout(resolve, 8000));
       } catch (e) {
         console.error(`Postscript attempt ${postscriptRetryCount + 1}/${maxRetries} failed:`, e);
         postscriptRetryCount++;
         
         if (postscriptRetryCount >= maxRetries) throw e;
         
-        // Wait before retrying - increased to 5 seconds
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        // Wait before retrying - increased to 8 seconds
+        await new Promise(resolve => setTimeout(resolve, 8000));
       }
     }
     
@@ -254,7 +255,8 @@ async function generateSocialMediaPost(
         totalHooks: hooks.length,
         cta: "Skontaktuj się z nami, aby dowiedzieć się więcej.",
         theme: theme,
-        form: form
+        form: form,
+        adStructure: '' // Puste pole dla postów social media
       };
     }
 
@@ -283,7 +285,8 @@ async function generateSocialMediaPost(
       totalHooks: hooks.length,
       cta: cta,
       theme: theme,
-      form: form
+      form: form,
+      adStructure: '' // Puste pole dla postów social media
     };
   } catch (error) {
     console.error('Error in generateSocialMediaPost:', error);

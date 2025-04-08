@@ -89,17 +89,17 @@ Typowe konstrukcje:
 - Przez 3 lata robiłem to źle, choć wszyscy mówili, że tak trzeba
 - Nikt mi nie wierzył, że to działa – dopóki nie spróbowali sami
 
-Jak korzystać ze stylów hooków
+### Jak korzystać ze stylów hooków
 
-Style hooków nie są gotowymi formułami do kopiowania — są sposobem myślenia o tym, jak przyciągnąć uwagę. Twoim zadaniem nie jest „dopasować” zdanie do stylu, tylko **zrozumieć jego intencję** i **własnymi słowami** zbudować zdanie, które działa według tej zasady.
+Style hooków nie są gotowymi formułami do kopiowania — są sposobem myślenia o tym, jak przyciągnąć uwagę. Twoim zadaniem nie jest „dopasować" zdanie do stylu, tylko **zrozumieć jego intencję** i **własnymi słowami** zbudować zdanie, które działa według tej zasady.
 
 Każdy styl odpowiada na inne pytanie w głowie odbiorcy. Twoją rolą jest:
 
-1. Zrozumieć, co ten styl ma wywołać w odbiorcy** – np. ciekawość, szok, identyfikację, lęk przed błędem.
-2. Zastanowić się, jakie myśli, decyzje lub emocje ma osoba, która zobaczy ten hook**.
-3. Wyobrazić sobie sytuację, która idealnie pasuje do danego stylu** – np. pomyłkę, szybką zmianę, zaskoczenie.
-4. Zbudować zdanie**, które brzmi jak wypowiedź człowieka – naturalne, rytmiczne, pełne, z użyciem prostego języka i zrozumiałych pojęć.
-5. Upewnić się, że hook spełnia kluczowe zasady**: ma maksymalnie 50 znaków, otwiera loop (czyli nie daje od razu odpowiedzi), ma jasny temat i emocję.
+1. **Zrozumieć, co ten styl ma wywołać w odbiorcy** – np. ciekawość, szok, identyfikację, lęk przed błędem.
+2. **Zastanowić się, jakie myśli, decyzje lub emocje ma osoba, która zobaczy ten hook**.
+3. **Wyobrazić sobie sytuację, która idealnie pasuje do danego stylu** – np. pomyłkę, szybką zmianę, zaskoczenie.
+4. **Zbudować zdanie**, które brzmi jak wypowiedź człowieka – naturalne, rytmiczne, pełne, z użyciem prostego języka i zrozumiałych pojęć.
+5. **Upewnić się, że hook spełnia kluczowe zasady**: ma maksymalnie 50 znaków, otwiera loop (czyli nie daje od razu odpowiedzi), ma jasny temat i emocję.
 
 Nie przepisuj przykładów. Nie opieraj się na konkretnych słowach. Zrozum **mechanikę** stylu i twórz zdania, które działają tak samo, ale są Twoje. Twoje hooki mają przyciągać jak magnes — nie dlatego, że są ładne, tylko dlatego, że nie da się ich zignorować.
 
@@ -107,7 +107,7 @@ Jak tworzyć TEMAT POSTA
 
 Wyobraź sobie, że kolejna osoba, copywriter będzie bazować wyłącznie na tym temacie, by stworzyć cały post lub nagranie. Nie może się domyślać, ma dokładnie wiedzieć, co przekazać, jakie elementy rozwinąć, co ma być punktem głównym.
 
-Nie pisz ogólnie. Nie używaj sformułowań typu „historia błędu” lub „lekcja na przyszłość”. To są puste etykiety. Pisz tak, jakbyś komuś tłumaczył, o czym dokładnie ma być treść: co się wydarzyło, co poszło nie tak, co zadziałało, co ktoś powinien zrobić zamiast tego.
+Nie pisz ogólnie. Nie używaj sformułowań typu „historia błędu" lub „lekcja na przyszłość". To są puste etykiety. Pisz tak, jakbyś komuś tłumaczył, o czym dokładnie ma być treść: co się wydarzyło, co poszło nie tak, co zadziałało, co ktoś powinien zrobić zamiast tego.
 
 ---
 
