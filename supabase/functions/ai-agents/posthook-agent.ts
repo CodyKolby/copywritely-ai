@@ -4,11 +4,11 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
-// POPRAWIONE nagłówki CORS - rozszerzone, aby akceptować wszystkie źródła
+// Complete CORS headers configuration
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, cache-control, pragma, expires, x-no-cache, Authorization',
+  'Access-Control-Allow-Origin': '*', // Allow all origins
   'Access-Control-Allow-Methods': 'POST, OPTIONS, GET',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, cache-control, pragma, expires, x-no-cache, Authorization',
   'Access-Control-Max-Age': '86400', // 24 hours
 };
 
@@ -40,12 +40,14 @@ ZASADY KRYTYCZNE:
 
 Dane z ankiety klienta: {{surveyData}}`;
 
+console.log("PosthookAgent Edge Function initialized");
+
 serve(async (req) => {
-  console.log("PosthookAgent otrzymał żądanie:", req.method, req.url);
+  console.log("PosthookAgent received request:", req.method, req.url);
   
-  // Handle OPTIONS requests properly for CORS with all headers
+  // Handle OPTIONS requests for CORS preflight
   if (req.method === 'OPTIONS') {
-    console.log("Obsługa preflight OPTIONS");
+    console.log("Handling OPTIONS preflight request");
     return new Response(null, { 
       status: 204, 
       headers: corsHeaders 
@@ -61,7 +63,7 @@ serve(async (req) => {
     
     const { targetAudience, advertisingGoal, platform } = requestData;
     
-    console.log("PosthookAgent received request:", { 
+    console.log("PosthookAgent processing request:", { 
       targetAudienceId: targetAudience?.id, 
       advertisingGoal, 
       platform 
@@ -109,7 +111,7 @@ serve(async (req) => {
     });
 
     if (!openAIResponse.ok) {
-      const errorData = await openAIResponse.json();
+      const errorData = await openAIResponse.json().catch(() => ({}));
       console.error("OpenAI API error:", errorData);
       throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
     }

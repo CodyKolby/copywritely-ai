@@ -131,6 +131,8 @@ async function generateSocialMediaPost(
     
     while (posthookRetryCount < maxRetries) {
       try {
+        console.log(`Posthook attempt ${posthookRetryCount + 1}/${maxRetries}`);
+        
         posthookResponse = await supabase.functions.invoke('ai-agents/posthook-agent', {
           body: {
             targetAudience,
@@ -139,21 +141,24 @@ async function generateSocialMediaPost(
           }
         });
         
+        console.log(`Posthook attempt ${posthookRetryCount + 1} response:`, 
+          posthookResponse.error ? `Error: ${posthookResponse.error.message}` : "Success");
+        
         if (!posthookResponse.error) break;
         
         console.warn(`Retry ${posthookRetryCount + 1}/${maxRetries} for posthook-agent:`, posthookResponse.error);
         posthookRetryCount++;
         
         // Wait before retrying
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 1500));
       } catch (e) {
-        console.error(`Attempt ${posthookRetryCount + 1}/${maxRetries} failed:`, e);
+        console.error(`Posthook attempt ${posthookRetryCount + 1}/${maxRetries} failed:`, e);
         posthookRetryCount++;
         
         if (posthookRetryCount >= maxRetries) throw e;
         
         // Wait before retrying
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 1500));
       }
     }
     
@@ -200,6 +205,8 @@ async function generateSocialMediaPost(
     
     while (postscriptRetryCount < maxRetries) {
       try {
+        console.log(`Postscript attempt ${postscriptRetryCount + 1}/${maxRetries}`);
+        
         postscriptResponse = await supabase.functions.invoke('ai-agents/postscript-agent', {
           body: {
             targetAudience,
@@ -213,21 +220,24 @@ async function generateSocialMediaPost(
           }
         });
         
+        console.log(`Postscript attempt ${postscriptRetryCount + 1} response:`, 
+          postscriptResponse.error ? `Error: ${postscriptResponse.error.message}` : "Success");
+        
         if (!postscriptResponse.error) break;
         
         console.warn(`Retry ${postscriptRetryCount + 1}/${maxRetries} for postscript-agent:`, postscriptResponse.error);
         postscriptRetryCount++;
         
         // Wait before retrying
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 1500));
       } catch (e) {
-        console.error(`Attempt ${postscriptRetryCount + 1}/${maxRetries} failed:`, e);
+        console.error(`Postscript attempt ${postscriptRetryCount + 1}/${maxRetries} failed:`, e);
         postscriptRetryCount++;
         
         if (postscriptRetryCount >= maxRetries) throw e;
         
         // Wait before retrying
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 1500));
       }
     }
     

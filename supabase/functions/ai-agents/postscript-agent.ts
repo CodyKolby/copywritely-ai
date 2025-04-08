@@ -4,12 +4,12 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
-// POPRAWIONE nagłówki CORS dla wszystkich domen
+// Complete CORS headers configuration
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, cache-control, pragma, expires, x-no-cache, Authorization',
+  'Access-Control-Allow-Origin': '*', // Allow all origins
   'Access-Control-Allow-Methods': 'POST, OPTIONS, GET',
-  'Access-Control-Max-Age': '86400'
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, cache-control, pragma, expires, x-no-cache, Authorization',
+  'Access-Control-Max-Age': '86400', // 24 hours
 };
 
 // System prompt for PostscriptAgent
@@ -30,12 +30,14 @@ Zwróć pełną treść postu w formacie JSON z polami:
 - content: główna treść postu (włącznie z hookiem)
 - cta: wyraźne wezwanie do działania`;
 
+console.log("PostscriptAgent Edge Function initialized");
+
 serve(async (req) => {
-  console.log("PostscriptAgent otrzymał żądanie:", req.method, req.url);
+  console.log("PostscriptAgent received request:", req.method, req.url);
   
-  // Handle OPTIONS requests properly for CORS
+  // Handle OPTIONS requests for CORS preflight
   if (req.method === 'OPTIONS') {
-    console.log("Obsługa preflight OPTIONS");
+    console.log("Handling OPTIONS preflight request");
     return new Response(null, { 
       status: 204, 
       headers: corsHeaders 
@@ -51,15 +53,18 @@ serve(async (req) => {
     
     const { targetAudience, advertisingGoal, platform, posthookOutput } = requestData;
     
-    console.log("PostscriptAgent received request:", { 
+    console.log("PostscriptAgent processing request:", { 
       targetAudienceId: targetAudience?.id, 
       advertisingGoal, 
       platform,
-      posthookOutput
+      posthookOutput: posthookOutput ? "present" : "missing"
     });
     
     if (!targetAudience || !posthookOutput) {
-      console.error("Missing required data");
+      console.error("Missing required data", {
+        hasTargetAudience: !!targetAudience,
+        hasPosthookOutput: !!posthookOutput
+      });
       return new Response(
         JSON.stringify({ error: 'Brak wymaganych danych' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -72,6 +77,8 @@ serve(async (req) => {
       theme: posthookOutput.theme || "Brak określonej tematyki",
       form: posthookOutput.form || "post tekstowy"
     };
+    
+    console.log("Validated posthook output:", validatedPosthookOutput);
     
     // Get selected hook
     const selectedHook = validatedPosthookOutput.hooks && validatedPosthookOutput.hooks.length > 0 
@@ -118,7 +125,7 @@ serve(async (req) => {
     });
 
     if (!openAIResponse.ok) {
-      const errorData = await openAIResponse.json();
+      const errorData = await openAIResponse.json().catch(() => ({}));
       console.error("OpenAI API error:", errorData);
       throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
     }

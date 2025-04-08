@@ -40,7 +40,7 @@ const GeneratedScriptDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[700px] p-0 rounded-xl overflow-hidden bg-white">
+      <DialogContent className="max-w-[700px] p-0 rounded-xl overflow-hidden bg-white" aria-describedby="script-content">
         <DialogTitle className="sr-only">Wygenerowany skrypt</DialogTitle>
         
         {/* Show DialogHeader only when not loading */}
@@ -59,12 +59,14 @@ const GeneratedScriptDialog = ({
           <ErrorState error={error} onRetry={handleRetry} />
         ) : (
           <>
-            <ScriptDisplay 
-              script={generatedScript} 
-              bestHook={currentHook} 
-              hookIndex={currentHookIndex}
-              totalHooks={totalHooks}
-            />
+            <div id="script-content">
+              <ScriptDisplay 
+                script={generatedScript} 
+                bestHook={currentHook} 
+                hookIndex={currentHookIndex}
+                totalHooks={totalHooks}
+              />
+            </div>
             
             <ActionButtons 
               isSaving={isSaving}
