@@ -9,7 +9,6 @@ import DialogHeader from './generated-script-dialog/DialogHeader';
 import ErrorState from './generated-script-dialog/ErrorState';
 import ActionButtons from './generated-script-dialog/ActionButtons';
 import { useScriptGeneration } from './generated-script-dialog/useScriptGeneration';
-import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 
 const GeneratedScriptDialog = ({
   open,
@@ -42,9 +41,7 @@ const GeneratedScriptDialog = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[700px] p-0 rounded-xl overflow-hidden bg-white">
-        <VisuallyHidden>
-          <DialogTitle>Wygenerowany skrypt</DialogTitle>
-        </VisuallyHidden>
+        <DialogTitle className="sr-only">Wygenerowany skrypt</DialogTitle>
         
         {/* Show DialogHeader only when not loading */}
         {!showLoading && (

@@ -4,10 +4,12 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
+// Enhanced CORS headers to ensure preflight requests work properly
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS, GET'
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, cache-control, pragma, expires, x-no-cache, Authorization',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS, GET',
+  'Access-Control-Max-Age': '86400'
 };
 
 // System prompt for PostscriptAgent
@@ -40,7 +42,12 @@ serve(async (req) => {
 
   try {
     // Parse request data
-    const { targetAudience, advertisingGoal, platform, posthookOutput } = await req.json();
+    const requestData = await req.json().catch(err => {
+      console.error("Error parsing JSON request:", err);
+      throw new Error("Invalid JSON in request body");
+    });
+    
+    const { targetAudience, advertisingGoal, platform, posthookOutput } = requestData;
     
     console.log("PostscriptAgent received request:", { 
       targetAudienceId: targetAudience?.id, 
@@ -57,9 +64,16 @@ serve(async (req) => {
       );
     }
     
+    // Ensure posthookOutput structure is valid
+    const validatedPosthookOutput = {
+      hooks: Array.isArray(posthookOutput.hooks) ? posthookOutput.hooks : ["Brak hooka"],
+      theme: posthookOutput.theme || "Brak określonej tematyki",
+      form: posthookOutput.form || "post tekstowy"
+    };
+    
     // Get selected hook
-    const selectedHook = posthookOutput.hooks && posthookOutput.hooks.length > 0 
-      ? posthookOutput.hooks[0] 
+    const selectedHook = validatedPosthookOutput.hooks && validatedPosthookOutput.hooks.length > 0 
+      ? validatedPosthookOutput.hooks[0] 
       : "Brak hooka";
       
     // Prepare platform info
@@ -73,9 +87,9 @@ serve(async (req) => {
     
     Wybrany hook: ${selectedHook}
     
-    Tematyka postu: ${posthookOutput.theme || 'Brak określonej tematyki'}
+    Tematyka postu: ${validatedPosthookOutput.theme || 'Brak określonej tematyki'}
     
-    Forma postu: ${posthookOutput.form || 'post tekstowy'}
+    Forma postu: ${validatedPosthookOutput.form || 'post tekstowy'}
     
     ${platformInfo}
     
@@ -120,14 +134,52 @@ serve(async (req) => {
       if (responseText.includes('```json')) {
         responseText = responseText.replace(/```json|```/g, '').trim();
       }
-      processedResponse = JSON.parse(responseText);
+      
+      // Try to parse as JSON
+      try {
+        processedResponse = JSON.parse(responseText);
+      } catch (e) {
+        console.error('Error parsing JSON response:', e);
+        
+        // If not parseable as JSON, create structure manually
+        const contentMatch = responseText.match(/CONTENT:|TREŚĆ:?/i);
+        const ctaMatch = responseText.match(/CTA:|WEZWANIE DO DZIAŁANIA:?/i);
+        
+        let content = selectedHook;
+        let cta = "Skontaktuj się z nami, aby dowiedzieć się więcej.";
+        
+        if (contentMatch && ctaMatch) {
+          const contentStartIdx = responseText.indexOf(':', responseText.indexOf(contentMatch[0])) + 1;
+          const contentEndIdx = responseText.indexOf(ctaMatch[0]);
+          content = responseText.substring(contentStartIdx, contentEndIdx).trim();
+          
+          const ctaStartIdx = responseText.indexOf(':', responseText.indexOf(ctaMatch[0])) + 1;
+          cta = responseText.substring(ctaStartIdx).trim();
+        }
+        
+        processedResponse = { content, cta };
+      }
     } catch (e) {
-      console.error('Error parsing JSON response:', e);
-      // If not parseable as JSON, create structure manually
+      console.error('Error processing response:', e);
       processedResponse = {
         content: `${selectedHook}\n\nNie udało się wygenerować treści postu.`,
         cta: "Skontaktuj się z nami, aby dowiedzieć się więcej."
       };
+    }
+    
+    // Ensure content includes the hook
+    if (processedResponse.content && !processedResponse.content.includes(selectedHook)) {
+      processedResponse.content = `${selectedHook}\n\n${processedResponse.content}`;
+    }
+    
+    // Ensure we have content
+    if (!processedResponse.content) {
+      processedResponse.content = `${selectedHook}\n\nNie udało się wygenerować treści postu.`;
+    }
+    
+    // Ensure we have CTA
+    if (!processedResponse.cta) {
+      processedResponse.cta = "Skontaktuj się z nami, aby dowiedzieć się więcej.";
     }
     
     console.log("Processed PostscriptAgent response:", processedResponse);
@@ -140,7 +192,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in postscript-agent:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error.message || "Unknown error" }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

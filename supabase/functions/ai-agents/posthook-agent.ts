@@ -4,10 +4,12 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
+// Enhanced CORS headers to ensure preflight requests work properly
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS, GET'
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, cache-control, pragma, expires, x-no-cache, Authorization',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS, GET',
+  'Access-Control-Max-Age': '86400', // 24 hours
 };
 
 // System prompt for PosthookAgent
@@ -39,7 +41,7 @@ ZASADY KRYTYCZNE:
 Dane z ankiety klienta: {{surveyData}}`;
 
 serve(async (req) => {
-  // Handle OPTIONS requests properly for CORS
+  // Handle OPTIONS requests properly for CORS with all headers
   if (req.method === 'OPTIONS') {
     console.log("Handling OPTIONS preflight request");
     return new Response(null, { 
@@ -50,7 +52,12 @@ serve(async (req) => {
 
   try {
     // Parse request data
-    const { targetAudience, advertisingGoal, platform } = await req.json();
+    const requestData = await req.json().catch(err => {
+      console.error("Error parsing JSON request:", err);
+      throw new Error("Invalid JSON in request body");
+    });
+    
+    const { targetAudience, advertisingGoal, platform } = requestData;
     
     console.log("PosthookAgent received request:", { 
       targetAudienceId: targetAudience?.id, 
@@ -147,6 +154,22 @@ serve(async (req) => {
       };
     }
     
+    // Ensure we have valid hooks array
+    if (!processedResponse.hooks || !Array.isArray(processedResponse.hooks) || processedResponse.hooks.length === 0) {
+      console.warn("Generated invalid hooks format, creating fallback");
+      processedResponse.hooks = ["Nie udało się wygenerować hooków"];
+    }
+    
+    // Ensure theme exists
+    if (!processedResponse.theme) {
+      processedResponse.theme = "Ogólna tematyka";
+    }
+    
+    // Ensure form exists
+    if (!processedResponse.form) {
+      processedResponse.form = "post tekstowy";
+    }
+    
     console.log("Processed PosthookAgent response:", processedResponse);
     
     return new Response(
@@ -157,7 +180,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in posthook-agent:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error.message || "Unknown error" }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

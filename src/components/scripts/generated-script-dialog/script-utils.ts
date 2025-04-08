@@ -6,6 +6,8 @@ import { SocialMediaPlatform } from '../SocialMediaPlatformDialog';
 // Helper function to fetch target audience details
 export async function fetchTargetAudience(audienceId: string) {
   try {
+    console.log(`Fetching target audience with ID: ${audienceId}`);
+    
     const { data, error } = await supabase
       .from('target_audiences')
       .select('*')
@@ -13,6 +15,8 @@ export async function fetchTargetAudience(audienceId: string) {
       .single();
 
     if (error) throw error;
+    
+    console.log("Target audience fetched successfully:", data ? "yes" : "no");
     return data;
   } catch (error) {
     console.error('Error fetching target audience:', error);
@@ -29,7 +33,7 @@ export async function generateScript(
   socialMediaPlatform?: SocialMediaPlatform
 ) {
   try {
-    console.log(`Generating script for template: ${templateId}, audience: ${audienceId}, goal: ${advertisingGoal}`);
+    console.log(`Generating script for template: ${templateId}, audience: ${audienceId}, goal: ${advertisingGoal}, platform: ${socialMediaPlatform || 'undefined'}`);
 
     // Fetch target audience first
     const targetAudience = await fetchTargetAudience(audienceId);
@@ -50,6 +54,7 @@ export async function generateScript(
 
     // For other templates, call the hook-angle-generator and script-generator
     // Generate hooks and angles with first agent
+    console.log("Calling hook-angle-generator function");
     const { data: hooksData, error: hooksError } = await supabase.functions.invoke('ai-agents/hook-angle-generator', {
       body: {
         targetAudience: audienceWithGoal,
@@ -70,8 +75,10 @@ export async function generateScript(
     // Calculate the actual hook index to use
     const actualHookIndex = Math.min(hookIndex, hooksData.hooks.length - 1);
     const selectedHook = hooksData.hooks[actualHookIndex];
+    console.log(`Selected hook at index ${actualHookIndex}: ${selectedHook}`);
 
     // Generate the main script with second agent
+    console.log("Calling script-generator function");
     const { data: scriptData, error: scriptError } = await supabase.functions.invoke('ai-agents/script-generator', {
       body: {
         targetAudience: audienceWithGoal,
@@ -104,7 +111,7 @@ export async function generateScript(
   }
 }
 
-// Function to generate social media posts
+// Function to generate social media posts with improved error handling
 async function generateSocialMediaPost(
   targetAudience: any, 
   advertisingGoal: string, 
@@ -115,6 +122,7 @@ async function generateSocialMediaPost(
     console.log(`Generating social media post for platform: ${platform}`);
     
     // First use PosthookAgent to generate hooks and theme
+    console.log("Calling posthook-agent edge function");
     const posthookResponse = await supabase.functions.invoke('ai-agents/posthook-agent', {
       body: {
         targetAudience,
@@ -155,8 +163,10 @@ async function generateSocialMediaPost(
     // Calculate the actual hook index to use
     const actualHookIndex = Math.min(hookIndex, hooks.length - 1);
     const selectedHook = hooks[actualHookIndex];
+    console.log(`Selected hook at index ${actualHookIndex}: ${selectedHook}`);
 
     // Then use PostscriptAgent to generate the full content
+    console.log("Calling postscript-agent edge function");
     const postscriptResponse = await supabase.functions.invoke('ai-agents/postscript-agent', {
       body: {
         targetAudience,
@@ -178,22 +188,17 @@ async function generateSocialMediaPost(
     const postscriptData = postscriptResponse.data;
     console.log('PostscriptAgent full response:', postscriptData);
 
-    if (!postscriptData) {
-      console.error('Empty response from postscript-agent');
-      throw new Error('Failed to generate social media content: Empty response');
-    }
-
-    // Create fallback content if missing
+    // Create fallback content if missing or invalid response
     let content = selectedHook + "\n\nTreść postu nie została wygenerowana.";
     let cta = "Skontaktuj się z nami, aby dowiedzieć się więcej.";
     
-    if (postscriptData.content) {
+    if (postscriptData && postscriptData.content) {
       content = postscriptData.content;
     } else {
       console.error('Missing content in response from postscript-agent:', postscriptData);
     }
     
-    if (postscriptData.cta) {
+    if (postscriptData && postscriptData.cta) {
       cta = postscriptData.cta;
     }
 
