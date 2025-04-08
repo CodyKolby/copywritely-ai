@@ -133,6 +133,7 @@ async function generateSocialMediaPost(
       try {
         console.log(`Posthook attempt ${posthookRetryCount + 1}/${maxRetries}`);
         
+        // Use the proper invoke path with ai-agents/posthook-agent directory structure
         posthookResponse = await supabase.functions.invoke('ai-agents/posthook-agent', {
           body: {
             targetAudience,
@@ -150,7 +151,7 @@ async function generateSocialMediaPost(
         posthookRetryCount++;
         
         // Wait before retrying
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        await new Promise(resolve => setTimeout(resolve, 2000));
       } catch (e) {
         console.error(`Posthook attempt ${posthookRetryCount + 1}/${maxRetries} failed:`, e);
         posthookRetryCount++;
@@ -158,7 +159,7 @@ async function generateSocialMediaPost(
         if (posthookRetryCount >= maxRetries) throw e;
         
         // Wait before retrying
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
     }
     
@@ -207,6 +208,7 @@ async function generateSocialMediaPost(
       try {
         console.log(`Postscript attempt ${postscriptRetryCount + 1}/${maxRetries}`);
         
+        // Use the proper invoke path with ai-agents/postscript-agent directory structure
         postscriptResponse = await supabase.functions.invoke('ai-agents/postscript-agent', {
           body: {
             targetAudience,
@@ -229,7 +231,7 @@ async function generateSocialMediaPost(
         postscriptRetryCount++;
         
         // Wait before retrying
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        await new Promise(resolve => setTimeout(resolve, 2000));
       } catch (e) {
         console.error(`Postscript attempt ${postscriptRetryCount + 1}/${maxRetries} failed:`, e);
         postscriptRetryCount++;
@@ -237,7 +239,7 @@ async function generateSocialMediaPost(
         if (postscriptRetryCount >= maxRetries) throw e;
         
         // Wait before retrying
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
     }
     
