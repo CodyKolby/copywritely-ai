@@ -74,10 +74,10 @@ enable_confirmations = false
 # Port to use for Functions API URL.
 port = 54326
 
-[functions.ai-agents/posthook-agent]
+[functions.posthook-agent]
 verify_jwt = false
 
-[functions.ai-agents/postscript-agent]
+[functions.postscript-agent]
 verify_jwt = false
 
 [analytics]

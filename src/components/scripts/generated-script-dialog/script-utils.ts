@@ -133,8 +133,8 @@ async function generateSocialMediaPost(
       try {
         console.log(`Posthook attempt ${posthookRetryCount + 1}/${maxRetries}`);
         
-        // Use the proper invoke path with ai-agents/posthook-agent directory structure
-        posthookResponse = await supabase.functions.invoke('ai-agents/posthook-agent', {
+        // Use the proper function name without directory structure
+        posthookResponse = await supabase.functions.invoke('posthook-agent', {
           body: {
             targetAudience,
             advertisingGoal,
@@ -208,8 +208,8 @@ async function generateSocialMediaPost(
       try {
         console.log(`Postscript attempt ${postscriptRetryCount + 1}/${maxRetries}`);
         
-        // Use the proper invoke path with ai-agents/postscript-agent directory structure
-        postscriptResponse = await supabase.functions.invoke('ai-agents/postscript-agent', {
+        // Use the proper function name without directory structure
+        postscriptResponse = await supabase.functions.invoke('postscript-agent', {
           body: {
             targetAudience,
             advertisingGoal,
