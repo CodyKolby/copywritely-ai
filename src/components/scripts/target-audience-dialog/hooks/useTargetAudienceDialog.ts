@@ -41,7 +41,7 @@ export const useTargetAudienceDialog = ({
   const [emailStyle, setEmailStyle] = useState<EmailStyle | null>(null);
   const [socialMediaPlatform, setSocialMediaPlatform] = useState<SocialMediaPlatform | null>(null);
   
-  const { user } = useAuth();
+  const { user, session } = useAuth();
 
   useEffect(() => {
     if (open && userId) {
@@ -126,7 +126,7 @@ export const useTargetAudienceDialog = ({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user?.session?.access_token || ''}`
+          'Authorization': `Bearer ${session?.access_token || ''}`
         },
         body: JSON.stringify({
           userId: userId,
