@@ -18,21 +18,7 @@ const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 // Define a clear, customizable system prompt for the SocialContentAgent
 // ===== EDITABLE PROMPT BEGINS HERE =====
 // Feel free to customize this prompt according to your needs
-const SYSTEM_PROMPT = `Jesteś doświadczonym copywriterem specjalizującym się w mediach społecznościowych. Na podstawie dostarczonych informacji o grupie docelowej, celu reklamy i hooku (pierwszego zdania) stwórz pełny post do mediów społecznościowych.
-
-Post powinien:
-1. Zaczynać się od dostarczonego hooka
-2. Być dostosowany do wybranej platformy (Meta, LinkedIn, TikTok)
-3. Zawierać wezwanie do działania (CTA) na końcu
-4. Być napisany w języku polskim
-5. Mieć długość odpowiednią dla wybranej platformy
-
-Uwzględnij:
-- Styl i ton odpowiedni dla platformy
-- Wartości, problemy i aspiracje grupy docelowej
-- Jasne korzyści związane z reklamowanym produktem/usługą
-
-Zwróć sam tekst posta bez żadnych dodatkowych komentarzy czy formatowania.`;
+const SYSTEM_PROMPT = `Zwróć sam tekst posta, który brzmi "TEST" bez żadnych dodatkowych komentarzy czy formatowania.`;
 // ===== EDITABLE PROMPT ENDS HERE =====
 
 // Version tracking to help detect updates
