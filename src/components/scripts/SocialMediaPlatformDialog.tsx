@@ -38,11 +38,6 @@ const platforms: SocialMediaPlatform[] = [
     label: 'LinkedIn',
     description: 'Najlepsze dla contentu biznesowego, profesjonalnych porad i networkingu branżowego.' 
   },
-  { 
-    key: 'twitter', 
-    label: 'Twitter/X',
-    description: 'Dobre dla krótkich aktualizacji, interakcji i szybkiej komunikacji z followersami.' 
-  },
 ];
 
 const SocialMediaPlatformDialog: React.FC<SocialMediaPlatformDialogProps> = ({
@@ -60,7 +55,6 @@ const SocialMediaPlatformDialog: React.FC<SocialMediaPlatformDialogProps> = ({
       const platform = platforms.find(p => p.key === selectedPlatform);
       if (platform) {
         onSelect(platform);
-        onOpenChange(false);
       }
     }
   };

@@ -2,10 +2,10 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-// Import the CORS headers with cache control headers
+// Import the CORS headers with expanded headers for X-Random
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, cache-control, pragma, expires, x-no-cache',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, cache-control, pragma, expires, x-no-cache, Authorization, x-timestamp, x-random',
   'Access-Control-Allow-Methods': 'POST, OPTIONS, GET',
   'Access-Control-Max-Age': '86400', // 24 hours
   'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -132,7 +132,7 @@ serve(async (req) => {
         systemPromptUsed: SYSTEM_PROMPT,
         timestamp: startTime,
         requestId: requestId,
-        promptVersion: "V8-TEST-" + new Date().toISOString()  // Added version with timestamp
+        promptVersion: "V9-TEST-" + new Date().toISOString()  // Updated version with timestamp
       }
     };
     
@@ -158,7 +158,7 @@ serve(async (req) => {
         requestId: requestId,
         debugInfo: {
           systemPromptUsed: SYSTEM_PROMPT,
-          version: "V8-ERROR-" + new Date().toISOString()
+          version: "V9-ERROR-" + new Date().toISOString()
         }
       }),
       { 

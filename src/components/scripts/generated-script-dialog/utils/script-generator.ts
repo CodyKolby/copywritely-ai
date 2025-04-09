@@ -86,13 +86,14 @@ export const generateScript = async (
     const selectedHookIndex = hookIndex >= 0 && hookIndex < posthookData.hooks.length ? hookIndex : 0;
     const selectedHook = posthookData.hooks[selectedHookIndex];
 
-    // Step 2: Generate the script with PostScript agent
+    // Step 2: Generate the script with PostScript agent - with updated CORS handling
+    const newCacheBuster = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
     const postscriptRequestBody = {
       targetAudience,
       advertisingGoal,
       platform: socialMediaPlatform?.key || 'meta',
       posthookOutput: posthookData,
-      cacheBuster: `${cacheBuster}-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`, // Add another timestamp and random value to ensure no caching
+      cacheBuster: newCacheBuster, 
       timestamp: new Date().toISOString()
     };
 
@@ -109,6 +110,7 @@ export const generateScript = async (
     const { data: { session: refreshedSession } } = await supabase.auth.getSession();
     const refreshedAccessToken = refreshedSession?.access_token || accessToken;
 
+    // Remove X-Random and X-Timestamp headers to avoid CORS issues
     const postscriptResponse = await fetch('https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/postscript-agent', {
       method: 'POST',
       headers: {
@@ -116,9 +118,7 @@ export const generateScript = async (
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
         'Expires': '0',
-        'Authorization': `Bearer ${refreshedAccessToken}`,
-        'X-Timestamp': new Date().toISOString(),
-        'X-Random': Math.random().toString()
+        'Authorization': `Bearer ${refreshedAccessToken}`
       },
       body: JSON.stringify(postscriptRequestBody),
     });
