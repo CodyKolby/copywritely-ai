@@ -47,6 +47,10 @@ export const generateScript = async (
 
     console.log('Wysyłanie żądania do PostHook:', posthookRequestBody);
 
+    // Get the access token
+    const { data: { session } } = await supabase.auth.getSession();
+    const accessToken = session?.access_token || '';
+
     // Step 1: Generate hooks and theme with PostHook agent
     const posthookResponse = await fetch('https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/posthook-agent', {
       method: 'POST',
@@ -54,6 +58,8 @@ export const generateScript = async (
         'Content-Type': 'application/json',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
+        'Authorization': `Bearer ${accessToken}`,
+        'apikey': supabase.supabaseKey // Add the API key for authorization
       },
       body: JSON.stringify(posthookRequestBody),
     });
@@ -99,6 +105,8 @@ export const generateScript = async (
         'Content-Type': 'application/json',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
+        'Authorization': `Bearer ${accessToken}`,
+        'apikey': supabase.supabaseKey // Add the API key for authorization
       },
       body: JSON.stringify(postscriptRequestBody),
     });

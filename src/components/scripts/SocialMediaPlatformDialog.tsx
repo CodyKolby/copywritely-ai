@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Check } from 'lucide-react';
 
 export type SocialMediaPlatform = {
   key: string;
@@ -115,14 +115,17 @@ const SocialMediaPlatformDialog = ({
           <Button variant="outline" onClick={handleCancel} disabled={isProcessing}>
             Anuluj
           </Button>
-          <Button onClick={handleSelection} disabled={isProcessing}>
+          <Button onClick={handleSelection} disabled={isProcessing} className="text-white bg-primary hover:bg-primary/90">
             {isProcessing ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Przetwarzanie...
               </>
             ) : (
-              'Wybierz platformę'
+              <>
+                <Check className="mr-2 h-4 w-4" />
+                Wybierz platformę
+              </>
             )}
           </Button>
         </div>
