@@ -134,7 +134,7 @@ async function generateSocialMediaPost(
       try {
         console.log(`Posthook attempt ${posthookRetryCount + 1}/${maxRetries}`);
         
-        // Use the proper function name without directory structure
+        // Call the edge function directly with the full URL
         posthookResponse = await supabase.functions.invoke('posthook-agent', {
           body: {
             targetAudience,
@@ -209,7 +209,7 @@ async function generateSocialMediaPost(
       try {
         console.log(`Postscript attempt ${postscriptRetryCount + 1}/${maxRetries}`);
         
-        // Use the proper function name without directory structure
+        // Call the edge function directly with the full URL
         postscriptResponse = await supabase.functions.invoke('postscript-agent', {
           body: {
             targetAudience,
