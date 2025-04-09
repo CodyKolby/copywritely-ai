@@ -23,12 +23,8 @@ export const useDialogNavigation = (deps: DialogNavigationDeps, templateId: stri
   // Back button handler for main flow
   const handleBack = useCallback(() => {
     console.log("Navigation: going back to main selection");
-    deps.setIsProcessing(true);
-    
-    deps.transitionToDialog(
-      () => deps.setShowForm(false),
-      () => deps.setIsProcessing(false)
-    );
+    deps.setIsProcessing(false);
+    deps.setShowForm(false);
   }, [deps]);
 
   // Goal submission handler
@@ -36,85 +32,66 @@ export const useDialogNavigation = (deps: DialogNavigationDeps, templateId: stri
     console.log(`Goal submitted: ${goal}, template: ${templateId}`);
     // Set data
     deps.setAdvertisingGoal(goal);
-    deps.setIsProcessing(true);
     
-    // Choose the next dialog based on template type
-    const closeCurrentDialog = () => deps.setShowGoalDialog(false);
-    
-    let openNextDialog;
+    // Choose the next dialog based on template type - RESTORED ORIGINAL WORKFLOW
     if (templateId === 'social') {
       console.log("Social template: transitioning to social media platform dialog");
-      openNextDialog = () => deps.setShowSocialMediaPlatformDialog(true);
+      deps.setShowGoalDialog(false);
+      deps.setShowSocialMediaPlatformDialog(true);
     } else if (templateId === 'email') {
       console.log("Email template: transitioning to email style dialog");
-      openNextDialog = () => deps.setShowEmailStyleDialog(true);
+      deps.setShowGoalDialog(false);
+      deps.setShowEmailStyleDialog(true);
     } else {
       console.log("Other template: transitioning directly to script dialog");
-      openNextDialog = () => deps.setShowScriptDialog(true);
+      deps.setShowGoalDialog(false);
+      deps.setShowScriptDialog(true);
     }
-    
-    deps.transitionToDialog(closeCurrentDialog, openNextDialog);
   }, [deps, templateId]);
 
   // Goal back button handler
   const handleGoalBack = useCallback(() => {
     console.log("Navigation: going back from goal dialog");
-    deps.setIsProcessing(true);
-    
-    deps.transitionToDialog(
-      () => deps.setShowGoalDialog(false),
-      () => deps.setIsProcessing(false)
-    );
+    deps.setShowGoalDialog(false);
+    deps.setIsProcessing(false);
   }, [deps]);
 
   // Email style submission handler
   const handleEmailStyleSubmit = useCallback((style: EmailStyle) => {
     console.log(`Email style submitted: ${style}`);
     deps.setEmailStyle(style);
-    deps.setIsProcessing(true);
     
     // Transition to email dialog
-    deps.transitionToDialog(
-      () => deps.setShowEmailStyleDialog(false),
-      () => deps.setShowEmailDialog(true)
-    );
+    deps.setShowEmailStyleDialog(false);
+    deps.setShowEmailDialog(true);
   }, [deps]);
 
   // Email style back button handler
   const handleEmailStyleBack = useCallback(() => {
     console.log("Navigation: going back from email style dialog");
-    deps.setIsProcessing(true);
     
     // Transition to goal dialog
-    deps.transitionToDialog(
-      () => deps.setShowEmailStyleDialog(false),
-      () => deps.setShowGoalDialog(true)
-    );
+    deps.setShowEmailStyleDialog(false);
+    deps.setShowGoalDialog(true);
   }, [deps]);
 
   // Social media platform submission handler
   const handleSocialMediaPlatformSubmit = useCallback((platform: SocialMediaPlatform) => {
     console.log(`Social media platform submitted: ${platform}`);
     deps.setSocialMediaPlatform(platform);
-    deps.setIsProcessing(true);
     
     // Transition to script dialog
-    deps.transitionToDialog(
-      () => deps.setShowSocialMediaPlatformDialog(false),
-      () => deps.setShowScriptDialog(true)
-    );
+    deps.setShowSocialMediaPlatformDialog(false);
+    deps.setShowScriptDialog(true);
   }, [deps]);
 
   // Social media platform back button handler
   const handleSocialMediaPlatformBack = useCallback(() => {
     console.log("Navigation: going back from social media platform dialog");
-    deps.setIsProcessing(true);
     
     // Transition to goal dialog
-    deps.transitionToDialog(
-      () => deps.setShowSocialMediaPlatformDialog(false),
-      () => deps.setShowGoalDialog(true)
-    );
+    deps.setShowSocialMediaPlatformDialog(false);
+    deps.setShowGoalDialog(true);
   }, [deps]);
 
   // Script dialog close handler
