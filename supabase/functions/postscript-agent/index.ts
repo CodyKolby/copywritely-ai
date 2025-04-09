@@ -2,17 +2,20 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-// Import the CORS headers
+// Import the CORS headers with cache control headers
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, cache-control, pragma, expires, x-no-cache',
   'Access-Control-Allow-Methods': 'POST, OPTIONS, GET',
-  'Access-Control-Max-Age': '86400' // 24 hours
+  'Access-Control-Max-Age': '86400', // 24 hours
+  'Cache-Control': 'no-cache, no-store, must-revalidate',
+  'Pragma': 'no-cache',
+  'Expires': '0'
 };
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
-// Updated system prompt for PostscriptAgent with Polish content
+// Updated system prompt for PostscriptAgent with test message
 const SYSTEM_PROMPT = `Twoim jedynym zadaniem jest napisanie słowa "TEST"`;
 
 serve(async (req) => {
@@ -20,7 +23,7 @@ serve(async (req) => {
   const requestId = crypto.randomUUID();
   const startTime = new Date().toISOString();
   console.log(`[${startTime}][REQ:${requestId}] PostscriptAgent received request:`, req.method, req.url);
-  console.log(`[${startTime}][REQ:${requestId}] Current system prompt: "${SYSTEM_PROMPT.substring(0, 50)}..."`);
+  console.log(`[${startTime}][REQ:${requestId}] Current system prompt: "${SYSTEM_PROMPT}"`);
   
   // Handle OPTIONS requests for CORS preflight
   if (req.method === 'OPTIONS') {
@@ -88,7 +91,7 @@ serve(async (req) => {
     console.log(`[${startTime}][REQ:${requestId}] USER PROMPT BEING USED (with anti-cache measures):`, userPrompt);
     
     // Get response from OpenAI with cache-busting headers
-    console.log(`[${startTime}][REQ:${requestId}] Sending request to OpenAI API`);
+    console.log(`[${startTime}][REQ:${requestId}] Sending request to OpenAI API with cache-busting parameters`);
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -97,6 +100,7 @@ serve(async (req) => {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
         'X-Request-ID': requestId,
+        'X-Timestamp': timestamp
       },
       body: JSON.stringify({
         model: 'gpt-4o',
@@ -128,7 +132,7 @@ serve(async (req) => {
         systemPromptUsed: SYSTEM_PROMPT,
         timestamp: startTime,
         requestId: requestId,
-        version: "V7"
+        promptVersion: "V8-TEST-" + new Date().toISOString()  // Added version with timestamp
       }
     };
     
@@ -140,9 +144,6 @@ serve(async (req) => {
         headers: { 
           ...corsHeaders, 
           'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
         } 
       }
     );
@@ -157,17 +158,14 @@ serve(async (req) => {
         requestId: requestId,
         debugInfo: {
           systemPromptUsed: SYSTEM_PROMPT,
-          version: "V7-ERROR"
+          version: "V8-ERROR-" + new Date().toISOString()
         }
       }),
       { 
         status: 500, 
         headers: { 
           ...corsHeaders, 
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
+          'Content-Type': 'application/json'
         } 
       }
     );

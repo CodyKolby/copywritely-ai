@@ -38,7 +38,8 @@ const ScriptDisplay = ({
   );
 
   // If script is just a test message (TEST, ESSA), don't display it as content
-  const displayScript = ['TEST', 'ESSA'].includes(cleanedScript) ? '' : cleanedScript;
+  const isTestMessage = ['TEST', 'ESSA', 'test'].includes(cleanedScript.trim().toLowerCase());
+  const displayScript = isTestMessage ? '' : cleanedScript;
 
   return (
     <div className="p-6 pt-0">
@@ -60,15 +61,12 @@ const ScriptDisplay = ({
           </div>
         )}
         
-        {/* Display debug notification if debug marker was detected */}
-        {containsDebugMarker && (
-          <div className="mb-4 p-3 bg-blue-100 border border-blue-300 text-blue-800 rounded-lg">
-            <p className="font-medium">Debug Test Detected:</p>
-            {script.includes('DEBUGTEST') ? (
-              <p className="text-sm">System wykonał test z kodem: DEBUGTEST_V1_2025-04-09</p>
-            ) : (
-              <p className="text-sm">System zwrócił oczekiwaną wiadomość testową: {script}</p>
-            )}
+        {/* Display test message notification with more prominence */}
+        {isTestMessage && (
+          <div className="mb-4 p-4 bg-green-100 border border-green-300 text-green-800 rounded-lg">
+            <p className="font-medium text-lg">✅ Test Successful!</p>
+            <p className="text-base">System returned the expected test message: "{script}"</p>
+            <p className="text-sm mt-2">This confirms that your custom prompt is working correctly.</p>
           </div>
         )}
         
@@ -86,7 +84,7 @@ const ScriptDisplay = ({
         )}
 
         {/* Display empty state message if no content after cleanup */}
-        {!displayScript && (
+        {!displayScript && !isTestMessage && (
           <div className="text-center p-4 border border-dashed border-gray-300 rounded-lg bg-gray-50">
             <p className="text-gray-500">Zwrócono tylko dane testowe.</p>
           </div>
@@ -119,6 +117,16 @@ const ScriptDisplay = ({
               <h5 className="text-xs font-medium mb-1">System Prompt Used:</h5>
               <pre className="bg-gray-100 p-3 rounded text-xs overflow-auto max-h-40">
                 {debugInfo?.systemPromptUsed || "Not available"}
+              </pre>
+            </div>
+            
+            {/* Display timestamp information */}
+            <div className="mb-4">
+              <h5 className="text-xs font-medium mb-1">Request Timestamps:</h5>
+              <pre className="bg-gray-100 p-3 rounded text-xs overflow-auto max-h-40">
+                Generated at: {debugInfo?.timestamp || new Date().toISOString()}
+                {debugInfo?.requestTimestamp ? `\nRequest sent: ${debugInfo.requestTimestamp}` : ''}
+                {debugInfo?.promptVersion ? `\nPrompt version: ${debugInfo.promptVersion}` : ''}
               </pre>
             </div>
           </div>

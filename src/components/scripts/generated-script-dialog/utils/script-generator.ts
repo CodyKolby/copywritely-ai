@@ -20,7 +20,7 @@ export const generateScript = async (
       platform: socialMediaPlatform?.label || 'Meta'
     });
 
-    // Add a cache-busting timestamp to prevent caching issues
+    // Add a strong cache-busting timestamp to prevent caching issues
     const cacheBuster = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
     
     // Fetch the target audience data first
@@ -37,19 +37,24 @@ export const generateScript = async (
 
     console.log('Pobrano dane grupy docelowej:', targetAudience);
 
+    // Get the access token
+    const { data: { session } } = await supabase.auth.getSession();
+    const accessToken = session?.access_token || '';
+    
+    if (!accessToken) {
+      throw new Error('Użytkownik nie jest zalogowany.');
+    }
+
     // Prepare the request body for the PostHook agent
     const posthookRequestBody = {
       targetAudience,
       advertisingGoal,
       platform: socialMediaPlatform?.key || 'meta',
-      cacheBuster
+      cacheBuster,
+      timestamp: new Date().toISOString()
     };
 
     console.log('Wysyłanie żądania do PostHook:', posthookRequestBody);
-
-    // Get the access token
-    const { data: { session } } = await supabase.auth.getSession();
-    const accessToken = session?.access_token || '';
 
     // Step 1: Generate hooks and theme with PostHook agent
     const posthookResponse = await fetch('https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/posthook-agent', {
@@ -58,6 +63,7 @@ export const generateScript = async (
         'Content-Type': 'application/json',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
+        'Expires': '0',
         'Authorization': `Bearer ${accessToken}`,
       },
       body: JSON.stringify(posthookRequestBody),
@@ -86,7 +92,8 @@ export const generateScript = async (
       advertisingGoal,
       platform: socialMediaPlatform?.key || 'meta',
       posthookOutput: posthookData,
-      cacheBuster: `${cacheBuster}-${Date.now()}` // Add another timestamp to ensure no caching
+      cacheBuster: `${cacheBuster}-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`, // Add another timestamp and random value to ensure no caching
+      timestamp: new Date().toISOString()
     };
 
     console.log('Wysyłanie żądania do PostScript:', {
@@ -98,13 +105,20 @@ export const generateScript = async (
       }
     });
 
+    // Use a fresh copy of the access token to ensure it's not expired
+    const { data: { session: refreshedSession } } = await supabase.auth.getSession();
+    const refreshedAccessToken = refreshedSession?.access_token || accessToken;
+
     const postscriptResponse = await fetch('https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/postscript-agent', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
-        'Authorization': `Bearer ${accessToken}`,
+        'Expires': '0',
+        'Authorization': `Bearer ${refreshedAccessToken}`,
+        'X-Timestamp': new Date().toISOString(),
+        'X-Random': Math.random().toString()
       },
       body: JSON.stringify(postscriptRequestBody),
     });
@@ -140,7 +154,8 @@ export const generateScript = async (
           posthookData: JSON.stringify(posthookData),
           postscriptData: JSON.stringify(postscriptData),
           systemPromptUsed: postscriptData.debugInfo?.systemPromptUsed || 'Not available',
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          requestTimestamp: new Date().toISOString()
         }
       };
     }
@@ -159,7 +174,8 @@ export const generateScript = async (
         posthookData: JSON.stringify(posthookData),
         postscriptData: JSON.stringify(postscriptData),
         systemPromptUsed: postscriptData.debugInfo?.systemPromptUsed || 'Not available',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        requestTimestamp: new Date().toISOString()
       }
     };
   } catch (error: any) {
