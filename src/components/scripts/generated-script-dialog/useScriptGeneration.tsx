@@ -22,15 +22,14 @@ export const useScriptGeneration = (
   const [isSaving, setIsSaving] = useState(false);
   const [projectSaved, setProjectSaved] = useState(false);
   const [projectId, setProjectId] = useState<string | null>(null);
+  
   const [rawResponse, setRawResponse] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<any | null>(null);
   
-  // Use refs to prevent unnecessary re-renders and track generation state
   const generationInProgress = useRef(false);
   const requestId = useRef(`${Date.now()}-${Math.random().toString(36).substring(2, 15)}`);
   const mountedRef = useRef(true);
 
-  // Clean up when the component is unmounted
   useEffect(() => {
     mountedRef.current = true;
     return () => {
@@ -38,10 +37,8 @@ export const useScriptGeneration = (
     };
   }, []);
 
-  // Reset state when dialog is closed
   useEffect(() => {
     if (!open) {
-      // Keep project state but reset loading states
       setIsLoading(true);
       setError(null);
       setIsGeneratingNewScript(false);
@@ -49,21 +46,17 @@ export const useScriptGeneration = (
     }
   }, [open]);
 
-  // Function to generate the script
   const generateScriptContent = async (hookIndex = 0, isRetry = false) => {
-    // Prevent multiple concurrent generation requests
     if (generationInProgress.current) {
       console.log("Script generation already in progress, skipping duplicate request");
       return;
     }
     
-    // If dialog is not open, don't continue
     if (!open) {
       console.log("Dialog is not open, not generating script");
       return;
     }
 
-    // Guard against invalid inputs
     if (!targetAudienceId || !templateId) {
       console.error("Missing required parameters:", { targetAudienceId, templateId });
       setError(new Error("Brakuje wymaganych parametrów do wygenerowania skryptu."));
@@ -71,7 +64,6 @@ export const useScriptGeneration = (
       return;
     }
     
-    // Set loading state
     setIsLoading(true);
     setError(null);
     if (isRetry) {
@@ -79,10 +71,8 @@ export const useScriptGeneration = (
     }
     
     try {
-      // Set flag to prevent duplicate requests
       generationInProgress.current = true;
       
-      // Generate unique request ID for this generation attempt
       const currentRequestId = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
       requestId.current = currentRequestId;
       
@@ -94,7 +84,6 @@ export const useScriptGeneration = (
         requestId: currentRequestId
       });
 
-      // Call the script generator
       const result = await generateScript(
         templateId, 
         targetAudienceId, 
@@ -103,17 +92,16 @@ export const useScriptGeneration = (
         socialMediaPlatform
       );
 
-      // If the component was unmounted or another request was started, don't update state
       if (!mountedRef.current || requestId.current !== currentRequestId) {
         console.log("Component unmounted or newer request started, discarding results");
         return;
       }
 
-      // Update state with the generated script
       setGeneratedScript(result.script || '');
       setCurrentHook(result.bestHook || '');
       setCurrentHookIndex(result.currentHookIndex);
       setTotalHooks(result.totalHooks);
+      
       setRawResponse(result.rawResponse || null);
       setDebugInfo(result.debugInfo || null);
       
@@ -121,18 +109,18 @@ export const useScriptGeneration = (
         scriptLength: result.script?.length || 0,
         hookIndex: result.currentHookIndex,
         totalHooks: result.totalHooks,
-        templateId
+        templateId,
+        rawResponse: result.rawResponse,
+        debugInfo: result.debugInfo
       });
 
     } catch (err: any) {
-      // Only update error state if this is still the current request
       if (mountedRef.current) {
         console.error("Error generating script:", err);
         setError(err);
         toast.error("Błąd podczas generowania skryptu");
       }
     } finally {
-      // Reset loading states if component still mounted
       if (mountedRef.current) {
         setIsLoading(false);
         setIsGeneratingNewScript(false);
@@ -141,7 +129,6 @@ export const useScriptGeneration = (
     }
   };
 
-  // Generate script when the dialog opens
   useEffect(() => {
     if (open && targetAudienceId && templateId) {
       console.log("Dialog opened, generating initial script");
@@ -149,15 +136,12 @@ export const useScriptGeneration = (
     }
   }, [open, targetAudienceId, templateId]);
 
-  // Retry generating the script
   const handleRetry = () => {
     setError(null);
     generateScriptContent(currentHookIndex, true);
   };
 
-  // Generate script with next hook
   const handleGenerateWithNextHook = async () => {
-    // Don't attempt if we're at the end of the hooks
     if (currentHookIndex >= totalHooks - 1) {
       toast.info("To już ostatni hook. Nie można wygenerować następnego wariantu.");
       return;
@@ -167,7 +151,6 @@ export const useScriptGeneration = (
     await generateScriptContent(currentHookIndex + 1);
   };
 
-  // Save the script as a project
   const handleViewProject = async () => {
     if (!generatedScript || !userId || !targetAudienceId) {
       toast.error("Nie można zapisać projektu");
@@ -177,7 +160,6 @@ export const useScriptGeneration = (
     try {
       setIsSaving(true);
       
-      // Use saveProjectWithContent instead of saveScriptProject
       const savedProject = await saveProjectWithContent(
         generatedScript,
         currentHook || "Nowy skrypt",

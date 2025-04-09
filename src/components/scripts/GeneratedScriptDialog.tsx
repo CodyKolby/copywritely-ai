@@ -37,8 +37,9 @@ const GeneratedScriptDialog = ({
     handleRetry,
     handleGenerateWithNextHook,
     handleViewProject,
-    rawResponse,
-    debugInfo
+    // We're not passing these to ScriptDisplay anymore
+    // rawResponse,
+    // debugInfo
   } = useScriptGeneration(open, targetAudienceId, templateId, advertisingGoal, user?.id, socialMediaPlatform);
   
   const showLoading = isLoading || isGeneratingNewScript;
@@ -103,8 +104,9 @@ const GeneratedScriptDialog = ({
                 hookIndex={currentHookIndex}
                 totalHooks={totalHooks}
                 adStructure={isSocialMediaPost ? 'social' : isAdTemplate ? 'PAS' : 'generic'}
-                rawResponse={rawResponse}
-                debugInfo={debugInfo}
+                // Remove debug information from being passed to ScriptDisplay
+                // rawResponse={rawResponse}
+                // debugInfo={debugInfo}
               />
             </div>
             

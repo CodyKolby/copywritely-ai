@@ -20,8 +20,9 @@ const ScriptDisplay = ({
   rawResponse,
   debugInfo
 }: ScriptDisplayProps) => {
-  const isDevelopment = process.env.NODE_ENV === 'development' || true; // Always show debug in preview
-
+  // Always hide debug information in production
+  const isDevelopment = false; // Set this to false to always hide debug info
+  
   // Check if the script contains any debug test markers
   const containsDebugMarker = script && (
     script.includes('DEBUGTEST_V1_2025-04-09') || 
@@ -90,47 +91,8 @@ const ScriptDisplay = ({
           </div>
         )}
 
-        {isDevelopment && (
-          <div className="mt-6 border-t pt-4">
-            <h4 className="font-medium text-sm text-gray-500 mb-2">Debug Information:</h4>
-            
-            {rawResponse && (
-              <div className="mb-4">
-                <h5 className="text-xs font-medium mb-1">Raw API Response:</h5>
-                <pre className="bg-gray-100 p-3 rounded text-xs overflow-auto max-h-40">
-                  {rawResponse}
-                </pre>
-              </div>
-            )}
-
-            {debugInfo && (
-              <div className="mb-4">
-                <h5 className="text-xs font-medium mb-1">Debug Info:</h5>
-                <pre className="bg-gray-100 p-3 rounded text-xs overflow-auto max-h-40">
-                  {JSON.stringify(debugInfo, null, 2)}
-                </pre>
-              </div>
-            )}
-            
-            {/* Add newly detected request logs */}
-            <div className="mb-4">
-              <h5 className="text-xs font-medium mb-1">System Prompt Used:</h5>
-              <pre className="bg-gray-100 p-3 rounded text-xs overflow-auto max-h-40">
-                {debugInfo?.systemPromptUsed || "Not available"}
-              </pre>
-            </div>
-            
-            {/* Display timestamp information */}
-            <div className="mb-4">
-              <h5 className="text-xs font-medium mb-1">Request Timestamps:</h5>
-              <pre className="bg-gray-100 p-3 rounded text-xs overflow-auto max-h-40">
-                Generated at: {debugInfo?.timestamp || new Date().toISOString()}
-                {debugInfo?.requestTimestamp ? `\nRequest sent: ${debugInfo.requestTimestamp}` : ''}
-                {debugInfo?.promptVersion ? `\nPrompt version: ${debugInfo.promptVersion}` : ''}
-              </pre>
-            </div>
-          </div>
-        )}
+        {/* Completely hide all debug information */}
+        {/* Debug information has been removed as requested */}
       </div>
     </div>
   );
