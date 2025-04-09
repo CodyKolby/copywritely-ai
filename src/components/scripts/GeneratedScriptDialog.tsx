@@ -76,7 +76,7 @@ const GeneratedScriptDialog = ({
                 bestHook={currentHook} 
                 hookIndex={currentHookIndex}
                 totalHooks={totalHooks}
-                adStructure={isSocialMediaPost ? '' : 'PAS'}
+                adStructure={isSocialMediaPost ? 'social' : 'PAS'}
                 rawResponse={rawResponse}
                 debugInfo={debugInfo}
               />
