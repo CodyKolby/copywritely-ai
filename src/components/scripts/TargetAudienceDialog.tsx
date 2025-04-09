@@ -7,6 +7,7 @@ import AdvertisingGoalDialog from './AdvertisingGoalDialog';
 import EmailStyleDialog from './EmailStyleDialog';
 import SocialMediaPlatformDialog from './SocialMediaPlatformDialog';
 import GeneratedEmailDialog from './GeneratedEmailDialog';
+import GeneratedSocialDialog from './GeneratedSocialDialog';
 import { TargetAudienceDialogProps } from './target-audience-dialog/types';
 import { useTargetAudienceDialog } from './target-audience-dialog/useTargetAudienceDialog';
 import DialogSelectionContent from './target-audience-dialog/DialogSelectionContent';
@@ -28,6 +29,7 @@ const TargetAudienceDialog = ({
     existingAudiences,
     showScriptDialog,
     showEmailDialog,
+    showSocialDialog,
     showGoalDialog,
     showEmailStyleDialog,
     showSocialMediaPlatformDialog,
@@ -50,6 +52,7 @@ const TargetAudienceDialog = ({
     handleSocialMediaPlatformBack,
     handleScriptDialogClose,
     handleEmailDialogClose,
+    handleSocialDialogClose,
     resetState,
   } = useTargetAudienceDialog({
     open,
@@ -86,11 +89,12 @@ const TargetAudienceDialog = ({
       showSocialMediaPlatformDialog,
       showScriptDialog,
       showEmailDialog,
+      showSocialDialog,
       isProcessing,
       isTransitioning
     });
   }, [open, showForm, showGoalDialog, showEmailStyleDialog, showSocialMediaPlatformDialog, 
-      showScriptDialog, showEmailDialog, isProcessing, isTransitioning]);
+      showScriptDialog, showEmailDialog, showSocialDialog, isProcessing, isTransitioning]);
 
   const handleDialogClose = () => {
     console.log("handleDialogClose wywołane - zamykanie dialogu");
@@ -112,8 +116,15 @@ const TargetAudienceDialog = ({
     onOpenChange(false);
   };
 
-  // Hide the audience dialog when script/email dialog is shown or transitioning
-  const shouldShowAudienceDialog = open && !showScriptDialog && !showEmailDialog && !isTransitioning;
+  const handleSocialClose = () => {
+    console.log("handleSocialClose wywołane");
+    handleSocialDialogClose();
+    resetState(); // Pełny reset stanu
+    onOpenChange(false);
+  };
+
+  // Hide the audience dialog when script/email/social dialog is shown or transitioning
+  const shouldShowAudienceDialog = open && !showScriptDialog && !showEmailDialog && !showSocialDialog && !isTransitioning;
   
   // Prevent display of multiple dialogs simultaneously
   const showMainDialog = shouldShowAudienceDialog && !showForm && !showGoalDialog && !showEmailStyleDialog && !showSocialMediaPlatformDialog;
@@ -207,15 +218,14 @@ const TargetAudienceDialog = ({
         </DialogContent>
       </Dialog>
       
-      {/* Script Dialog - shown for non-email templates */}
-      {templateId !== 'email' && (
+      {/* Script Dialog - shown for ad templates */}
+      {templateId === 'ad' && (
         <GeneratedScriptDialog
           open={showScriptDialog}
           onOpenChange={handleScriptClose}
           targetAudienceId={selectedAudienceId || ''}
           templateId={templateId}
           advertisingGoal={advertisingGoal}
-          socialMediaPlatform={templateId === 'social' ? socialMediaPlatform : undefined}
         />
       )}
 
@@ -228,6 +238,18 @@ const TargetAudienceDialog = ({
           templateId={templateId}
           advertisingGoal={advertisingGoal}
           emailStyle={emailStyle as EmailStyle}
+        />
+      )}
+      
+      {/* Social Dialog - shown only for social template */}
+      {templateId === 'social' && (
+        <GeneratedSocialDialog
+          open={showSocialDialog}
+          onOpenChange={handleSocialClose}
+          targetAudienceId={selectedAudienceId || ''}
+          templateId={templateId}
+          advertisingGoal={advertisingGoal}
+          platform={socialMediaPlatform}
         />
       )}
     </>

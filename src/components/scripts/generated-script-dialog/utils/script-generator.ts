@@ -48,7 +48,7 @@ export const generateScript = async (
 
     // Different workflow for social media posts vs online ads (PAS)
     if (templateId === 'social') {
-      // Social media posts workflow using posthook and postscript agents
+      // Social media posts workflow using social-hook-agent and social-content-agent
       return generateSocialMediaPost(
         targetAudience,
         advertisingGoal,
@@ -74,7 +74,7 @@ export const generateScript = async (
   }
 };
 
-// Function for generating social media posts
+// Function for generating social media posts using the new social workflow
 async function generateSocialMediaPost(
   targetAudience: any,
   advertisingGoal: string,
@@ -84,14 +84,14 @@ async function generateSocialMediaPost(
   cacheBuster?: string,
   timestamp?: string
 ): Promise<ScriptGenerationResult> {
-  console.log('Używam workflow dla postów w social media');
+  console.log('Używam nowego workflow dla postów w social media');
   
-  // Step 1: Generate hooks and theme with PostHook agent
+  // Step 1: Generate hooks and theme with SocialHookAgent
   const currentTimestamp = timestamp || new Date().toISOString();
   const randomValue = Math.random().toString(36).substring(2, 15);
   const currentCacheBuster = cacheBuster || `${Date.now()}-${randomValue}`;
   
-  const posthookRequestBody = {
+  const socialHookRequestBody = {
     targetAudience,
     advertisingGoal,
     platform: socialMediaPlatform?.key || 'meta',
@@ -100,15 +100,15 @@ async function generateSocialMediaPost(
     randomValue: randomValue
   };
 
-  console.log('Wysyłanie żądania do PostHook:', {
-    ...posthookRequestBody,
+  console.log('Wysyłanie żądania do SocialHookAgent:', {
+    ...socialHookRequestBody,
     targetAudience: '...abbreviated...'
   });
 
   // CRITICAL: Force no-cache by appending a unique timestamp to the URL
-  const posthookUrl = `https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/posthook-agent?_nocache=${Date.now()}`;
+  const socialHookUrl = `https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/social-hook-agent?_nocache=${Date.now()}`;
   
-  const posthookResponse = await fetch(posthookUrl, {
+  const socialHookResponse = await fetch(socialHookUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -121,52 +121,53 @@ async function generateSocialMediaPost(
       'X-Random': randomValue,
       'X-No-Cache': 'true'
     },
-    body: JSON.stringify(posthookRequestBody),
+    body: JSON.stringify(socialHookRequestBody),
   });
 
-  if (!posthookResponse.ok) {
-    const errorText = await posthookResponse.text();
-    console.error('PostHook API error:', errorText);
+  if (!socialHookResponse.ok) {
+    const errorText = await socialHookResponse.text();
+    console.error('SocialHook API error:', errorText);
     throw new Error(`Błąd podczas generowania hooków: ${errorText}`);
   }
 
-  const posthookData: PosthookResponse = await posthookResponse.json();
-  console.log('Step 1 Complete: PostHook response:', posthookData);
+  const socialHookData = await socialHookResponse.json();
+  console.log('Step 1 Complete: SocialHook response:', socialHookData);
   
   // Check if we got version info to confirm we're using the updated function
-  if (posthookData.version) {
-    console.log(`Using PostHook agent version: ${posthookData.version}, prompt: ${posthookData.promptUsed || 'unknown'}`);
+  if (socialHookData.version) {
+    console.log(`Using SocialHook agent version: ${socialHookData.version}, prompt: ${socialHookData.promptUsed || 'unknown'}`);
   }
 
-  if (!posthookData || !posthookData.hooks || posthookData.hooks.length === 0) {
+  if (!socialHookData || !socialHookData.hooks || socialHookData.hooks.length === 0) {
     throw new Error('Nie udało się wygenerować hooków');
   }
 
   // Select the hook based on the provided index, defaulting to the first one if out of bounds
-  const selectedHookIndex = hookIndex >= 0 && hookIndex < posthookData.hooks.length ? hookIndex : 0;
-  const selectedHook = posthookData.hooks[selectedHookIndex];
+  const selectedHookIndex = hookIndex >= 0 && hookIndex < socialHookData.hooks.length ? hookIndex : 0;
+  const selectedHook = socialHookData.hooks[selectedHookIndex];
 
-  // Step 2: Generate the script with PostScript agent
+  // Step 2: Generate the script with SocialContent agent
   const newTimestamp = new Date().toISOString();
   const newRandomValue = Math.random().toString(36).substring(2, 15);
   const newCacheBuster = `${Date.now()}-${newRandomValue}`;
   
-  const postscriptRequestBody = {
+  const socialContentRequestBody = {
     targetAudience,
     advertisingGoal,
     platform: socialMediaPlatform?.key || 'meta',
-    posthookOutput: posthookData,
+    hookOutput: socialHookData,
+    selectedHook: selectedHook,
     cacheBuster: newCacheBuster, 
     timestamp: newTimestamp,
     randomValue: newRandomValue
   };
 
-  console.log('Wysyłanie żądania do PostScript:', {
-    ...postscriptRequestBody,
+  console.log('Wysyłanie żądania do SocialContentAgent:', {
+    ...socialContentRequestBody,
     targetAudience: '...abbreviated...',
-    posthookOutput: {
-      hooks: posthookData.hooks.length ? [posthookData.hooks[0].substring(0, 30) + '...'] : [],
-      theme: posthookData.theme?.substring(0, 30) + '...'
+    hookOutput: {
+      hooks: socialHookData.hooks.length ? [socialHookData.hooks[0].substring(0, 30) + '...'] : [],
+      theme: socialHookData.theme?.substring(0, 30) + '...'
     }
   });
 
@@ -175,9 +176,9 @@ async function generateSocialMediaPost(
   const refreshedAccessToken = refreshedSession?.access_token || accessToken;
 
   // CRITICAL: Force no-cache by appending a unique timestamp to the URL
-  const postscriptUrl = `https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/postscript-agent?_nocache=${Date.now()}`;
+  const socialContentUrl = `https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/social-content-agent?_nocache=${Date.now()}`;
   
-  const postscriptResponse = await fetch(postscriptUrl, {
+  const socialContentResponse = await fetch(socialContentUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -190,36 +191,36 @@ async function generateSocialMediaPost(
       'X-Random': newRandomValue,
       'X-No-Cache': 'true'
     },
-    body: JSON.stringify(postscriptRequestBody),
+    body: JSON.stringify(socialContentRequestBody),
   });
 
-  if (!postscriptResponse.ok) {
-    const errorText = await postscriptResponse.text();
-    console.error('PostScript API error:', errorText);
-    throw new Error(`Błąd podczas generowania skryptu: ${errorText}`);
+  if (!socialContentResponse.ok) {
+    const errorText = await socialContentResponse.text();
+    console.error('SocialContent API error:', errorText);
+    throw new Error(`Błąd podczas generowania treści posta: ${errorText}`);
   }
 
-  const postscriptData: PostscriptResponse = await postscriptResponse.json();
-  console.log('Step 2 Complete: PostscriptAgent full response:', postscriptData);
+  const socialContentData = await socialContentResponse.json();
+  console.log('Step 2 Complete: SocialContentAgent full response:', socialContentData);
 
-  if (!postscriptData || !postscriptData.content) {
-    throw new Error('Nie udało się wygenerować treści skryptu');
+  if (!socialContentData || !socialContentData.content) {
+    throw new Error('Nie udało się wygenerować treści posta');
   }
 
   return {
-    script: postscriptData.content,
+    script: socialContentData.content,
     bestHook: selectedHook,
-    allHooks: posthookData.hooks,
+    allHooks: socialHookData.hooks,
     currentHookIndex: selectedHookIndex,
-    totalHooks: posthookData.hooks.length,
-    cta: posthookData.cta || '',
-    theme: posthookData.theme || '',
-    form: posthookData.form || '',
+    totalHooks: socialHookData.hooks.length,
+    cta: socialHookData.cta || '',
+    theme: socialHookData.theme || '',
+    form: socialHookData.form || '',
     adStructure: 'social',
     debugInfo: {
-      posthookVersion: posthookData.version || 'unknown',
-      posthookPromptUsed: posthookData.promptUsed || 'unknown',
-      postscriptDebugInfo: postscriptData.debugInfo
+      socialHookVersion: socialHookData.version || 'unknown',
+      socialHookPromptUsed: socialHookData.promptUsed || 'unknown',
+      socialContentDebugInfo: socialContentData.debugInfo
     }
   };
 }

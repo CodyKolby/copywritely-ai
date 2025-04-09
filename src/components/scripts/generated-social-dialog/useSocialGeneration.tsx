@@ -1,0 +1,326 @@
+
+import { useState, useEffect, useRef } from 'react';
+import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
+import { generateSocialHooks, SocialHookResponse } from './services/social-hook-service';
+import { generateSocialContent } from './services/social-content-service';
+import { saveSocialToProject } from './services/social-project-service';
+import { supabase } from '@/integrations/supabase/client';
+import { SocialGenerationHookReturn, UseSocialGenerationProps } from './social-generation-types';
+import { SocialMediaPlatform } from '../SocialMediaPlatformDialog';
+
+export const useSocialGeneration = ({
+  open,
+  targetAudienceId,
+  templateId,
+  advertisingGoal,
+  platform,
+  userId
+}: UseSocialGenerationProps): SocialGenerationHookReturn => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [generatedHooks, setGeneratedHooks] = useState<string[]>([]);
+  const [selectedHookIndex, setSelectedHookIndex] = useState(0);
+  const [generatedContent, setGeneratedContent] = useState<string>('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [projectSaved, setProjectSaved] = useState(false);
+  const [projectId, setProjectId] = useState<string | null>(null);
+  const [hookResponse, setHookResponse] = useState<SocialHookResponse | null>(null);
+  const [isGeneratingNewContent, setIsGeneratingNewContent] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<any | null>(null);
+  
+  const generationInProgress = useRef(false);
+  const requestId = useRef(`${Date.now()}-${Math.random().toString(36).substring(2, 15)}`);
+  const mountedRef = useRef(true);
+  const retryCount = useRef(0);
+  const maxRetries = 2;
+  
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!open) {
+      resetState();
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (open && targetAudienceId && !generatedContent) {
+      generateSocialPost();
+    }
+  }, [open, targetAudienceId]);
+
+  const resetState = () => {
+    setError(null);
+    setGeneratedHooks([]);
+    setSelectedHookIndex(0);
+    setGeneratedContent('');
+    setProjectSaved(false);
+    setProjectId(null);
+    setHookResponse(null);
+    setDebugInfo(null);
+    setIsGeneratingNewContent(false);
+    retryCount.current = 0;
+  };
+
+  const generateSocialPost = async (hookIndex = 0, isRetry = false) => {
+    if (generationInProgress.current) {
+      console.log("Social post generation already in progress, skipping duplicate request");
+      return;
+    }
+    
+    if (!open) {
+      console.log("Dialog is not open, not generating social post");
+      return;
+    }
+
+    if (!targetAudienceId) {
+      setError('Brak ID grupy docelowej');
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    if (isRetry) {
+      toast.info("Ponawiam generowanie posta...");
+    }
+    
+    try {
+      generationInProgress.current = true;
+      requestId.current = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
+      
+      console.log("Starting social post generation with params:", { 
+        targetAudienceId, 
+        advertisingGoal,
+        platform: platform?.key || 'meta',
+        requestId: requestId.current
+      });
+
+      // First, fetch the target audience data
+      const { data: targetAudienceData, error: targetAudienceError } = await supabase
+        .from('target_audiences')
+        .select('*')
+        .eq('id', targetAudienceId)
+        .single();
+
+      if (targetAudienceError) {
+        throw new Error(`Nie udało się pobrać danych grupy docelowej: ${targetAudienceError.message}`);
+      }
+
+      console.log('Target audience data fetched:', targetAudienceData.name || 'Unnamed');
+
+      // Step 1: Generate hooks with social-hook-agent
+      const hooksResponse = await generateSocialHooks(
+        targetAudienceData,
+        advertisingGoal,
+        platform?.key || 'meta'
+      );
+      
+      console.log('Received hooks response:', hooksResponse);
+      
+      setHookResponse(hooksResponse);
+      setGeneratedHooks(hooksResponse.hooks);
+      
+      // Get hook from the specified index if available
+      const selectedIndex = hookIndex < hooksResponse.hooks.length ? hookIndex : 0;
+      setSelectedHookIndex(selectedIndex);
+      const selectedHook = hooksResponse.hooks[selectedIndex];
+      
+      // Store debug info
+      setDebugInfo({
+        hooks: hooksResponse,
+        platform: platform,
+        targetAudience: targetAudienceData.id
+      });
+      
+      // Step 2: Generate content with social-content-agent
+      const contentResponse = await generateSocialContent(
+        targetAudienceData,
+        hooksResponse,
+        selectedHook,
+        advertisingGoal,
+        platform?.key || 'meta'
+      );
+      
+      console.log('Received social content:', {
+        contentLength: contentResponse.content?.length || 0,
+        selectedHook: contentResponse.selectedHook
+      });
+      
+      // Set the generated content
+      setGeneratedContent(contentResponse.content);
+      
+      // Update debug info with content generation details
+      setDebugInfo(prev => ({
+        ...prev,
+        content: contentResponse.debugInfo
+      }));
+
+      retryCount.current = 0;
+
+    } catch (err: any) {
+      if (mountedRef.current) {
+        console.error("Error generating social post:", err);
+        
+        if (retryCount.current < maxRetries && 
+            (err.message?.includes('fetch') || err.message?.includes('network') || err.message?.includes('timeout'))) {
+          retryCount.current++;
+          console.log(`Automatically retrying (${retryCount.current}/${maxRetries})...`);
+          toast.error(`Błąd połączenia. Automatyczne ponawianie (${retryCount.current}/${maxRetries})...`);
+          
+          setTimeout(() => {
+            generateSocialPost(hookIndex, true);
+          }, 1500);
+          return;
+        }
+        
+        setError(err.message);
+        toast.error("Błąd podczas generowania posta");
+      }
+    } finally {
+      if (mountedRef.current) {
+        setIsLoading(false);
+        setIsGeneratingNewContent(false);
+        generationInProgress.current = false;
+      }
+    }
+  };
+
+  const selectHook = (index: number) => {
+    if (index >= 0 && index < generatedHooks.length) {
+      setSelectedHookIndex(index);
+      
+      // If we already have content, we need to regenerate it with the new hook
+      if (generatedContent) {
+        setIsGeneratingNewContent(true);
+        generateWithHook(index);
+      }
+    }
+  };
+
+  const generateWithHook = async (hookIndex: number) => {
+    setIsGeneratingNewContent(true);
+    
+    try {
+      // Fetch the target audience data again
+      const { data: targetAudienceData, error: targetAudienceError } = await supabase
+        .from('target_audiences')
+        .select('*')
+        .eq('id', targetAudienceId)
+        .single();
+
+      if (targetAudienceError) {
+        throw new Error(`Nie udało się pobrać danych grupy docelowej: ${targetAudienceError.message}`);
+      }
+      
+      if (!hookResponse) {
+        throw new Error('Brak wygenerowanych hooków');
+      }
+      
+      const selectedHook = hookResponse.hooks[hookIndex];
+      
+      // Generate new content with the selected hook
+      const contentResponse = await generateSocialContent(
+        targetAudienceData,
+        hookResponse,
+        selectedHook,
+        advertisingGoal,
+        platform?.key || 'meta'
+      );
+      
+      setGeneratedContent(contentResponse.content);
+      
+    } catch (err: any) {
+      console.error('Error generating content with new hook:', err);
+      toast.error('Nie udało się wygenerować treści z nowym hookiem');
+    } finally {
+      setIsGeneratingNewContent(false);
+    }
+  };
+
+  const generateWithNextHook = async () => {
+    if (selectedHookIndex >= generatedHooks.length - 1) {
+      toast.info("To już ostatni hook. Nie można wygenerować następnego wariantu.");
+      return;
+    }
+
+    setIsGeneratingNewContent(true);
+    const nextHookIndex = selectedHookIndex + 1;
+    setSelectedHookIndex(nextHookIndex);
+    await generateWithHook(nextHookIndex);
+  };
+
+  const handleRetry = () => {
+    setError(null);
+    generateSocialPost(selectedHookIndex, true);
+  };
+
+  const saveToProject = async () => {
+    if (!userId || !generatedContent || !generatedHooks || !targetAudienceId) {
+      toast.error("Nie można zapisać projektu");
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      const currentHook = generatedHooks[selectedHookIndex];
+      const platformName = platform?.label || 'Meta';
+      
+      const savedProject = await saveSocialToProject(
+        generatedContent,
+        currentHook,
+        platformName,
+        userId,
+        targetAudienceId,
+        hookResponse || undefined,
+        generatedHooks
+      );
+      
+      setProjectId(savedProject.id);
+      setProjectSaved(true);
+      toast.success("Post zapisany w projektach");
+
+    } catch (err: any) {
+      console.error("Error saving social post to projects:", err);
+      toast.error("Nie udało się zapisać posta");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleViewProject = () => {
+    if (projectId) {
+      navigate(`/copy-editor/${projectId}`);
+    }
+  };
+
+  return {
+    isLoading,
+    error,
+    generatedHooks,
+    selectedHookIndex,
+    currentHook: generatedHooks[selectedHookIndex] || '',
+    generatedContent,
+    isSaving,
+    projectSaved,
+    projectId,
+    hookResponse,
+    totalHooks: generatedHooks.length,
+    isGeneratingNewContent,
+    selectHook,
+    handleRetry,
+    saveToProject,
+    handleViewProject,
+    setGeneratedContent,
+    generateWithNextHook,
+    debugInfo
+  };
+};

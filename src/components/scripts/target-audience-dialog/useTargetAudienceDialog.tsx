@@ -1,223 +1,286 @@
 
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { checkPremiumStatus } from '@/contexts/auth/premium-utils';
-import { TargetAudienceDialogProps } from './types';
+import { useState, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { fetchUserTargetAudiences } from './api';
+import { AudienceChoice, UseTargetAudienceDialogReturn } from './types';
+import { EmailStyle } from '../EmailStyleDialog';
+import { SocialMediaPlatform } from '../SocialMediaPlatformDialog';
 
-export const useTargetAudienceDialog = ({
+interface Props {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  templateId: string;
+  userId: string;
+  isPremium: boolean;
+}
+
+export function useTargetAudienceDialog({
   open,
   onOpenChange,
   templateId,
   userId,
   isPremium
-}: TargetAudienceDialogProps) => {
-  const [showForm, setShowForm] = useState(false);
-  const [audienceChoice, setAudienceChoice] = useState<'existing' | 'new' | null>(null);
+}: Props): UseTargetAudienceDialogReturn {
+  // State for audience selection
+  const [audienceChoice, setAudienceChoice] = useState<AudienceChoice>(null);
   const [selectedAudienceId, setSelectedAudienceId] = useState<string | null>(null);
-  const [existingAudiences, setExistingAudiences] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  
+  // State for dialog visibility
+  const [showForm, setShowForm] = useState(false);
   const [showScriptDialog, setShowScriptDialog] = useState(false);
   const [showEmailDialog, setShowEmailDialog] = useState(false);
-  const [advertisingGoal, setAdvertisingGoal] = useState<string>('');
-  const [emailStyle, setEmailStyle] = useState<string | null>(null);
+  const [showSocialDialog, setShowSocialDialog] = useState(false);
   const [showGoalDialog, setShowGoalDialog] = useState(false);
   const [showEmailStyleDialog, setShowEmailStyleDialog] = useState(false);
+  const [showSocialMediaPlatformDialog, setShowSocialMediaPlatformDialog] = useState(false);
+  
+  // State for additional parameters
+  const [advertisingGoal, setAdvertisingGoal] = useState<string>('');
+  const [emailStyle, setEmailStyle] = useState<string>('direct-sales');
+  const [socialMediaPlatform, setSocialMediaPlatform] = useState<SocialMediaPlatform | undefined>(undefined);
+  
+  // State for loading and transitions
   const [isProcessing, setIsProcessing] = useState(false);
-  const [verifiedPremium, setVerifiedPremium] = useState<boolean | null>(null);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  
+  const navigate = useNavigate();
 
-  // Verify premium status when dialog opens
+  // Fetch existing target audiences
+  const { data: existingAudiences = [], isLoading } = useQuery({
+    queryKey: ['targetAudiences', userId],
+    queryFn: () => fetchUserTargetAudiences(userId),
+    enabled: !!userId && open,
+    staleTime: 30000, // 30 seconds
+  });
+
+  // Reset state when dialog is closed
   useEffect(() => {
-    if (open && userId) {
-      // Verify premium status again to be sure
-      const verifyPremium = async () => {
-        try {
-          // First check database directly for fastest response
-          const { data: profile, error } = await supabase
-            .from('profiles')
-            .select('is_premium')
-            .eq('id', userId)
-            .single();
-            
-          if (!error && profile?.is_premium) {
-            console.log('[TARGET-AUDIENCE] Premium confirmed from database');
-            setVerifiedPremium(true);
-            return;
-          }
-          
-          // If not confirmed from database, use the full check
-          const result = await checkPremiumStatus(userId, false);
-          setVerifiedPremium(result);
-        } catch (e) {
-          console.error('[TARGET-AUDIENCE] Error verifying premium:', e);
-          // Fallback to prop
-          setVerifiedPremium(isPremium);
-        }
-      };
-      
-      verifyPremium();
+    if (!open) {
+      resetState();
     }
-  }, [open, userId, isPremium]);
+  }, [open]);
 
-  // Fetch existing target audiences when dialog opens
-  useEffect(() => {
-    if (open && userId) {
-      fetchExistingAudiences();
-    }
-  }, [open, userId]);
-
-  const fetchExistingAudiences = async () => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('target_audiences')
-        .select('id, name, age_range, gender')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        throw error;
-      }
-
-      setExistingAudiences(data || []);
-    } catch (error) {
-      console.error('Error fetching target audiences:', error);
-      toast.error('Nie udało się pobrać grup docelowych');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleChoiceSelection = (choice: 'existing' | 'new') => {
-    setAudienceChoice(choice);
-  };
-
-  const handleExistingAudienceSelect = (id: string) => {
-    setSelectedAudienceId(id);
-  };
-
-  const handleContinue = () => {
-    // Final premium check before proceeding
-    if (!isPremium && !verifiedPremium) {
-      onOpenChange(false);
-      toast.error('Ta funkcja wymaga konta Premium', {
-        description: 'Wykup subskrypcję, aby uzyskać dostęp do tej funkcji.',
-        dismissible: true
-      });
-      return;
-    }
-    
-    if (audienceChoice === 'existing' && selectedAudienceId) {
-      handleNextStep();
-    } else if (audienceChoice === 'new') {
-      setShowForm(true);
-    } else {
-      toast.error('Wybierz istniejącą grupę docelową lub utwórz nową');
-    }
-  };
-
-  const handleCreateNewAudience = () => {
-    // Final premium check before proceeding
-    if (!isPremium && !verifiedPremium) {
-      onOpenChange(false);
-      toast.error('Ta funkcja wymaga konta Premium', {
-        description: 'Wykup subskrypcję, aby uzyskać dostęp do tej funkcji.',
-        dismissible: true
-      });
-      return;
-    }
-    
-    setShowForm(true);
-  };
-
-  const handleFormSubmit = async (values: any) => {
-    setIsProcessing(true);
-    
-    try {
-      // Store the target audience in the database
-      const { data, error } = await supabase
-        .from('target_audiences')
-        .insert({
-          ...values,
-          user_id: userId
-        })
-        .select('id')
-        .single();
-
-      if (error) {
-        throw error;
-      }
-
-      setSelectedAudienceId(data.id);
-      handleNextStep();
-    } catch (error) {
-      console.error('Error creating target audience:', error);
-      toast.error('Nie udało się utworzyć grupy docelowej');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleNextStep = () => {
-    if (templateId === 'email') {
-      setShowEmailStyleDialog(true);
-    } else {
-      setShowGoalDialog(true);
-    }
-    setShowForm(false);
-  };
-
-  const handleBack = () => {
-    setShowForm(false);
+  // Reset state function
+  const resetState = useCallback(() => {
     setAudienceChoice(null);
     setSelectedAudienceId(null);
-  };
-
-  const handleGoalSubmit = (values: { objective: string }) => {
-    setAdvertisingGoal(values.objective);
-    setShowGoalDialog(false);
-    setShowScriptDialog(true);
-    onOpenChange(false);
-  };
-
-  const handleGoalBack = () => {
-    setShowGoalDialog(false);
-    if (audienceChoice === 'new') {
-      setShowForm(true);
-    } else {
-      setShowForm(false);
-      setAudienceChoice('existing');
-    }
-  };
-
-  const handleEmailStyleSubmit = (values: { style: string }) => {
-    setEmailStyle(values.style);
-    setShowEmailStyleDialog(false);
-    setShowEmailDialog(true);
-    onOpenChange(false);
-  };
-
-  const handleEmailStyleBack = () => {
-    setShowEmailStyleDialog(false);
-    if (audienceChoice === 'new') {
-      setShowForm(true);
-    } else {
-      setShowForm(false);
-      setAudienceChoice('existing');
-    }
-  };
-
-  const handleScriptDialogClose = () => {
+    setShowForm(false);
     setShowScriptDialog(false);
-    setSelectedAudienceId(null);
-    setAdvertisingGoal('');
-  };
-
-  const handleEmailDialogClose = () => {
     setShowEmailDialog(false);
-    setSelectedAudienceId(null);
-    setEmailStyle(null);
-  };
+    setShowSocialDialog(false);
+    setShowGoalDialog(false);
+    setShowEmailStyleDialog(false);
+    setShowSocialMediaPlatformDialog(false);
+    setAdvertisingGoal('');
+    setEmailStyle('direct-sales');
+    setSocialMediaPlatform(undefined);
+    setIsProcessing(false);
+    setIsTransitioning(false);
+  }, []);
+
+  // Handle audience choice selection
+  const handleChoiceSelection = useCallback((choice: AudienceChoice) => {
+    setAudienceChoice(choice);
+    if (choice === 'new') {
+      setSelectedAudienceId(null);
+    }
+  }, []);
+
+  // Handle existing audience selection
+  const handleExistingAudienceSelect = useCallback((id: string) => {
+    setSelectedAudienceId(id);
+  }, []);
+
+  // Handle continue button click
+  const handleContinue = useCallback(() => {
+    if (!isPremium) {
+      navigate('/pricing');
+      onOpenChange(false);
+      return;
+    }
+
+    setIsProcessing(true);
+    
+    if (audienceChoice === 'new') {
+      // Show the form to create a new audience
+      setIsTransitioning(true);
+      setTimeout(() => {
+        setShowForm(true);
+        setIsTransitioning(false);
+        setIsProcessing(false);
+      }, 300);
+    } else if (audienceChoice === 'existing' && selectedAudienceId) {
+      // Move to the next step in the workflow
+      goToNextStep();
+    }
+  }, [audienceChoice, selectedAudienceId, isPremium, navigate, onOpenChange]);
+
+  // Go to the next step in the workflow
+  const goToNextStep = useCallback(() => {
+    setIsTransitioning(true);
+    
+    // Different workflows based on template type
+    if (templateId === 'email') {
+      // Email workflow: audience -> goal -> email style -> generate email
+      setTimeout(() => {
+        setShowGoalDialog(true);
+        setIsTransitioning(false);
+        setIsProcessing(false);
+      }, 300);
+    } else if (templateId === 'social') {
+      // Social media workflow: audience -> goal -> platform -> generate social post
+      setTimeout(() => {
+        setShowGoalDialog(true);
+        setIsTransitioning(false);
+        setIsProcessing(false);
+      }, 300);
+    } else {
+      // Default workflow: audience -> goal -> generate script
+      setTimeout(() => {
+        setShowGoalDialog(true);
+        setIsTransitioning(false);
+        setIsProcessing(false);
+      }, 300);
+    }
+  }, [templateId]);
+
+  // Handle create new audience button
+  const handleCreateNewAudience = useCallback(() => {
+    setIsProcessing(true);
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setShowForm(true);
+      setIsTransitioning(false);
+      setIsProcessing(false);
+    }, 300);
+  }, []);
+
+  // Handle form submission
+  const handleFormSubmit = useCallback((audienceId: string) => {
+    setSelectedAudienceId(audienceId);
+    setIsProcessing(true);
+    
+    // Hide the form and go to the next step
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setShowForm(false);
+      goToNextStep();
+    }, 300);
+  }, [goToNextStep]);
+
+  // Handle back button in form
+  const handleBack = useCallback(() => {
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setShowForm(false);
+      setIsTransitioning(false);
+    }, 300);
+  }, []);
+
+  // Handle goal submission
+  const handleGoalSubmit = useCallback((goal: string) => {
+    setAdvertisingGoal(goal);
+    setIsProcessing(true);
+    setIsTransitioning(true);
+    
+    // Different next steps based on template
+    if (templateId === 'email') {
+      // For email, go to email style selection
+      setTimeout(() => {
+        setShowGoalDialog(false);
+        setShowEmailStyleDialog(true);
+        setIsTransitioning(false);
+        setIsProcessing(false);
+      }, 300);
+    } else if (templateId === 'social') {
+      // For social, go to platform selection
+      setTimeout(() => {
+        setShowGoalDialog(false);
+        setShowSocialMediaPlatformDialog(true);
+        setIsTransitioning(false);
+        setIsProcessing(false);
+      }, 300);
+    } else {
+      // For other templates, go straight to script generation
+      setTimeout(() => {
+        setShowGoalDialog(false);
+        setShowScriptDialog(true);
+        setIsTransitioning(false);
+        setIsProcessing(false);
+      }, 300);
+    }
+  }, [templateId]);
+
+  // Handle back button in goal dialog
+  const handleGoalBack = useCallback(() => {
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setShowGoalDialog(false);
+      setIsTransitioning(false);
+    }, 300);
+  }, []);
+
+  // Handle email style submission
+  const handleEmailStyleSubmit = useCallback((style: EmailStyle) => {
+    setEmailStyle(style);
+    setIsProcessing(true);
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setShowEmailStyleDialog(false);
+      setShowEmailDialog(true);
+      setIsTransitioning(false);
+      setIsProcessing(false);
+    }, 300);
+  }, []);
+
+  // Handle back button in email style dialog
+  const handleEmailStyleBack = useCallback(() => {
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setShowEmailStyleDialog(false);
+      setShowGoalDialog(true);
+      setIsTransitioning(false);
+    }, 300);
+  }, []);
+
+  // Handle social media platform submission
+  const handleSocialMediaPlatformSubmit = useCallback((platform: SocialMediaPlatform) => {
+    setSocialMediaPlatform(platform);
+    setIsProcessing(true);
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setShowSocialMediaPlatformDialog(false);
+      setShowSocialDialog(true);
+      setIsTransitioning(false);
+      setIsProcessing(false);
+    }, 300);
+  }, []);
+
+  // Handle back button in social media platform dialog
+  const handleSocialMediaPlatformBack = useCallback(() => {
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setShowSocialMediaPlatformDialog(false);
+      setShowGoalDialog(true);
+      setIsTransitioning(false);
+    }, 300);
+  }, []);
+
+  // Handle script dialog close
+  const handleScriptDialogClose = useCallback(() => {
+    setShowScriptDialog(false);
+  }, []);
+
+  // Handle email dialog close
+  const handleEmailDialogClose = useCallback(() => {
+    setShowEmailDialog(false);
+  }, []);
+  
+  // Handle social dialog close
+  const handleSocialDialogClose = useCallback(() => {
+    setShowSocialDialog(false);
+  }, []);
 
   return {
     isLoading,
@@ -227,11 +290,15 @@ export const useTargetAudienceDialog = ({
     existingAudiences,
     showScriptDialog,
     showEmailDialog,
+    showSocialDialog,
     showGoalDialog,
     showEmailStyleDialog,
+    showSocialMediaPlatformDialog,
     advertisingGoal,
     emailStyle,
+    socialMediaPlatform,
     isProcessing,
+    isTransitioning,
     handleChoiceSelection,
     handleExistingAudienceSelect,
     handleContinue,
@@ -242,7 +309,11 @@ export const useTargetAudienceDialog = ({
     handleGoalBack,
     handleEmailStyleSubmit,
     handleEmailStyleBack,
+    handleSocialMediaPlatformSubmit,
+    handleSocialMediaPlatformBack,
     handleScriptDialogClose,
     handleEmailDialogClose,
+    handleSocialDialogClose,
+    resetState,
   };
-};
+}
