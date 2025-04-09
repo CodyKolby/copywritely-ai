@@ -3,22 +3,7 @@ import { useState, useEffect } from 'react';
 import { generateScript, saveScriptAsProject } from './script-utils';
 import { toast } from 'sonner';
 import { SocialMediaPlatform } from '../SocialMediaPlatformDialog';
-
-// Define a consistent return type for the generateScript function
-interface ScriptGenerationResult {
-  script: string;
-  bestHook: string;
-  allHooks: string[];
-  currentHookIndex: number;
-  totalHooks: number;
-  adStructure: string;
-  rawResponse?: string;
-  debugInfo?: any;
-  // Optional properties for social media posts
-  cta?: string;
-  theme?: string;
-  form?: string;
-}
+import { ScriptGenerationResult } from './types';
 
 export const useScriptGeneration = (
   open: boolean,
