@@ -2,10 +2,10 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-// Import the CORS headers with expanded headers for X-Random
+// Expanded CORS headers to accept x-cache-buster header
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, cache-control, pragma, expires, x-no-cache, Authorization, x-timestamp, x-random',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, cache-control, pragma, expires, x-no-cache, x-cache-buster, x-timestamp, x-random',
   'Access-Control-Allow-Methods': 'POST, OPTIONS, GET',
   'Access-Control-Max-Age': '86400', // 24 hours
   'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -18,7 +18,25 @@ const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 // Define a clear, customizable system prompt for the PostscriptAgent
 // ===== EDITABLE PROMPT BEGINS HERE =====
 // Feel free to customize this prompt according to your needs
-const SYSTEM_PROMPT = `Napisz mi słowo "TEST"`;
+const SYSTEM_PROMPT = `Jesteś PostscriptAgent - ekspertem w tworzeniu angażujących postów w mediach społecznościowych.
+
+Na podstawie otrzymanego hooka i tematyki, stwórz KOMPLETNY post do mediów społecznościowych, który:
+1. Zaczyna się od podanego hooka
+2. Rozwija temat w sposób angażujący i wartościowy dla czytelnika
+3. Zawiera odpowiedni call-to-action
+4. Jeśli to post na platformę Meta (Facebook/Instagram) lub TikTok, dodaj odpowiednie hashtagi (maksymalnie 5)
+
+Zasady pisania treści:
+- Używaj prostego, konwersacyjnego języka (jak w rozmowie ze znajomym)
+- Unikaj żargonu branżowego, skomplikowanych terminów i anglicyzmów
+- Pisz krótkie akapity (1-3 zdania)
+- Używaj emoji w umiarkowany sposób
+- Dostosuj ton i długość do wskazanej platformy:
+  * Meta (Instagram/Facebook): bardziej wizualny, emocjonalny, do 1500 znaków
+  * TikTok: bardzo krótki, dynamiczny, konwersacyjny, do 800 znaków
+  * LinkedIn: profesjonalny, wartościowy, budujący autorytet, do 2000 znaków
+
+Zwróć TYLKO TEKST POSTU bez dodatkowych komentarzy, nagłówków czy instrukcji.`;
 // ===== EDITABLE PROMPT ENDS HERE =====
 
 serve(async (req) => {
@@ -130,12 +148,11 @@ serve(async (req) => {
     // Create a result with the raw response for debugging
     const result = {
       content: responseText,
-      rawResponse: responseText,
       debugInfo: {
         systemPromptUsed: SYSTEM_PROMPT,
         timestamp: startTime,
         requestId: requestId,
-        promptVersion: "V12-CUSTOM-" + new Date().toISOString()  // Updated version with timestamp
+        promptVersion: "V13-CUSTOM-" + new Date().toISOString()
       }
     };
     
@@ -161,7 +178,7 @@ serve(async (req) => {
         requestId: requestId,
         debugInfo: {
           systemPromptUsed: SYSTEM_PROMPT,
-          version: "V12-ERROR-" + new Date().toISOString()
+          version: "V13-ERROR-" + new Date().toISOString()
         }
       }),
       { 

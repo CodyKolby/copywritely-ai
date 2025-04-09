@@ -5,20 +5,45 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 // Import the CORS headers
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, cache-control, pragma, expires, x-no-cache',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, cache-control, pragma, expires, x-no-cache, x-cache-buster',
   'Access-Control-Allow-Methods': 'POST, OPTIONS, GET',
-  'Access-Control-Max-Age': '86400' // 24 hours
+  'Access-Control-Max-Age': '86400', // 24 hours
+  'Cache-Control': 'no-cache, no-store, must-revalidate',
+  'Pragma': 'no-cache',
+  'Expires': '0'
 };
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
 // ===== EDITABLE PROMPT BEGINS HERE =====
 // Feel free to customize this prompt according to your needs
-const SYSTEM_PROMPT = `napisz mi słowo "HOOKTEST"
-`;
+const SYSTEM_PROMPT = `Jesteś PosthookAgentem, ekspertem w tworzeniu angażujących hooków do postów w mediach społecznościowych.
+
+Twoje zadanie:
+1. Na podstawie danych o grupie docelowej i celu reklamy
+2. Stworzyć hook (pierwsze zdanie postu) przykuwające uwagę
+3. Określić ogólną tematykę postu
+4. Zaproponować formę postu (tekst, karuzela, wideo, itp.)
+
+Dopasuj styl do wskazanej platformy:
+- Meta (Instagram/Facebook): wizualny, emocjonalny
+- TikTok: krótki, dynamiczny, conversational
+- LinkedIn: wartościowy, profesjonalny, budujący autorytet
+
+Zwróć wyniki jako JSON z polami:
+- hooks: tablica z propozycjami hooków (1-3)
+- theme: ogólna tematyka postu
+- form: sugerowana forma postu (np. "post tekstowy", "karuzela", "wideo", "relacja")
+
+ZASADY KRYTYCZNE:
+
+1. Hook to jedno pełne, wypowiedziane zdanie. Nie używaj samych haseł, wyliczeń, myślników ani konstrukcji pytanie–odpowiedź.
+2. Hook musi jasno wskazywać temat postu. Unikaj pustych, zbyt ogólnych sformułowań.
+3. Język musi być bardzo prosty – zero branżowego żargonu, złożonych metafor, anglicyzmów i eksperckich określeń.
+4. Styl musi być mówiony, nie sloganowy. Hook ma brzmieć jak zdanie wypowiedziane do znajomego.`;
 // ===== EDITABLE PROMPT ENDS HERE =====
 
-console.log("PosthookAgent Edge Function initialized with custom prompt test marker");
+console.log("PosthookAgent Edge Function initialized with custom prompt");
 
 serve(async (req) => {
   console.log("PosthookAgent received request:", req.method, req.url);
@@ -88,6 +113,9 @@ serve(async (req) => {
       headers: {
         'Authorization': `Bearer ${openAIApiKey}`,
         'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
       },
       body: JSON.stringify({
         model: 'gpt-4o',

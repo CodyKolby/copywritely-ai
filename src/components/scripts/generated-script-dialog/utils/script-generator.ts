@@ -1,3 +1,4 @@
+
 import type { SocialMediaPlatform } from '../../SocialMediaPlatformDialog';
 import { ScriptGenerationResult, PosthookResponse, PostscriptResponse } from './types';
 import { supabase } from "@/integrations/supabase/client";
@@ -93,7 +94,7 @@ async function generateSocialMediaPost(
 
   console.log('Wysyłanie żądania do PostHook:', posthookRequestBody);
 
-  // Use full URL to ensure we're hitting the correct endpoint
+  // Use the full URL with direct project ID reference to avoid any subdomain resolution issues
   const posthookResponse = await fetch('https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/posthook-agent', {
     method: 'POST',
     headers: {
@@ -148,7 +149,7 @@ async function generateSocialMediaPost(
   const { data: { session: refreshedSession } } = await supabase.auth.getSession();
   const refreshedAccessToken = refreshedSession?.access_token || accessToken;
 
-  // Use full URL to ensure we're hitting the correct endpoint
+  // Use the full URL with direct project ID reference to avoid any subdomain resolution issues
   const postscriptResponse = await fetch('https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/postscript-agent', {
     method: 'POST',
     headers: {
@@ -158,7 +159,8 @@ async function generateSocialMediaPost(
       'Expires': '0',
       'Authorization': `Bearer ${refreshedAccessToken}`,
       'X-Cache-Buster': newCacheBuster,
-      'X-Timestamp': new Date().toISOString()
+      'X-Timestamp': new Date().toISOString(),
+      'X-Random': Math.random().toString(36).substring(2, 15)
     },
     body: JSON.stringify(postscriptRequestBody),
   });
@@ -185,7 +187,6 @@ async function generateSocialMediaPost(
     cta: posthookData.cta || '',
     theme: posthookData.theme || '',
     form: posthookData.form || '',
-    rawResponse: postscriptData.rawResponse || postscriptData.content,
     adStructure: 'social',
     debugInfo: null
   };
