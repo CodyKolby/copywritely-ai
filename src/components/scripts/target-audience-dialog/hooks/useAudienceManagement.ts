@@ -10,6 +10,7 @@ interface AudienceManagementDeps {
   setShowForm: (value: boolean) => void;
   setShowGoalDialog: (value: boolean) => void;
   setIsProcessing: (value: boolean) => void;
+  transitionToDialog?: (closeDialog: () => void, openDialog: () => void) => void;
   audienceChoice: 'existing' | 'new' | null;
   selectedAudienceId: string | null;
 }
@@ -32,7 +33,7 @@ export const useAudienceManagement = (
     deps.setIsProcessing(false); // Reset processing state when changing selection
   };
 
-  // Continue button handler - MUSI przestawić isProcessing na false po pokazaniu następnego dialogu
+  // Continue button handler - używa mechanizmu przejść sekwencyjnych
   const handleContinue = () => {
     if (!userId) {
       toast.error('Musisz być zalogowany, aby kontynuować');
@@ -40,24 +41,31 @@ export const useAudienceManagement = (
     }
     
     try {
-      // Ustawiam flagę przetwarzania tylko na czas aktualnej operacji
+      // Ustawiam flagę przetwarzania
       deps.setIsProcessing(true);
       
-      // Pokazuję dialog celu i natychmiast resetuję flagę przetwarzania
-      deps.setShowGoalDialog(true);
-      
-      // Ustawienie z opóźnieniem, aby zapewnić poprawną sekwencję renderowania
-      setTimeout(() => {
-        deps.setIsProcessing(false);
-      }, 100);
-      
+      if (deps.transitionToDialog) {
+        // Użyj nowego mechanizmu przejść jeśli jest dostępny
+        deps.transitionToDialog(
+          () => {}, // Nie zamykamy bieżącego dialogu
+          () => deps.setShowGoalDialog(true)
+        );
+      } else {
+        // Fallback do starego podejścia
+        deps.setShowGoalDialog(true);
+        
+        // Reset z opóźnieniem
+        setTimeout(() => {
+          deps.setIsProcessing(false);
+        }, 100);
+      }
     } catch (error) {
       console.error("Error in continue flow:", error);
       deps.setIsProcessing(false);
     }
   };
 
-  // Handler for creating a new audience - MUSI przestawić isProcessing na false
+  // Handler for creating a new audience
   const handleCreateNewAudience = () => {
     if (!userId) {
       toast.error('Musisz być zalogowany, aby kontynuować');
@@ -65,8 +73,19 @@ export const useAudienceManagement = (
     }
     
     try {
-      deps.setShowForm(true);
-      deps.setIsProcessing(false); // Reset processing state when showing form
+      deps.setIsProcessing(true);
+      
+      if (deps.transitionToDialog) {
+        // Użyj nowego mechanizmu przejść
+        deps.transitionToDialog(
+          () => {}, // Nie zamykamy bieżącego dialogu
+          () => deps.setShowForm(true)
+        );
+      } else {
+        // Fallback do starego podejścia
+        deps.setShowForm(true);
+        deps.setIsProcessing(false);
+      }
     } catch (error) {
       console.error("Error showing form:", error);
       deps.setIsProcessing(false);

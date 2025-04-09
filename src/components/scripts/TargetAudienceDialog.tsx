@@ -35,6 +35,7 @@ const TargetAudienceDialog = ({
     emailStyle,
     socialMediaPlatform,
     isProcessing,
+    isTransitioning,
     handleChoiceSelection,
     handleExistingAudienceSelect,
     handleContinue,
@@ -85,9 +86,11 @@ const TargetAudienceDialog = ({
       showSocialMediaPlatformDialog,
       showScriptDialog,
       showEmailDialog,
-      isProcessing
+      isProcessing,
+      isTransitioning
     });
-  }, [open, showForm, showGoalDialog, showEmailStyleDialog, showSocialMediaPlatformDialog, showScriptDialog, showEmailDialog, isProcessing]);
+  }, [open, showForm, showGoalDialog, showEmailStyleDialog, showSocialMediaPlatformDialog, 
+      showScriptDialog, showEmailDialog, isProcessing, isTransitioning]);
 
   const handleDialogClose = () => {
     console.log("handleDialogClose wywołane - zamykanie dialogu");
@@ -109,14 +112,21 @@ const TargetAudienceDialog = ({
     onOpenChange(false);
   };
 
-  // Hide the audience dialog when script/email dialog is shown
-  const shouldShowAudienceDialog = open && !showScriptDialog && !showEmailDialog;
+  // Hide the audience dialog when script/email dialog is shown or transitioning
+  const shouldShowAudienceDialog = open && !showScriptDialog && !showEmailDialog && !isTransitioning;
   
+  // Prevent display of multiple dialogs simultaneously
+  const showMainDialog = shouldShowAudienceDialog && !showForm && !showGoalDialog && !showEmailStyleDialog && !showSocialMediaPlatformDialog;
+  const showFormDialog = shouldShowAudienceDialog && showForm && !isTransitioning;
+  const showGoalDialogUi = shouldShowAudienceDialog && showGoalDialog && !isTransitioning;
+  const showEmailStyleDialogUi = shouldShowAudienceDialog && showEmailStyleDialog && !isTransitioning;
+  const showSocialMediaDialogUi = shouldShowAudienceDialog && showSocialMediaPlatformDialog && !isTransitioning;
+
   return (
     <>
       {/* Main audience selection dialog */}
       <Dialog 
-        open={shouldShowAudienceDialog && !showForm && !showGoalDialog && !showEmailStyleDialog && !showSocialMediaPlatformDialog} 
+        open={showMainDialog} 
         onOpenChange={handleDialogClose}
       >
         <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
@@ -138,7 +148,7 @@ const TargetAudienceDialog = ({
       
       {/* Form dialog */}
       <Dialog 
-        open={shouldShowAudienceDialog && showForm} 
+        open={showFormDialog} 
         onOpenChange={handleDialogClose}
       >
         <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
@@ -152,7 +162,7 @@ const TargetAudienceDialog = ({
       
       {/* Goal dialog */}
       <Dialog 
-        open={shouldShowAudienceDialog && showGoalDialog} 
+        open={showGoalDialogUi} 
         onOpenChange={handleDialogClose}
       >
         <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
@@ -167,7 +177,7 @@ const TargetAudienceDialog = ({
       
       {/* Email style dialog */}
       <Dialog 
-        open={shouldShowAudienceDialog && showEmailStyleDialog} 
+        open={showEmailStyleDialogUi} 
         onOpenChange={handleDialogClose}
       >
         <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
@@ -182,7 +192,7 @@ const TargetAudienceDialog = ({
       
       {/* Social media platform dialog */}
       <Dialog 
-        open={shouldShowAudienceDialog && showSocialMediaPlatformDialog} 
+        open={showSocialMediaDialogUi} 
         onOpenChange={handleDialogClose}
       >
         <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">

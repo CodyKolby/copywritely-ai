@@ -13,6 +13,9 @@ export interface DialogNavigationDeps {
   setEmailStyle: (value: EmailStyle | null) => void;
   setSocialMediaPlatform: (value: SocialMediaPlatform | null) => void;
   setIsProcessing: (value: boolean) => void;
+  // Dodane nowe zależności
+  isTransitioning: boolean;
+  transitionToDialog: (closeDialog: () => void, openDialog: () => void) => void;
 }
 
 export const useDialogNavigation = (deps: DialogNavigationDeps, templateId: string) => {
@@ -24,87 +27,87 @@ export const useDialogNavigation = (deps: DialogNavigationDeps, templateId: stri
 
   // Goal submission handler
   const handleGoalSubmit = (goal: string) => {
-    // Ustaw dane i zmień stan przetwarzania
+    // Ustaw dane
     deps.setAdvertisingGoal(goal);
-    deps.setShowGoalDialog(false);
-    deps.setIsProcessing(false); // Reset processing state
+    deps.setIsProcessing(true);
     
-    // Ustaw odpowiedni dialog bazując na typie szablonu
-    setTimeout(() => {
-      // Based on template type, show different dialogs
-      if (templateId === 'social') {
-        deps.setShowSocialMediaPlatformDialog(true);
-      } else if (templateId === 'email') {
-        deps.setShowEmailStyleDialog(true);
-      } else {
-        // For ad templates or any other type
-        deps.setShowScriptDialog(true);
-      }
-    }, 100);
+    // Wykonaj przejście do odpowiedniego dialogu bazując na typie szablonu
+    const closeCurrentDialog = () => deps.setShowGoalDialog(false);
+    
+    let openNextDialog;
+    if (templateId === 'social') {
+      openNextDialog = () => deps.setShowSocialMediaPlatformDialog(true);
+    } else if (templateId === 'email') {
+      openNextDialog = () => deps.setShowEmailStyleDialog(true);
+    } else {
+      openNextDialog = () => deps.setShowScriptDialog(true);
+    }
+    
+    deps.transitionToDialog(closeCurrentDialog, openNextDialog);
   };
 
   // Goal back button handler
   const handleGoalBack = () => {
     deps.setShowGoalDialog(false);
-    deps.setIsProcessing(false); // Reset processing state
+    deps.setIsProcessing(false);
   };
 
   // Email style submission handler
   const handleEmailStyleSubmit = (style: EmailStyle) => {
     deps.setEmailStyle(style);
-    deps.setShowEmailStyleDialog(false);
-    deps.setIsProcessing(false); // Reset processing state
+    deps.setIsProcessing(true);
     
-    // Pokazuj dialog email z opóźnieniem
-    setTimeout(() => {
-      deps.setShowEmailDialog(true);
-    }, 100);
+    // Wykonaj płynne przejście do następnego dialogu
+    deps.transitionToDialog(
+      () => deps.setShowEmailStyleDialog(false),
+      () => deps.setShowEmailDialog(true)
+    );
   };
 
   // Email style back button handler
   const handleEmailStyleBack = () => {
-    deps.setShowEmailStyleDialog(false);
-    deps.setIsProcessing(false); // Reset processing state
+    deps.setIsProcessing(true);
     
-    // Pokazuj dialog celu z opóźnieniem
-    setTimeout(() => {
-      deps.setShowGoalDialog(true);
-    }, 100);
+    // Wykonaj płynne przejście do poprzedniego dialogu
+    deps.transitionToDialog(
+      () => deps.setShowEmailStyleDialog(false),
+      () => deps.setShowGoalDialog(true)
+    );
   };
 
   // Social media platform submission handler
   const handleSocialMediaPlatformSubmit = (platform: SocialMediaPlatform) => {
     deps.setSocialMediaPlatform(platform);
-    deps.setShowSocialMediaPlatformDialog(false);
-    deps.setIsProcessing(false); // Reset processing state
+    deps.setIsProcessing(true);
     
-    // Pokazuj dialog skryptu z opóźnieniem
-    setTimeout(() => {
-      deps.setShowScriptDialog(true);
-    }, 100);
+    // Wykonaj płynne przejście do następnego dialogu
+    deps.transitionToDialog(
+      () => deps.setShowSocialMediaPlatformDialog(false),
+      () => deps.setShowScriptDialog(true)
+    );
   };
 
   // Social media platform back button handler
   const handleSocialMediaPlatformBack = () => {
-    deps.setShowSocialMediaPlatformDialog(false);
-    deps.setIsProcessing(false); // Reset processing state
+    deps.setIsProcessing(true);
     
-    // Pokazuj dialog celu z opóźnieniem
-    setTimeout(() => {
-      deps.setShowGoalDialog(true);
-    }, 100);
+    // Wykonaj płynne przejście do poprzedniego dialogu
+    deps.transitionToDialog(
+      () => deps.setShowSocialMediaPlatformDialog(false),
+      () => deps.setShowGoalDialog(true)
+    );
   };
 
   // Script dialog close handler
   const handleScriptDialogClose = () => {
     deps.setShowScriptDialog(false);
-    deps.setIsProcessing(false); // Reset processing state
+    deps.setIsProcessing(false);
   };
 
   // Email dialog close handler
   const handleEmailDialogClose = () => {
     deps.setShowEmailDialog(false);
-    deps.setIsProcessing(false); // Reset processing state
+    deps.setIsProcessing(false);
   };
 
   return {

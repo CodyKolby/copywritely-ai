@@ -22,6 +22,9 @@ export const useDialogState = () => {
   const [showEmailStyleDialog, setShowEmailStyleDialog] = useState(false);
   const [showSocialMediaPlatformDialog, setShowSocialMediaPlatformDialog] = useState(false);
   
+  // Dialog transition state - to prevent flashing of previous dialogs
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  
   // Answer state
   const [advertisingGoal, setAdvertisingGoal] = useState('');
   const [emailStyle, setEmailStyle] = useState<EmailStyle | null>(null);
@@ -42,7 +45,23 @@ export const useDialogState = () => {
     setEmailStyle(null);
     setSocialMediaPlatform(null);
     setIsProcessing(false); // Important: reset processing state
+    setIsTransitioning(false); // Reset transition state
   }, []); // Pusta tablica zależności, funkcja nigdy nie jest tworzona na nowo
+  
+  // Sequential dialog transitions to prevent flashing
+  const transitionToDialog = useCallback((closeDialog: () => void, openDialog: () => void) => {
+    setIsTransitioning(true);
+    
+    // First close current dialog
+    closeDialog();
+    
+    // Then open next dialog with delay
+    setTimeout(() => {
+      openDialog();
+      setIsTransitioning(false);
+      setIsProcessing(false);
+    }, 100);
+  }, []);
 
   return {
     // State
@@ -60,6 +79,7 @@ export const useDialogState = () => {
     emailStyle,
     socialMediaPlatform,
     isProcessing,
+    isTransitioning,
     
     // Setters
     setShowForm,
@@ -76,8 +96,10 @@ export const useDialogState = () => {
     setEmailStyle,
     setSocialMediaPlatform,
     setIsProcessing,
+    setIsTransitioning,
     
     // Actions
     resetState,
+    transitionToDialog,
   };
 };

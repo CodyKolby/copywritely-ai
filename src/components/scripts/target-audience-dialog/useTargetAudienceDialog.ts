@@ -43,6 +43,7 @@ export const useTargetAudienceDialog = ({
     setShowForm: dialogState.setShowForm,
     setShowGoalDialog: dialogState.setShowGoalDialog,
     setIsProcessing: dialogState.setIsProcessing,
+    transitionToDialog: dialogState.transitionToDialog,
     audienceChoice: dialogState.audienceChoice,
     selectedAudienceId: dialogState.selectedAudienceId
   });
@@ -58,7 +59,9 @@ export const useTargetAudienceDialog = ({
     setAdvertisingGoal: dialogState.setAdvertisingGoal,
     setEmailStyle: dialogState.setEmailStyle,
     setSocialMediaPlatform: dialogState.setSocialMediaPlatform,
-    setIsProcessing: dialogState.setIsProcessing
+    setIsProcessing: dialogState.setIsProcessing,
+    isTransitioning: dialogState.isTransitioning,
+    transitionToDialog: dialogState.transitionToDialog
   }, templateId);
 
   // Dodatkowy efekt do logowania stanu dialogu
@@ -74,7 +77,8 @@ export const useTargetAudienceDialog = ({
         showSocialMediaPlatformDialog: dialogState.showSocialMediaPlatformDialog,
         showScriptDialog: dialogState.showScriptDialog,
         showEmailDialog: dialogState.showEmailDialog,
-        isProcessing: dialogState.isProcessing
+        isProcessing: dialogState.isProcessing,
+        isTransitioning: dialogState.isTransitioning
       });
     }
   }, [
@@ -88,7 +92,8 @@ export const useTargetAudienceDialog = ({
     dialogState.showSocialMediaPlatformDialog,
     dialogState.showScriptDialog,
     dialogState.showEmailDialog,
-    dialogState.isProcessing
+    dialogState.isProcessing,
+    dialogState.isTransitioning
   ]);
 
   // Reset state when dialog opens/closes or template changes
@@ -115,6 +120,7 @@ export const useTargetAudienceDialog = ({
       dialogState.setEmailStyle(null);
       dialogState.setSocialMediaPlatform(null);
       dialogState.setIsProcessing(false); // Make sure processing state is reset
+      dialogState.setIsTransitioning(false); // Reset transition state
     }
   }, [templateId]);
 
@@ -126,13 +132,12 @@ export const useTargetAudienceDialog = ({
       
       if (audienceId) {
         dialogState.setSelectedAudienceId(audienceId);
-        dialogState.setShowForm(false);
         
-        // Ustaw dialog celu z małym opóźnieniem, aby zapewnić poprawne renderowanie
-        setTimeout(() => {
-          dialogState.setShowGoalDialog(true);
-          dialogState.setIsProcessing(false); // Resetuj stan przetwarzania po pokazaniu następnego dialogu
-        }, 100);
+        // Użyj mechanizmu sekwencyjnych przejść
+        dialogState.transitionToDialog(
+          () => dialogState.setShowForm(false),
+          () => dialogState.setShowGoalDialog(true)
+        );
         
         toast.success('Grupa docelowa została utworzona');
       }
@@ -140,6 +145,7 @@ export const useTargetAudienceDialog = ({
       console.error("Error submitting form:", error);
       toast.error('Wystąpił błąd podczas tworzenia grupy docelowej');
       dialogState.setIsProcessing(false);
+      dialogState.setIsTransitioning(false);
     }
   };
 
@@ -179,6 +185,7 @@ export const useTargetAudienceDialog = ({
     emailStyle: dialogState.emailStyle,
     socialMediaPlatform: dialogState.socialMediaPlatform,
     isProcessing: dialogState.isProcessing,
+    isTransitioning: dialogState.isTransitioning,
     
     // Methods from audienceManagement
     handleChoiceSelection: audienceManagement.handleChoiceSelection,
