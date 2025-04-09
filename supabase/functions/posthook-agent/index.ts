@@ -20,12 +20,12 @@ const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 const SYSTEM_PROMPT = `Twoim jedynym zadaniem jest napisać "TESTHOOK2"`;
 // ===== EDITABLE PROMPT ENDS HERE =====
 
-// Force redeployment marker: v1.0.2
-console.log("PosthookAgent Edge Function initialized with custom prompt v1.0.2");
+// Force redeployment marker: v1.0.3
+console.log("PosthookAgent Edge Function initialized with custom prompt v1.0.3");
 
 serve(async (req) => {
   console.log("PosthookAgent received request:", req.method, req.url);
-  console.log("Using prompt version v1.0.2:", SYSTEM_PROMPT.substring(0, 50));
+  console.log("Using prompt version v1.0.3:", SYSTEM_PROMPT.substring(0, 50));
   
   // Handle OPTIONS requests for CORS preflight
   if (req.method === 'OPTIONS') {
@@ -43,12 +43,14 @@ serve(async (req) => {
       throw new Error("Invalid JSON in request body");
     });
     
-    const { targetAudience, advertisingGoal, platform } = requestData;
+    const { targetAudience, advertisingGoal, platform, cacheBuster, timestamp } = requestData;
     
     console.log("PosthookAgent processing request:", { 
       targetAudienceId: targetAudience?.id, 
       advertisingGoal, 
-      platform 
+      platform,
+      timestamp: timestamp || new Date().toISOString(),
+      cacheBuster: cacheBuster || 'none'
     });
     
     if (!targetAudience) {
@@ -74,11 +76,11 @@ serve(async (req) => {
     
     // Log the prompt for debugging
     console.log("Prompt for PosthookAgent:", userPrompt);
-    console.log("System prompt being used:", SYSTEM_PROMPT.substring(0, 100) + "...");
+    console.log("System prompt being used:", SYSTEM_PROMPT);
     
     // Add anti-caching measures
-    const timestamp = new Date().toISOString();
-    const cacheBuster = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+    const requestTimestamp = timestamp || new Date().toISOString();
+    const cacheBusterValue = cacheBuster || `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
     
     // Get response from OpenAI
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -89,8 +91,9 @@ serve(async (req) => {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
         'Expires': '0',
-        'X-Cache-Buster': cacheBuster,
-        'X-Timestamp': timestamp
+        'X-Cache-Buster': cacheBusterValue,
+        'X-Timestamp': requestTimestamp,
+        'X-Random': Math.random().toString(36).substring(2, 15)
       },
       body: JSON.stringify({
         model: 'gpt-4o',
@@ -169,8 +172,8 @@ serve(async (req) => {
     console.log("Processed PosthookAgent response:", processedResponse);
     
     // Add version info to help track which version is running
-    processedResponse.version = "v1.0.2";
-    processedResponse.promptUsed = SYSTEM_PROMPT.substring(0, 20) + "...";
+    processedResponse.version = "v1.0.3";
+    processedResponse.promptUsed = SYSTEM_PROMPT.substring(0, 50) + "...";
     
     return new Response(
       JSON.stringify(processedResponse),
@@ -182,8 +185,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         error: error.message || "Unknown error", 
-        version: "v1.0.2-error",
-        promptUsed: SYSTEM_PROMPT.substring(0, 20) + "..."
+        version: "v1.0.3-error",
+        promptUsed: SYSTEM_PROMPT.substring(0, 50) + "..."
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

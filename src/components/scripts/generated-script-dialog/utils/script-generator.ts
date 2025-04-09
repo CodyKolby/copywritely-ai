@@ -1,3 +1,4 @@
+
 import type { SocialMediaPlatform } from '../../SocialMediaPlatformDialog';
 import { ScriptGenerationResult, PosthookResponse, PostscriptResponse } from './types';
 import { supabase } from "@/integrations/supabase/client";
@@ -21,6 +22,7 @@ export const generateScript = async (
 
     // Add a strong cache-busting timestamp to prevent caching issues
     const cacheBuster = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
+    const timestamp = new Date().toISOString();
     
     // Fetch the target audience data first
     const { data: targetAudience, error: audienceError } = await supabase
@@ -53,7 +55,8 @@ export const generateScript = async (
         hookIndex,
         socialMediaPlatform,
         accessToken,
-        cacheBuster
+        cacheBuster,
+        timestamp
       );
     } else {
       // For online ads (PAS) and other templates, use the generate-script function
@@ -78,20 +81,22 @@ async function generateSocialMediaPost(
   hookIndex: number,
   socialMediaPlatform?: SocialMediaPlatform,
   accessToken?: string,
-  cacheBuster?: string
+  cacheBuster?: string,
+  timestamp?: string
 ): Promise<ScriptGenerationResult> {
   console.log('Używam workflow dla postów w social media');
   
   // Step 1: Generate hooks and theme with PostHook agent
-  const timestamp = new Date().toISOString();
+  const currentTimestamp = timestamp || new Date().toISOString();
   const randomValue = Math.random().toString(36).substring(2, 15);
+  const currentCacheBuster = cacheBuster || `${Date.now()}-${randomValue}`;
   
   const posthookRequestBody = {
     targetAudience,
     advertisingGoal,
     platform: socialMediaPlatform?.key || 'meta',
-    cacheBuster: cacheBuster || `${Date.now()}`,
-    timestamp: timestamp,
+    cacheBuster: currentCacheBuster,
+    timestamp: currentTimestamp,
     randomValue: randomValue
   };
 
@@ -109,8 +114,8 @@ async function generateSocialMediaPost(
       'Pragma': 'no-cache',
       'Expires': '0',
       'Authorization': `Bearer ${accessToken}`,
-      'X-Cache-Buster': `${Date.now()}-${randomValue}`,
-      'X-Timestamp': timestamp,
+      'X-Cache-Buster': currentCacheBuster,
+      'X-Timestamp': currentTimestamp,
       'X-Random': randomValue
     },
     body: JSON.stringify(posthookRequestBody),
@@ -127,7 +132,7 @@ async function generateSocialMediaPost(
   
   // Check if we got version info to confirm we're using the updated function
   if (posthookData.version) {
-    console.log(`Using PostHook agent version: ${posthookData.version}, prompt: ${posthookData.promptUsed}`);
+    console.log(`Using PostHook agent version: ${posthookData.version}, prompt: ${posthookData.promptUsed || 'unknown'}`);
   }
 
   if (!posthookData || !posthookData.hooks || posthookData.hooks.length === 0) {
@@ -206,8 +211,8 @@ async function generateSocialMediaPost(
     form: posthookData.form || '',
     adStructure: 'social',
     debugInfo: {
-      posthookVersion: posthookData.version,
-      posthookPromptUsed: posthookData.promptUsed,
+      posthookVersion: posthookData.version || 'unknown',
+      posthookPromptUsed: posthookData.promptUsed || 'unknown',
       postscriptDebugInfo: postscriptData.debugInfo
     }
   };

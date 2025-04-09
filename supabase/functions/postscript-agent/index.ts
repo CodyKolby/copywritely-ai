@@ -21,15 +21,15 @@ const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 const SYSTEM_PROMPT = `Twoim jedynym zadaniem jest napisać "TESTSCRIPT2"`;
 // ===== EDITABLE PROMPT ENDS HERE =====
 
-// Force redeployment marker: v1.0.2
-console.log(`PostscriptAgent initialized with version v1.0.2 and prompt: "${SYSTEM_PROMPT.substring(0, 100)}..."`);
+// Force redeployment marker: v1.0.3
+console.log(`PostscriptAgent initialized with version v1.0.3 and prompt: "${SYSTEM_PROMPT}"`);
 
 serve(async (req) => {
   // Track execution with timestamps and add a unique request ID
   const requestId = crypto.randomUUID();
   const startTime = new Date().toISOString();
   console.log(`[${startTime}][REQ:${requestId}] PostscriptAgent received request:`, req.method, req.url);
-  console.log(`[${startTime}][REQ:${requestId}] Current system prompt: "${SYSTEM_PROMPT.substring(0, 100)}..."`);
+  console.log(`[${startTime}][REQ:${requestId}] Current system prompt: "${SYSTEM_PROMPT}"`);
   
   // Handle OPTIONS requests for CORS preflight
   if (req.method === 'OPTIONS') {
@@ -49,13 +49,15 @@ serve(async (req) => {
     
     console.log(`[${startTime}][REQ:${requestId}] Request data received:`, JSON.stringify(requestData).substring(0, 500));
     
-    const { targetAudience, advertisingGoal, platform, posthookOutput } = requestData;
+    const { targetAudience, advertisingGoal, platform, posthookOutput, cacheBuster, timestamp } = requestData;
     
     console.log(`[${startTime}][REQ:${requestId}] Processing request with:`, { 
       targetAudienceId: targetAudience?.id, 
       advertisingGoal, 
       platform,
-      posthookOutputPresent: !!posthookOutput
+      posthookOutputPresent: !!posthookOutput,
+      timestamp: timestamp || startTime,
+      cacheBuster: cacheBuster || 'none'
     });
     
     if (!targetAudience || !posthookOutput) {
@@ -73,12 +75,13 @@ serve(async (req) => {
     console.log(`[${startTime}][REQ:${requestId}] Posthook output:`, JSON.stringify(posthookOutput));
     
     // Force a clear timestamp and random value to avoid caching
-    const timestamp = new Date().toISOString();
+    const currentTimestamp = timestamp || startTime;
     const randomValue = Math.random().toString(36).substring(2, 15);
+    const requestCacheBuster = cacheBuster || `${Date.now()}-${randomValue}`;
     
     // Construct prompt for agent with our forced timestamp to avoid caching
-    const userPrompt = `Timestamp to avoid caching: ${timestamp}
-    Random value to break cache: ${randomValue}
+    const userPrompt = `Timestamp to avoid caching: ${currentTimestamp}
+    Random value to break cache: ${requestCacheBuster}
     Request ID: ${requestId}
     
     Oto dane o grupie docelowej:
@@ -107,7 +110,9 @@ serve(async (req) => {
         'Pragma': 'no-cache',
         'Expires': '0',
         'X-Request-ID': requestId,
-        'X-Timestamp': timestamp
+        'X-Timestamp': currentTimestamp,
+        'X-Cache-Buster': requestCacheBuster,
+        'X-Random': randomValue
       },
       body: JSON.stringify({
         model: 'gpt-4o',

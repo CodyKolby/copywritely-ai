@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { generateScript } from './utils/script-generator';
 import { saveProjectWithContent } from './utils/project-utils';
@@ -107,7 +108,7 @@ export const useScriptGeneration = (
       setDebugInfo(result.debugInfo || null);
       
       // Check if we got our expected test values
-      if (result.script === 'TESTSCRIPT' || result.bestHook === 'TESTHOOK') {
+      if (result.script === 'TESTSCRIPT2' || result.bestHook === 'TESTHOOK2') {
         console.log("SUCCESS: Got expected test values, confirming prompts are working correctly!");
         toast.success("Prompty zaktualizowane pomyślnie!");
       }

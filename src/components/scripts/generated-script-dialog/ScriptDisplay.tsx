@@ -25,9 +25,18 @@ const ScriptDisplay = ({
   
   // Check if the script contains any debug test markers
   const containsDebugMarker = script && (
-    script.includes('TEST TEST TEST') || 
+    script.includes('TEST') || 
     script === 'TEST' ||
+    script === 'TESTSCRIPT' ||
+    script === 'TESTSCRIPT2' ||
     (script && script.trim().toLowerCase() === 'test')
+  );
+  
+  // Check if hook contains test markers
+  const containsHookDebugMarker = bestHook && (
+    bestHook.includes('TEST') ||
+    bestHook === 'TESTHOOK' ||
+    bestHook === 'TESTHOOK2'
   );
   
   // Remove the debug marker from the script if present
@@ -38,7 +47,7 @@ const ScriptDisplay = ({
   );
 
   // If script is just a test message (TEST), don't display it as content
-  const isTestMessage = ['TEST', 'test'].includes(cleanedScript.trim().toLowerCase());
+  const isTestMessage = containsDebugMarker || containsHookDebugMarker;
   const displayScript = isTestMessage ? '' : cleanedScript;
 
   return (
@@ -65,7 +74,12 @@ const ScriptDisplay = ({
         {isTestMessage && (
           <div className="mb-4 p-4 bg-green-100 border border-green-300 text-green-800 rounded-lg">
             <p className="font-medium text-lg">✅ Test Successful!</p>
-            <p className="text-base">System returned the expected test message: "{script}"</p>
+            <p className="text-base">System returned the expected test message:</p>
+            <p className="font-mono bg-white p-2 rounded mt-2 border border-green-200">
+              {containsDebugMarker ? `Script: "${script}"` : ''}
+              {containsDebugMarker && containsHookDebugMarker ? <br /> : ''}
+              {containsHookDebugMarker ? `Hook: "${bestHook}"` : ''}
+            </p>
             <p className="text-sm mt-2">This confirms that your custom prompt is working correctly.</p>
           </div>
         )}
