@@ -202,24 +202,28 @@ serve(async (req) => {
     // Prepare platform info
     const platformInfo = `Platforma: ${platform || 'Meta (Instagram/Facebook)'}`;
     
+    // Prepare variables for the prompt template
+    const surveyData = JSON.stringify(targetAudience, null, 2);
+    const postTheme = validatedPosthookOutput.theme;
+    
+    // Replace the template variables in the system prompt
+    let customizedSystemPrompt = SYSTEM_PROMPT;
+    customizedSystemPrompt = customizedSystemPrompt.replace('{{surveyData}}', surveyData);
+    customizedSystemPrompt = customizedSystemPrompt.replace('{{selectedHook}}', selectedHook);
+    customizedSystemPrompt = customizedSystemPrompt.replace('{{postTheme}}', postTheme);
+    customizedSystemPrompt = customizedSystemPrompt.replace('{{platformInfo}}', platformInfo);
+    
+    console.log("CUSTOMIZED SYSTEM PROMPT (first 300 chars):", customizedSystemPrompt.substring(0, 300));
+    
     // Construct prompt for agent
-    const userPrompt = `Oto dane o grupie docelowej:
-    ${JSON.stringify(targetAudience, null, 2)}
-    
-    Cel reklamy: ${advertisingGoal || 'Brak określonego celu'}
-    
-    Wybrany hook: ${selectedHook}
-    
-    Tematyka postu: ${validatedPosthookOutput.theme || 'Brak określonej tematyki'}
-    
-    Forma postu: ${validatedPosthookOutput.form || 'post tekstowy'}
-    
-    ${platformInfo}
-    
-    Stwórz pełną treść postu z wezwaniem do działania.`;
+    const userPrompt = `Napisz tekst postu dla mediów społecznościowych, który zaczyna się od hooka: "${selectedHook}". 
+    Tematyka: ${validatedPosthookOutput.theme}. 
+    Platforma: ${platform || 'Meta (Instagram/Facebook)'}
+    Forma: ${validatedPosthookOutput.form}
+    Cel reklamy: ${advertisingGoal || 'Brak określonego celu'}`;
     
     // Log the prompt for debugging
-    console.log("Prompt for PostscriptAgent:", userPrompt);
+    console.log("User prompt for PostscriptAgent:", userPrompt);
     
     // Get response from OpenAI
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -231,7 +235,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: 'gpt-4o',
         messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'system', content: customizedSystemPrompt },
           { role: 'user', content: userPrompt }
         ],
         temperature: 0.7,
@@ -248,62 +252,48 @@ serve(async (req) => {
     let responseText = data.choices[0].message.content;
     
     // Log response for debugging
-    console.log("Raw PostscriptAgent response:", responseText);
+    console.log("Raw OpenAI response:", responseText);
     
-    // Process response as JSON
-    let processedResponse;
-    try {
-      // Clean text of code markers if they exist
-      if (responseText.includes('```json')) {
-        responseText = responseText.replace(/```json|```/g, '').trim();
+    // Extract content and CTA from the response
+    let content = responseText;
+    let cta = "Skontaktuj się z nami, aby dowiedzieć się więcej.";
+    
+    // Try to find a CTA in the text
+    const ctaIdentifiers = [
+      "CTA:", "Wezwanie do działania:", 
+      "#CTA", "Call to action:", 
+      "WEZWANIE DO DZIAŁANIA", "CALL TO ACTION"
+    ];
+    
+    // Look for any CTA identifier in the text
+    let ctaIndex = -1;
+    for (const identifier of ctaIdentifiers) {
+      const idx = responseText.lastIndexOf(identifier);
+      if (idx !== -1 && (ctaIndex === -1 || idx > ctaIndex)) {
+        ctaIndex = idx;
       }
-      
-      // Try to parse as JSON
-      try {
-        processedResponse = JSON.parse(responseText);
-      } catch (e) {
-        console.error('Error parsing JSON response:', e);
-        
-        // If not parseable as JSON, create structure manually
-        const contentMatch = responseText.match(/CONTENT:|TREŚĆ:?/i);
-        const ctaMatch = responseText.match(/CTA:|WEZWANIE DO DZIAŁANIA:?/i);
-        
-        let content = selectedHook;
-        let cta = "Skontaktuj się z nami, aby dowiedzieć się więcej.";
-        
-        if (contentMatch && ctaMatch) {
-          const contentStartIdx = responseText.indexOf(':', responseText.indexOf(contentMatch[0])) + 1;
-          const contentEndIdx = responseText.indexOf(ctaMatch[0]);
-          content = responseText.substring(contentStartIdx, contentEndIdx).trim();
-          
-          const ctaStartIdx = responseText.indexOf(':', responseText.indexOf(ctaMatch[0])) + 1;
-          cta = responseText.substring(ctaStartIdx).trim();
-        }
-        
-        processedResponse = { content, cta };
+    }
+    
+    // If we found a CTA, split the content
+    if (ctaIndex !== -1) {
+      content = responseText.substring(0, ctaIndex).trim();
+      // Extract text after the identifier
+      const afterIdentifier = responseText.substring(ctaIndex);
+      // Find the first colon after the identifier
+      const colonIndex = afterIdentifier.indexOf(':');
+      if (colonIndex !== -1) {
+        cta = afterIdentifier.substring(colonIndex + 1).trim();
+      } else {
+        // If no colon, try to use everything after the identifier
+        cta = afterIdentifier.substring(afterIdentifier.indexOf(' ')).trim();
       }
-    } catch (e) {
-      console.error('Error processing response:', e);
-      processedResponse = {
-        content: `${selectedHook}\n\nNie udało się wygenerować treści postu.`,
-        cta: "Skontaktuj się z nami, aby dowiedzieć się więcej."
-      };
     }
     
-    // Ensure content includes the hook
-    if (processedResponse.content && !processedResponse.content.includes(selectedHook)) {
-      processedResponse.content = `${selectedHook}\n\n${processedResponse.content}`;
-    }
-    
-    // Ensure we have content
-    if (!processedResponse.content) {
-      processedResponse.content = `${selectedHook}\n\nNie udało się wygenerować treści postu.`;
-    }
-    
-    // Ensure we have CTA
-    if (!processedResponse.cta) {
-      processedResponse.cta = "Skontaktuj się z nami, aby dowiedzieć się więcej.";
-    }
+    // Create the final response object
+    const processedResponse = { 
+      content: content || selectedHook,
+      cta: cta
+    };
     
     console.log("Processed PostscriptAgent response:", processedResponse);
     

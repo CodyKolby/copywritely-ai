@@ -209,7 +209,7 @@ async function generateSocialMediaPost(
       try {
         console.log(`Postscript attempt ${postscriptRetryCount + 1}/${maxRetries}`);
         
-        // Call the edge function directly with the full URL
+        // Call the function directly - specify that it's the root postscript-agent
         postscriptResponse = await supabase.functions.invoke('postscript-agent', {
           body: {
             targetAudience,

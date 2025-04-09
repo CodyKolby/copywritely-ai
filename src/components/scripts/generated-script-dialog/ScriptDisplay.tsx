@@ -27,9 +27,9 @@ const ScriptDisplay = ({
 
   const handleCopy = async () => {
     try {
-      // For social media posts, only copy the script without the hook
-      const fullScript = adStructure ? `${bestHook}\n\n${script}` : script;
-      await navigator.clipboard.writeText(fullScript);
+      // For social media posts, include the whole script as it already has the hook
+      const textToCopy = adStructure ? `${bestHook}\n\n${script}` : script;
+      await navigator.clipboard.writeText(textToCopy);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
@@ -38,10 +38,9 @@ const ScriptDisplay = ({
   };
 
   const handleDownload = () => {
-    // For social media posts, only include the script without the hook
-    const fullScript = adStructure ? `${bestHook}\n\n${script}` : script;
+    const textToDownload = adStructure ? `${bestHook}\n\n${script}` : script;
     const element = document.createElement('a');
-    const file = new Blob([fullScript], { type: 'text/plain' });
+    const file = new Blob([textToDownload], { type: 'text/plain' });
     element.href = URL.createObjectURL(file);
     element.download = 'wygenerowany-skrypt.txt';
     document.body.appendChild(element);
@@ -58,11 +57,11 @@ const ScriptDisplay = ({
 
   const adStructureDescription = getAdStructureDescription();
 
-  // Łączymy hook i skrypt do wyświetlenia
-  const displayScript = showRaw && rawScript ? rawScript : script;
-
-  // Sprawdź, czy to post na social media - jeśli nie ma struktury reklamowej, nie pokazuj jej
+  // Determine if this is a social media post (no adStructure)
   const isSocialMediaPost = !adStructure || adStructure.trim() === '';
+  
+  // The content to display depends on whether this is a social media post
+  const displayContent = showRaw && rawScript ? rawScript : script;
 
   return (
     <div className="space-y-6">
@@ -105,7 +104,7 @@ const ScriptDisplay = ({
             {bestHook}
           </div>
         )}
-        <pre className="whitespace-pre-wrap text-sm">{displayScript}</pre>
+        <pre className="whitespace-pre-wrap text-sm">{displayContent}</pre>
       </div>
 
       <div className="flex justify-end space-x-3">
