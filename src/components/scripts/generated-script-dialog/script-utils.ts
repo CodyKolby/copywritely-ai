@@ -1,3 +1,4 @@
+
 import { supabase } from "@/lib/supabase";
 import { v4 as uuidv4 } from 'uuid';
 import { SocialMediaPlatform } from '../SocialMediaPlatformDialog';
@@ -111,7 +112,7 @@ export async function generateScript(
   }
 }
 
-// Function to generate social media posts with improved error handling
+// Function to generate social media posts with improved error handling and debugging
 async function generateSocialMediaPost(
   targetAudience: any, 
   advertisingGoal: string, 
@@ -119,10 +120,13 @@ async function generateSocialMediaPost(
   platform: SocialMediaPlatform = 'meta'
 ) {
   try {
-    console.log(`Generating social media post for platform: ${platform}`);
+    console.log(`===== SOCIAL MEDIA POST GENERATION STARTED =====`);
+    console.log(`Platform: ${platform}, Hook Index: ${hookIndex}`);
+    console.log(`Target audience ID: ${targetAudience.id}`);
+    console.log(`Advertising goal: ${advertisingGoal || 'Not specified'}`);
     
     // First use PosthookAgent to generate hooks and theme
-    console.log("Calling posthook-agent edge function");
+    console.log("Step 1: Calling posthook-agent edge function");
     
     // Add retry mechanism for posthook-agent call
     let posthookResponse;
@@ -138,14 +142,19 @@ async function generateSocialMediaPost(
           body: {
             targetAudience,
             advertisingGoal,
-            platform
+            platform,
+            debug: true,
+            timestamp: new Date().toISOString()
           }
         });
         
-        console.log(`Posthook attempt ${posthookRetryCount + 1} response:`, 
+        console.log(`Posthook attempt ${posthookRetryCount + 1} response status:`, 
           posthookResponse.error ? `Error: ${posthookResponse.error.message}` : "Success");
         
-        if (!posthookResponse.error) break;
+        if (!posthookResponse.error) {
+          console.log("Posthook success response data:", posthookResponse.data);
+          break;
+        }
         
         console.warn(`Retry ${posthookRetryCount + 1}/${maxRetries} for posthook-agent:`, posthookResponse.error);
         posthookRetryCount++;
@@ -153,7 +162,7 @@ async function generateSocialMediaPost(
         // Wait before retrying
         await new Promise(resolve => setTimeout(resolve, 5000));
       } catch (e) {
-        console.error(`Posthook attempt ${posthookRetryCount + 1}/${maxRetries} failed:`, e);
+        console.error(`Posthook attempt ${posthookRetryCount + 1}/${maxRetries} failed with exception:`, e);
         posthookRetryCount++;
         
         if (posthookRetryCount >= maxRetries) throw e;
@@ -169,7 +178,7 @@ async function generateSocialMediaPost(
     }
 
     const posthookData = posthookResponse.data;
-    console.log('PosthookAgent full response:', posthookData);
+    console.log('Step 1 Complete: PosthookAgent full response:', posthookData);
 
     if (!posthookData) {
       console.error('Empty response from posthook-agent');
@@ -183,6 +192,7 @@ async function generateSocialMediaPost(
     
     if (posthookData.hooks && Array.isArray(posthookData.hooks) && posthookData.hooks.length > 0) {
       hooks = posthookData.hooks;
+      console.log('Valid hooks received:', hooks);
     } else {
       console.error('Invalid hooks in response from posthook-agent:', posthookData);
     }
@@ -190,15 +200,23 @@ async function generateSocialMediaPost(
     theme = posthookData.theme || theme;
     form = posthookData.form || form;
     
-    console.log('Using hooks:', hooks);
-
     // Calculate the actual hook index to use
     const actualHookIndex = Math.min(hookIndex, hooks.length - 1);
     const selectedHook = hooks[actualHookIndex];
     console.log(`Selected hook at index ${actualHookIndex}: ${selectedHook}`);
 
-    // Make sure we're calling the root postscript-agent function (not nested in ai-agents)
-    console.log("Calling postscript-agent edge function directly");
+    // Step 2: Call main postscript-agent directly
+    console.log("Step 2: Calling postscript-agent edge function directly");
+    console.log("Request body for postscript-agent:", {
+      targetAudienceId: targetAudience.id,
+      advertisingGoal,
+      platform,
+      posthookOutputSummary: {
+        hooksLength: hooks.length,
+        theme,
+        form
+      }
+    });
     
     // Add retry mechanism for postscript-agent call
     let postscriptResponse;
@@ -207,6 +225,7 @@ async function generateSocialMediaPost(
     while (postscriptRetryCount < maxRetries) {
       try {
         console.log(`Postscript attempt ${postscriptRetryCount + 1}/${maxRetries}`);
+        const requestStartTime = new Date().toISOString();
         
         // IMPORTANT: Call the root function directly - NOT in ai-agents folder
         postscriptResponse = await supabase.functions.invoke('postscript-agent', {
@@ -218,14 +237,19 @@ async function generateSocialMediaPost(
               hooks,
               theme,
               form
-            }
+            },
+            debug: true,
+            timestamp: requestStartTime
           }
         });
         
-        console.log(`Postscript attempt ${postscriptRetryCount + 1} response:`, 
+        console.log(`Postscript attempt ${postscriptRetryCount + 1} response status:`, 
           postscriptResponse.error ? `Error: ${postscriptResponse.error.message}` : "Success");
         
-        if (!postscriptResponse.error) break;
+        if (!postscriptResponse.error) {
+          console.log("Postscript success response data:", postscriptResponse.data);
+          break;
+        }
         
         console.warn(`Retry ${postscriptRetryCount + 1}/${maxRetries} for postscript-agent:`, postscriptResponse.error);
         postscriptRetryCount++;
@@ -233,7 +257,7 @@ async function generateSocialMediaPost(
         // Wait before retrying
         await new Promise(resolve => setTimeout(resolve, 5000));
       } catch (e) {
-        console.error(`Postscript attempt ${postscriptRetryCount + 1}/${maxRetries} failed:`, e);
+        console.error(`Postscript attempt ${postscriptRetryCount + 1}/${maxRetries} failed with exception:`, e);
         postscriptRetryCount++;
         
         if (postscriptRetryCount >= maxRetries) throw e;
@@ -247,7 +271,7 @@ async function generateSocialMediaPost(
       console.error('All attempts to call postscript-agent failed:', postscriptResponse?.error);
       // Fallback to just using the hook as content if postscript-agent fails
       return {
-        script: `${selectedHook}\n\nTreść postu nie została wygenerowana z powodu błędu.`,
+        script: `${selectedHook}\n\nTreść postu nie została wygenerowana z powodu błędu.\nBłąd: ${postscriptResponse?.error?.message || 'Unknown error'}`,
         bestHook: selectedHook,
         allHooks: hooks,
         currentHookIndex: actualHookIndex,
@@ -255,16 +279,21 @@ async function generateSocialMediaPost(
         cta: "Skontaktuj się z nami, aby dowiedzieć się więcej.",
         theme: theme,
         form: form,
+        rawResponse: JSON.stringify(postscriptResponse?.error) || "Error",
         adStructure: '' // Puste pole dla postów social media
       };
     }
 
     const postscriptData = postscriptResponse.data;
-    console.log('PostscriptAgent full response:', postscriptData);
+    console.log('Step 2 Complete: PostscriptAgent full response:', postscriptData);
 
     // Log the raw response for debugging
     if (postscriptData && postscriptData.rawResponse) {
       console.log('PostscriptAgent raw response text:', postscriptData.rawResponse);
+    }
+
+    if (postscriptData && postscriptData.debugInfo) {
+      console.log('PostscriptAgent debug info:', postscriptData.debugInfo);
     }
 
     // Create content from response
@@ -273,6 +302,7 @@ async function generateSocialMediaPost(
     
     if (postscriptData && postscriptData.content) {
       content = postscriptData.content;
+      console.log('Content successfully generated with length:', content.length);
     } else {
       console.error('Missing content in response from postscript-agent:', postscriptData);
     }
@@ -281,6 +311,8 @@ async function generateSocialMediaPost(
     if (postscriptData && postscriptData.cta) {
       cta = postscriptData.cta;
     }
+
+    console.log(`===== SOCIAL MEDIA POST GENERATION COMPLETED =====`);
 
     return {
       script: content,
@@ -292,6 +324,11 @@ async function generateSocialMediaPost(
       theme: theme,
       form: form,
       rawResponse: postscriptData.rawResponse || content,
+      debugInfo: {
+        posthookData: JSON.stringify(posthookData).substring(0, 500),
+        postscriptData: JSON.stringify(postscriptData).substring(0, 500),
+        timestamp: new Date().toISOString()
+      },
       adStructure: '' // Puste pole dla postów social media
     };
   } catch (error) {

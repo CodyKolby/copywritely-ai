@@ -8,6 +8,7 @@ interface ScriptDisplayProps {
   totalHooks?: number;
   adStructure?: string;
   rawResponse?: string;
+  debugInfo?: any;
 }
 
 const ScriptDisplay = ({
@@ -16,9 +17,10 @@ const ScriptDisplay = ({
   hookIndex = 0,
   totalHooks = 0,
   adStructure = '',
-  rawResponse
+  rawResponse,
+  debugInfo
 }: ScriptDisplayProps) => {
-  const isDevelopment = process.env.NODE_ENV === 'development';
+  const isDevelopment = process.env.NODE_ENV === 'development' || true; // Always show debug in preview
 
   return (
     <div className="p-6 pt-0">
@@ -50,12 +52,27 @@ const ScriptDisplay = ({
           ))}
         </div>
 
-        {isDevelopment && rawResponse && (
+        {isDevelopment && (
           <div className="mt-6 border-t pt-4">
-            <h4 className="font-medium text-sm text-gray-500 mb-2">Raw API Response (Debug):</h4>
-            <pre className="bg-gray-100 p-3 rounded text-xs overflow-auto max-h-40">
-              {rawResponse}
-            </pre>
+            <h4 className="font-medium text-sm text-gray-500 mb-2">Debug Information:</h4>
+            
+            {rawResponse && (
+              <div className="mb-4">
+                <h5 className="text-xs font-medium mb-1">Raw API Response:</h5>
+                <pre className="bg-gray-100 p-3 rounded text-xs overflow-auto max-h-40">
+                  {rawResponse}
+                </pre>
+              </div>
+            )}
+
+            {debugInfo && (
+              <div className="mb-4">
+                <h5 className="text-xs font-medium mb-1">Debug Info:</h5>
+                <pre className="bg-gray-100 p-3 rounded text-xs overflow-auto max-h-40">
+                  {JSON.stringify(debugInfo, null, 2)}
+                </pre>
+              </div>
+            )}
           </div>
         )}
       </div>
