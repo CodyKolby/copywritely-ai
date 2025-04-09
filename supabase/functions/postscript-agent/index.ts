@@ -16,7 +16,7 @@ const corsHeaders = {
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
 // Updated system prompt for PostscriptAgent with test message
-const SYSTEM_PROMPT = `Twoim jedynym zadaniem jest napisanie słowa "TEST"`;
+const SYSTEM_PROMPT = `Twoim jedynym zadaniem jest napisanie słowa "KOKOS"`;
 
 serve(async (req) => {
   // Track execution with timestamps and add a unique request ID
