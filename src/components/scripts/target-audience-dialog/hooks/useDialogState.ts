@@ -5,27 +5,33 @@ import { SocialMediaPlatform } from '../../SocialMediaPlatformDialog';
 import { TargetAudience } from '../types';
 
 export const useDialogState = () => {
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [showForm, setShowForm] = useState<boolean>(false);
+  // Base dialog state
+  const [showForm, setShowForm] = useState(false);
   const [audienceChoice, setAudienceChoice] = useState<'existing' | 'new' | null>(null);
   const [selectedAudienceId, setSelectedAudienceId] = useState<string | null>(null);
   const [existingAudiences, setExistingAudiences] = useState<TargetAudience[]>([]);
-  const [showScriptDialog, setShowScriptDialog] = useState<boolean>(false);
-  const [showEmailDialog, setShowEmailDialog] = useState<boolean>(false);
-  const [showGoalDialog, setShowGoalDialog] = useState<boolean>(false);
-  const [showEmailStyleDialog, setShowEmailStyleDialog] = useState<boolean>(false);
-  const [showSocialMediaPlatformDialog, setShowSocialMediaPlatformDialog] = useState<boolean>(false);
-  const [advertisingGoal, setAdvertisingGoal] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Processing state - critical for UI feedback
+  const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Dialog flow state
+  const [showScriptDialog, setShowScriptDialog] = useState(false);
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [showGoalDialog, setShowGoalDialog] = useState(false);
+  const [showEmailStyleDialog, setShowEmailStyleDialog] = useState(false);
+  const [showSocialMediaPlatformDialog, setShowSocialMediaPlatformDialog] = useState(false);
+  
+  // Answer state
+  const [advertisingGoal, setAdvertisingGoal] = useState('');
   const [emailStyle, setEmailStyle] = useState<EmailStyle | null>(null);
   const [socialMediaPlatform, setSocialMediaPlatform] = useState<SocialMediaPlatform | null>(null);
-  const [isProcessing, setIsProcessing] = useState<boolean>(false);
 
+  // Reset all state
   const resetState = () => {
-    setIsLoading(false);
     setShowForm(false);
     setAudienceChoice(null);
     setSelectedAudienceId(null);
-    setExistingAudiences([]);
     setShowScriptDialog(false);
     setShowEmailDialog(false);
     setShowGoalDialog(false);
@@ -34,38 +40,43 @@ export const useDialogState = () => {
     setAdvertisingGoal('');
     setEmailStyle(null);
     setSocialMediaPlatform(null);
-    setIsProcessing(false);
+    setIsProcessing(false); // Important: reset processing state
   };
 
   return {
-    isLoading,
-    setIsLoading,
+    // State
     showForm,
-    setShowForm,
     audienceChoice,
-    setAudienceChoice,
     selectedAudienceId,
-    setSelectedAudienceId,
     existingAudiences,
-    setExistingAudiences,
+    isLoading,
     showScriptDialog,
-    setShowScriptDialog,
     showEmailDialog,
-    setShowEmailDialog,
     showGoalDialog,
-    setShowGoalDialog,
     showEmailStyleDialog,
-    setShowEmailStyleDialog,
     showSocialMediaPlatformDialog,
-    setShowSocialMediaPlatformDialog,
     advertisingGoal,
-    setAdvertisingGoal,
     emailStyle,
-    setEmailStyle,
     socialMediaPlatform,
-    setSocialMediaPlatform,
     isProcessing,
+    
+    // Setters
+    setShowForm,
+    setAudienceChoice,
+    setSelectedAudienceId,
+    setExistingAudiences,
+    setIsLoading,
+    setShowScriptDialog,
+    setShowEmailDialog,
+    setShowGoalDialog,
+    setShowEmailStyleDialog,
+    setShowSocialMediaPlatformDialog,
+    setAdvertisingGoal,
+    setEmailStyle,
+    setSocialMediaPlatform,
     setIsProcessing,
-    resetState
+    
+    // Actions
+    resetState,
   };
 };

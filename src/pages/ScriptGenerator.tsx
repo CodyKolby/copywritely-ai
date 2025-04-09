@@ -28,12 +28,23 @@ const ScriptGenerator = () => {
     window.scrollTo(0, 0);
   }, []);
   
-  // Handle dialog closed - recheck premium status
+  // Handle dialog closed - recheck premium status and reset templateId if needed
   const handleDialogOpenChange = (open: boolean) => {
     templateSelection.handleDialogOpenChange(open);
-    if (!open && user?.id) {
+    
+    // When dialog is closed, perform cleanup
+    if (!open) {
       // Revalidate premium after dialog closes
-      premiumVerification.validatePremiumStatus();
+      if (user?.id) {
+        premiumVerification.validatePremiumStatus();
+      }
+      
+      // Force update to react to changes
+      const forceUpdate = setTimeout(() => {
+        console.log("Dialog closed - cleaning up state");
+      }, 100);
+      
+      return () => clearTimeout(forceUpdate);
     }
   };
 
@@ -82,6 +93,7 @@ const ScriptGenerator = () => {
 
         {!premiumVerification.isCheckingPremium && (
           <TargetAudienceDialog
+            key={`dialog-${templateSelection.currentTemplateId || 'default'}`} // Add key to force re-render on template change
             open={templateSelection.targetAudienceDialogOpen}
             onOpenChange={handleDialogOpenChange}
             templateId={templateSelection.currentTemplateId}

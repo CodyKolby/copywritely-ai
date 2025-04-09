@@ -58,21 +58,36 @@ export const useTargetAudienceDialog = ({
     setAdvertisingGoal: dialogState.setAdvertisingGoal,
     setEmailStyle: dialogState.setEmailStyle,
     setSocialMediaPlatform: dialogState.setSocialMediaPlatform,
-    setIsProcessing: dialogState.setIsProcessing  // Added the missing property
+    setIsProcessing: dialogState.setIsProcessing
   }, templateId);
 
-  // Reset state when dialog opens/closes
+  // Reset state when dialog opens/closes or template changes
   useEffect(() => {
     if (!open) {
       dialogState.resetState();
     }
   }, [open]);
 
+  // Reset specific dialog states when template changes
+  useEffect(() => {
+    if (templateId) {
+      // Reset dialog flow states to prevent incorrect dialog sequences
+      dialogState.setShowGoalDialog(false);
+      dialogState.setShowEmailStyleDialog(false);
+      dialogState.setShowSocialMediaPlatformDialog(false);
+      dialogState.setShowScriptDialog(false);
+      dialogState.setShowEmailDialog(false);
+      dialogState.setAdvertisingGoal('');
+      dialogState.setEmailStyle(null);
+      dialogState.setSocialMediaPlatform(null);
+      dialogState.setIsProcessing(false); // Make sure processing state is reset
+    }
+  }, [templateId]);
+
   // Enhanced form submission handler
   const handleFormSubmit = async (values: any) => {
-    dialogState.setIsProcessing(true);
-    
     try {
+      dialogState.setIsProcessing(true);
       const audienceId = await submitAudienceForm(values);
       
       if (audienceId) {
@@ -81,6 +96,9 @@ export const useTargetAudienceDialog = ({
         dialogState.setShowGoalDialog(true);
         toast.success('Grupa docelowa została utworzona');
       }
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      toast.error('Wystąpił błąd podczas tworzenia grupy docelowej');
     } finally {
       dialogState.setIsProcessing(false);
     }

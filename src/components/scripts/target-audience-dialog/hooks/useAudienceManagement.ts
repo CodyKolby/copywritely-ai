@@ -23,11 +23,13 @@ export const useAudienceManagement = (
   // Choice selection handler
   const handleChoiceSelection = (choice: 'existing' | 'new') => {
     deps.setAudienceChoice(choice);
+    deps.setIsProcessing(false); // Reset processing state when changing choice
   };
 
   // Handlers for existing audience selection
   const handleExistingAudienceSelect = (audienceId: string) => {
     deps.setSelectedAudienceId(audienceId);
+    deps.setIsProcessing(false); // Reset processing state when changing selection
   };
 
   // Continue button handler
@@ -37,11 +39,17 @@ export const useAudienceManagement = (
       return;
     }
     
-    // Set processing state for UI feedback
-    deps.setIsProcessing(true);
-    
-    // Always show goal dialog next
-    deps.setShowGoalDialog(true);
+    try {
+      // Set processing state for UI feedback
+      deps.setIsProcessing(true);
+      
+      // Always show goal dialog next
+      deps.setShowGoalDialog(true);
+      
+    } catch (error) {
+      console.error("Error in continue flow:", error);
+      deps.setIsProcessing(false);
+    }
   };
 
   // Handler for creating a new audience
@@ -51,7 +59,13 @@ export const useAudienceManagement = (
       return;
     }
     
-    deps.setShowForm(true);
+    try {
+      deps.setShowForm(true);
+      deps.setIsProcessing(false); // Reset processing state when showing form
+    } catch (error) {
+      console.error("Error showing form:", error);
+      deps.setIsProcessing(false);
+    }
   };
 
   return {

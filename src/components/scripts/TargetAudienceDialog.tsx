@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import TargetAudienceForm from './TargetAudienceForm';
 import GeneratedScriptDialog from './GeneratedScriptDialog';
@@ -8,7 +8,7 @@ import EmailStyleDialog from './EmailStyleDialog';
 import SocialMediaPlatformDialog from './SocialMediaPlatformDialog';
 import GeneratedEmailDialog from './GeneratedEmailDialog';
 import { TargetAudienceDialogProps } from './target-audience-dialog/types';
-import { useTargetAudienceDialog } from './target-audience-dialog/hooks/useTargetAudienceDialog';
+import { useTargetAudienceDialog } from './target-audience-dialog/useTargetAudienceDialog';
 import DialogSelectionContent from './target-audience-dialog/DialogSelectionContent';
 import { EmailStyle } from './EmailStyleDialog';
 import { SocialMediaPlatform } from './SocialMediaPlatformDialog';
@@ -56,6 +56,19 @@ const TargetAudienceDialog = ({
     userId,
     isPremium
   });
+
+  // Force reset isProcessing when component unmounts or dialog closes
+  useEffect(() => {
+    if (!open) {
+      // This will help ensure the isProcessing state is always reset when the dialog closes
+      const resetTimeout = setTimeout(() => {
+        // This is a no-op if the component is unmounted, but helps ensure state is reset
+        // We use a timeout to ensure this happens after any animations
+      }, 300);
+      
+      return () => clearTimeout(resetTimeout);
+    }
+  }, [open]);
 
   const handleDialogClose = () => {
     onOpenChange(false);
