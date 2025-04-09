@@ -15,23 +15,27 @@ const corsHeaders = {
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
-// Define a clear, customizable system prompt for the SocialContentAgent
-// ===== EDITABLE PROMPT BEGINS HERE =====
-// Feel free to customize this prompt according to your needs
-const SYSTEM_PROMPT = `Zwróć sam tekst posta, który brzmi "TEST" bez żadnych dodatkowych komentarzy czy formatowania.`;
-// ===== EDITABLE PROMPT ENDS HERE =====
+// Default prompt as fallback
+const DEFAULT_PROMPT = `Zwróć sam tekst posta, który brzmi "TEST" bez żadnych dodatkowych komentarzy czy formatowania.`;
+
+// Get system prompt from environment variable with fallback to default
+const SYSTEM_PROMPT = Deno.env.get('SOCIAL_CONTENT_PROMPT') || DEFAULT_PROMPT;
 
 // Version tracking to help detect updates
-const FUNCTION_VERSION = "v1.0.1";
+const FUNCTION_VERSION = "v1.1.0";
 
-console.log(`[STARTUP] SocialContentAgent initialized with version ${FUNCTION_VERSION}`);
-console.log(`[STARTUP] Current system prompt: "${SYSTEM_PROMPT}"`);
+// Generate a deployment ID to track specific deployments
+const DEPLOYMENT_ID = crypto.randomUUID().substring(0, 8);
+
+console.log(`[STARTUP][${DEPLOYMENT_ID}] SocialContentAgent initialized with version ${FUNCTION_VERSION}`);
+console.log(`[STARTUP][${DEPLOYMENT_ID}] Using prompt from environment: ${Deno.env.get('SOCIAL_CONTENT_PROMPT') ? 'YES' : 'NO'}`);
+console.log(`[STARTUP][${DEPLOYMENT_ID}] Current system prompt: "${SYSTEM_PROMPT}"`);
 
 serve(async (req) => {
   const requestId = crypto.randomUUID();
   const startTime = new Date().toISOString();
   console.log(`[${startTime}][REQ:${requestId}] SocialContentAgent received request:`, req.method, req.url);
-  console.log(`[${startTime}][REQ:${requestId}] Using function version: ${FUNCTION_VERSION}`);
+  console.log(`[${startTime}][REQ:${requestId}] Using function version: ${FUNCTION_VERSION}, deployment: ${DEPLOYMENT_ID}`);
   
   // Handle OPTIONS requests for CORS preflight
   if (req.method === 'OPTIONS') {
@@ -80,7 +84,7 @@ serve(async (req) => {
     // Force a clear timestamp and random value to avoid caching
     const currentTimestamp = timestamp || startTime;
     const randomValue = Math.random().toString(36).substring(2, 15);
-    const requestCacheBuster = cacheBuster || `${Date.now()}-${randomValue}`;
+    const requestCacheBuster = `${Date.now()}-${randomValue}-${DEPLOYMENT_ID}-${requestId}`;
     
     // Determine which hook to use
     const hookToUse = selectedHook || hookOutput.hooks[0];
@@ -89,6 +93,8 @@ serve(async (req) => {
     const userPrompt = `Timestamp to avoid caching: ${currentTimestamp}
     Random value to break cache: ${requestCacheBuster}
     Request ID: ${requestId}
+    Deployment ID: ${DEPLOYMENT_ID}
+    Function version: ${FUNCTION_VERSION}
     
     Oto dane o grupie docelowej:
     ${JSON.stringify(targetAudience, null, 2)}
@@ -122,7 +128,8 @@ serve(async (req) => {
         'X-Request-ID': requestId,
         'X-Timestamp': currentTimestamp,
         'X-Cache-Buster': requestCacheBuster,
-        'X-Random': randomValue
+        'X-Random': randomValue,
+        'X-Deployment-ID': DEPLOYMENT_ID
       },
       body: JSON.stringify({
         model: 'gpt-4o',
@@ -156,8 +163,10 @@ serve(async (req) => {
       platform: platform || 'Meta (Instagram/Facebook)',
       debugInfo: {
         systemPromptUsed: SYSTEM_PROMPT,
+        promptSource: Deno.env.get('SOCIAL_CONTENT_PROMPT') ? 'environment' : 'default',
         timestamp: startTime,
         requestId: requestId,
+        deploymentId: DEPLOYMENT_ID,
         functionVersion: FUNCTION_VERSION
       }
     };
@@ -186,8 +195,10 @@ serve(async (req) => {
         error: error.message || "Unknown error",
         timestamp: timestamp,
         requestId: requestId,
+        deploymentId: DEPLOYMENT_ID,
         debugInfo: {
           systemPromptUsed: SYSTEM_PROMPT,
+          promptSource: Deno.env.get('SOCIAL_CONTENT_PROMPT') ? 'environment' : 'default',
           functionVersion: FUNCTION_VERSION
         }
       }),

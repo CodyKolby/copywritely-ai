@@ -15,23 +15,25 @@ const corsHeaders = {
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
-// Define a clear, customizable system prompt for the SocialHookAgent
-// ===== EDITABLE PROMPT BEGINS HERE =====
-// Feel free to customize this prompt according to your needs
-const SYSTEM_PROMPT = `Twoim zadaniem jest napisnie 3 hooków, który każdy będzie miał treść "TEST"`;
-// ===== EDITABLE PROMPT ENDS HERE =====
-
 // Version tracking to help detect updates
-const FUNCTION_VERSION = "v1.0.0";
+const FUNCTION_VERSION = "v1.1.0";
 
-console.log(`[STARTUP] SocialHookAgent initialized with version ${FUNCTION_VERSION}`);
-console.log(`[STARTUP] Current system prompt: "${SYSTEM_PROMPT}"`);
+// Get system prompt from environment variable with fallback
+const DEFAULT_PROMPT = `Twoim zadaniem jest napisnie 3 hooków, który każdy będzie miał treść "TEST"`;
+const SYSTEM_PROMPT = Deno.env.get('SOCIAL_HOOK_PROMPT') || DEFAULT_PROMPT;
+
+// Generate a deployment ID to track specific deployments
+const DEPLOYMENT_ID = crypto.randomUUID().substring(0, 8);
+
+console.log(`[STARTUP][${DEPLOYMENT_ID}] SocialHookAgent initialized with version ${FUNCTION_VERSION}`);
+console.log(`[STARTUP][${DEPLOYMENT_ID}] Using prompt from environment: ${Deno.env.get('SOCIAL_HOOK_PROMPT') ? 'YES' : 'NO'}`);
+console.log(`[STARTUP][${DEPLOYMENT_ID}] Current system prompt: "${SYSTEM_PROMPT}"`);
 
 serve(async (req) => {
   const requestId = crypto.randomUUID();
   const startTime = new Date().toISOString();
   console.log(`[${startTime}][REQ:${requestId}] SocialHookAgent received request:`, req.method, req.url);
-  console.log(`[${startTime}][REQ:${requestId}] Using function version: ${FUNCTION_VERSION}`);
+  console.log(`[${startTime}][REQ:${requestId}] Using function version: ${FUNCTION_VERSION}, deployment: ${DEPLOYMENT_ID}`);
   console.log(`[${startTime}][REQ:${requestId}] Current system prompt: "${SYSTEM_PROMPT}"`);
   
   // Handle OPTIONS requests for CORS preflight
@@ -73,8 +75,10 @@ serve(async (req) => {
     
     // Construct prompt with provided data
     const userPrompt = `Timestamp to avoid caching: ${startTime}
-    Random value to break cache: ${Math.random().toString(36).substring(2, 15)}
     Request ID: ${requestId}
+    Deployment ID: ${DEPLOYMENT_ID}
+    Function version: ${FUNCTION_VERSION}
+    Random value to break cache: ${Math.random().toString(36).substring(2, 15)}-${Date.now()}
     
     Oto dane o grupie docelowej:
     ${JSON.stringify(targetAudience, null, 2)}
@@ -91,7 +95,7 @@ serve(async (req) => {
     
     // Add anti-caching measures
     const requestTimestamp = timestamp || new Date().toISOString();
-    const cacheBusterValue = cacheBuster || `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+    const cacheBusterValue = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}-${DEPLOYMENT_ID}-${requestId}`;
     
     // Get response from OpenAI
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -105,7 +109,8 @@ serve(async (req) => {
         'X-Cache-Buster': cacheBusterValue,
         'X-Timestamp': requestTimestamp,
         'X-Random': Math.random().toString(36).substring(2, 15),
-        'X-Request-ID': requestId
+        'X-Request-ID': requestId,
+        'X-Deployment-ID': DEPLOYMENT_ID
       },
       body: JSON.stringify({
         model: 'gpt-4o',
@@ -207,8 +212,10 @@ serve(async (req) => {
     
     console.log(`[${startTime}][REQ:${requestId}] Processed SocialHookAgent response:`, processedResponse);
     
-    // Add version info to help track which version is running
+    // Add deployment and prompt info to help track which version is running
     processedResponse.version = FUNCTION_VERSION;
+    processedResponse.deploymentId = DEPLOYMENT_ID;
+    processedResponse.promptSource = Deno.env.get('SOCIAL_HOOK_PROMPT') ? 'environment' : 'default';
     processedResponse.promptUsed = SYSTEM_PROMPT;
     processedResponse.requestId = requestId;
     
@@ -232,6 +239,8 @@ serve(async (req) => {
       JSON.stringify({ 
         error: error.message || "Unknown error", 
         version: FUNCTION_VERSION,
+        deploymentId: DEPLOYMENT_ID,
+        promptSource: Deno.env.get('SOCIAL_HOOK_PROMPT') ? 'environment' : 'default',
         promptUsed: SYSTEM_PROMPT,
         timestamp: timestamp,
         requestId: requestId

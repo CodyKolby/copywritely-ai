@@ -12,4 +12,8 @@ verify_jwt = false
 [functions.posthook-agent]
 verify_jwt = false
 
+[functions.social-hook-agent]
+verify_jwt = true
 
+[functions.social-content-agent]
+verify_jwt = true
