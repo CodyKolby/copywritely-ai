@@ -23,12 +23,21 @@ const ScriptDisplay = ({
   const isDevelopment = process.env.NODE_ENV === 'development' || true; // Always show debug in preview
 
   // Check if the script contains the debug test marker
-  const containsDebugMarker = script.includes('DEBUGTEST_V1_2025-04-09');
+  const containsDebugMarker = script && (
+    script.includes('DEBUGTEST_V1_2025-04-09') || 
+    script === 'TEST' ||
+    (script && script.trim().toLowerCase() === 'test')
+  );
   
   // Remove the debug marker from the script if present
-  const cleanedScript = containsDebugMarker 
-    ? script.replace('DEBUGTEST_V1_2025-04-09', '') 
-    : script;
+  const cleanedScript = !script ? '' : (
+    containsDebugMarker && script.includes('DEBUGTEST_V1_2025-04-09') 
+      ? script.replace('DEBUGTEST_V1_2025-04-09', '') 
+      : script
+  );
+
+  // If script is just TEST, don't display it as content
+  const displayScript = cleanedScript === 'TEST' ? '' : cleanedScript;
 
   return (
     <div className="p-6 pt-0">
@@ -54,19 +63,33 @@ const ScriptDisplay = ({
         {containsDebugMarker && (
           <div className="mb-4 p-3 bg-blue-100 border border-blue-300 text-blue-800 rounded-lg">
             <p className="font-medium">Debug Test Detected:</p>
-            <p className="text-sm">System wykonał test z kodem: DEBUGTEST_V1_2025-04-09</p>
+            {script.includes('DEBUGTEST') ? (
+              <p className="text-sm">System wykonał test z kodem: DEBUGTEST_V1_2025-04-09</p>
+            ) : (
+              <p className="text-sm">System zwrócił oczekiwaną wiadomość testową: {script}</p>
+            )}
           </div>
         )}
         
-        <div className="prose max-w-none">
-          {cleanedScript.split('\n').map((line, i) => (
-            line ? (
-              <p key={i} className="mb-4 last:mb-0">
-                {line}
-              </p>
-            ) : <br key={i} />
-          ))}
-        </div>
+        {/* Display the content only if there's something to display */}
+        {displayScript && (
+          <div className="prose max-w-none">
+            {displayScript.split('\n').map((line, i) => (
+              line ? (
+                <p key={i} className="mb-4 last:mb-0">
+                  {line}
+                </p>
+              ) : <br key={i} />
+            ))}
+          </div>
+        )}
+
+        {/* Display empty state message if no content after cleanup */}
+        {!displayScript && (
+          <div className="text-center p-4 border border-dashed border-gray-300 rounded-lg bg-gray-50">
+            <p className="text-gray-500">Zwrócono tylko dane testowe.</p>
+          </div>
+        )}
 
         {isDevelopment && (
           <div className="mt-6 border-t pt-4">

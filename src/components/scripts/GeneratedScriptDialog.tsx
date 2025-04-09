@@ -33,7 +33,9 @@ const GeneratedScriptDialog = ({
     projectId,
     handleRetry,
     handleGenerateWithNextHook,
-    handleViewProject
+    handleViewProject,
+    rawResponse,
+    debugInfo
   } = useScriptGeneration(open, targetAudienceId, templateId, advertisingGoal, user?.id, socialMediaPlatform);
   
   const showLoading = isLoading || isGeneratingNewScript;
@@ -75,6 +77,8 @@ const GeneratedScriptDialog = ({
                 hookIndex={currentHookIndex}
                 totalHooks={totalHooks}
                 adStructure={isSocialMediaPost ? '' : 'PAS'}
+                rawResponse={rawResponse}
+                debugInfo={debugInfo}
               />
             </div>
             

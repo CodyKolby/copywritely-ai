@@ -13,16 +13,17 @@ const corsHeaders = {
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
 // System prompt for PostscriptAgent - THIS IS THE DEFINITIVE PROMPT
-const SYSTEM_PROMPT = `napisz po prostu słowo 'TEST'"`;
+const SYSTEM_PROMPT = `napisz po prostu słowo 'TEST'`;
 
-console.log("PostscriptAgent Edge Function initialized with new debugging - version 4");
+console.log("PostscriptAgent Edge Function initialized with new debugging - version 5");
 console.log(`Complete system prompt being used: "${SYSTEM_PROMPT}"`);
 
 serve(async (req) => {
   // Track execution with timestamps
   const startTime = new Date().toISOString();
   console.log(`[${startTime}] PostscriptAgent received request:`, req.method, req.url);
-  console.log(`[${startTime}] DEBUGVER4: Complete rebuild with extensive logging`);
+  console.log(`[${startTime}] DEBUGVER5: Complete rebuild with updated prompt to 'TEST'`);
+  console.log(`[${startTime}] Current system prompt: "${SYSTEM_PROMPT}"`);
   
   // Handle OPTIONS requests for CORS preflight
   if (req.method === 'OPTIONS') {
@@ -65,8 +66,13 @@ serve(async (req) => {
     console.log(`[${startTime}] Target audience data:`, JSON.stringify(targetAudience).substring(0, 300));
     console.log(`[${startTime}] Posthook output:`, JSON.stringify(posthookOutput));
     
-    // Construct prompt for agent
-    const userPrompt = `Oto dane o grupie docelowej:
+    // Force a clear timestamp to avoid caching
+    const timestamp = new Date().toISOString();
+    
+    // Construct prompt for agent with our forced timestamp to avoid caching
+    const userPrompt = `Timestamp to avoid caching: ${timestamp}
+    
+    Oto dane o grupie docelowej:
     ${JSON.stringify(targetAudience, null, 2)}
     
     Cel reklamy: ${advertisingGoal || 'Brak określonego celu'}
@@ -79,7 +85,7 @@ serve(async (req) => {
     
     // Log the prompts for debugging
     console.log(`[${startTime}] SYSTEM PROMPT BEING USED:`, SYSTEM_PROMPT);
-    console.log(`[${startTime}] USER PROMPT BEING USED:`, userPrompt);
+    console.log(`[${startTime}] USER PROMPT BEING USED (with timestamp):`, userPrompt);
     
     // Get response from OpenAI
     console.log(`[${startTime}] Sending request to OpenAI API`);
@@ -118,7 +124,7 @@ serve(async (req) => {
       debugInfo: {
         systemPromptUsed: SYSTEM_PROMPT,
         timestamp: startTime,
-        version: "DEBUGVER4"
+        version: "DEBUGVER5"
       }
     };
     
@@ -138,7 +144,7 @@ serve(async (req) => {
         timestamp: timestamp,
         debugInfo: {
           systemPromptUsed: SYSTEM_PROMPT,
-          version: "DEBUGVER4-ERROR"
+          version: "DEBUGVER5-ERROR"
         }
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

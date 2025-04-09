@@ -26,6 +26,8 @@ export const useScriptGeneration = (
   const [projectSaved, setProjectSaved] = useState(false);
   const [projectId, setProjectId] = useState<string | null>(null);
   const [saveAttempted, setSaveAttempted] = useState(false);
+  const [rawResponse, setRawResponse] = useState<string | undefined>(undefined);
+  const [debugInfo, setDebugInfo] = useState<any | undefined>(undefined);
 
   useEffect(() => {
     let isMounted = true;
@@ -38,6 +40,8 @@ export const useScriptGeneration = (
       setProjectSaved(false);
       setProjectId(null);
       setSaveAttempted(false);
+      setRawResponse(undefined);
+      setDebugInfo(undefined);
       
       try {
         console.log("Weryfikacja ID grupy docelowej:", targetAudienceId);
@@ -65,9 +69,15 @@ export const useScriptGeneration = (
           setAllHooks(result.allHooks || []);
           setCurrentHookIndex(result.currentHookIndex || 0);
           setTotalHooks(result.totalHooks || 0);
+          // Save raw response and debug info
+          setRawResponse(result.rawResponse);
+          setDebugInfo(result.debugInfo);
           setIsLoading(false);
           setGenerationCount(prevCount => prevCount + 1);
           setIsGeneratingNewScript(false);
+          
+          console.log("Debug info from result:", result.debugInfo);
+          console.log("Raw response from result:", result.rawResponse);
           
           // Automatycznie zapisz skrypt po wygenerowaniu
           if (userId && result.script) {
@@ -212,6 +222,8 @@ export const useScriptGeneration = (
     isSaving,
     projectSaved,
     projectId,
+    rawResponse,
+    debugInfo,
     handleRetry,
     handleGenerateWithNextHook,
     handleViewProject
