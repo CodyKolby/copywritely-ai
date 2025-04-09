@@ -18,12 +18,12 @@ const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 // Version tracking to help detect updates
 const FUNCTION_VERSION = "v1.1.0";
 
+// Generate a deployment ID to track specific deployments
+const DEPLOYMENT_ID = crypto.randomUUID().substring(0, 8);
+
 // Get system prompt from environment variable with fallback
 const DEFAULT_PROMPT = `Twoim zadaniem jest napisnie 3 hooków, który każdy będzie miał treść "TEST"`;
 const SYSTEM_PROMPT = Deno.env.get('SOCIAL_HOOK_PROMPT') || DEFAULT_PROMPT;
-
-// Generate a deployment ID to track specific deployments
-const DEPLOYMENT_ID = crypto.randomUUID().substring(0, 8);
 
 console.log(`[STARTUP][${DEPLOYMENT_ID}] SocialHookAgent initialized with version ${FUNCTION_VERSION}`);
 console.log(`[STARTUP][${DEPLOYMENT_ID}] Using prompt from environment: ${Deno.env.get('SOCIAL_HOOK_PROMPT') ? 'YES' : 'NO'}`);
