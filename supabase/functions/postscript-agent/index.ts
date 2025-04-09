@@ -12,16 +12,16 @@ const corsHeaders = {
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
-// System prompt for PostscriptAgent
-const SYSTEM_PROMPT = `Zwróć tylko tekst "DUPA"`;
+// System prompt for PostscriptAgent - THIS IS THE DEFINITIVE PROMPT
+const SYSTEM_PROMPT = `Napisz po prostu słowo "TEST123"`;
 
-console.log("PostscriptAgent Edge Function initialized v2");
-console.log("First 300 chars of system prompt:", SYSTEM_PROMPT.substring(0, 300));
-console.log("Current complete system prompt:", SYSTEM_PROMPT);
+console.log("PostscriptAgent Edge Function initialized v3");
+console.log(`Current complete system prompt: "${SYSTEM_PROMPT}"`);
+console.log(`First 300 chars of system prompt: "${SYSTEM_PROMPT.substring(0, 300)}"`);
 
 serve(async (req) => {
   console.log("PostscriptAgent received request:", req.method, req.url);
-  console.log("USING UPDATED FUNCTION with completely new implementation!");
+  console.log("CLEAN IMPLEMENTATION - REBUILT FROM SCRATCH");
   
   // Handle OPTIONS requests for CORS preflight
   if (req.method === 'OPTIONS') {
@@ -94,7 +94,7 @@ serve(async (req) => {
     
     // Log the prompt for debugging
     console.log("User prompt for PostscriptAgent:", userPrompt);
-    console.log("System prompt being used:", SYSTEM_PROMPT);
+    console.log(`System prompt being used: "${SYSTEM_PROMPT}"`);
     
     // Get response from OpenAI
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -123,7 +123,7 @@ serve(async (req) => {
     let responseText = data.choices[0].message.content;
     
     // Log response for debugging
-    console.log("Raw OpenAI response:", responseText);
+    console.log(`Raw OpenAI response: "${responseText}"`);
     
     // Return exactly what we got from the API, without further processing
     // This will help us verify that the system prompt is working

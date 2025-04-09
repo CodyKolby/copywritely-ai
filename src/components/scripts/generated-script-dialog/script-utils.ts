@@ -199,7 +199,7 @@ async function generateSocialMediaPost(
     console.log(`Selected hook at index ${actualHookIndex}: ${selectedHook}`);
 
     // Make sure we're calling the root postscript-agent function (not nested in ai-agents)
-    console.log("Calling main postscript-agent edge function directly");
+    console.log("Calling postscript-agent edge function directly");
     
     // Add retry mechanism for postscript-agent call
     let postscriptResponse;
@@ -209,7 +209,7 @@ async function generateSocialMediaPost(
       try {
         console.log(`Postscript attempt ${postscriptRetryCount + 1}/${maxRetries}`);
         
-        // IMPORTANT: Call the root function directly
+        // IMPORTANT: Call the root function directly - NOT in ai-agents folder
         postscriptResponse = await supabase.functions.invoke('postscript-agent', {
           body: {
             targetAudience,
@@ -248,7 +248,7 @@ async function generateSocialMediaPost(
       console.error('All attempts to call postscript-agent failed:', postscriptResponse?.error);
       // Fallback to just using the hook as content if postscript-agent fails
       return {
-        script: selectedHook + "\n\nTreść postu nie została wygenerowana z powodu błędu.",
+        script: `${selectedHook}\n\nTreść postu nie została wygenerowana z powodu błędu.`,
         bestHook: selectedHook,
         allHooks: hooks,
         currentHookIndex: actualHookIndex,
@@ -268,7 +268,7 @@ async function generateSocialMediaPost(
       console.log('PostscriptAgent raw response text:', postscriptData.rawResponse);
     }
 
-    // Create fallback content
+    // Create content from response
     let content = selectedHook + "\n\nTreść postu nie została wygenerowana.";
     let cta = "Skontaktuj się z nami, aby dowiedzieć się więcej.";
     
@@ -276,6 +276,11 @@ async function generateSocialMediaPost(
       content = postscriptData.content;
     } else {
       console.error('Missing content in response from postscript-agent:', postscriptData);
+    }
+    
+    // Set CTA if available or use default
+    if (postscriptData && postscriptData.cta) {
+      cta = postscriptData.cta;
     }
 
     return {
@@ -287,6 +292,7 @@ async function generateSocialMediaPost(
       cta: cta,
       theme: theme,
       form: form,
+      rawResponse: postscriptData.rawResponse || content,
       adStructure: '' // Puste pole dla postów social media
     };
   } catch (error) {
