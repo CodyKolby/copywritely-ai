@@ -9,25 +9,40 @@ import { processHookResponse, constructHookPrompt } from "./hook-service.ts";
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
 // Version tracking to help detect updates
-const FUNCTION_VERSION = "v1.1.0";
+const FUNCTION_VERSION = "v1.2.0";
 
 // Generate a deployment ID to track specific deployments
 const DEPLOYMENT_ID = generateDeploymentId();
 
 // Get system prompt from environment variable with fallback
-const DEFAULT_PROMPT = `Twoim zadaniem jest napisnie 3 hooków, który każdy będzie miał treść "TEST"`;
-const SYSTEM_PROMPT = Deno.env.get('SOCIAL_HOOK_PROMPT') || DEFAULT_PROMPT;
+const DEFAULT_PROMPT = `
+Jesteś ekspertem od tworzenia krótkich hooków do social media.
+Twoim zadaniem jest stworzyć 3 angażujące hooki i określić tematykę oraz formę posta.
 
+Zwróć odpowiedź w formacie JSON:
+{
+  "hooks": ["Hook 1", "Hook 2", "Hook 3"],
+  "theme": "Temat posta",
+  "form": "Forma posta (np. post tekstowy, carousel, video)",
+  "cta": "Sugerowane wezwanie do działania"
+}
+`;
+
+// Get system prompt from environment variable
+const envPrompt = Deno.env.get('SOCIAL_HOOK_PROMPT');
+const SYSTEM_PROMPT = envPrompt || DEFAULT_PROMPT;
+
+// Log startup information
 console.log(`[STARTUP][${DEPLOYMENT_ID}] SocialHookAgent initialized with version ${FUNCTION_VERSION}`);
-console.log(`[STARTUP][${DEPLOYMENT_ID}] Using prompt from environment: ${Deno.env.get('SOCIAL_HOOK_PROMPT') ? 'YES' : 'NO'}`);
-console.log(`[STARTUP][${DEPLOYMENT_ID}] Current system prompt: "${SYSTEM_PROMPT}"`);
+console.log(`[STARTUP][${DEPLOYMENT_ID}] Using prompt from environment: ${envPrompt ? 'YES' : 'NO'}`);
+console.log(`[STARTUP][${DEPLOYMENT_ID}] System prompt length: ${SYSTEM_PROMPT.length} characters`);
+console.log(`[STARTUP][${DEPLOYMENT_ID}] System prompt first 100 chars: "${SYSTEM_PROMPT.substring(0, 100)}..."`);
 
 serve(async (req) => {
   const requestId = crypto.randomUUID();
   const startTime = getCurrentTimestamp();
   console.log(`[${startTime}][REQ:${requestId}] SocialHookAgent received request:`, req.method, req.url);
   console.log(`[${startTime}][REQ:${requestId}] Using function version: ${FUNCTION_VERSION}, deployment: ${DEPLOYMENT_ID}`);
-  console.log(`[${startTime}][REQ:${requestId}] Current system prompt: "${SYSTEM_PROMPT}"`);
   
   // Handle OPTIONS requests for CORS preflight
   const optionsResponse = handleOptions(req);
@@ -58,12 +73,26 @@ serve(async (req) => {
       );
     }
     
+    // Validate system prompt
+    if (!SYSTEM_PROMPT || SYSTEM_PROMPT.length < 10) {
+      console.error(`[${startTime}][REQ:${requestId}] System prompt is invalid or too short: "${SYSTEM_PROMPT}"`);
+      return new Response(
+        JSON.stringify({ 
+          error: 'System prompt is invalid or missing',
+          promptLength: SYSTEM_PROMPT?.length || 0,
+          promptSource: envPrompt ? 'environment' : 'default',
+          deploymentId: DEPLOYMENT_ID
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     // Construct prompt with provided data
     const userPrompt = constructHookPrompt(requestData, requestId, DEPLOYMENT_ID, FUNCTION_VERSION);
     
-    // Log the prompt for debugging
-    console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT BEING USED:`, SYSTEM_PROMPT);
-    console.log(`[${startTime}][REQ:${requestId}] USER PROMPT BEING USED:`, userPrompt);
+    // Log prompt information
+    console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT LENGTH: ${SYSTEM_PROMPT.length} characters`);
+    console.log(`[${startTime}][REQ:${requestId}] USER PROMPT LENGTH: ${userPrompt.length} characters`);
     
     // Add anti-caching measures
     const requestTimestamp = timestamp || startTime;
@@ -81,7 +110,8 @@ serve(async (req) => {
     let responseText = data.choices[0].message.content;
     
     // Log complete response for debugging
-    console.log(`[${startTime}][REQ:${requestId}] Raw SocialHookAgent response:`, responseText);
+    console.log(`[${startTime}][REQ:${requestId}] Raw SocialHookAgent response length: ${responseText.length} chars`);
+    console.log(`[${startTime}][REQ:${requestId}] Raw response preview: ${responseText.substring(0, 200)}...`);
     
     // Process response to extract hooks, theme, and form
     let processedResponse = processHookResponse(responseText);
@@ -99,7 +129,6 @@ serve(async (req) => {
     processedResponse.version = FUNCTION_VERSION;
     processedResponse.deploymentId = DEPLOYMENT_ID;
     processedResponse.promptSource = Deno.env.get('SOCIAL_HOOK_PROMPT') ? 'environment' : 'default';
-    processedResponse.promptUsed = SYSTEM_PROMPT;
     processedResponse.requestId = requestId;
     
     return new Response(
@@ -123,7 +152,7 @@ serve(async (req) => {
       version: FUNCTION_VERSION,
       deploymentId: DEPLOYMENT_ID,
       promptSource: Deno.env.get('SOCIAL_HOOK_PROMPT') ? 'environment' : 'default',
-      promptUsed: SYSTEM_PROMPT,
+      systemPromptLength: SYSTEM_PROMPT.length,
       timestamp: timestamp,
       requestId: requestId
     });

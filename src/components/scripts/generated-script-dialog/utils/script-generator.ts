@@ -96,16 +96,20 @@ async function generateSocialMediaPost(
     platform: socialMediaPlatform?.key || 'meta',
     cacheBuster: currentCacheBuster,
     timestamp: currentTimestamp,
-    randomValue: randomValue
+    randomValue: randomValue,
+    test: process.env.NODE_ENV === 'development'
   };
 
-  console.log('Wysyłanie żądania do SocialHookAgent:', {
-    ...socialHookRequestBody,
-    targetAudience: '...abbreviated...'
+  console.log('Wysyłanie żądania do SocialHookAgent z parametrami:', {
+    targetAudienceId: targetAudience?.id,
+    advertisingGoal,
+    platform: socialMediaPlatform?.key || 'meta',
+    hookIndex,
+    cacheBuster: currentCacheBuster
   });
 
   // CRITICAL: Force no-cache by appending a unique timestamp to the URL
-  const socialHookUrl = `https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/social-hook-agent?_nocache=${Date.now()}`;
+  const socialHookUrl = `https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/social-hook-agent?_nocache=${Date.now()}-${randomValue}`;
   
   try {
     console.log('Calling social-hook-agent with URL:', socialHookUrl);
@@ -138,25 +142,41 @@ async function generateSocialMediaPost(
       try {
         const errorJson = JSON.parse(errorText);
         console.error('SocialHook API error JSON:', errorJson);
+        throw new Error(`Błąd podczas generowania hooków: ${errorJson.error || `Status ${socialHookResponse.status}`}`);
       } catch (e) {
-        // If not JSON, just use the text
+        // If not JSON or parsing error, just use the text
+        throw new Error(`Błąd podczas generowania hooków: Status ${socialHookResponse.status} - ${errorText.substring(0, 100)}`);
       }
-      
-      throw new Error(`Błąd podczas generowania hooków: Status ${socialHookResponse.status} - ${errorText}`);
     }
 
     const socialHookData = await socialHookResponse.json();
     console.log('Step 1 Complete: SocialHook response:', socialHookData);
     
-    // Check if we got version info to confirm we're using the updated function
-    if (socialHookData.version) {
-      console.log(`Using SocialHook agent version: ${socialHookData.version}, prompt: ${socialHookData.promptUsed || 'unknown'}`);
+    // Enhanced validation for hook data
+    if (!socialHookData) {
+      throw new Error('Otrzymano pustą odpowiedź z serwisu generowania hooków');
     }
-
-    if (!socialHookData || !socialHookData.hooks || socialHookData.hooks.length === 0) {
+    
+    // Check for error in the response
+    if (socialHookData.error) {
+      throw new Error(`Błąd z serwisu hooków: ${socialHookData.error}`);
+    }
+    
+    // Check if we got valid hooks
+    if (!socialHookData.hooks || socialHookData.hooks.length === 0) {
       console.error('No hooks returned from social-hook-agent:', socialHookData);
       throw new Error('Nie udało się wygenerować hooków - brak lub pusta tablica hooków');
     }
+    
+    // Log detailed information about the hooks
+    console.log('Generated hooks details:', {
+      count: socialHookData.hooks.length,
+      hooks: socialHookData.hooks,
+      theme: socialHookData.theme,
+      form: socialHookData.form,
+      promptSource: socialHookData.promptSource,
+      version: socialHookData.version
+    });
 
     // Select the hook based on the provided index, defaulting to the first one if out of bounds
     const selectedHookIndex = hookIndex >= 0 && hookIndex < socialHookData.hooks.length ? hookIndex : 0;

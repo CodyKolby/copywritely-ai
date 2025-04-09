@@ -8,21 +8,28 @@ import { constructContentPrompt } from "./content-service.ts";
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
-// Default prompt as fallback
-const DEFAULT_PROMPT = `Zwróć sam tekst posta, który brzmi "TEST" bez żadnych dodatkowych komentarzy czy formatowania.`;
-
-// Get system prompt from environment variable with fallback to default
-const SYSTEM_PROMPT = Deno.env.get('SOCIAL_CONTENT_PROMPT') || DEFAULT_PROMPT;
-
 // Version tracking to help detect updates
-const FUNCTION_VERSION = "v1.1.0";
+const FUNCTION_VERSION = "v1.2.0";
 
 // Generate a deployment ID to track specific deployments
 const DEPLOYMENT_ID = generateDeploymentId();
 
+// Default prompt as fallback
+const DEFAULT_PROMPT = `
+Jesteś ekspertem od tworzenia treści na social media.
+Twoim zadaniem jest napisać angażujący post bazujący na dostarczonym hooku i tematyce.
+Zwróć sam tekst posta bez żadnych dodatkowych komentarzy czy formatowania.
+`;
+
+// Get system prompt from environment variable with fallback
+const envPrompt = Deno.env.get('SOCIAL_CONTENT_PROMPT');
+const SYSTEM_PROMPT = envPrompt || DEFAULT_PROMPT;
+
+// Log startup information
 console.log(`[STARTUP][${DEPLOYMENT_ID}] SocialContentAgent initialized with version ${FUNCTION_VERSION}`);
-console.log(`[STARTUP][${DEPLOYMENT_ID}] Using prompt from environment: ${Deno.env.get('SOCIAL_CONTENT_PROMPT') ? 'YES' : 'NO'}`);
-console.log(`[STARTUP][${DEPLOYMENT_ID}] Current system prompt: "${SYSTEM_PROMPT}"`);
+console.log(`[STARTUP][${DEPLOYMENT_ID}] Using prompt from environment: ${envPrompt ? 'YES' : 'NO'}`);
+console.log(`[STARTUP][${DEPLOYMENT_ID}] System prompt length: ${SYSTEM_PROMPT.length} characters`);
+console.log(`[STARTUP][${DEPLOYMENT_ID}] System prompt first 100 chars: "${SYSTEM_PROMPT.substring(0, 100)}..."`);
 
 serve(async (req) => {
   const requestId = crypto.randomUUID();
@@ -41,7 +48,7 @@ serve(async (req) => {
       throw new Error("Invalid JSON in request body");
     });
     
-    console.log(`[${startTime}][REQ:${requestId}] Request data received:`, JSON.stringify(requestData).substring(0, 500));
+    console.log(`[${startTime}][REQ:${requestId}] Request data received with keys:`, Object.keys(requestData));
     
     const { targetAudience, advertisingGoal, platform, hookOutput, cacheBuster, timestamp, selectedHook } = requestData;
     
@@ -55,26 +62,55 @@ serve(async (req) => {
       cacheBuster: cacheBuster || 'none'
     });
     
-    if (!targetAudience || !hookOutput) {
-      console.error(`[${startTime}][REQ:${requestId}] Missing required data:`, {
-        hasTargetAudience: !!targetAudience,
-        hasHookOutput: !!hookOutput
-      });
+    // Validate input data
+    if (!targetAudience) {
+      console.error(`[${startTime}][REQ:${requestId}] Missing target audience data`);
       return new Response(
-        JSON.stringify({ error: 'Brak wymaganych danych' }),
+        JSON.stringify({ error: 'Brak danych o grupie docelowej' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
-    console.log(`[${startTime}][REQ:${requestId}] Target audience data:`, JSON.stringify(targetAudience).substring(0, 300));
-    console.log(`[${startTime}][REQ:${requestId}] Hook output:`, JSON.stringify(hookOutput));
+    // Validate hook output
+    if (!hookOutput || !hookOutput.hooks || hookOutput.hooks.length === 0) {
+      console.error(`[${startTime}][REQ:${requestId}] Invalid or missing hook output:`, hookOutput);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Brak lub nieprawidłowe dane o hookach',
+          hookOutput: hookOutput || 'undefined'
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Validate system prompt
+    if (!SYSTEM_PROMPT || SYSTEM_PROMPT.length < 10) {
+      console.error(`[${startTime}][REQ:${requestId}] System prompt is invalid or too short: "${SYSTEM_PROMPT}"`);
+      return new Response(
+        JSON.stringify({ 
+          error: 'System prompt is invalid or missing',
+          promptLength: SYSTEM_PROMPT?.length || 0,
+          promptSource: envPrompt ? 'environment' : 'default',
+          deploymentId: DEPLOYMENT_ID
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Print full information about hooks for debugging
+    console.log(`[${startTime}][REQ:${requestId}] Hook output details:`, {
+      hooks: hookOutput.hooks,
+      theme: hookOutput.theme,
+      form: hookOutput.form,
+      cta: hookOutput.cta
+    });
     
     // Construct prompt for agent
     const userPrompt = constructContentPrompt(requestData, requestId, DEPLOYMENT_ID, FUNCTION_VERSION);
     
-    // Log the prompts for debugging
-    console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT BEING USED:`, SYSTEM_PROMPT);
-    console.log(`[${startTime}][REQ:${requestId}] USER PROMPT BEING USED (with anti-cache measures):`, userPrompt);
+    // Log prompt information
+    console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT LENGTH: ${SYSTEM_PROMPT.length} characters`);
+    console.log(`[${startTime}][REQ:${requestId}] USER PROMPT LENGTH: ${userPrompt.length} characters`);
     
     // Prepare cache busting and metadata
     const currentTimestamp = timestamp || startTime;
@@ -95,7 +131,8 @@ serve(async (req) => {
     const responseText = data.choices[0].message.content;
     
     // Log complete response from API
-    console.log(`[${startTime}][REQ:${requestId}] Raw OpenAI response:`, responseText);
+    console.log(`[${startTime}][REQ:${requestId}] Raw OpenAI response length: ${responseText.length} chars`);
+    console.log(`[${startTime}][REQ:${requestId}] Raw response preview: ${responseText.substring(0, 200)}...`);
     
     // Determine which hook was used
     const hookToUse = selectedHook || hookOutput.hooks[0];
@@ -109,8 +146,8 @@ serve(async (req) => {
       cta: hookOutput.cta || 'Sprawdź więcej',
       platform: platform || 'Meta (Instagram/Facebook)',
       debugInfo: {
-        systemPromptUsed: SYSTEM_PROMPT,
-        promptSource: Deno.env.get('SOCIAL_CONTENT_PROMPT') ? 'environment' : 'default',
+        systemPromptSource: envPrompt ? 'environment' : 'default',
+        systemPromptLength: SYSTEM_PROMPT.length,
         timestamp: startTime,
         requestId: requestId,
         deploymentId: DEPLOYMENT_ID,
@@ -118,7 +155,7 @@ serve(async (req) => {
       }
     };
     
-    console.log(`[${startTime}][REQ:${requestId}] Final response sent:`, JSON.stringify(result).substring(0, 500));
+    console.log(`[${startTime}][REQ:${requestId}] Final response sent with content length: ${result.content.length} chars`);
     
     return new Response(
       JSON.stringify(result),
@@ -143,8 +180,8 @@ serve(async (req) => {
       requestId: requestId,
       deploymentId: DEPLOYMENT_ID,
       debugInfo: {
-        systemPromptUsed: SYSTEM_PROMPT,
-        promptSource: Deno.env.get('SOCIAL_CONTENT_PROMPT') ? 'environment' : 'default',
+        systemPromptSource: envPrompt ? 'environment' : 'default',
+        systemPromptLength: SYSTEM_PROMPT?.length || 0,
         functionVersion: FUNCTION_VERSION
       }
     });
