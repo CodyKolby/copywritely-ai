@@ -59,7 +59,6 @@ export const generateScript = async (
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
         'Authorization': `Bearer ${accessToken}`,
-        'apikey': supabase.supabaseKey // Add the API key for authorization
       },
       body: JSON.stringify(posthookRequestBody),
     });
@@ -106,7 +105,6 @@ export const generateScript = async (
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
         'Authorization': `Bearer ${accessToken}`,
-        'apikey': supabase.supabaseKey // Add the API key for authorization
       },
       body: JSON.stringify(postscriptRequestBody),
     });
