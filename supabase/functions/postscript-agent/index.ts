@@ -18,11 +18,11 @@ const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 // Define a clear, customizable system prompt for the PostscriptAgent
 // ===== EDITABLE PROMPT BEGINS HERE =====
 // Feel free to customize this prompt according to your needs
-const SYSTEM_PROMPT = `Twoim jedynym zadaniem jest napisać "TESTSCRIPT2"`;
+const SYSTEM_PROMPT = `Twoim jedynym zadaniem jest napisać "TESTSCRIPT3"`;
 // ===== EDITABLE PROMPT ENDS HERE =====
 
-// Force redeployment marker: v1.0.3
-console.log(`PostscriptAgent initialized with version v1.0.3 and prompt: "${SYSTEM_PROMPT}"`);
+// Force redeployment marker: v1.0.4
+console.log(`PostscriptAgent initialized with version v1.0.4 and prompt: "${SYSTEM_PROMPT}"`);
 
 serve(async (req) => {
   // Track execution with timestamps and add a unique request ID
@@ -143,7 +143,7 @@ serve(async (req) => {
         systemPromptUsed: SYSTEM_PROMPT,
         timestamp: startTime,
         requestId: requestId,
-        promptVersion: "V14-CUSTOM-" + new Date().toISOString()
+        promptVersion: "V15-CUSTOM-" + new Date().toISOString()
       }
     };
     
@@ -169,7 +169,7 @@ serve(async (req) => {
         requestId: requestId,
         debugInfo: {
           systemPromptUsed: SYSTEM_PROMPT,
-          version: "V14-ERROR-" + new Date().toISOString()
+          version: "V15-ERROR-" + new Date().toISOString()
         }
       }),
       { 

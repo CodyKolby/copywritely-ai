@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { generateScript } from './utils/script-generator';
 import { saveProjectWithContent } from './utils/project-utils';
@@ -24,14 +23,14 @@ export const useScriptGeneration = (
   const [projectSaved, setProjectSaved] = useState(false);
   const [projectId, setProjectId] = useState<string | null>(null);
   
-  // Debug information for tracking function versions and prompts
   const [debugInfo, setDebugInfo] = useState<any | null>(null);
   
   const generationInProgress = useRef(false);
   const requestId = useRef(`${Date.now()}-${Math.random().toString(36).substring(2, 15)}`);
   const mountedRef = useRef(true);
   const retryCount = useRef(0);
-  const maxRetries = 2; // Maximum number of auto-retries for transient errors
+  const maxRetries = 2;
+  const lastRequestTimestamp = useRef(Date.now());
 
   useEffect(() => {
     mountedRef.current = true;
@@ -46,7 +45,8 @@ export const useScriptGeneration = (
       setError(null);
       setIsGeneratingNewScript(false);
       setIsSaving(false);
-      retryCount.current = 0; // Reset retry counter when dialog closes
+      retryCount.current = 0;
+      lastRequestTimestamp.current = Date.now();
     }
   }, [open]);
 
@@ -77,7 +77,8 @@ export const useScriptGeneration = (
     try {
       generationInProgress.current = true;
       
-      const currentRequestId = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+      lastRequestTimestamp.current = Date.now();
+      const currentRequestId = `${lastRequestTimestamp.current}-${Math.random().toString(36).substring(2, 15)}`;
       requestId.current = currentRequestId;
       
       console.log("Starting script generation with params:", { 
@@ -85,7 +86,8 @@ export const useScriptGeneration = (
         targetAudienceId, 
         advertisingGoal,
         hookIndex,
-        requestId: currentRequestId
+        requestId: currentRequestId,
+        timestamp: new Date(lastRequestTimestamp.current).toISOString()
       });
 
       const result = await generateScript(
@@ -107,8 +109,7 @@ export const useScriptGeneration = (
       setTotalHooks(result.totalHooks);
       setDebugInfo(result.debugInfo || null);
       
-      // Check if we got our expected test values
-      if (result.script === 'TESTSCRIPT2' || result.bestHook === 'TESTHOOK2') {
+      if (result.script === 'TESTSCRIPT3' || result.bestHook === 'TESTHOOK4') {
         console.log("SUCCESS: Got expected test values, confirming prompts are working correctly!");
         toast.success("Prompty zaktualizowane pomyślnie!");
       }
@@ -121,21 +122,18 @@ export const useScriptGeneration = (
         debugInfo: result.debugInfo
       });
 
-      // Reset retry counter on success
       retryCount.current = 0;
 
     } catch (err: any) {
       if (mountedRef.current) {
         console.error("Error generating script:", err);
         
-        // Implement auto-retry for certain errors
         if (retryCount.current < maxRetries && 
             (err.message?.includes('fetch') || err.message?.includes('network') || err.message?.includes('timeout'))) {
           retryCount.current++;
           console.log(`Automatically retrying (${retryCount.current}/${maxRetries})...`);
           toast.error(`Błąd połączenia. Automatyczne ponawianie (${retryCount.current}/${maxRetries})...`);
           
-          // Add a small delay before retry
           setTimeout(() => {
             generateScriptContent(hookIndex, true);
           }, 1500);
@@ -163,6 +161,7 @@ export const useScriptGeneration = (
 
   const handleRetry = () => {
     setError(null);
+    lastRequestTimestamp.current = Date.now();
     generateScriptContent(currentHookIndex, true);
   };
 
@@ -173,6 +172,7 @@ export const useScriptGeneration = (
     }
 
     setIsGeneratingNewScript(true);
+    lastRequestTimestamp.current = Date.now();
     await generateScriptContent(currentHookIndex + 1);
   };
 

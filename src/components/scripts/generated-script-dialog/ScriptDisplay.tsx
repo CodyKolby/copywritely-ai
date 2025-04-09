@@ -29,6 +29,7 @@ const ScriptDisplay = ({
     script === 'TEST' ||
     script === 'TESTSCRIPT' ||
     script === 'TESTSCRIPT2' ||
+    script === 'TESTSCRIPT3' ||
     (script && script.trim().toLowerCase() === 'test')
   );
   
@@ -36,7 +37,8 @@ const ScriptDisplay = ({
   const containsHookDebugMarker = bestHook && (
     bestHook.includes('TEST') ||
     bestHook === 'TESTHOOK' ||
-    bestHook === 'TESTHOOK2'
+    bestHook === 'TESTHOOK2' ||
+    bestHook === 'TESTHOOK4'
   );
   
   // Remove the debug marker from the script if present
@@ -81,6 +83,12 @@ const ScriptDisplay = ({
               {containsHookDebugMarker ? `Hook: "${bestHook}"` : ''}
             </p>
             <p className="text-sm mt-2">This confirms that your custom prompt is working correctly.</p>
+            {debugInfo && (
+              <div className="mt-2 text-xs bg-white p-2 rounded border border-green-200 overflow-auto">
+                <p><strong>Debug Info:</strong></p>
+                <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
+              </div>
+            )}
           </div>
         )}
         

@@ -31,3 +31,14 @@ export interface ScriptGenerationResult {
   rawResponse?: string;
   debugInfo?: any;
 }
+
+export interface SavedProject {
+  id: string;
+  title: string;
+  content: string;
+  created_at?: string;
+  updated_at?: string;
+  user_id?: string;
+  type?: string;
+  platform?: string;
+}

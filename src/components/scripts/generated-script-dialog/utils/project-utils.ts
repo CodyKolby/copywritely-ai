@@ -1,66 +1,38 @@
 
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import type { SocialMediaPlatform } from '../../SocialMediaPlatformDialog';
-import type { SavedProject } from './types';
+import { SavedProject } from './types';
 
 export const saveProjectWithContent = async (
   content: string,
   title: string,
-  template_type: string,
+  type: string,
   userId: string,
-  socialMediaPlatform?: SocialMediaPlatform
+  platform?: SocialMediaPlatform
 ): Promise<SavedProject | null> => {
   try {
-    console.log('Saving project content with utils:', { 
-      contentLength: content.length, 
-      title, 
-      template_type, 
-      userId,
-      platform: socialMediaPlatform?.key
-    });
-
-    // Create project object with metadata about platform
-    let fullContent = content;
-    
-    // If it's a social media post, add metadata
-    if (template_type === 'social' && socialMediaPlatform) {
-      fullContent = `${content}\n\n---\nPlatforma: ${socialMediaPlatform.label}`;
-    }
-
-    // Check if userId exists
-    if (!userId) {
-      console.error('No user ID provided when saving project');
-      throw new Error('User ID is required to save a project');
-    }
-
-    // Create a new project in the database
-    const { data: project, error } = await supabase
+    const { data, error } = await supabase
       .from('projects')
-      .insert({
-        title: title.length > 0 ? title.substring(0, 255) : 'Nowy projekt',
-        content: fullContent,
-        user_id: userId,
-        title_auto_generated: true,
-        status: 'Draft'
-      })
-      .select('id, title, content, created_at')
+      .insert([
+        {
+          title,
+          content,
+          user_id: userId,
+          type,
+          platform: platform?.key || null
+        }
+      ])
+      .select()
       .single();
 
     if (error) {
-      console.error('Error creating project in project-utils:', error);
+      console.error('Error saving project:', error);
       throw new Error(`Failed to save project: ${error.message}`);
     }
 
-    console.log('Project saved successfully in project-utils:', project);
-
-    return {
-      id: project.id,
-      title: project.title,
-      content: project.content,
-      created_at: project.created_at
-    };
-  } catch (error: any) {
-    console.error('Error in saveProjectWithContent:', error);
-    throw error;
+    return data as SavedProject;
+  } catch (err) {
+    console.error('Exception saving project:', err);
+    throw err;
   }
 };

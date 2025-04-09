@@ -1,6 +1,6 @@
 
-# A string used to distinguish different Supabase projects on the same host. Defaults to the
-# working directory name when running `supabase init`.
+# A string used to distinguish different Supabase projects on the same host. Defaults to the working
+# directory name when running `supabase init`.
 project_id = "jorbqjareswzdrsmepbv"
 
 [functions.stripe-webhook]
@@ -9,3 +9,5 @@ verify_jwt = false
 [functions.postscript-agent]
 verify_jwt = false
 
+[functions.posthook-agent]
+verify_jwt = false

@@ -105,8 +105,10 @@ async function generateSocialMediaPost(
     targetAudience: '...abbreviated...'
   });
 
-  // Use the full URL with direct project ID reference to avoid any subdomain resolution issues
-  const posthookResponse = await fetch('https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/posthook-agent', {
+  // IMPORTANT: Always force a new fetch by including a unique timestamp in the URL
+  const posthookUrl = `https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/posthook-agent?_t=${Date.now()}`;
+  
+  const posthookResponse = await fetch(posthookUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -116,7 +118,8 @@ async function generateSocialMediaPost(
       'Authorization': `Bearer ${accessToken}`,
       'X-Cache-Buster': currentCacheBuster,
       'X-Timestamp': currentTimestamp,
-      'X-Random': randomValue
+      'X-Random': randomValue,
+      'X-No-Cache': 'true'
     },
     body: JSON.stringify(posthookRequestBody),
   });
@@ -171,8 +174,10 @@ async function generateSocialMediaPost(
   const { data: { session: refreshedSession } } = await supabase.auth.getSession();
   const refreshedAccessToken = refreshedSession?.access_token || accessToken;
 
-  // Use the full URL with direct project ID reference to avoid any subdomain resolution issues
-  const postscriptResponse = await fetch('https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/postscript-agent', {
+  // IMPORTANT: Always force a new fetch by including a unique timestamp in the URL
+  const postscriptUrl = `https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/postscript-agent?_t=${Date.now()}`;
+  
+  const postscriptResponse = await fetch(postscriptUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -182,7 +187,8 @@ async function generateSocialMediaPost(
       'Authorization': `Bearer ${refreshedAccessToken}`,
       'X-Cache-Buster': newCacheBuster,
       'X-Timestamp': newTimestamp,
-      'X-Random': newRandomValue
+      'X-Random': newRandomValue,
+      'X-No-Cache': 'true'
     },
     body: JSON.stringify(postscriptRequestBody),
   });
