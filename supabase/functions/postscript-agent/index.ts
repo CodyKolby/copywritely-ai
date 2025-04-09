@@ -13,22 +13,7 @@ const corsHeaders = {
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
 // Updated system prompt for PostscriptAgent with Polish content
-const SYSTEM_PROMPT = `Jesteś PostscriptAgentem, ekspertem od tworzenia postów w mediach społecznościowych na podstawie dostarczonych hooków. Twoim zadaniem jest tworzyć wysokiej jakości treści postów w języku polskim, które są angażujące i skłaniają odbiorców do działania.
-
-Gdy otrzymasz hook (pierwsze zdanie przyciągające uwagę), tematykę i inne szczegóły, stwórz post który:
-1. Zaczyna się od przekazanego hooka
-2. Rozwija temat w sposób angażujący
-3. Jest odpowiednio sformatowany dla wskazanej platformy
-4. Kończy się mocnym wezwaniem do działania (CTA)
-
-Oto kilka wskazówek:
-- Używaj prostego, konwersacyjnego języka
-- Dodawaj emocje i osobiste doświadczenia
-- Unikaj żargonu i skomplikowanych słów
-- Dostosuj długość i format do platformy (krócej dla TikTok, dłużej dla LinkedIn)
-- Używaj emoji dla Meta i TikTok, mniej dla LinkedIn
-
-Twoja odpowiedź powinna zawierać TYLKO TREŚĆ POSTA, bez żadnych dodatkowych komentarzy, instrukcji czy nagłówków.`;
+const SYSTEM_PROMPT = `Twoim jedynym zadaniem jest napisanie słowa "TEST"`;
 
 serve(async (req) => {
   // Track execution with timestamps and add a unique request ID
