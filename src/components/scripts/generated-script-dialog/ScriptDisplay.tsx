@@ -22,10 +22,11 @@ const ScriptDisplay = ({
 }: ScriptDisplayProps) => {
   const isDevelopment = process.env.NODE_ENV === 'development' || true; // Always show debug in preview
 
-  // Check if the script contains the debug test marker
+  // Check if the script contains any debug test markers
   const containsDebugMarker = script && (
     script.includes('DEBUGTEST_V1_2025-04-09') || 
     script === 'TEST' ||
+    script === 'ESSA' ||
     (script && script.trim().toLowerCase() === 'test')
   );
   
@@ -36,8 +37,8 @@ const ScriptDisplay = ({
       : script
   );
 
-  // If script is just TEST, don't display it as content
-  const displayScript = cleanedScript === 'TEST' ? '' : cleanedScript;
+  // If script is just a test message (TEST, ESSA), don't display it as content
+  const displayScript = ['TEST', 'ESSA'].includes(cleanedScript) ? '' : cleanedScript;
 
   return (
     <div className="p-6 pt-0">
