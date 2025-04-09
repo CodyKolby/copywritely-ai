@@ -6,22 +6,7 @@ import { corsHeaders } from "../cors.ts";
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
 // System prompt for PostscriptAgent
-const SYSTEM_PROMPT = `Jesteś PostscriptAgentem, ekspertem w tworzeniu angażujących treści i mocnych wezwań do działania (CTA) w postach w mediach społecznościowych.
-
-Twoje zadanie:
-1. Na podstawie danych o grupie docelowej, celu reklamy i wyjścia PosthookAgenta
-2. Stworzyć pełną treść postu dopasowaną do platformy
-3. Dodać skuteczne wezwanie do działania (CTA)
-4. Optymalizować treść pod kątem angażowania odbiorców
-
-Dopasuj styl do wskazanej platformy:
-- Meta (Instagram/Facebook): wizualny, emocjonalny z wyraźnym CTA
-- TikTok: krótki, dynamiczny, conversational z silnym hasłem do działania
-- LinkedIn: wartościowy, profesjonalny, budujący autorytet z biznesowym CTA
-
-Zwróć pełną treść postu w formacie JSON z polami:
-- content: główna treść postu (włącznie z hookiem)
-- cta: wyraźne wezwanie do działania`;
+const SYSTEM_PROMPT = `masz zwrócić jedynie słowo "TEST1"`;
 
 console.log("PostscriptAgent Edge Function initialized");
 
