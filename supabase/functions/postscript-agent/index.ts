@@ -13,7 +13,7 @@ const corsHeaders = {
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
 // System prompt for PostscriptAgent - THIS IS THE DEFINITIVE PROMPT
-const SYSTEM_PROMPT = `napisz po prostu słowo 'ESSA'`;
+const SYSTEM_PROMPT = `napisz po prostu słowo 'DUPAMUDZINA'`;
 
 console.log("PostscriptAgent Edge Function initialized with new debugging - version 6");
 console.log(`Complete system prompt being used: "${SYSTEM_PROMPT}"`);
