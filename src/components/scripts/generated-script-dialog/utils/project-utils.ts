@@ -1,66 +1,89 @@
 
-import { v4 as uuidv4 } from 'uuid';
-import { supabase } from "@/lib/supabase";
+import { supabase } from '@/lib/supabase';
+import type { SavedProject } from './types';
 import type { SocialMediaPlatform } from '../../SocialMediaPlatformDialog';
 
-// Save script as a project in the database
-export async function saveScriptAsProject(
-  scriptContent: string, 
-  hookText: string, 
-  templateId: string, 
+/**
+ * Save a script as a new project
+ */
+export const saveProjectWithContent = async (
+  content: string,
+  title: string,
+  template_type: string,
   userId: string,
   socialMediaPlatform?: SocialMediaPlatform
-) {
+): Promise<SavedProject | null> => {
   try {
-    const projectId = uuidv4();
+    console.log('Saving project with content:', {
+      contentLength: content.length,
+      titleLength: title.length,
+      template_type,
+      userId,
+      platform: socialMediaPlatform?.label || 'N/A'
+    });
 
-    const title = 
-      templateId === 'email' ? 'Email sprzedażowy' : 
-      templateId === 'social' ? `Post na ${getSocialMediaPlatformName(socialMediaPlatform)}` : 
-      templateId === 'ad' ? 'Reklama internetowa' : 
-      'Skrypt';
+    if (!content || !title || !userId) {
+      console.error('Missing required data for project creation');
+      throw new Error('Missing required data');
+    }
 
+    // Set project metadata
     const projectData = {
-      id: projectId,
-      title: `${title}: ${hookText.substring(0, 30)}${hookText.length > 30 ? '...' : ''}`,
-      content: scriptContent,
-      hook: hookText,
       user_id: userId,
-      type: templateId,
-      status: 'Draft' as 'Draft' | 'Completed' | 'Reviewed',
-      metadata: socialMediaPlatform ? { socialMediaPlatform } : null
+      title,
+      content,
+      template_type,
+      // Save social media platform if specified
+      platform: socialMediaPlatform?.key || null,
+      metadata: {
+        source: 'script-generator',
+        platformInfo: socialMediaPlatform ? {
+          key: socialMediaPlatform.key,
+          label: socialMediaPlatform.label,
+          description: socialMediaPlatform.description
+        } : null
+      }
     };
 
+    // Insert project into database
     const { data, error } = await supabase
       .from('projects')
       .insert(projectData)
-      .select()
+      .select('id, title, content, created_at')
       .single();
 
     if (error) {
-      console.error('Error saving script as project:', error);
-      throw error;
+      console.error('Error saving project:', error);
+      throw new Error(`Błąd podczas zapisywania projektu: ${error.message}`);
     }
 
-    return data;
+    console.log('Project saved successfully:', data);
+    return data as SavedProject;
   } catch (error) {
-    console.error('Error in saveScriptAsProject:', error);
+    console.error('Error in saveProjectWithContent:', error);
     throw error;
   }
-}
+};
 
-// Helper to get a friendly platform name
-export function getSocialMediaPlatformName(platform?: SocialMediaPlatform): string {
-  if (!platform) return 'social media';
-  
-  switch (platform.key) {
-    case 'meta':
-      return 'Meta (Facebook/Instagram)';
-    case 'tiktok':
-      return 'TikTok';
-    case 'linkedin':
-      return 'LinkedIn';
-    default:
-      return 'social media';
+/**
+ * Get a project by ID
+ */
+export const getProjectById = async (projectId: string): Promise<SavedProject | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('projects')
+      .select('id, title, content, created_at')
+      .eq('id', projectId)
+      .single();
+
+    if (error) {
+      console.error('Error fetching project:', error);
+      return null;
+    }
+
+    return data as SavedProject;
+  } catch (error) {
+    console.error('Error in getProjectById:', error);
+    return null;
   }
-}
+};

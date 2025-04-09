@@ -1,115 +1,97 @@
 
 import React, { useState } from 'react';
-import { DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Facebook, Instagram, Linkedin, MessageSquare } from 'lucide-react';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-// Update the type definition to match how it's being used
-export interface SocialMediaPlatform {
-  key: 'meta' | 'tiktok' | 'linkedin';
+export type SocialMediaPlatform = {
+  key: string;
   label: string;
-}
+  description: string;
+  icon?: React.ReactNode;
+};
+
+const platforms: SocialMediaPlatform[] = [
+  {
+    key: 'meta',
+    label: 'Meta',
+    description: 'Facebook i Instagram - idealny do budowania społeczności i relacji z klientami.',
+  },
+  {
+    key: 'tiktok',
+    label: 'TikTok',
+    description: 'Platforma do krótkich, dynamicznych treści wideo skierowanych do młodszej grupy odbiorców.'
+  },
+  {
+    key: 'linkedin',
+    label: 'LinkedIn',
+    description: 'Profesjonalna sieć społecznościowa, idealna do komunikacji B2B i budowania autorytetu w branży.'
+  }
+];
 
 interface SocialMediaPlatformDialogProps {
-  onSubmit: (platform: SocialMediaPlatform) => void;
-  onBack: () => void;
-  onCancel: () => void;
-  isProcessing?: boolean;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onPlatformSelect: (platform: SocialMediaPlatform) => void;
 }
 
 const SocialMediaPlatformDialog = ({
-  onSubmit,
-  onBack,
-  onCancel,
-  isProcessing = false
+  open,
+  onOpenChange,
+  onPlatformSelect
 }: SocialMediaPlatformDialogProps) => {
-  const [selectedPlatform, setSelectedPlatform] = useState<SocialMediaPlatform['key'] | null>(null);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (selectedPlatform) {
-      const platformLabel = {
-        meta: 'Meta (Instagram & Facebook)',
-        tiktok: 'TikTok',
-        linkedin: 'LinkedIn'
-      }[selectedPlatform];
-      
-      onSubmit({ key: selectedPlatform, label: platformLabel });
+  const [selectedTab, setSelectedTab] = useState('meta');
+  
+  const handleSelection = () => {
+    const platform = platforms.find(p => p.key === selectedTab);
+    if (platform) {
+      onPlatformSelect(platform);
     }
+    onOpenChange(false);
   };
-
+  
   return (
-    <>
-      <DialogHeader>
-        <DialogTitle className="text-2xl">Wybierz platformę social media</DialogTitle>
-        <DialogDescription>
-          Wskaż platformę, na której będzie publikowany Twój post
-        </DialogDescription>
-      </DialogHeader>
-
-      <form onSubmit={handleSubmit} className="space-y-6 py-4">
-        <RadioGroup
-          value={selectedPlatform || ""}
-          onValueChange={(value) => setSelectedPlatform(value as SocialMediaPlatform['key'])}
-          className="space-y-3"
-        >
-          <div className="flex items-center space-x-2 rounded-md border p-4 cursor-pointer hover:bg-gray-50">
-            <RadioGroupItem value="meta" id="meta" />
-            <Label htmlFor="meta" className="flex items-center gap-2 cursor-pointer">
-              <div className="flex gap-2 items-center">
-                <Facebook className="h-5 w-5 text-blue-600" />
-                <Instagram className="h-5 w-5 text-pink-600" />
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[525px]">
+        <DialogHeader>
+          <DialogTitle className="text-center text-2xl font-bold">
+            Wybierz platformę społecznościową
+          </DialogTitle>
+        </DialogHeader>
+        
+        <Tabs defaultValue="meta" value={selectedTab} onValueChange={setSelectedTab} className="pt-2">
+          <TabsList className="grid grid-cols-3 gap-2 w-full">
+            <TabsTrigger value="meta">Meta</TabsTrigger>
+            <TabsTrigger value="tiktok">TikTok</TabsTrigger>
+            <TabsTrigger value="linkedin">LinkedIn</TabsTrigger>
+          </TabsList>
+          
+          {platforms.map((platform) => (
+            <TabsContent 
+              key={platform.key} 
+              value={platform.key}
+              className="space-y-4 py-4"
+            >
+              <div className="space-y-2">
+                <h3 className="font-medium text-lg">{platform.label}</h3>
+                <p className="text-gray-500 dark:text-gray-400">
+                  {platform.description}
+                </p>
               </div>
-              <span>Meta (Instagram & Facebook)</span>
-            </Label>
-          </div>
-
-          <div className="flex items-center space-x-2 rounded-md border p-4 cursor-pointer hover:bg-gray-50">
-            <RadioGroupItem value="tiktok" id="tiktok" />
-            <Label htmlFor="tiktok" className="flex items-center gap-2 cursor-pointer">
-              <MessageSquare className="h-5 w-5 text-black" />
-              <span>TikTok</span>
-            </Label>
-          </div>
-
-          <div className="flex items-center space-x-2 rounded-md border p-4 cursor-pointer hover:bg-gray-50">
-            <RadioGroupItem value="linkedin" id="linkedin" />
-            <Label htmlFor="linkedin" className="flex items-center gap-2 cursor-pointer">
-              <Linkedin className="h-5 w-5 text-blue-700" />
-              <span>LinkedIn</span>
-            </Label>
-          </div>
-        </RadioGroup>
-
-        <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-0">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={onBack}
-            disabled={isProcessing}
-          >
-            Wstecz
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={onCancel}
-            disabled={isProcessing}
-          >
+            </TabsContent>
+          ))}
+        </Tabs>
+        
+        <div className="flex justify-end gap-2 pt-4">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
             Anuluj
           </Button>
-          <Button
-            type="submit"
-            className="bg-copywrite-teal hover:bg-copywrite-teal-dark"
-            disabled={!selectedPlatform || isProcessing}
-          >
-            {isProcessing ? "Przetwarzanie..." : "Kontynuuj"}
+          <Button onClick={handleSelection}>
+            Wybierz platformę
           </Button>
-        </DialogFooter>
-      </form>
-    </>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

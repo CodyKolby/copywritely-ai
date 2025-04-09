@@ -12,10 +12,25 @@ const corsHeaders = {
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
-// System prompt for PostscriptAgent - THIS IS THE DEFINITIVE PROMPT
-const SYSTEM_PROMPT = `napisz po prostu słowo 'DUPAMUDZINA'`;
+// Updated system prompt for PostscriptAgent with Polish content
+const SYSTEM_PROMPT = `Jesteś PostscriptAgentem, ekspertem od tworzenia postów w mediach społecznościowych na podstawie dostarczonych hooków. Twoim zadaniem jest tworzyć wysokiej jakości treści postów w języku polskim, które są angażujące i skłaniają odbiorców do działania.
 
-console.log("PostscriptAgent Edge Function initialized with new debugging - version 6");
+Gdy otrzymasz hook (pierwsze zdanie przyciągające uwagę), tematykę i inne szczegóły, stwórz post który:
+1. Zaczyna się od przekazanego hooka
+2. Rozwija temat w sposób angażujący
+3. Jest odpowiednio sformatowany dla wskazanej platformy
+4. Kończy się mocnym wezwaniem do działania (CTA)
+
+Oto kilka wskazówek:
+- Używaj prostego, konwersacyjnego języka
+- Dodawaj emocje i osobiste doświadczenia
+- Unikaj żargonu i skomplikowanych słów
+- Dostosuj długość i format do platformy (krócej dla TikTok, dłużej dla LinkedIn)
+- Używaj emoji dla Meta i TikTok, mniej dla LinkedIn
+
+Twoja odpowiedź powinna zawierać TYLKO TREŚĆ POSTA, bez żadnych dodatkowych komentarzy, instrukcji czy nagłówków.`;
+
+console.log("PostscriptAgent Edge Function initialized with new prompt - version 7");
 console.log(`Complete system prompt being used: "${SYSTEM_PROMPT}"`);
 
 serve(async (req) => {
@@ -23,7 +38,6 @@ serve(async (req) => {
   const requestId = crypto.randomUUID();
   const startTime = new Date().toISOString();
   console.log(`[${startTime}][REQ:${requestId}] PostscriptAgent received request:`, req.method, req.url);
-  console.log(`[${startTime}][REQ:${requestId}] DEBUGVER6: Updated prompt to 'ESSA' with aggressive anti-caching`);
   console.log(`[${startTime}][REQ:${requestId}] Current system prompt: "${SYSTEM_PROMPT}"`);
   
   // Handle OPTIONS requests for CORS preflight
@@ -132,7 +146,7 @@ serve(async (req) => {
         systemPromptUsed: SYSTEM_PROMPT,
         timestamp: startTime,
         requestId: requestId,
-        version: "DEBUGVER6"
+        version: "V7"
       }
     };
     
@@ -161,7 +175,7 @@ serve(async (req) => {
         requestId: requestId,
         debugInfo: {
           systemPromptUsed: SYSTEM_PROMPT,
-          version: "DEBUGVER6-ERROR"
+          version: "V7-ERROR"
         }
       }),
       { 

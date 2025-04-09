@@ -1,7 +1,7 @@
 
 import type { SocialMediaPlatform } from '../../SocialMediaPlatformDialog';
 import { ScriptGenerationResult, PosthookResponse, PostscriptResponse } from './types';
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
 
 // Main function to generate script
 export const generateScript = async (
@@ -17,7 +17,7 @@ export const generateScript = async (
       targetAudienceId,
       advertisingGoal,
       hookIndex,
-      platform: socialMediaPlatform?.label
+      platform: socialMediaPlatform?.label || 'Meta'
     });
 
     // Add a cache-busting timestamp to prevent caching issues
@@ -59,8 +59,9 @@ export const generateScript = async (
     });
 
     if (!posthookResponse.ok) {
-      console.error('PostHook API error:', await posthookResponse.text());
-      throw new Error('Błąd podczas generowania hooków');
+      const errorText = await posthookResponse.text();
+      console.error('PostHook API error:', errorText);
+      throw new Error(`Błąd podczas generowania hooków: ${errorText}`);
     }
 
     const posthookData: PosthookResponse = await posthookResponse.json();
@@ -103,8 +104,9 @@ export const generateScript = async (
     });
 
     if (!postscriptResponse.ok) {
-      console.error('PostScript API error:', await postscriptResponse.text());
-      throw new Error('Błąd podczas generowania skryptu');
+      const errorText = await postscriptResponse.text();
+      console.error('PostScript API error:', errorText);
+      throw new Error(`Błąd podczas generowania skryptu: ${errorText}`);
     }
 
     const postscriptData: PostscriptResponse = await postscriptResponse.json();
