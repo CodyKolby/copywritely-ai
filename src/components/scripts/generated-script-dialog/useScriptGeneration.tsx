@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { generateScript } from './utils/script-generator';
-import { saveScriptProject } from './utils/project-utils';
+import { saveProjectWithContent } from './utils/project-utils';
 import { SocialMediaPlatform } from '../SocialMediaPlatformDialog';
 import { toast } from 'sonner';
 
@@ -177,17 +177,14 @@ export const useScriptGeneration = (
     try {
       setIsSaving(true);
       
-      const savedProject = await saveScriptProject({
+      // Use saveProjectWithContent instead of saveScriptProject
+      const savedProject = await saveProjectWithContent(
+        generatedScript,
+        currentHook || "Nowy skrypt",
+        templateId || 'unknown',
         userId,
-        targetAudienceId, 
-        templateId: templateId || 'unknown',
-        hook: currentHook,
-        script: generatedScript,
-        hookIndex: currentHookIndex,
-        totalHooks,
-        platform: socialMediaPlatform?.key,
-        advertisingGoal
-      });
+        socialMediaPlatform
+      );
       
       if (savedProject && savedProject.id) {
         setProjectId(savedProject.id);
