@@ -20,6 +20,9 @@ const GeneratedScriptDialog = ({
 }: GeneratedScriptDialogProps) => {
   const { user } = useAuth();
   
+  // Prevent duplicate renders by using a stable key
+  const dialogKey = `${templateId}-${targetAudienceId}-${open ? 'open' : 'closed'}`;
+  
   const {
     isLoading,
     generatedScript,
@@ -50,9 +53,26 @@ const GeneratedScriptDialog = ({
   
   // Determine the loading stage
   const loadingStage = isGeneratingNewScript ? 'script' : undefined;
+  
+  // Log the script generation state
+  React.useEffect(() => {
+    if (open) {
+      console.log("Script generation dialog state:", {
+        isLoading,
+        templateId,
+        isSocialMediaPost,
+        isAdTemplate,
+        currentHookIndex,
+        totalHooks,
+        error: error ? true : false,
+        isGeneratingNewScript,
+        projectSaved
+      });
+    }
+  }, [open, isLoading, templateId, isSocialMediaPost, isAdTemplate, currentHookIndex, totalHooks, error, isGeneratingNewScript, projectSaved]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange} key={dialogKey}>
       <DialogContent 
         className="max-w-[700px] p-0 rounded-xl overflow-hidden bg-white" 
         aria-describedby={contentId}

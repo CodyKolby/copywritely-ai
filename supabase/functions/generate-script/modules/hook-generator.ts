@@ -78,14 +78,14 @@ Nie tłumacz, nie analizuj, nie komentuj.
 Zwracasz tylko ponumerowane hooki.
 `;
 
-    console.log('✏️ Prompt dla Hook Generator przygotowany (fragment):', hookGeneratorPrompt.substring(0, 150) + '...');
+    console.log('✏️ Prompt dla Hook Generator przygotowany');
 
     // Wywołanie OpenAI API z retry logic
     console.log('✏️ Wywołuję OpenAI API dla Hook Generator...');
     
     // Add retry logic for rate limit issues
     let attempts = 0;
-    const maxAttempts = 3;
+    const maxAttempts = 5;
     let waitTime = 2000; // Start with 2 seconds wait
     
     while (attempts < maxAttempts) {
@@ -97,7 +97,7 @@ Zwracasz tylko ponumerowane hooki.
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'gpt-4o-mini', // Use smaller, more efficient model
+            model: 'gpt-4o-mini',
             messages: [
               { role: 'system', content: hookGeneratorPrompt }
             ],

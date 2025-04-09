@@ -1,134 +1,152 @@
 
-import { useCallback } from "react";
-import { EmailStyle } from "../../EmailStyleDialog";
-import { SocialMediaPlatform } from "../../SocialMediaPlatformDialog";
+import { useCallback } from 'react';
+import { SocialMediaPlatform } from '../../SocialMediaPlatformDialog';
+import { EmailStyle } from '../../EmailStyleDialog';
 
-export interface DialogNavigationDeps {
-  setShowForm: (value: boolean) => void;
-  setShowGoalDialog: (value: boolean) => void;
-  setShowEmailStyleDialog: (value: boolean) => void;
-  setShowSocialMediaPlatformDialog: (value: boolean) => void;
-  setShowScriptDialog: (value: boolean) => void;
-  setShowEmailDialog: (value: boolean) => void;
-  setAdvertisingGoal: (value: string) => void;
-  setEmailStyle: (value: EmailStyle | null) => void;
-  setSocialMediaPlatform: (value: SocialMediaPlatform | null) => void;
-  setIsProcessing: (value: boolean) => void;
-  // Dependencies for transitions
+interface DialogNavigationParams {
+  setShowForm: (show: boolean) => void;
+  setShowGoalDialog: (show: boolean) => void;
+  setShowEmailStyleDialog: (show: boolean) => void;
+  setShowSocialMediaPlatformDialog: (show: boolean) => void;
+  setShowScriptDialog: (show: boolean) => void;
+  setShowEmailDialog: (show: boolean) => void;
+  setAdvertisingGoal: (goal: string) => void;
+  setEmailStyle: (style: EmailStyle | null) => void;
+  setSocialMediaPlatform: (platform: SocialMediaPlatform | null) => void;
+  setIsProcessing: (processing: boolean) => void;
   isTransitioning: boolean;
   transitionToDialog: (closeDialog: () => void, openDialog: () => void) => void;
 }
 
-export const useDialogNavigation = (deps: DialogNavigationDeps, templateId: string) => {
-  // Back button handler for main flow
-  const handleBack = useCallback(() => {
-    console.log("Navigation: going back to main selection");
-    deps.setIsProcessing(false);
-    deps.setShowForm(false);
-  }, [deps]);
+export const useDialogNavigation = (params: DialogNavigationParams, templateId: string | undefined) => {
+  const {
+    setShowForm,
+    setShowGoalDialog,
+    setShowEmailStyleDialog,
+    setShowSocialMediaPlatformDialog,
+    setShowScriptDialog,
+    setShowEmailDialog,
+    setAdvertisingGoal,
+    setEmailStyle,
+    setSocialMediaPlatform,
+    setIsProcessing,
+    isTransitioning,
+    transitionToDialog,
+  } = params;
 
-  // Goal submission handler
-  const handleGoalSubmit = useCallback((goal: string) => {
-    console.log(`Goal submitted: ${goal}, template: ${templateId}`);
-    // Set data
-    deps.setAdvertisingGoal(goal);
+  // Step back from goal to audience
+  const handleGoalBack = useCallback(() => {
+    if (isTransitioning) return;
     
-    // Choose the next dialog based on template type
-    if (templateId === 'social') {
-      console.log("Social template: transitioning to social media platform dialog");
-      deps.transitionToDialog(
-        () => deps.setShowGoalDialog(false),
-        () => deps.setShowSocialMediaPlatformDialog(true)
+    transitionToDialog(
+      () => setShowGoalDialog(false),
+      () => setShowForm(true)
+    );
+  }, [isTransitioning, transitionToDialog, setShowGoalDialog, setShowForm]);
+  
+  // Submit goal and move to appropriate next dialog
+  const handleGoalSubmit = useCallback((goal: string) => {
+    if (isTransitioning) return;
+    setIsProcessing(true);
+    
+    setAdvertisingGoal(goal);
+    console.log(`Cel reklamy: ${goal}, templateId: ${templateId}`);
+    
+    // Determine next dialog based on template
+    if (templateId === 'email') {
+      transitionToDialog(
+        () => setShowGoalDialog(false),
+        () => setShowEmailStyleDialog(true)
       );
-    } else if (templateId === 'email') {
-      console.log("Email template: transitioning to email style dialog");
-      deps.transitionToDialog(
-        () => deps.setShowGoalDialog(false),
-        () => deps.setShowEmailStyleDialog(true)
-      );
-    } else if (templateId === 'ad') {
-      console.log("Ad template: transitioning directly to script dialog (using PAS generator)");
-      deps.transitionToDialog(
-        () => deps.setShowGoalDialog(false),
-        () => deps.setShowScriptDialog(true)
+    } else if (templateId === 'social') {
+      transitionToDialog(
+        () => setShowGoalDialog(false),
+        () => setShowSocialMediaPlatformDialog(true)
       );
     } else {
-      console.log("Other template: transitioning directly to script dialog");
-      deps.transitionToDialog(
-        () => deps.setShowGoalDialog(false),
-        () => deps.setShowScriptDialog(true)
+      // For AD templates and other templates, go directly to script dialog
+      console.log("For template", templateId, "going directly to script dialog");
+      transitionToDialog(
+        () => setShowGoalDialog(false),
+        () => setShowScriptDialog(true)
       );
     }
-  }, [deps, templateId]);
-
-  // Goal back button handler
-  const handleGoalBack = useCallback(() => {
-    console.log("Navigation: going back from goal dialog");
-    deps.transitionToDialog(
-      () => deps.setShowGoalDialog(false),
-      () => deps.setIsProcessing(false)
-    );
-  }, [deps]);
-
-  // Email style submission handler
-  const handleEmailStyleSubmit = useCallback((style: EmailStyle) => {
-    console.log(`Email style submitted: ${style}`);
-    deps.setEmailStyle(style);
-    
-    // Transition to email dialog
-    deps.transitionToDialog(
-      () => deps.setShowEmailStyleDialog(false),
-      () => deps.setShowEmailDialog(true)
-    );
-  }, [deps]);
-
-  // Email style back button handler
+  }, [
+    isTransitioning,
+    setIsProcessing,
+    setAdvertisingGoal,
+    templateId,
+    transitionToDialog,
+    setShowGoalDialog,
+    setShowEmailStyleDialog,
+    setShowSocialMediaPlatformDialog,
+    setShowScriptDialog
+  ]);
+  
+  // Step back from email style to goal
   const handleEmailStyleBack = useCallback(() => {
-    console.log("Navigation: going back from email style dialog");
+    if (isTransitioning) return;
     
-    // Transition to goal dialog
-    deps.transitionToDialog(
-      () => deps.setShowEmailStyleDialog(false),
-      () => deps.setShowGoalDialog(true)
+    transitionToDialog(
+      () => setShowEmailStyleDialog(false),
+      () => setShowGoalDialog(true)
     );
-  }, [deps]);
-
-  // Social media platform submission handler
-  const handleSocialMediaPlatformSubmit = useCallback((platform: SocialMediaPlatform) => {
-    console.log(`Social media platform submitted: ${platform}`);
-    deps.setSocialMediaPlatform(platform);
+  }, [isTransitioning, transitionToDialog, setShowEmailStyleDialog, setShowGoalDialog]);
+  
+  // Submit email style and go to email dialog
+  const handleEmailStyleSubmit = useCallback((style: EmailStyle) => {
+    if (isTransitioning) return;
+    setIsProcessing(true);
     
-    // Transition to script dialog
-    deps.transitionToDialog(
-      () => deps.setShowSocialMediaPlatformDialog(false),
-      () => deps.setShowScriptDialog(true)
+    setEmailStyle(style);
+    console.log(`Wybrany styl emaila: ${style}`);
+    
+    transitionToDialog(
+      () => setShowEmailStyleDialog(false),
+      () => setShowEmailDialog(true)
     );
-  }, [deps]);
-
-  // Social media platform back button handler
+  }, [isTransitioning, setIsProcessing, setEmailStyle, transitionToDialog, setShowEmailStyleDialog, setShowEmailDialog]);
+  
+  // Step back from social media platform to goal
   const handleSocialMediaPlatformBack = useCallback(() => {
-    console.log("Navigation: going back from social media platform dialog");
+    if (isTransitioning) return;
     
-    // Transition to goal dialog
-    deps.transitionToDialog(
-      () => deps.setShowSocialMediaPlatformDialog(false),
-      () => deps.setShowGoalDialog(true)
+    transitionToDialog(
+      () => setShowSocialMediaPlatformDialog(false),
+      () => setShowGoalDialog(true)
     );
-  }, [deps]);
+  }, [isTransitioning, transitionToDialog, setShowSocialMediaPlatformDialog, setShowGoalDialog]);
+  
+  // Submit social media platform and go to script dialog
+  const handleSocialMediaPlatformSubmit = useCallback((platform: SocialMediaPlatform) => {
+    if (isTransitioning) return;
+    setIsProcessing(true);
+    
+    setSocialMediaPlatform(platform);
+    console.log(`Wybrana platforma social media: ${platform}`);
+    
+    transitionToDialog(
+      () => setShowSocialMediaPlatformDialog(false),
+      () => setShowScriptDialog(true)
+    );
+  }, [isTransitioning, setIsProcessing, setSocialMediaPlatform, transitionToDialog, setShowSocialMediaPlatformDialog, setShowScriptDialog]);
 
-  // Script dialog close handler
+  // Close script dialog
   const handleScriptDialogClose = useCallback(() => {
-    console.log("Navigation: closing script dialog");
-    deps.setShowScriptDialog(false);
-    deps.setIsProcessing(false);
-  }, [deps]);
-
-  // Email dialog close handler
+    setShowScriptDialog(false);
+  }, [setShowScriptDialog]);
+  
+  // Close email dialog
   const handleEmailDialogClose = useCallback(() => {
-    console.log("Navigation: closing email dialog");
-    deps.setShowEmailDialog(false);
-    deps.setIsProcessing(false);
-  }, [deps]);
+    setShowEmailDialog(false);
+  }, [setShowEmailDialog]);
+
+  // Common navigation - back from form to audience selection
+  const handleBack = useCallback(() => {
+    if (isTransitioning) return;
+    
+    setShowForm(false);
+  }, [isTransitioning, setShowForm]);
 
   return {
     handleBack,
@@ -139,6 +157,6 @@ export const useDialogNavigation = (deps: DialogNavigationDeps, templateId: stri
     handleSocialMediaPlatformSubmit,
     handleSocialMediaPlatformBack,
     handleScriptDialogClose,
-    handleEmailDialogClose,
+    handleEmailDialogClose
   };
 };

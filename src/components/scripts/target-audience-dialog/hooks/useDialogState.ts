@@ -30,13 +30,15 @@ export const useDialogState = () => {
   const [emailStyle, setEmailStyle] = useState<EmailStyle | null>(null);
   const [socialMediaPlatform, setSocialMediaPlatform] = useState<SocialMediaPlatform | null>(null);
 
-  // Visibility tracking state - improved
+  // Visibility tracking state - improved with lock to prevent dialog cycling
   const visibilityRef = useRef({
     wasFocused: true,
     dialogsInProgress: false,
     lastActiveDialog: null as string | null,
     dialogState: {} as Record<string, boolean>,
-    stateWasSaved: false
+    stateWasSaved: false,
+    stateRestorationLock: false, // Add state restoration lock to prevent cycling
+    lastStateUpdateTime: 0 // Timestamp to throttle updates
   });
 
   // Helper to determine current active dialog
@@ -57,8 +59,17 @@ export const useDialogState = () => {
     showForm
   ]);
 
-  // Save current dialog state when tab becomes hidden
+  // Throttled save function to prevent excessive storage operations
   const saveDialogState = useCallback(() => {
+    const currentTime = Date.now();
+    
+    // Throttle updates to once per second max
+    if (currentTime - visibilityRef.current.lastStateUpdateTime < 1000) {
+      console.log("Skipping save operation due to throttling");
+      return;
+    }
+    
+    visibilityRef.current.lastStateUpdateTime = currentTime;
     const currentDialog = getCurrentActiveDialog();
     console.log("Saving dialog state, active dialog:", currentDialog);
     
@@ -87,18 +98,21 @@ export const useDialogState = () => {
       
     console.log("Dialog state saved:", visibilityRef.current);
     
-    // Save to session storage as a backup
+    // Save to session storage as a backup - using a unique key for each dialog type
+    // to prevent conflicts between different dialog states
     try {
-      sessionStorage.setItem('dialogState', JSON.stringify({
+      const storageKey = `dialogState_${currentDialog}`;
+      sessionStorage.setItem(storageKey, JSON.stringify({
         lastActiveDialog: currentDialog,
         dialogState: visibilityRef.current.dialogState,
         dialogsInProgress: visibilityRef.current.dialogsInProgress,
         advertisingGoal,
         socialMediaPlatform,
         emailStyle,
-        selectedAudienceId
+        selectedAudienceId,
+        timestamp: currentTime
       }));
-      console.log("Dialog state saved to session storage");
+      console.log("Dialog state saved to session storage with key:", storageKey);
     } catch (err) {
       console.error("Failed to save dialog state to session storage:", err);
     }
@@ -118,30 +132,50 @@ export const useDialogState = () => {
 
   // Restore dialog state when tab becomes visible again
   const restoreDialogState = useCallback(() => {
+    // Prevent state restoration cycling by using a lock
+    if (visibilityRef.current.stateRestorationLock) {
+      console.log("State restoration is locked, skipping...");
+      return false;
+    }
+    
+    // Set the lock before attempting restoration
+    visibilityRef.current.stateRestorationLock = true;
+    
+    // Get current dialog to determine which state to restore
+    const currentDialog = getCurrentActiveDialog();
+    const storageKey = currentDialog ? `dialogState_${currentDialog}` : null;
+    
     // Try to get state from session storage first
     try {
-      const savedStateJson = sessionStorage.getItem('dialogState');
-      if (savedStateJson) {
-        const savedState = JSON.parse(savedStateJson);
-        console.log("Restoring dialog state from session storage:", savedState);
-        
-        if (savedState.dialogsInProgress) {
-          // Restore specific dialog that was active
-          if (savedState.dialogState) {
-            setShowForm(savedState.dialogState.showForm || false);
-            setShowGoalDialog(savedState.dialogState.showGoalDialog || false);
-            setShowEmailStyleDialog(savedState.dialogState.showEmailStyleDialog || false);
-            setShowSocialMediaPlatformDialog(savedState.dialogState.showSocialMediaPlatformDialog || false);
-            setShowScriptDialog(savedState.dialogState.showScriptDialog || false);
-            setShowEmailDialog(savedState.dialogState.showEmailDialog || false);
-            
-            // Restore associated data if it was saved
-            if (savedState.advertisingGoal) setAdvertisingGoal(savedState.advertisingGoal);
-            if (savedState.socialMediaPlatform) setSocialMediaPlatform(savedState.socialMediaPlatform);
-            if (savedState.emailStyle) setEmailStyle(savedState.emailStyle);
-            if (savedState.selectedAudienceId) setSelectedAudienceId(savedState.selectedAudienceId);
-            
-            return true;
+      // If we have a current dialog, try to restore that specific state
+      if (storageKey) {
+        const savedStateJson = sessionStorage.getItem(storageKey);
+        if (savedStateJson) {
+          const savedState = JSON.parse(savedStateJson);
+          console.log("Restoring dialog state from session storage for:", currentDialog, savedState);
+          
+          // Only restore if saved state is less than 5 minutes old
+          const isStale = Date.now() - savedState.timestamp > 5 * 60 * 1000;
+          if (isStale) {
+            console.log("Saved state is too old, skipping restoration");
+            visibilityRef.current.stateRestorationLock = false;
+            return false;
+          }
+          
+          if (savedState.dialogsInProgress) {
+            // Prevent switching between dialogs - only restore if it matches current dialog
+            if (savedState.lastActiveDialog === currentDialog) {
+              console.log("Restoring matching dialog state:", savedState.lastActiveDialog);
+              
+              // Release lock after a timeout to allow the state to settle
+              setTimeout(() => {
+                visibilityRef.current.stateRestorationLock = false;
+              }, 2000);
+              
+              return true;
+            } else {
+              console.log("Current dialog doesn't match saved dialog, not restoring");
+            }
           }
         }
       }
@@ -151,51 +185,39 @@ export const useDialogState = () => {
     
     // Fall back to in-memory state if session storage failed
     const savedState = visibilityRef.current;
-    console.log("Restoring dialog state from memory:", savedState);
+    console.log("Checking in-memory state:", savedState);
     
     if (!savedState.stateWasSaved) {
       console.log("No saved state found, nothing to restore");
+      visibilityRef.current.stateRestorationLock = false;
       return false;
     }
     
-    if (savedState.dialogsInProgress) {
-      // Restore specific dialog that was active
-      if (savedState.dialogState) {
-        console.log("Restoring specific dialog:", savedState.lastActiveDialog);
-        
-        setShowForm(savedState.dialogState.showForm || false);
-        setShowGoalDialog(savedState.dialogState.showGoalDialog || false);
-        setShowEmailStyleDialog(savedState.dialogState.showEmailStyleDialog || false);
-        setShowSocialMediaPlatformDialog(savedState.dialogState.showSocialMediaPlatformDialog || false);
-        setShowScriptDialog(savedState.dialogState.showScriptDialog || false);
-        setShowEmailDialog(savedState.dialogState.showEmailDialog || false);
-        
-        return true;
-      }
-    }
+    // Release lock after timeout
+    setTimeout(() => {
+      visibilityRef.current.stateRestorationLock = false;
+    }, 2000);
     
     return false;
-  }, [
-    setAdvertisingGoal, 
-    setSocialMediaPlatform, 
-    setEmailStyle, 
-    setSelectedAudienceId
-  ]);
+  }, [getCurrentActiveDialog]);
 
   // Monitor page visibility with improved state handling
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && !visibilityRef.current.wasFocused) {
         // Tab is now visible again after being hidden
-        console.log("Tab became visible again - attempting to restore dialog state");
+        console.log("Tab became visible again");
         visibilityRef.current.wasFocused = true;
         
-        const restored = restoreDialogState();
-        if (restored) {
-          console.log("Dialog state successfully restored");
-        } else {
-          console.log("No dialog state to restore or restoration failed");
-        }
+        // Add a small delay before restoration to prevent race conditions
+        setTimeout(() => {
+          const restored = restoreDialogState();
+          if (restored) {
+            console.log("Dialog state successfully restored");
+          } else {
+            console.log("No dialog state to restore or restoration failed");
+          }
+        }, 500);
       } else if (document.visibilityState === 'hidden') {
         // Tab is now hidden
         console.log("Tab became hidden - saving dialog state");
@@ -209,10 +231,13 @@ export const useDialogState = () => {
     
     // Check if we need to restore state on mount
     if (document.visibilityState === 'visible') {
-      const restored = restoreDialogState();
-      if (restored) {
-        console.log("Dialog state restored on component mount");
-      }
+      // Wrap in setTimeout to ensure component is fully mounted
+      setTimeout(() => {
+        const restored = restoreDialogState();
+        if (restored) {
+          console.log("Dialog state restored on component mount");
+        }
+      }, 500);
     }
     
     // Cleanup
@@ -224,11 +249,17 @@ export const useDialogState = () => {
     restoreDialogState
   ]);
 
-  // Update current dialog state whenever dialogs change
+  // Update current dialog state whenever dialogs change - but with throttling
   useEffect(() => {
     // Only update if page is visible to avoid interference with visibility handling
     if (document.visibilityState === 'visible') {
       const currentDialog = getCurrentActiveDialog();
+      
+      // Use throttling to prevent excessive updates
+      const currentTime = Date.now();
+      if (currentTime - visibilityRef.current.lastStateUpdateTime < 1000) {
+        return; // Skip this update if less than 1 second since last update
+      }
       
       if (currentDialog) {
         visibilityRef.current.lastActiveDialog = currentDialog;
@@ -253,44 +284,54 @@ export const useDialogState = () => {
 
   // Reset all state - implementacja z useCallback dla stabilności referencji
   const resetState = useCallback(() => {
-    // Clear session storage
+    console.log("Resetting all dialog state");
+    
+    // Clear all session storage keys
     try {
-      sessionStorage.removeItem('dialogState');
+      sessionStorage.removeItem('dialogState_script');
+      sessionStorage.removeItem('dialogState_goal');
+      sessionStorage.removeItem('dialogState_form');
+      sessionStorage.removeItem('dialogState_email');
+      sessionStorage.removeItem('dialogState_emailStyle');
+      sessionStorage.removeItem('dialogState_socialMedia');
+      sessionStorage.removeItem('dialogState'); // legacy key
     } catch (err) {
       console.error("Failed to clear dialog state from session storage:", err);
     }
     
-    // Only reset if we're not in the middle of a dialog sequence that needs to be preserved
-    // OR if we're explicitly closing the dialog (when tab is visible)
-    if (!visibilityRef.current.dialogsInProgress || 
-        (document.visibilityState === 'visible' && !isTransitioning)) {
-      console.log("Resetowanie wszystkich stanów dialogu");
-      setShowForm(false);
-      setAudienceChoice(null);
-      setSelectedAudienceId(null);
-      setShowScriptDialog(false);
-      setShowEmailDialog(false);
-      setShowGoalDialog(false);
-      setShowEmailStyleDialog(false);
-      setShowSocialMediaPlatformDialog(false);
-      setAdvertisingGoal('');
-      setEmailStyle(null);
-      setSocialMediaPlatform(null);
-      setIsProcessing(false); // Important: reset processing state
-      setIsTransitioning(false); // Reset transition state
-      
-      // Reset visibility tracking
-      visibilityRef.current.dialogsInProgress = false;
-      visibilityRef.current.lastActiveDialog = null;
-      visibilityRef.current.stateWasSaved = false;
-    } else {
-      console.log("Skipping dialog reset because dialog sequence is in progress and tab visibility changed");
-    }
-  }, [isTransitioning]); // dodany isTransitioning jako zależność
+    // Reset all state variables
+    setShowForm(false);
+    setAudienceChoice(null);
+    setSelectedAudienceId(null);
+    setShowScriptDialog(false);
+    setShowEmailDialog(false);
+    setShowGoalDialog(false);
+    setShowEmailStyleDialog(false);
+    setShowSocialMediaPlatformDialog(false);
+    setAdvertisingGoal('');
+    setEmailStyle(null);
+    setSocialMediaPlatform(null);
+    setIsProcessing(false); // Important: reset processing state
+    setIsTransitioning(false); // Reset transition state
+    
+    // Reset visibility tracking
+    visibilityRef.current.dialogsInProgress = false;
+    visibilityRef.current.lastActiveDialog = null;
+    visibilityRef.current.stateWasSaved = false;
+    visibilityRef.current.stateRestorationLock = false;
+    visibilityRef.current.lastStateUpdateTime = 0;
+    
+    console.log("Dialog state reset completed");
+  }, []);
   
-  // Sequential dialog transitions to prevent flashing
+  // Sequential dialog transitions to prevent flashing - with improved locking
   const transitionToDialog = useCallback((closeDialog: () => void, openDialog: () => void) => {
     setIsTransitioning(true);
+    
+    // Set a lock during transition
+    visibilityRef.current.stateRestorationLock = true;
+    
+    console.log("Starting dialog transition");
     
     // First close current dialog
     closeDialog();
@@ -300,7 +341,13 @@ export const useDialogState = () => {
       openDialog();
       setIsTransitioning(false);
       setIsProcessing(false);
-    }, 100);
+      
+      // Release lock after transition is complete
+      setTimeout(() => {
+        visibilityRef.current.stateRestorationLock = false;
+        console.log("Dialog transition completed, lock released");
+      }, 1000);
+    }, 300);
   }, []);
 
   return {

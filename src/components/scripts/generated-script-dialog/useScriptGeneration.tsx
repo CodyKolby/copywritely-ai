@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { generateScript, saveScriptAsProject } from './script-utils';
 import { toast } from 'sonner';
 import { SocialMediaPlatform } from '../SocialMediaPlatformDialog';
@@ -7,6 +7,9 @@ import { ScriptGenerationResult } from './types';
 
 // Store generation state in session storage for persistence
 const STORAGE_KEY = 'script_generation_state';
+
+// Flag to prevent multiple simultaneous generation attempts
+let isGenerating = false;
 
 interface StoredGenerationState {
   generatedScript: string;
@@ -90,6 +93,20 @@ export const useScriptGeneration = (
   const [rawResponse, setRawResponse] = useState<string | undefined>(undefined);
   const [debugInfo, setDebugInfo] = useState<any | undefined>(undefined);
   const [generationAttempts, setGenerationAttempts] = useState<number>(0);
+  
+  // Use ref to track component mount state
+  const isMounted = useRef(true);
+  // Generation lock with timestamp to prevent multiple generations
+  const generationLockRef = useRef({ locked: false, timestamp: 0 });
+
+  // Set mounted state on component mount/unmount
+  useEffect(() => {
+    isMounted.current = true;
+    
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   // Load from session storage on initial render
   useEffect(() => {
@@ -118,11 +135,11 @@ export const useScriptGeneration = (
   }, [open, targetAudienceId, templateId, userId]);
 
   useEffect(() => {
-    let isMounted = true;
-    let abortController = new AbortController();
+    const abortController = new AbortController();
     
     const verifyAndGenerateScript = async () => {
-      if (!open || !targetAudienceId) return;
+      // Skip if component is unmounted or dialog not open
+      if (!isMounted.current || !open || !targetAudienceId) return;
       
       // Check if we have stored data first
       const storedState = getStoredState(templateId, targetAudienceId);
@@ -131,11 +148,31 @@ export const useScriptGeneration = (
         return;
       }
       
+      // Check if generation is locked and timeout hasn't passed
+      const currentTime = Date.now();
+      const lockTimeout = 10000; // 10 seconds
+      if (generationLockRef.current.locked && 
+          currentTime - generationLockRef.current.timestamp < lockTimeout) {
+        console.log("Generation is locked, skipping duplicate request");
+        return;
+      }
+      
+      // Global lock to prevent multiple generations
+      if (isGenerating) {
+        console.log("Generation already in progress, skipping");
+        return;
+      }
+      
+      console.log("Starting script generation");
       setIsLoading(true);
       setError(null);
       setProjectSaved(false);
       setProjectId(null);
       setSaveAttempted(false);
+      
+      // Set locks
+      isGenerating = true;
+      generationLockRef.current = { locked: true, timestamp: currentTime };
       
       try {
         console.log("Starting script generation for template:", templateId);
@@ -176,7 +213,7 @@ export const useScriptGeneration = (
           socialMediaPlatform
         ) as ScriptGenerationResult;
         
-        if (isMounted) {
+        if (isMounted.current) {
           // Store the result to session storage
           storeGenerationState({
             generatedScript: result.script,
@@ -204,8 +241,7 @@ export const useScriptGeneration = (
           setIsGeneratingNewScript(false);
           setGenerationAttempts(0); // Reset attempts counter on success
           
-          console.log("Debug info from result:", result.debugInfo);
-          console.log("Raw response from result:", result.rawResponse);
+          console.log("Script generation successful");
           
           // Automatycznie zapisz skrypt po wygenerowaniu
           if (userId && result.script) {
@@ -214,7 +250,7 @@ export const useScriptGeneration = (
         }
       } catch (err: any) {
         console.error('Error during script generation:', err);
-        if (isMounted) {
+        if (isMounted.current) {
           // Only set error if all attempts have failed
           if (generationAttempts >= 3) {
             setError('Wystąpił nieoczekiwany błąd podczas generowania skryptu. Zbyt wiele prób generowania.');
@@ -231,7 +267,7 @@ export const useScriptGeneration = (
             
             // Try again after a short delay
             setTimeout(() => {
-              if (isMounted) {
+              if (isMounted.current) {
                 setIsGeneratingNewScript(true);
               }
             }, 3000);
@@ -239,6 +275,14 @@ export const useScriptGeneration = (
           
           setIsLoading(false);
         }
+      } finally {
+        // Release locks
+        isGenerating = false;
+        
+        // Release lock after 10 seconds to allow for retries if needed
+        setTimeout(() => {
+          generationLockRef.current.locked = false;
+        }, 10000);
       }
     };
     
@@ -247,10 +291,9 @@ export const useScriptGeneration = (
     }
     
     return () => {
-      isMounted = false;
       abortController.abort();
     };
-  }, [open, targetAudienceId, templateId, advertisingGoal, socialMediaPlatform, currentHookIndex, isGeneratingNewScript, generationCount, verifiedAudienceId, userId, generationAttempts]);
+  }, [open, targetAudienceId, templateId, advertisingGoal, socialMediaPlatform, currentHookIndex, isGeneratingNewScript, generationCount, verifiedAudienceId, userId, generationAttempts, isLoading]);
 
   const saveScriptToProject = async (scriptContent: string, hookText: string, uid: string) => {
     if (!scriptContent || isSaving || projectSaved || saveAttempted) return;
