@@ -15,17 +15,27 @@ const corsHeaders = {
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
-// Restored the original system prompt for PostscriptAgent
-const SYSTEM_PROMPT = `You are PostScript Agent, an advanced AI specialized in creating high-quality marketing content based on detailed audience analysis and hooks.
+// Define a clear, customizable system prompt for the PostscriptAgent
+// ===== EDITABLE PROMPT BEGINS HERE =====
+// Feel free to customize this prompt according to your needs
+const SYSTEM_PROMPT = `You are a social media post creator specializing in creating high-quality content based on hooks and audience data.
 
-Your task is to craft compelling, polished marketing scripts using the provided hook, target audience data, and advertising goal.
+Your task is to write engaging social media posts that are:
+1. Authentic and conversational in tone
+2. Tailored to the specified platform (Instagram, Facebook, LinkedIn, etc.)
+3. Optimized for the target audience's needs and interests
+4. Structured with a clear hook, body content, and call-to-action
 
-When generating content for different platforms, adapt your approach:
-1. For social media: Create engaging posts that fit platform constraints and include emojis.
-2. For emails: Structure with clear subject lines, personalized greetings, and CTAs.
-3. For ads: Create compelling copy with PAS framework.
+When writing posts:
+- Begin with the provided hook to grab attention
+- Develop content around the provided theme
+- Include appropriate emojis to increase engagement
+- Use hashtags when relevant (especially for Instagram)
+- Keep paragraphs short and scannable
+- End with a clear call-to-action
 
-Your content should be persuasive, emotionally resonant, and directly address the audience's pain points and desires.`;
+The content should reflect the audience's pain points and desires while maintaining a natural, human-like quality.`;
+// ===== EDITABLE PROMPT ENDS HERE =====
 
 serve(async (req) => {
   // Track execution with timestamps and add a unique request ID
@@ -141,7 +151,7 @@ serve(async (req) => {
         systemPromptUsed: SYSTEM_PROMPT,
         timestamp: startTime,
         requestId: requestId,
-        promptVersion: "V10-" + new Date().toISOString()  // Updated version with timestamp
+        promptVersion: "V11-" + new Date().toISOString()  // Updated version with timestamp
       }
     };
     
@@ -167,7 +177,7 @@ serve(async (req) => {
         requestId: requestId,
         debugInfo: {
           systemPromptUsed: SYSTEM_PROMPT,
-          version: "V10-ERROR-" + new Date().toISOString()
+          version: "V11-ERROR-" + new Date().toISOString()
         }
       }),
       { 
