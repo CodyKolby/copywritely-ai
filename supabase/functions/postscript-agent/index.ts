@@ -21,6 +21,7 @@ console.log("Workflow: 1) Receive request with target audience, hook and theme 2
 
 serve(async (req) => {
   console.log("PostscriptAgent received request:", req.method, req.url);
+  console.log("USING UPDATED FUNCTION with TEST prompt!");
   
   // Handle OPTIONS requests for CORS preflight
   if (req.method === 'OPTIONS') {

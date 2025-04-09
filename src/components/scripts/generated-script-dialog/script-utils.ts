@@ -200,6 +200,7 @@ async function generateSocialMediaPost(
 
     // Then use PostscriptAgent to generate the full content
     console.log("Calling postscript-agent edge function");
+    console.log("NOTE: Making sure we're calling the correct root endpoint, not a nested one");
     
     // Add retry mechanism for postscript-agent call
     let postscriptResponse;
@@ -209,7 +210,7 @@ async function generateSocialMediaPost(
       try {
         console.log(`Postscript attempt ${postscriptRetryCount + 1}/${maxRetries}`);
         
-        // Call the function directly - specify that it's the root postscript-agent
+        // IMPORTANT: Call the root function directly to make sure we're using the updated prompt
         postscriptResponse = await supabase.functions.invoke('postscript-agent', {
           body: {
             targetAudience,
