@@ -73,10 +73,15 @@ const TargetAudienceDialog = ({
 
   // Hide the audience dialog when script/email dialog is shown
   const shouldShowAudienceDialog = open && !showScriptDialog && !showEmailDialog;
+  
+  // Determine which dialog should be shown
+  const showMainDialog = shouldShowAudienceDialog && !showSocialMediaPlatformDialog && !showEmailStyleDialog && !showGoalDialog;
+  const showFormContent = shouldShowAudienceDialog && showForm && !showSocialMediaPlatformDialog && !showEmailStyleDialog && !showGoalDialog;
 
   return (
     <>
-      <Dialog open={shouldShowAudienceDialog} onOpenChange={onOpenChange}>
+      {/* Main audience selection dialog */}
+      <Dialog open={showMainDialog} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
           {!showForm && !showGoalDialog && !showEmailStyleDialog && !showSocialMediaPlatformDialog ? (
             <DialogSelectionContent
@@ -92,40 +97,56 @@ const TargetAudienceDialog = ({
               handleCancel={handleDialogClose}
               isProcessing={isProcessing}
             />
-          ) : showGoalDialog ? (
-            <AdvertisingGoalDialog 
-              onSubmit={handleGoalSubmit}
-              onBack={handleGoalBack}
-              onCancel={handleDialogClose}
-              isProcessing={isProcessing}
-            />
-          ) : showEmailStyleDialog ? (
-            <EmailStyleDialog
-              onSubmit={handleEmailStyleSubmit}
-              onBack={handleEmailStyleBack}
-              onCancel={handleDialogClose}
-              isProcessing={isProcessing}
-            />
-          ) : showSocialMediaPlatformDialog ? (
-            <SocialMediaPlatformDialog
-              open={showSocialMediaPlatformDialog}
-              onOpenChange={(open) => {
-                if (!open) handleDialogClose();
-              }}
-              onSelect={handleSocialMediaPlatformSubmit}
-              onBack={handleSocialMediaPlatformBack}
-              onCancel={handleDialogClose}
-              isProcessing={isProcessing}
-            />
-          ) : (
-            <TargetAudienceForm 
-              onSubmit={handleFormSubmit}
-              onCancel={handleDialogClose}
-              onBack={handleBack}
-            />
-          )}
+          ) : null}
         </DialogContent>
       </Dialog>
+      
+      {/* Form dialog */}
+      <Dialog open={showFormContent} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+          <TargetAudienceForm 
+            onSubmit={handleFormSubmit}
+            onCancel={handleDialogClose}
+            onBack={handleBack}
+          />
+        </DialogContent>
+      </Dialog>
+      
+      {/* Goal dialog */}
+      <Dialog open={shouldShowAudienceDialog && showGoalDialog} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+          <AdvertisingGoalDialog 
+            onSubmit={handleGoalSubmit}
+            onBack={handleGoalBack}
+            onCancel={handleDialogClose}
+            isProcessing={isProcessing}
+          />
+        </DialogContent>
+      </Dialog>
+      
+      {/* Email style dialog */}
+      <Dialog open={shouldShowAudienceDialog && showEmailStyleDialog} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+          <EmailStyleDialog
+            onSubmit={handleEmailStyleSubmit}
+            onBack={handleEmailStyleBack}
+            onCancel={handleDialogClose}
+            isProcessing={isProcessing}
+          />
+        </DialogContent>
+      </Dialog>
+      
+      {/* Social media platform dialog */}
+      <SocialMediaPlatformDialog
+        open={shouldShowAudienceDialog && showSocialMediaPlatformDialog}
+        onOpenChange={(open) => {
+          if (!open) handleDialogClose();
+        }}
+        onSelect={handleSocialMediaPlatformSubmit}
+        onBack={handleSocialMediaPlatformBack}
+        onCancel={handleDialogClose}
+        isProcessing={isProcessing}
+      />
       
       {/* Script Dialog - shown for non-email templates */}
       {templateId !== 'email' && (

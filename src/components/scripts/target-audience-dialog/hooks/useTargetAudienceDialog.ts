@@ -198,13 +198,13 @@ export const useTargetAudienceDialog = ({
     setIsProcessing(false);
   };
 
-  // Social media platform submission handler - fixed to properly show script dialog
+  // Social media platform submission handler
   const handleSocialMediaPlatformSubmit = (platform: SocialMediaPlatform) => {
     setSocialMediaPlatform(platform);
     setShowSocialMediaPlatformDialog(false);
-    
-    // Important: Set showScriptDialog to true to show the script generation dialog
     setShowScriptDialog(true);
+    // Make sure we reset the isProcessing state
+    setIsProcessing(false);
   };
 
   // Social media platform back button handler
