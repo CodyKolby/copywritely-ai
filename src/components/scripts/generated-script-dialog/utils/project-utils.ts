@@ -1,11 +1,8 @@
 
 import { supabase } from '@/lib/supabase';
-import type { SavedProject } from './types';
 import type { SocialMediaPlatform } from '../../SocialMediaPlatformDialog';
+import type { SavedProject } from './types';
 
-/**
- * Save a script as a new project
- */
 export const saveProjectWithContent = async (
   content: string,
   title: string,
@@ -14,76 +11,50 @@ export const saveProjectWithContent = async (
   socialMediaPlatform?: SocialMediaPlatform
 ): Promise<SavedProject | null> => {
   try {
-    console.log('Saving project with content:', {
-      contentLength: content.length,
-      titleLength: title.length,
-      template_type,
+    console.log('Saving project content with utils:', { 
+      contentLength: content.length, 
+      title, 
+      template_type, 
       userId,
-      platform: socialMediaPlatform?.label || 'N/A'
+      platform: socialMediaPlatform?.key
     });
 
-    if (!content || !title || !userId) {
-      console.error('Missing required data for project creation');
-      throw new Error('Missing required data');
+    // Create project object with metadata about platform
+    let fullContent = content;
+    
+    // If it's a social media post, add metadata
+    if (template_type === 'social' && socialMediaPlatform) {
+      fullContent = `${content}\n\n---\nPlatforma: ${socialMediaPlatform.label}`;
     }
 
-    // Set project metadata
-    const projectData = {
-      user_id: userId,
-      title,
-      content,
-      template_type,
-      // Save social media platform if specified
-      platform: socialMediaPlatform?.key || null,
-      metadata: {
-        source: 'script-generator',
-        platformInfo: socialMediaPlatform ? {
-          key: socialMediaPlatform.key,
-          label: socialMediaPlatform.label,
-          description: socialMediaPlatform.description
-        } : null
-      }
-    };
-
-    // Insert project into database
-    const { data, error } = await supabase
+    // Create a new project in the database
+    const { data: project, error } = await supabase
       .from('projects')
-      .insert(projectData)
+      .insert({
+        title: title.length > 0 ? title.substring(0, 255) : 'Nowy projekt',
+        content: fullContent,
+        user_id: userId,
+        title_auto_generated: true,
+        status: 'Draft'
+      })
       .select('id, title, content, created_at')
       .single();
 
     if (error) {
-      console.error('Error saving project:', error);
-      throw new Error(`Błąd podczas zapisywania projektu: ${error.message}`);
+      console.error('Error creating project in project-utils:', error);
+      throw new Error(`Failed to save project: ${error.message}`);
     }
 
-    console.log('Project saved successfully:', data);
-    return data as SavedProject;
-  } catch (error) {
+    console.log('Project saved successfully in project-utils:', project);
+
+    return {
+      id: project.id,
+      title: project.title,
+      content: project.content,
+      created_at: project.created_at
+    };
+  } catch (error: any) {
     console.error('Error in saveProjectWithContent:', error);
     throw error;
-  }
-};
-
-/**
- * Get a project by ID
- */
-export const getProjectById = async (projectId: string): Promise<SavedProject | null> => {
-  try {
-    const { data, error } = await supabase
-      .from('projects')
-      .select('id, title, content, created_at')
-      .eq('id', projectId)
-      .single();
-
-    if (error) {
-      console.error('Error fetching project:', error);
-      return null;
-    }
-
-    return data as SavedProject;
-  } catch (error) {
-    console.error('Error in getProjectById:', error);
-    return null;
   }
 };

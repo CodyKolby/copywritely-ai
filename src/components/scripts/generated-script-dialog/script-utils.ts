@@ -19,8 +19,41 @@ export const saveScriptAsProject = async (
   socialMediaPlatform?: SocialMediaPlatform
 ): Promise<SavedProject | null> => {
   try {
-    return await saveProjectWithContent(content, title, template_type, userId, socialMediaPlatform);
-  } catch (error) {
+    console.log('Saving script as project:', { 
+      contentLength: content.length, 
+      title, 
+      template_type, 
+      userId,
+      platform: socialMediaPlatform?.key
+    });
+
+    // Create a new project in the database
+    const { data: project, error } = await supabase
+      .from('projects')
+      .insert({
+        title: title.substring(0, 255), // Ensure title is not too long
+        content: content,
+        user_id: userId,
+        title_auto_generated: true,
+        status: 'Draft'
+      })
+      .select('id, title, content, created_at')
+      .single();
+
+    if (error) {
+      console.error('Error saving project to database:', error);
+      throw new Error(`Failed to save project: ${error.message}`);
+    }
+
+    console.log('Successfully saved project:', project);
+
+    return {
+      id: project.id,
+      title: project.title,
+      content: project.content,
+      created_at: project.created_at
+    };
+  } catch (error: any) {
     console.error('Error saving script as project:', error);
     throw error;
   }
