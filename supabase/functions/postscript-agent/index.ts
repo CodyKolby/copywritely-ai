@@ -2,7 +2,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-// Expanded CORS headers to accept x-cache-buster header
+// Expanded CORS headers to accept all necessary custom headers
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, cache-control, pragma, expires, x-no-cache, x-cache-buster, x-timestamp, x-random',
@@ -21,8 +21,8 @@ const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 const SYSTEM_PROMPT = `Twoim jedynym zadaniem jest napisać "TESTSCRIPT"`;
 // ===== EDITABLE PROMPT ENDS HERE =====
 
-// Force redeployment marker: v1.0.1
-console.log(`PostscriptAgent initialized with version v1.0.1 and prompt: "${SYSTEM_PROMPT.substring(0, 100)}..."`);
+// Force redeployment marker: v1.0.2
+console.log(`PostscriptAgent initialized with version v1.0.2 and prompt: "${SYSTEM_PROMPT.substring(0, 100)}..."`);
 
 serve(async (req) => {
   // Track execution with timestamps and add a unique request ID

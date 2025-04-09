@@ -2,10 +2,10 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-// Import the CORS headers
+// Import the CORS headers with expanded allowed headers
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, cache-control, pragma, expires, x-no-cache, x-cache-buster',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, cache-control, pragma, expires, x-no-cache, x-cache-buster, x-timestamp, x-random',
   'Access-Control-Allow-Methods': 'POST, OPTIONS, GET',
   'Access-Control-Max-Age': '86400', // 24 hours
   'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -20,12 +20,12 @@ const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 const SYSTEM_PROMPT = `Twoim jedynym zadaniem jest napisać "TESTHOOK"`;
 // ===== EDITABLE PROMPT ENDS HERE =====
 
-// Force redeployment marker: v1.0.1
-console.log("PosthookAgent Edge Function initialized with custom prompt v1.0.1");
+// Force redeployment marker: v1.0.2
+console.log("PosthookAgent Edge Function initialized with custom prompt v1.0.2");
 
 serve(async (req) => {
   console.log("PosthookAgent received request:", req.method, req.url);
-  console.log("Using prompt version v1.0.1:", SYSTEM_PROMPT.substring(0, 50));
+  console.log("Using prompt version v1.0.2:", SYSTEM_PROMPT.substring(0, 50));
   
   // Handle OPTIONS requests for CORS preflight
   if (req.method === 'OPTIONS') {
@@ -169,7 +169,7 @@ serve(async (req) => {
     console.log("Processed PosthookAgent response:", processedResponse);
     
     // Add version info to help track which version is running
-    processedResponse.version = "v1.0.1";
+    processedResponse.version = "v1.0.2";
     processedResponse.promptUsed = SYSTEM_PROMPT.substring(0, 20) + "...";
     
     return new Response(
@@ -182,7 +182,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         error: error.message || "Unknown error", 
-        version: "v1.0.1-error",
+        version: "v1.0.2-error",
         promptUsed: SYSTEM_PROMPT.substring(0, 20) + "..."
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

@@ -110,7 +110,8 @@ async function generateSocialMediaPost(
       'Expires': '0',
       'Authorization': `Bearer ${accessToken}`,
       'X-Cache-Buster': `${Date.now()}-${randomValue}`,
-      'X-Timestamp': timestamp
+      'X-Timestamp': timestamp,
+      'X-Random': randomValue
     },
     body: JSON.stringify(posthookRequestBody),
   });
