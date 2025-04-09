@@ -4,6 +4,22 @@ import { generateScript, saveScriptAsProject } from './script-utils';
 import { toast } from 'sonner';
 import { SocialMediaPlatform } from '../SocialMediaPlatformDialog';
 
+// Define a consistent return type for the generateScript function
+interface ScriptGenerationResult {
+  script: string;
+  bestHook: string;
+  allHooks: string[];
+  currentHookIndex: number;
+  totalHooks: number;
+  adStructure: string;
+  rawResponse?: string;
+  debugInfo?: any;
+  // Optional properties for social media posts
+  cta?: string;
+  theme?: string;
+  form?: string;
+}
+
 export const useScriptGeneration = (
   open: boolean,
   targetAudienceId: string,
@@ -54,14 +70,14 @@ export const useScriptGeneration = (
         // If we have a verified audience ID, use it; otherwise, use the target audience ID
         const audienceId = verifiedAudienceId || targetAudienceId;
         
-        // Generate the script
+        // Generate the script with type assertion to ensure consistent return type
         const result = await generateScript(
           templateId, 
           audienceId, 
           advertisingGoal, 
           currentHookIndex, 
           socialMediaPlatform
-        );
+        ) as ScriptGenerationResult;
         
         if (isMounted) {
           setGeneratedScript(result.script);
@@ -172,12 +188,15 @@ export const useScriptGeneration = (
         advertisingGoal, 
         currentHookIndex,
         socialMediaPlatform
-      );
+      ) as ScriptGenerationResult;
+      
       setGeneratedScript(result.script);
       setCurrentHook(result.bestHook || '');
       setAllHooks(result.allHooks || []);
       setCurrentHookIndex(result.currentHookIndex || 0);
       setTotalHooks(result.totalHooks || 0);
+      setRawResponse(result.rawResponse);
+      setDebugInfo(result.debugInfo);
       setIsLoading(false);
       setGenerationCount(prevCount => prevCount + 1);
       

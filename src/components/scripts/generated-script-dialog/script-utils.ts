@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase";
 import { v4 as uuidv4 } from 'uuid';
 import { SocialMediaPlatform } from '../SocialMediaPlatformDialog';
@@ -24,6 +23,22 @@ export async function fetchTargetAudience(audienceId: string) {
   }
 }
 
+// Define a consistent return type for all script generation functions
+interface ScriptGenerationResult {
+  script: string;
+  bestHook: string;
+  allHooks: string[];
+  currentHookIndex: number;
+  totalHooks: number;
+  adStructure: string;
+  rawResponse?: string;
+  debugInfo?: any;
+  // Optional properties for social media posts
+  cta?: string;
+  theme?: string;
+  form?: string;
+}
+
 // Main function to generate script
 export async function generateScript(
   templateId: string,
@@ -31,7 +46,7 @@ export async function generateScript(
   advertisingGoal: string = '',
   hookIndex: number = 0,
   socialMediaPlatform?: SocialMediaPlatform
-) {
+): Promise<ScriptGenerationResult> {
   try {
     console.log(`Generating script for template: ${templateId}, audience: ${audienceId}, goal: ${advertisingGoal}, platform: ${socialMediaPlatform || 'undefined'}`);
 
@@ -97,14 +112,19 @@ export async function generateScript(
       throw new Error('Failed to generate script: Invalid response format');
     }
 
-    // Return the complete result
+    // Return the complete result with consistent type
     return {
       script: scriptData.script,
       bestHook: selectedHook,
       allHooks: hooksData.hooks,
       currentHookIndex: actualHookIndex,
       totalHooks: hooksData.hooks.length,
-      adStructure: 'PAS' // Tylko dla innych szablonów niż social media
+      adStructure: 'PAS', // Tylko dla innych szablonów niż social media
+      rawResponse: JSON.stringify(scriptData),
+      debugInfo: {
+        timestamp: new Date().toISOString(),
+        templateType: templateId
+      }
     };
   } catch (error) {
     console.error('Error in generateScript:', error);
@@ -118,7 +138,7 @@ async function generateSocialMediaPost(
   advertisingGoal: string, 
   hookIndex: number = 0, 
   platform: SocialMediaPlatform = 'meta'
-) {
+): Promise<ScriptGenerationResult> {
   try {
     console.log(`===== SOCIAL MEDIA POST GENERATION STARTED =====`);
     console.log(`Platform: ${platform}, Hook Index: ${hookIndex}`);
@@ -323,10 +343,11 @@ async function generateSocialMediaPost(
       cta: cta,
       theme: theme,
       form: form,
-      rawResponse: postscriptData.rawResponse || content,
+      rawResponse: postscriptData?.rawResponse || JSON.stringify(postscriptData),
       debugInfo: {
         posthookData: JSON.stringify(posthookData).substring(0, 500),
         postscriptData: JSON.stringify(postscriptData).substring(0, 500),
+        systemPromptUsed: postscriptData?.debugInfo?.systemPromptUsed,
         timestamp: new Date().toISOString()
       },
       adStructure: '' // Puste pole dla postów social media
