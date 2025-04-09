@@ -17,7 +17,7 @@ const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
 // ===== EDITABLE PROMPT BEGINS HERE =====
 // Feel free to customize this prompt according to your needs
-const SYSTEM_PROMPT = `Twoim jedynym zadaniem jest napisać "TESTHOOK"`;
+const SYSTEM_PROMPT = `Twoim jedynym zadaniem jest napisać "TESTHOOK2"`;
 // ===== EDITABLE PROMPT ENDS HERE =====
 
 // Force redeployment marker: v1.0.2
