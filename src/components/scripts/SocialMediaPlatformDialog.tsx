@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Loader2 } from 'lucide-react';
 
 export type SocialMediaPlatform = {
   key: string;
@@ -32,22 +33,45 @@ const platforms: SocialMediaPlatform[] = [
 interface SocialMediaPlatformDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onPlatformSelect: (platform: SocialMediaPlatform) => void;
+  onSubmit?: (platform: SocialMediaPlatform) => void;
+  onBack?: () => void;
+  onCancel?: () => void;
+  isProcessing?: boolean;
 }
 
 const SocialMediaPlatformDialog = ({
   open,
   onOpenChange,
-  onPlatformSelect
+  onSubmit,
+  onBack,
+  onCancel,
+  isProcessing = false
 }: SocialMediaPlatformDialogProps) => {
   const [selectedTab, setSelectedTab] = useState('meta');
   
   const handleSelection = () => {
     const platform = platforms.find(p => p.key === selectedTab);
-    if (platform) {
-      onPlatformSelect(platform);
+    if (platform && onSubmit) {
+      onSubmit(platform);
+    } else {
+      onOpenChange(false);
     }
-    onOpenChange(false);
+  };
+  
+  const handleCancel = () => {
+    if (onCancel) {
+      onCancel();
+    } else {
+      onOpenChange(false);
+    }
+  };
+
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+    } else {
+      onOpenChange(false);
+    }
   };
   
   return (
@@ -83,11 +107,23 @@ const SocialMediaPlatformDialog = ({
         </Tabs>
         
         <div className="flex justify-end gap-2 pt-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          {onBack && (
+            <Button variant="outline" onClick={handleBack} disabled={isProcessing}>
+              Wstecz
+            </Button>
+          )}
+          <Button variant="outline" onClick={handleCancel} disabled={isProcessing}>
             Anuluj
           </Button>
-          <Button onClick={handleSelection}>
-            Wybierz platformę
+          <Button onClick={handleSelection} disabled={isProcessing}>
+            {isProcessing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Przetwarzanie...
+              </>
+            ) : (
+              'Wybierz platformę'
+            )}
           </Button>
         </div>
       </DialogContent>

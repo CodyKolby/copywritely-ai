@@ -8,7 +8,7 @@ import EmailStyleDialog from './EmailStyleDialog';
 import SocialMediaPlatformDialog from './SocialMediaPlatformDialog';
 import GeneratedEmailDialog from './GeneratedEmailDialog';
 import { TargetAudienceDialogProps } from './target-audience-dialog/types';
-import { useTargetAudienceDialog } from './target-audience-dialog/useTargetAudienceDialog';
+import { useTargetAudienceDialog } from './target-audience-dialog/hooks/useTargetAudienceDialog';
 import DialogSelectionContent from './target-audience-dialog/DialogSelectionContent';
 import { EmailStyle } from './EmailStyleDialog';
 import { SocialMediaPlatform } from './SocialMediaPlatformDialog';
@@ -108,6 +108,10 @@ const TargetAudienceDialog = ({
             />
           ) : showSocialMediaPlatformDialog ? (
             <SocialMediaPlatformDialog
+              open={showSocialMediaPlatformDialog}
+              onOpenChange={(open) => {
+                if (!open) handleDialogClose();
+              }}
               onSubmit={handleSocialMediaPlatformSubmit}
               onBack={handleSocialMediaPlatformBack}
               onCancel={handleDialogClose}
