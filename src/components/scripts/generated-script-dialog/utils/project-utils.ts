@@ -1,7 +1,7 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from "@/lib/supabase";
-import { SocialMediaPlatform } from '../../SocialMediaPlatformDialog';
+import type { SocialMediaPlatform } from '../../SocialMediaPlatformDialog';
 
 // Save script as a project in the database
 export async function saveScriptAsProject(
@@ -51,7 +51,9 @@ export async function saveScriptAsProject(
 
 // Helper to get a friendly platform name
 export function getSocialMediaPlatformName(platform?: SocialMediaPlatform): string {
-  switch (platform?.key) {
+  if (!platform) return 'social media';
+  
+  switch (platform.key) {
     case 'meta':
       return 'Meta (Facebook/Instagram)';
     case 'tiktok':

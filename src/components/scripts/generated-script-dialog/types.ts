@@ -1,6 +1,6 @@
 
-import { SocialMediaPlatform } from '../SocialMediaPlatformDialog';
-import { ScriptGenerationResult } from './utils/types';
+import type { SocialMediaPlatform } from '../SocialMediaPlatformDialog';
+import type { ScriptGenerationResult } from './utils/types';
 
 export interface GeneratedScriptDialogProps {
   open: boolean;
@@ -11,4 +11,5 @@ export interface GeneratedScriptDialogProps {
   socialMediaPlatform?: SocialMediaPlatform;
 }
 
-export { ScriptGenerationResult };
+export type { ScriptGenerationResult };
+

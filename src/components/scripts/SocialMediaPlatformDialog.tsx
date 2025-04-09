@@ -6,7 +6,11 @@ import { Facebook, Instagram, Linkedin, MessageSquare } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 
-export type SocialMediaPlatform = 'meta' | 'tiktok' | 'linkedin';
+// Update the type definition to match how it's being used
+export interface SocialMediaPlatform {
+  key: 'meta' | 'tiktok' | 'linkedin';
+  label: string;
+}
 
 interface SocialMediaPlatformDialogProps {
   onSubmit: (platform: SocialMediaPlatform) => void;
@@ -21,12 +25,18 @@ const SocialMediaPlatformDialog = ({
   onCancel,
   isProcessing = false
 }: SocialMediaPlatformDialogProps) => {
-  const [selectedPlatform, setSelectedPlatform] = useState<SocialMediaPlatform | null>(null);
+  const [selectedPlatform, setSelectedPlatform] = useState<SocialMediaPlatform['key'] | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedPlatform) {
-      onSubmit(selectedPlatform);
+      const platformLabel = {
+        meta: 'Meta (Instagram & Facebook)',
+        tiktok: 'TikTok',
+        linkedin: 'LinkedIn'
+      }[selectedPlatform];
+      
+      onSubmit({ key: selectedPlatform, label: platformLabel });
     }
   };
 
@@ -42,7 +52,7 @@ const SocialMediaPlatformDialog = ({
       <form onSubmit={handleSubmit} className="space-y-6 py-4">
         <RadioGroup
           value={selectedPlatform || ""}
-          onValueChange={(value) => setSelectedPlatform(value as SocialMediaPlatform)}
+          onValueChange={(value) => setSelectedPlatform(value as SocialMediaPlatform['key'])}
           className="space-y-3"
         >
           <div className="flex items-center space-x-2 rounded-md border p-4 cursor-pointer hover:bg-gray-50">

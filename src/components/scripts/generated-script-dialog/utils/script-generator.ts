@@ -1,6 +1,7 @@
 
-import { SocialMediaPlatform } from '../../SocialMediaPlatformDialog';
+import type { SocialMediaPlatform } from '../../SocialMediaPlatformDialog';
 import { ScriptGenerationResult, PosthookResponse, PostscriptResponse } from './types';
+import { supabase } from "@/lib/supabase";
 
 // Main function to generate script
 export const generateScript = async (
@@ -158,6 +159,3 @@ export const generateScript = async (
     throw error;
   }
 };
-
-// Export for backward compatibility with existing code
-import { supabase } from "@/lib/supabase";
