@@ -25,21 +25,20 @@ const ScriptDisplay = ({
   
   // Check if the script contains any debug test markers
   const containsDebugMarker = script && (
-    script.includes('DEBUGTEST_V1_2025-04-09') || 
+    script.includes('TEST TEST TEST') || 
     script === 'TEST' ||
-    script === 'ESSA' ||
     (script && script.trim().toLowerCase() === 'test')
   );
   
   // Remove the debug marker from the script if present
   const cleanedScript = !script ? '' : (
-    containsDebugMarker && script.includes('DEBUGTEST_V1_2025-04-09') 
-      ? script.replace('DEBUGTEST_V1_2025-04-09', '') 
+    containsDebugMarker && script.includes('TEST TEST TEST') 
+      ? script.replace('TEST TEST TEST', '') 
       : script
   );
 
-  // If script is just a test message (TEST, ESSA), don't display it as content
-  const isTestMessage = ['TEST', 'ESSA', 'test'].includes(cleanedScript.trim().toLowerCase());
+  // If script is just a test message (TEST), don't display it as content
+  const isTestMessage = ['TEST', 'test'].includes(cleanedScript.trim().toLowerCase());
   const displayScript = isTestMessage ? '' : cleanedScript;
 
   return (
@@ -87,12 +86,9 @@ const ScriptDisplay = ({
         {/* Display empty state message if no content after cleanup */}
         {!displayScript && !isTestMessage && (
           <div className="text-center p-4 border border-dashed border-gray-300 rounded-lg bg-gray-50">
-            <p className="text-gray-500">Zwrócono tylko dane testowe.</p>
+            <p className="text-gray-500">Brak treści do wyświetlenia.</p>
           </div>
         )}
-
-        {/* Completely hide all debug information */}
-        {/* Debug information has been removed as requested */}
       </div>
     </div>
   );

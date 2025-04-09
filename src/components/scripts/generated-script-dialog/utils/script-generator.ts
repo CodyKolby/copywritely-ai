@@ -1,4 +1,3 @@
-
 import type { SocialMediaPlatform } from '../../SocialMediaPlatformDialog';
 import { ScriptGenerationResult, PosthookResponse, PostscriptResponse } from './types';
 import { supabase } from "@/integrations/supabase/client";
@@ -94,6 +93,7 @@ async function generateSocialMediaPost(
 
   console.log('Wysyłanie żądania do PostHook:', posthookRequestBody);
 
+  // Use full URL to ensure we're hitting the correct endpoint
   const posthookResponse = await fetch('https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/posthook-agent', {
     method: 'POST',
     headers: {
@@ -102,6 +102,7 @@ async function generateSocialMediaPost(
       'Pragma': 'no-cache',
       'Expires': '0',
       'Authorization': `Bearer ${accessToken}`,
+      'X-Cache-Buster': cacheBuster || `${Date.now()}`
     },
     body: JSON.stringify(posthookRequestBody),
   });
@@ -147,6 +148,7 @@ async function generateSocialMediaPost(
   const { data: { session: refreshedSession } } = await supabase.auth.getSession();
   const refreshedAccessToken = refreshedSession?.access_token || accessToken;
 
+  // Use full URL to ensure we're hitting the correct endpoint
   const postscriptResponse = await fetch('https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/postscript-agent', {
     method: 'POST',
     headers: {
@@ -154,7 +156,9 @@ async function generateSocialMediaPost(
       'Cache-Control': 'no-cache, no-store, must-revalidate',
       'Pragma': 'no-cache',
       'Expires': '0',
-      'Authorization': `Bearer ${refreshedAccessToken}`
+      'Authorization': `Bearer ${refreshedAccessToken}`,
+      'X-Cache-Buster': newCacheBuster,
+      'X-Timestamp': new Date().toISOString()
     },
     body: JSON.stringify(postscriptRequestBody),
   });
@@ -183,14 +187,7 @@ async function generateSocialMediaPost(
     form: posthookData.form || '',
     rawResponse: postscriptData.rawResponse || postscriptData.content,
     adStructure: 'social',
-    debugInfo: {
-      ...postscriptData.debugInfo,
-      posthookData: JSON.stringify(posthookData),
-      postscriptData: JSON.stringify(postscriptData),
-      systemPromptUsed: postscriptData.debugInfo?.systemPromptUsed || 'Not available',
-      timestamp: new Date().toISOString(),
-      requestTimestamp: new Date().toISOString()
-    }
+    debugInfo: null
   };
 }
 
@@ -254,10 +251,6 @@ async function generateOnlineAdScript(
     totalHooks: data.allHooks ? data.allHooks.length : 0,
     adStructure: 'PAS',
     rawResponse: data.script,
-    debugInfo: {
-      ...data.debug,
-      timestamp: new Date().toISOString(),
-      requestTimestamp: new Date().toISOString()
-    }
+    debugInfo: null
   };
 }
