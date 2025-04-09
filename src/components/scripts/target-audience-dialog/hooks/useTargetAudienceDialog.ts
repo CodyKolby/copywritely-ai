@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth/AuthContext';
-import { fetchExistingTargetAudiences } from '../api';
+import { fetchExistingAudiences } from '../api';
 import { toast } from 'sonner';
 import { SocialMediaPlatform } from '../../SocialMediaPlatformDialog';
 import { EmailStyle } from '../../EmailStyleDialog';
@@ -52,7 +52,7 @@ export const useTargetAudienceDialog = ({
   const fetchAudiences = async () => {
     setIsLoading(true);
     try {
-      const audiences = await fetchExistingTargetAudiences(userId);
+      const audiences = await fetchExistingAudiences(userId);
       setExistingAudiences(audiences);
     } catch (error) {
       console.error('Błąd pobierania grup docelowych:', error);
@@ -126,7 +126,7 @@ export const useTargetAudienceDialog = ({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user?.access_token}`
+          'Authorization': `Bearer ${user?.session?.access_token || ''}`
         },
         body: JSON.stringify({
           userId: userId,
