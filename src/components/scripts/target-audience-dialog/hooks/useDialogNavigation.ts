@@ -33,27 +33,41 @@ export const useDialogNavigation = (deps: DialogNavigationDeps, templateId: stri
     // Set data
     deps.setAdvertisingGoal(goal);
     
-    // Choose the next dialog based on template type - RESTORED ORIGINAL WORKFLOW
+    // Choose the next dialog based on template type
     if (templateId === 'social') {
       console.log("Social template: transitioning to social media platform dialog");
-      deps.setShowGoalDialog(false);
-      deps.setShowSocialMediaPlatformDialog(true);
+      deps.transitionToDialog(
+        () => deps.setShowGoalDialog(false),
+        () => deps.setShowSocialMediaPlatformDialog(true)
+      );
     } else if (templateId === 'email') {
       console.log("Email template: transitioning to email style dialog");
-      deps.setShowGoalDialog(false);
-      deps.setShowEmailStyleDialog(true);
+      deps.transitionToDialog(
+        () => deps.setShowGoalDialog(false),
+        () => deps.setShowEmailStyleDialog(true)
+      );
+    } else if (templateId === 'ad') {
+      console.log("Ad template: transitioning directly to script dialog (using PAS generator)");
+      deps.transitionToDialog(
+        () => deps.setShowGoalDialog(false),
+        () => deps.setShowScriptDialog(true)
+      );
     } else {
       console.log("Other template: transitioning directly to script dialog");
-      deps.setShowGoalDialog(false);
-      deps.setShowScriptDialog(true);
+      deps.transitionToDialog(
+        () => deps.setShowGoalDialog(false),
+        () => deps.setShowScriptDialog(true)
+      );
     }
   }, [deps, templateId]);
 
   // Goal back button handler
   const handleGoalBack = useCallback(() => {
     console.log("Navigation: going back from goal dialog");
-    deps.setShowGoalDialog(false);
-    deps.setIsProcessing(false);
+    deps.transitionToDialog(
+      () => deps.setShowGoalDialog(false),
+      () => deps.setIsProcessing(false)
+    );
   }, [deps]);
 
   // Email style submission handler
@@ -62,8 +76,10 @@ export const useDialogNavigation = (deps: DialogNavigationDeps, templateId: stri
     deps.setEmailStyle(style);
     
     // Transition to email dialog
-    deps.setShowEmailStyleDialog(false);
-    deps.setShowEmailDialog(true);
+    deps.transitionToDialog(
+      () => deps.setShowEmailStyleDialog(false),
+      () => deps.setShowEmailDialog(true)
+    );
   }, [deps]);
 
   // Email style back button handler
@@ -71,8 +87,10 @@ export const useDialogNavigation = (deps: DialogNavigationDeps, templateId: stri
     console.log("Navigation: going back from email style dialog");
     
     // Transition to goal dialog
-    deps.setShowEmailStyleDialog(false);
-    deps.setShowGoalDialog(true);
+    deps.transitionToDialog(
+      () => deps.setShowEmailStyleDialog(false),
+      () => deps.setShowGoalDialog(true)
+    );
   }, [deps]);
 
   // Social media platform submission handler
@@ -81,8 +99,10 @@ export const useDialogNavigation = (deps: DialogNavigationDeps, templateId: stri
     deps.setSocialMediaPlatform(platform);
     
     // Transition to script dialog
-    deps.setShowSocialMediaPlatformDialog(false);
-    deps.setShowScriptDialog(true);
+    deps.transitionToDialog(
+      () => deps.setShowSocialMediaPlatformDialog(false),
+      () => deps.setShowScriptDialog(true)
+    );
   }, [deps]);
 
   // Social media platform back button handler
@@ -90,8 +110,10 @@ export const useDialogNavigation = (deps: DialogNavigationDeps, templateId: stri
     console.log("Navigation: going back from social media platform dialog");
     
     // Transition to goal dialog
-    deps.setShowSocialMediaPlatformDialog(false);
-    deps.setShowGoalDialog(true);
+    deps.transitionToDialog(
+      () => deps.setShowSocialMediaPlatformDialog(false),
+      () => deps.setShowGoalDialog(true)
+    );
   }, [deps]);
 
   // Script dialog close handler

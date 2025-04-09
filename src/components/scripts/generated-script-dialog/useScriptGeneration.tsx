@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { generateScript, saveScriptAsProject } from './script-utils';
 import { toast } from 'sonner';
@@ -45,11 +44,19 @@ export const useScriptGeneration = (
       setDebugInfo(undefined);
       
       try {
+        console.log("Starting script generation for template:", templateId);
         console.log("Weryfikacja ID grupy docelowej:", targetAudienceId);
         console.log("Cel reklamy:", advertisingGoal);
-        if (socialMediaPlatform) {
+        
+        // Log additional information for specific templates
+        if (templateId === 'social' && socialMediaPlatform) {
           console.log("Platforma social media:", socialMediaPlatform);
         }
+        
+        if (templateId === 'ad') {
+          console.log("Generowanie reklamy internetowej z PAS workflow");
+        }
+        
         console.log("Generowanie skryptu #", generationCount + 1, "z hookiem o indeksie:", currentHookIndex);
         
         // If we have a verified audience ID, use it; otherwise, use the target audience ID
