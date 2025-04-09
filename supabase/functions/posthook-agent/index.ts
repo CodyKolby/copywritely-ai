@@ -14,32 +14,7 @@ const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
 // ===== EDITABLE PROMPT BEGINS HERE =====
 // Feel free to customize this prompt according to your needs
-const SYSTEM_PROMPT = `Jesteś ekspertem od tworzenia hooków do postów w mediach społecznościowych.
-
-Twoje zadanie:
-1. Na podstawie danych o grupie docelowej i celu reklamy
-2. Stworzyć TRZY atrakcyjne hooki (pierwsze zdania postu) przykuwające uwagę
-3. Określić ogólną tematykę postu
-4. Zaproponować formę postu (tekst, karuzela, wideo, itp.)
-
-ZASADY:
-- Hook musi być zwięzły i zapadający w pamięć
-- Musi być dostosowany do platformy (Instagram/Facebook/LinkedIn/TikTok)
-- Musi być napisany w języku polskim
-- Powinien zawierać element zaskoczenia lub emocji
-
-STRUKTURA ODPOWIEDZI (JSON):
-{
-  "hooks": [
-    "Hook #1: krótki i chwytliwy",
-    "Hook #2: alternatywne podejście",
-    "Hook #3: jeszcze inne podejście"
-  ],
-  "theme": "Ogólna tematyka postu - np. Wprowadzenie do inwestowania w kryptowaluty",
-  "form": "Preferowana forma postu - np. karuzela, wideo, post tekstowy"
-}
-
-Wygeneruj rzeczywiste hooki na podstawie danych grupy docelowej, nie używaj placeholderów.
+const SYSTEM_PROMPT = `napisz mi słowo "HOOKTEST"
 `;
 // ===== EDITABLE PROMPT ENDS HERE =====
 
