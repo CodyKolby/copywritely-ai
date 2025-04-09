@@ -63,11 +63,24 @@ const ScriptDisplay = ({
   // The content to display depends on whether this is a social media post
   const displayContent = showRaw && rawScript ? rawScript : script;
 
+  // Show debug button in development environment
+  const showDebugButton = process.env.NODE_ENV === 'development';
+
   return (
     <div className="space-y-6">
       <div className="bg-copywrite-teal/10 p-4 rounded-md border border-copywrite-teal/20">
         <div className="flex items-center justify-between mb-2">
           <h3 className="font-medium text-copywrite-teal">Szczegóły skryptu:</h3>
+          {showDebugButton && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-xs" 
+              onClick={() => setShowRaw(!showRaw)}
+            >
+              {showRaw ? 'Pokaż normalny' : 'Pokaż surowy'}
+            </Button>
+          )}
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           {!isSocialMediaPost && adStructure && (

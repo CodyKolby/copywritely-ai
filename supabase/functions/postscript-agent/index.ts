@@ -13,15 +13,15 @@ const corsHeaders = {
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
 // System prompt for PostscriptAgent
-const SYSTEM_PROMPT = `Twoim zadaniem jest po prostu napisanie słowa "TEST" i tyle`;
+const SYSTEM_PROMPT = `Zwróć tylko tekst "DUPA"`;
 
-console.log("PostscriptAgent Edge Function initialized");
+console.log("PostscriptAgent Edge Function initialized v2");
 console.log("First 300 chars of system prompt:", SYSTEM_PROMPT.substring(0, 300));
-console.log("Workflow: 1) Receive request with target audience, hook and theme 2) Process with OpenAI 3) Return formatted post content with CTA");
+console.log("Current complete system prompt:", SYSTEM_PROMPT);
 
 serve(async (req) => {
   console.log("PostscriptAgent received request:", req.method, req.url);
-  console.log("USING UPDATED FUNCTION with TEST prompt!");
+  console.log("USING UPDATED FUNCTION with completely new implementation!");
   
   // Handle OPTIONS requests for CORS preflight
   if (req.method === 'OPTIONS') {
@@ -76,28 +76,25 @@ serve(async (req) => {
     // Prepare platform info
     const platformInfo = `Platforma: ${platform || 'Meta (Instagram/Facebook)'}`;
     
-    // Prepare variables for the prompt template
-    const surveyData = JSON.stringify(targetAudience, null, 2);
-    const postTheme = validatedPosthookOutput.theme;
-    
-    // Replace the template variables in the system prompt
-    let customizedSystemPrompt = SYSTEM_PROMPT;
-    customizedSystemPrompt = customizedSystemPrompt.replace('{{surveyData}}', surveyData);
-    customizedSystemPrompt = customizedSystemPrompt.replace('{{selectedHook}}', selectedHook);
-    customizedSystemPrompt = customizedSystemPrompt.replace('{{postTheme}}', postTheme);
-    customizedSystemPrompt = customizedSystemPrompt.replace('{{platformInfo}}', platformInfo);
-    
-    console.log("CUSTOMIZED SYSTEM PROMPT (first 300 chars):", customizedSystemPrompt.substring(0, 300));
-    
     // Construct prompt for agent
-    const userPrompt = `Napisz tekst postu dla mediów społecznościowych, który zaczyna się od hooka: "${selectedHook}". 
-    Tematyka: ${validatedPosthookOutput.theme}. 
-    Platforma: ${platform || 'Meta (Instagram/Facebook)'}
-    Forma: ${validatedPosthookOutput.form}
-    Cel reklamy: ${advertisingGoal || 'Brak określonego celu'}`;
+    const userPrompt = `Oto dane o grupie docelowej:
+    ${JSON.stringify(targetAudience, null, 2)}
+    
+    Cel reklamy: ${advertisingGoal || 'Brak określonego celu'}
+    
+    Wybrany hook: ${selectedHook}
+    
+    Tematyka postu: ${validatedPosthookOutput.theme || 'Brak określonej tematyki'}
+    
+    Forma postu: ${validatedPosthookOutput.form || 'post tekstowy'}
+    
+    ${platformInfo}
+    
+    Stwórz pełną treść postu z wezwaniem do działania.`;
     
     // Log the prompt for debugging
     console.log("User prompt for PostscriptAgent:", userPrompt);
+    console.log("System prompt being used:", SYSTEM_PROMPT);
     
     // Get response from OpenAI
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -109,7 +106,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: 'gpt-4o',
         messages: [
-          { role: 'system', content: customizedSystemPrompt },
+          { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: userPrompt }
         ],
         temperature: 0.7,
@@ -128,51 +125,17 @@ serve(async (req) => {
     // Log response for debugging
     console.log("Raw OpenAI response:", responseText);
     
-    // Extract content and CTA from the response
-    let content = responseText;
-    let cta = "Skontaktuj się z nami, aby dowiedzieć się więcej.";
-    
-    // Try to find a CTA in the text
-    const ctaIdentifiers = [
-      "CTA:", "Wezwanie do działania:", 
-      "#CTA", "Call to action:", 
-      "WEZWANIE DO DZIAŁANIA", "CALL TO ACTION"
-    ];
-    
-    // Look for any CTA identifier in the text
-    let ctaIndex = -1;
-    for (const identifier of ctaIdentifiers) {
-      const idx = responseText.lastIndexOf(identifier);
-      if (idx !== -1 && (ctaIndex === -1 || idx > ctaIndex)) {
-        ctaIndex = idx;
-      }
-    }
-    
-    // If we found a CTA, split the content
-    if (ctaIndex !== -1) {
-      content = responseText.substring(0, ctaIndex).trim();
-      // Extract text after the identifier
-      const afterIdentifier = responseText.substring(ctaIndex);
-      // Find the first colon after the identifier
-      const colonIndex = afterIdentifier.indexOf(':');
-      if (colonIndex !== -1) {
-        cta = afterIdentifier.substring(colonIndex + 1).trim();
-      } else {
-        // If no colon, try to use everything after the identifier
-        cta = afterIdentifier.substring(afterIdentifier.indexOf(' ')).trim();
-      }
-    }
-    
-    // Create the final response object
-    const processedResponse = { 
-      content: content || selectedHook,
-      cta: cta
+    // Return exactly what we got from the API, without further processing
+    // This will help us verify that the system prompt is working
+    const result = {
+      content: responseText,
+      rawResponse: responseText
     };
     
-    console.log("Processed PostscriptAgent response:", processedResponse);
+    console.log("Final response being sent to client:", result);
     
     return new Response(
-      JSON.stringify(processedResponse),
+      JSON.stringify(result),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
     

@@ -5,3 +5,6 @@ project_id = "jorbqjareswzdrsmepbv"
 
 [functions.stripe-webhook]
 verify_jwt = false
+
+[functions.postscript-agent]
+verify_jwt = false

@@ -134,7 +134,7 @@ async function generateSocialMediaPost(
       try {
         console.log(`Posthook attempt ${posthookRetryCount + 1}/${maxRetries}`);
         
-        // Call the edge function directly with the full URL
+        // Call the posthook agent
         posthookResponse = await supabase.functions.invoke('posthook-agent', {
           body: {
             targetAudience,
@@ -151,16 +151,16 @@ async function generateSocialMediaPost(
         console.warn(`Retry ${posthookRetryCount + 1}/${maxRetries} for posthook-agent:`, posthookResponse.error);
         posthookRetryCount++;
         
-        // Wait before retrying - increased to 8 seconds
-        await new Promise(resolve => setTimeout(resolve, 8000));
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, 5000));
       } catch (e) {
         console.error(`Posthook attempt ${posthookRetryCount + 1}/${maxRetries} failed:`, e);
         posthookRetryCount++;
         
         if (posthookRetryCount >= maxRetries) throw e;
         
-        // Wait before retrying - increased to 8 seconds
-        await new Promise(resolve => setTimeout(resolve, 8000));
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, 5000));
       }
     }
     
@@ -198,9 +198,8 @@ async function generateSocialMediaPost(
     const selectedHook = hooks[actualHookIndex];
     console.log(`Selected hook at index ${actualHookIndex}: ${selectedHook}`);
 
-    // Then use PostscriptAgent to generate the full content
-    console.log("Calling postscript-agent edge function");
-    console.log("NOTE: Making sure we're calling the correct root endpoint, not a nested one");
+    // Make sure we're calling the root postscript-agent function (not nested in ai-agents)
+    console.log("Calling main postscript-agent edge function directly");
     
     // Add retry mechanism for postscript-agent call
     let postscriptResponse;
@@ -210,7 +209,7 @@ async function generateSocialMediaPost(
       try {
         console.log(`Postscript attempt ${postscriptRetryCount + 1}/${maxRetries}`);
         
-        // IMPORTANT: Call the root function directly to make sure we're using the updated prompt
+        // IMPORTANT: Call the root function directly
         postscriptResponse = await supabase.functions.invoke('postscript-agent', {
           body: {
             targetAudience,
@@ -232,16 +231,16 @@ async function generateSocialMediaPost(
         console.warn(`Retry ${postscriptRetryCount + 1}/${maxRetries} for postscript-agent:`, postscriptResponse.error);
         postscriptRetryCount++;
         
-        // Wait before retrying - increased to 8 seconds
-        await new Promise(resolve => setTimeout(resolve, 8000));
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, 5000));
       } catch (e) {
         console.error(`Postscript attempt ${postscriptRetryCount + 1}/${maxRetries} failed:`, e);
         postscriptRetryCount++;
         
         if (postscriptRetryCount >= maxRetries) throw e;
         
-        // Wait before retrying - increased to 8 seconds
-        await new Promise(resolve => setTimeout(resolve, 8000));
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, 5000));
       }
     }
     
@@ -264,7 +263,12 @@ async function generateSocialMediaPost(
     const postscriptData = postscriptResponse.data;
     console.log('PostscriptAgent full response:', postscriptData);
 
-    // Create fallback content if missing or invalid response
+    // Log the raw response for debugging
+    if (postscriptData && postscriptData.rawResponse) {
+      console.log('PostscriptAgent raw response text:', postscriptData.rawResponse);
+    }
+
+    // Create fallback content
     let content = selectedHook + "\n\nTreść postu nie została wygenerowana.";
     let cta = "Skontaktuj się z nami, aby dowiedzieć się więcej.";
     
@@ -272,10 +276,6 @@ async function generateSocialMediaPost(
       content = postscriptData.content;
     } else {
       console.error('Missing content in response from postscript-agent:', postscriptData);
-    }
-    
-    if (postscriptData && postscriptData.cta) {
-      cta = postscriptData.cta;
     }
 
     return {
