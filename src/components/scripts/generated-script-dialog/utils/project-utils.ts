@@ -27,6 +27,12 @@ export const saveProjectWithContent = async (
       fullContent = `${content}\n\n---\nPlatforma: ${socialMediaPlatform.label}`;
     }
 
+    // Check if userId exists
+    if (!userId) {
+      console.error('No user ID provided when saving project');
+      throw new Error('User ID is required to save a project');
+    }
+
     // Create a new project in the database
     const { data: project, error } = await supabase
       .from('projects')
