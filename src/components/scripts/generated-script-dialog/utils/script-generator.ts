@@ -45,141 +45,219 @@ export const generateScript = async (
       throw new Error('Użytkownik nie jest zalogowany.');
     }
 
-    // Prepare the request body for the PostHook agent
-    const posthookRequestBody = {
-      targetAudience,
-      advertisingGoal,
-      platform: socialMediaPlatform?.key || 'meta',
-      cacheBuster,
-      timestamp: new Date().toISOString()
-    };
-
-    console.log('Wysyłanie żądania do PostHook:', posthookRequestBody);
-
-    // Step 1: Generate hooks and theme with PostHook agent
-    const posthookResponse = await fetch('https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/posthook-agent', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-        'Authorization': `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify(posthookRequestBody),
-    });
-
-    if (!posthookResponse.ok) {
-      const errorText = await posthookResponse.text();
-      console.error('PostHook API error:', errorText);
-      throw new Error(`Błąd podczas generowania hooków: ${errorText}`);
-    }
-
-    const posthookData: PosthookResponse = await posthookResponse.json();
-    console.log('Step 1 Complete: PostHook response:', posthookData);
-
-    if (!posthookData || !posthookData.hooks || posthookData.hooks.length === 0) {
-      throw new Error('Nie udało się wygenerować hooków');
-    }
-
-    // Select the hook based on the provided index, defaulting to the first one if out of bounds
-    const selectedHookIndex = hookIndex >= 0 && hookIndex < posthookData.hooks.length ? hookIndex : 0;
-    const selectedHook = posthookData.hooks[selectedHookIndex];
-
-    // Step 2: Generate the script with PostScript agent - with updated CORS handling
-    const newCacheBuster = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
-    const postscriptRequestBody = {
-      targetAudience,
-      advertisingGoal,
-      platform: socialMediaPlatform?.key || 'meta',
-      posthookOutput: posthookData,
-      cacheBuster: newCacheBuster, 
-      timestamp: new Date().toISOString()
-    };
-
-    console.log('Wysyłanie żądania do PostScript:', {
-      ...postscriptRequestBody,
-      targetAudience: '...abbreviated...',
-      posthookOutput: {
-        hooks: posthookData.hooks.length ? [posthookData.hooks[0].substring(0, 30) + '...'] : [],
-        theme: posthookData.theme?.substring(0, 30) + '...'
-      }
-    });
-
-    // Use a fresh copy of the access token to ensure it's not expired
-    const { data: { session: refreshedSession } } = await supabase.auth.getSession();
-    const refreshedAccessToken = refreshedSession?.access_token || accessToken;
-
-    // Remove X-Random and X-Timestamp headers to avoid CORS issues
-    const postscriptResponse = await fetch('https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/postscript-agent', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-        'Authorization': `Bearer ${refreshedAccessToken}`
-      },
-      body: JSON.stringify(postscriptRequestBody),
-    });
-
-    if (!postscriptResponse.ok) {
-      const errorText = await postscriptResponse.text();
-      console.error('PostScript API error:', errorText);
-      throw new Error(`Błąd podczas generowania skryptu: ${errorText}`);
-    }
-
-    const postscriptData: PostscriptResponse = await postscriptResponse.json();
-    console.log('Step 2 Complete: PostscriptAgent full response:', postscriptData);
-
-    if (!postscriptData || !postscriptData.content) {
-      throw new Error('Nie udało się wygenerować treści skryptu');
-    }
-
-    // For social media posts, structure is different
+    // Different workflow for social media posts vs online ads (PAS)
     if (templateId === 'social') {
-      return {
-        script: postscriptData.content,
-        bestHook: selectedHook,
-        allHooks: posthookData.hooks,
-        currentHookIndex: selectedHookIndex,
-        totalHooks: posthookData.hooks.length,
-        cta: posthookData.cta || '',
-        theme: posthookData.theme || '',
-        form: posthookData.form || '',
-        rawResponse: postscriptData.rawResponse || postscriptData.content,
-        adStructure: 'social',
-        debugInfo: {
-          ...postscriptData.debugInfo,
-          posthookData: JSON.stringify(posthookData),
-          postscriptData: JSON.stringify(postscriptData),
-          systemPromptUsed: postscriptData.debugInfo?.systemPromptUsed || 'Not available',
-          timestamp: new Date().toISOString(),
-          requestTimestamp: new Date().toISOString()
-        }
-      };
+      // Social media posts workflow using posthook and postscript agents
+      return generateSocialMediaPost(
+        targetAudience,
+        advertisingGoal,
+        hookIndex,
+        socialMediaPlatform,
+        accessToken,
+        cacheBuster
+      );
+    } else {
+      // For online ads (PAS) and other templates, use the generate-script function
+      return generateOnlineAdScript(
+        targetAudience,
+        advertisingGoal,
+        hookIndex,
+        templateId,
+        accessToken
+      );
     }
-
-    // For regular scripts
-    return {
-      script: postscriptData.content,
-      bestHook: selectedHook,
-      allHooks: posthookData.hooks,
-      currentHookIndex: selectedHookIndex,
-      totalHooks: posthookData.hooks.length,
-      adStructure: 'PAS',
-      rawResponse: postscriptData.rawResponse || postscriptData.content,
-      debugInfo: {
-        ...postscriptData.debugInfo,
-        posthookData: JSON.stringify(posthookData),
-        postscriptData: JSON.stringify(postscriptData),
-        systemPromptUsed: postscriptData.debugInfo?.systemPromptUsed || 'Not available',
-        timestamp: new Date().toISOString(),
-        requestTimestamp: new Date().toISOString()
-      }
-    };
   } catch (error: any) {
     console.error('Error generating script:', error);
     throw error;
   }
 };
+
+// Function for generating social media posts
+async function generateSocialMediaPost(
+  targetAudience: any,
+  advertisingGoal: string,
+  hookIndex: number,
+  socialMediaPlatform?: SocialMediaPlatform,
+  accessToken?: string,
+  cacheBuster?: string
+): Promise<ScriptGenerationResult> {
+  console.log('Używam workflow dla postów w social media');
+  
+  // Step 1: Generate hooks and theme with PostHook agent
+  const posthookRequestBody = {
+    targetAudience,
+    advertisingGoal,
+    platform: socialMediaPlatform?.key || 'meta',
+    cacheBuster: cacheBuster || `${Date.now()}`,
+    timestamp: new Date().toISOString()
+  };
+
+  console.log('Wysyłanie żądania do PostHook:', posthookRequestBody);
+
+  const posthookResponse = await fetch('https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/posthook-agent', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'Authorization': `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(posthookRequestBody),
+  });
+
+  if (!posthookResponse.ok) {
+    const errorText = await posthookResponse.text();
+    console.error('PostHook API error:', errorText);
+    throw new Error(`Błąd podczas generowania hooków: ${errorText}`);
+  }
+
+  const posthookData: PosthookResponse = await posthookResponse.json();
+  console.log('Step 1 Complete: PostHook response:', posthookData);
+
+  if (!posthookData || !posthookData.hooks || posthookData.hooks.length === 0) {
+    throw new Error('Nie udało się wygenerować hooków');
+  }
+
+  // Select the hook based on the provided index, defaulting to the first one if out of bounds
+  const selectedHookIndex = hookIndex >= 0 && hookIndex < posthookData.hooks.length ? hookIndex : 0;
+  const selectedHook = posthookData.hooks[selectedHookIndex];
+
+  // Step 2: Generate the script with PostScript agent
+  const newCacheBuster = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
+  const postscriptRequestBody = {
+    targetAudience,
+    advertisingGoal,
+    platform: socialMediaPlatform?.key || 'meta',
+    posthookOutput: posthookData,
+    cacheBuster: newCacheBuster, 
+    timestamp: new Date().toISOString()
+  };
+
+  console.log('Wysyłanie żądania do PostScript:', {
+    ...postscriptRequestBody,
+    targetAudience: '...abbreviated...',
+    posthookOutput: {
+      hooks: posthookData.hooks.length ? [posthookData.hooks[0].substring(0, 30) + '...'] : [],
+      theme: posthookData.theme?.substring(0, 30) + '...'
+    }
+  });
+
+  // Use a fresh copy of the access token to ensure it's not expired
+  const { data: { session: refreshedSession } } = await supabase.auth.getSession();
+  const refreshedAccessToken = refreshedSession?.access_token || accessToken;
+
+  const postscriptResponse = await fetch('https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/postscript-agent', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'Authorization': `Bearer ${refreshedAccessToken}`
+    },
+    body: JSON.stringify(postscriptRequestBody),
+  });
+
+  if (!postscriptResponse.ok) {
+    const errorText = await postscriptResponse.text();
+    console.error('PostScript API error:', errorText);
+    throw new Error(`Błąd podczas generowania skryptu: ${errorText}`);
+  }
+
+  const postscriptData: PostscriptResponse = await postscriptResponse.json();
+  console.log('Step 2 Complete: PostscriptAgent full response:', postscriptData);
+
+  if (!postscriptData || !postscriptData.content) {
+    throw new Error('Nie udało się wygenerować treści skryptu');
+  }
+
+  return {
+    script: postscriptData.content,
+    bestHook: selectedHook,
+    allHooks: posthookData.hooks,
+    currentHookIndex: selectedHookIndex,
+    totalHooks: posthookData.hooks.length,
+    cta: posthookData.cta || '',
+    theme: posthookData.theme || '',
+    form: posthookData.form || '',
+    rawResponse: postscriptData.rawResponse || postscriptData.content,
+    adStructure: 'social',
+    debugInfo: {
+      ...postscriptData.debugInfo,
+      posthookData: JSON.stringify(posthookData),
+      postscriptData: JSON.stringify(postscriptData),
+      systemPromptUsed: postscriptData.debugInfo?.systemPromptUsed || 'Not available',
+      timestamp: new Date().toISOString(),
+      requestTimestamp: new Date().toISOString()
+    }
+  };
+}
+
+// Function for generating online ad scripts using hook-generator and pas-script-generator
+async function generateOnlineAdScript(
+  targetAudience: any,
+  advertisingGoal: string,
+  hookIndex: number,
+  templateId: string,
+  accessToken?: string
+): Promise<ScriptGenerationResult> {
+  console.log('Używam workflow dla reklam internetowych (PAS)');
+
+  // Get a fresh access token
+  const { data: { session } } = await supabase.auth.getSession();
+  const freshAccessToken = session?.access_token || accessToken || '';
+
+  if (!freshAccessToken) {
+    throw new Error('Nie można uzyskać tokenu dostępu');
+  }
+
+  // Call the generate-script function
+  const cacheBuster = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
+  const response = await fetch(`https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/generate-script`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${freshAccessToken}`,
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+    },
+    body: JSON.stringify({
+      templateId,
+      targetAudienceId: targetAudience.id,
+      advertisingGoal,
+      hookIndex,
+      debugInfo: true,
+      cacheBuster
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Generate Script API error:', errorText);
+    throw new Error(`Błąd podczas generowania skryptu: ${errorText}`);
+  }
+
+  const data = await response.json();
+  console.log('Online Ad Script Generated Response:', {
+    script: data.script?.substring(0, 50) + '...',
+    hooks: data.allHooks ? data.allHooks.length : 0,
+    hookIndex: data.currentHookIndex
+  });
+
+  return {
+    script: data.script,
+    bestHook: data.bestHook,
+    allHooks: data.allHooks || [],
+    currentHookIndex: data.currentHookIndex,
+    totalHooks: data.allHooks ? data.allHooks.length : 0,
+    adStructure: 'PAS',
+    rawResponse: data.script,
+    debugInfo: {
+      ...data.debug,
+      timestamp: new Date().toISOString(),
+      requestTimestamp: new Date().toISOString()
+    }
+  };
+}
