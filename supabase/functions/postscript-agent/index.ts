@@ -13,16 +13,7 @@ const corsHeaders = {
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
 // System prompt for PostscriptAgent - THIS IS THE DEFINITIVE PROMPT
-const SYSTEM_PROMPT = `Jesteś ekspertem od tworzenia postów na social media w języku polskim.
-
-Pisząc posty kieruj się następującymi zasadami:
-1. Używaj prostego, zrozumiałego języka
-2. Dziel tekst na krótkie akapity
-3. Stosuj emoji dla zwiększenia czytelności
-4. Dodaj hashtagi na końcu
-5. Zawsze zakończ zachętą do działania (CTA)
-
-System sprawdzi działanie zwracając tylko słowo "DEBUGTEST_V1_2025-04-09"`;
+const SYSTEM_PROMPT = `napisz po prostu słowo 'TEST'"`;
 
 console.log("PostscriptAgent Edge Function initialized with new debugging - version 4");
 console.log(`Complete system prompt being used: "${SYSTEM_PROMPT}"`);
