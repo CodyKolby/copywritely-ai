@@ -23,8 +23,12 @@ export const useDialogNavigation = (deps: DialogNavigationDeps, templateId: stri
   // Back button handler for main flow
   const handleBack = useCallback(() => {
     console.log("Navigation: going back to main selection");
-    deps.setShowForm(false);
-    deps.setIsProcessing(false);
+    deps.setIsProcessing(true);
+    
+    deps.transitionToDialog(
+      () => deps.setShowForm(false),
+      () => deps.setIsProcessing(false)
+    );
   }, [deps]);
 
   // Goal submission handler
