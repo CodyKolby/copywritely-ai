@@ -22,6 +22,14 @@ const ScriptDisplay = ({
 }: ScriptDisplayProps) => {
   const isDevelopment = process.env.NODE_ENV === 'development' || true; // Always show debug in preview
 
+  // Check if the script contains the debug test marker
+  const containsDebugMarker = script.includes('DEBUGTEST_V1_2025-04-09');
+  
+  // Remove the debug marker from the script if present
+  const cleanedScript = containsDebugMarker 
+    ? script.replace('DEBUGTEST_V1_2025-04-09', '') 
+    : script;
+
   return (
     <div className="p-6 pt-0">
       <div className="mb-4">
@@ -42,8 +50,16 @@ const ScriptDisplay = ({
           </div>
         )}
         
+        {/* Display debug notification if debug marker was detected */}
+        {containsDebugMarker && (
+          <div className="mb-4 p-3 bg-blue-100 border border-blue-300 text-blue-800 rounded-lg">
+            <p className="font-medium">Debug Test Detected:</p>
+            <p className="text-sm">System wykonał test z kodem: DEBUGTEST_V1_2025-04-09</p>
+          </div>
+        )}
+        
         <div className="prose max-w-none">
-          {script.split('\n').map((line, i) => (
+          {cleanedScript.split('\n').map((line, i) => (
             line ? (
               <p key={i} className="mb-4 last:mb-0">
                 {line}
@@ -73,6 +89,14 @@ const ScriptDisplay = ({
                 </pre>
               </div>
             )}
+            
+            {/* Add newly detected request logs */}
+            <div className="mb-4">
+              <h5 className="text-xs font-medium mb-1">System Prompt Used:</h5>
+              <pre className="bg-gray-100 p-3 rounded text-xs overflow-auto max-h-40">
+                {debugInfo?.systemPromptUsed || "Not available"}
+              </pre>
+            </div>
           </div>
         )}
       </div>
