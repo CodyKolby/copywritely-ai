@@ -1,6 +1,7 @@
 
 import { useAuth } from '@/contexts/auth/AuthContext';
 import { toast } from 'sonner';
+import { useCallback } from 'react';
 
 interface AudienceManagementDeps {
   setIsLoading: (value: boolean) => void;
@@ -21,26 +22,30 @@ export const useAudienceManagement = (
 ) => {
   const { session } = useAuth();
 
-  // Choice selection handler - WAŻNE: musi resetować isProcessing
-  const handleChoiceSelection = (choice: 'existing' | 'new') => {
+  // Choice selection handler - memoized with useCallback
+  const handleChoiceSelection = useCallback((choice: 'existing' | 'new') => {
+    console.log(`Selected audience choice: ${choice}`);
     deps.setAudienceChoice(choice);
     deps.setIsProcessing(false); // Reset processing state when changing choice
-  };
+  }, [deps]);
 
-  // Handlers for existing audience selection - WAŻNE: musi resetować isProcessing
-  const handleExistingAudienceSelect = (audienceId: string) => {
+  // Handlers for existing audience selection - memoized with useCallback
+  const handleExistingAudienceSelect = useCallback((audienceId: string) => {
+    console.log(`Selected audience ID: ${audienceId}`);
     deps.setSelectedAudienceId(audienceId);
     deps.setIsProcessing(false); // Reset processing state when changing selection
-  };
+  }, [deps]);
 
-  // Continue button handler - używa mechanizmu przejść sekwencyjnych
-  const handleContinue = () => {
+  // Continue button handler - memoized with useCallback
+  const handleContinue = useCallback(() => {
     if (!userId) {
       toast.error('Musisz być zalogowany, aby kontynuować');
       return;
     }
     
     try {
+      console.log('Continue button clicked, moving to goal dialog');
+      
       // Ustawiam flagę przetwarzania
       deps.setIsProcessing(true);
       
@@ -63,16 +68,17 @@ export const useAudienceManagement = (
       console.error("Error in continue flow:", error);
       deps.setIsProcessing(false);
     }
-  };
+  }, [userId, deps]);
 
-  // Handler for creating a new audience
-  const handleCreateNewAudience = () => {
+  // Handler for creating a new audience - memoized with useCallback
+  const handleCreateNewAudience = useCallback(() => {
     if (!userId) {
       toast.error('Musisz być zalogowany, aby kontynuować');
       return;
     }
     
     try {
+      console.log('Create new audience button clicked, showing form');
       deps.setIsProcessing(true);
       
       if (deps.transitionToDialog) {
@@ -90,7 +96,7 @@ export const useAudienceManagement = (
       console.error("Error showing form:", error);
       deps.setIsProcessing(false);
     }
-  };
+  }, [userId, deps]);
 
   return {
     handleChoiceSelection,

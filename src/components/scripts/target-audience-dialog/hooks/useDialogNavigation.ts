@@ -1,4 +1,5 @@
 
+import { useCallback } from "react";
 import { EmailStyle } from "../../EmailStyleDialog";
 import { SocialMediaPlatform } from "../../SocialMediaPlatformDialog";
 
@@ -20,13 +21,15 @@ export interface DialogNavigationDeps {
 
 export const useDialogNavigation = (deps: DialogNavigationDeps, templateId: string) => {
   // Back button handler for main flow
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
+    console.log("Navigation: going back to main selection");
     deps.setShowForm(false);
     deps.setIsProcessing(false);
-  };
+  }, [deps]);
 
   // Goal submission handler
-  const handleGoalSubmit = (goal: string) => {
+  const handleGoalSubmit = useCallback((goal: string) => {
+    console.log(`Goal submitted: ${goal}, template: ${templateId}`);
     // Ustaw dane
     deps.setAdvertisingGoal(goal);
     deps.setIsProcessing(true);
@@ -44,16 +47,22 @@ export const useDialogNavigation = (deps: DialogNavigationDeps, templateId: stri
     }
     
     deps.transitionToDialog(closeCurrentDialog, openNextDialog);
-  };
+  }, [deps, templateId]);
 
   // Goal back button handler
-  const handleGoalBack = () => {
-    deps.setShowGoalDialog(false);
-    deps.setIsProcessing(false);
-  };
+  const handleGoalBack = useCallback(() => {
+    console.log("Navigation: going back from goal dialog");
+    deps.setIsProcessing(true);
+    
+    deps.transitionToDialog(
+      () => deps.setShowGoalDialog(false),
+      () => deps.setIsProcessing(false)
+    );
+  }, [deps]);
 
   // Email style submission handler
-  const handleEmailStyleSubmit = (style: EmailStyle) => {
+  const handleEmailStyleSubmit = useCallback((style: EmailStyle) => {
+    console.log(`Email style submitted: ${style}`);
     deps.setEmailStyle(style);
     deps.setIsProcessing(true);
     
@@ -62,10 +71,11 @@ export const useDialogNavigation = (deps: DialogNavigationDeps, templateId: stri
       () => deps.setShowEmailStyleDialog(false),
       () => deps.setShowEmailDialog(true)
     );
-  };
+  }, [deps]);
 
   // Email style back button handler
-  const handleEmailStyleBack = () => {
+  const handleEmailStyleBack = useCallback(() => {
+    console.log("Navigation: going back from email style dialog");
     deps.setIsProcessing(true);
     
     // Wykonaj płynne przejście do poprzedniego dialogu
@@ -73,10 +83,11 @@ export const useDialogNavigation = (deps: DialogNavigationDeps, templateId: stri
       () => deps.setShowEmailStyleDialog(false),
       () => deps.setShowGoalDialog(true)
     );
-  };
+  }, [deps]);
 
   // Social media platform submission handler
-  const handleSocialMediaPlatformSubmit = (platform: SocialMediaPlatform) => {
+  const handleSocialMediaPlatformSubmit = useCallback((platform: SocialMediaPlatform) => {
+    console.log(`Social media platform submitted: ${platform}`);
     deps.setSocialMediaPlatform(platform);
     deps.setIsProcessing(true);
     
@@ -85,10 +96,11 @@ export const useDialogNavigation = (deps: DialogNavigationDeps, templateId: stri
       () => deps.setShowSocialMediaPlatformDialog(false),
       () => deps.setShowScriptDialog(true)
     );
-  };
+  }, [deps]);
 
   // Social media platform back button handler
-  const handleSocialMediaPlatformBack = () => {
+  const handleSocialMediaPlatformBack = useCallback(() => {
+    console.log("Navigation: going back from social media platform dialog");
     deps.setIsProcessing(true);
     
     // Wykonaj płynne przejście do poprzedniego dialogu
@@ -96,19 +108,21 @@ export const useDialogNavigation = (deps: DialogNavigationDeps, templateId: stri
       () => deps.setShowSocialMediaPlatformDialog(false),
       () => deps.setShowGoalDialog(true)
     );
-  };
+  }, [deps]);
 
   // Script dialog close handler
-  const handleScriptDialogClose = () => {
+  const handleScriptDialogClose = useCallback(() => {
+    console.log("Navigation: closing script dialog");
     deps.setShowScriptDialog(false);
     deps.setIsProcessing(false);
-  };
+  }, [deps]);
 
   // Email dialog close handler
-  const handleEmailDialogClose = () => {
+  const handleEmailDialogClose = useCallback(() => {
+    console.log("Navigation: closing email dialog");
     deps.setShowEmailDialog(false);
     deps.setIsProcessing(false);
-  };
+  }, [deps]);
 
   return {
     handleBack,

@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { EmailStyle } from '../../EmailStyleDialog';
 import { SocialMediaPlatform } from '../../SocialMediaPlatformDialog';
 import { TargetAudience } from '../types';
@@ -30,8 +30,57 @@ export const useDialogState = () => {
   const [emailStyle, setEmailStyle] = useState<EmailStyle | null>(null);
   const [socialMediaPlatform, setSocialMediaPlatform] = useState<SocialMediaPlatform | null>(null);
 
+  // Visibility tracking state - NEW
+  const visibilityState = useRef({
+    wasFocused: true,
+    dialogsInProgress: false
+  });
+
+  // NEW: Monitor page visibility and preserve dialog state
+  useEffect(() => {
+    // Function to handle visibility change
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && !visibilityState.current.wasFocused) {
+        // Tab is now visible again after being hidden
+        console.log("Tab became visible - preserving dialog state");
+        visibilityState.current.wasFocused = true;
+      } else if (document.visibilityState === 'hidden') {
+        // Tab is now hidden
+        console.log("Tab became hidden - marking dialog state to preserve");
+        visibilityState.current.wasFocused = false;
+        
+        // Check if we're in an active dialog sequence
+        visibilityState.current.dialogsInProgress = 
+          showGoalDialog || showEmailStyleDialog || 
+          showSocialMediaPlatformDialog || showScriptDialog || 
+          showEmailDialog || showForm;
+      }
+    };
+
+    // Add event listener
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Cleanup
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [
+    showGoalDialog, 
+    showEmailStyleDialog, 
+    showSocialMediaPlatformDialog, 
+    showScriptDialog, 
+    showEmailDialog,
+    showForm
+  ]);
+
   // Reset all state - implementacja z useCallback dla stabilności referencji
   const resetState = useCallback(() => {
+    // Only reset if we're not in the middle of a dialog sequence that needs to be preserved
+    if (visibilityState.current.dialogsInProgress && !visibilityState.current.wasFocused) {
+      console.log("Skipping dialog reset because tab visibility changed during active dialog sequence");
+      return;
+    }
+    
     console.log("Resetowanie wszystkich stanów dialogu");
     setShowForm(false);
     setAudienceChoice(null);
@@ -46,6 +95,9 @@ export const useDialogState = () => {
     setSocialMediaPlatform(null);
     setIsProcessing(false); // Important: reset processing state
     setIsTransitioning(false); // Reset transition state
+    
+    // Reset visibility tracking
+    visibilityState.current.dialogsInProgress = false;
   }, []); // Pusta tablica zależności, funkcja nigdy nie jest tworzona na nowo
   
   // Sequential dialog transitions to prevent flashing
