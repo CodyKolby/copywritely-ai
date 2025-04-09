@@ -46,11 +46,14 @@ export const useTargetAudienceDialog = ({
       fetchAudiences();
     }
     
-    // Reset state when dialog opens
-    if (open) {
+    // Reset state when dialog opens or closes
+    if (!open) {
       resetState();
     }
-  }, [open, userId]);
+
+    // When template changes, reset all dialog states
+    resetDialogStates();
+  }, [open, userId, templateId]);
 
   const fetchAudiences = async () => {
     setIsLoading(true);
@@ -78,6 +81,17 @@ export const useTargetAudienceDialog = ({
     setEmailStyle(null);
     setSocialMediaPlatform(null);
     setIsProcessing(false);
+  };
+
+  const resetDialogStates = () => {
+    setShowScriptDialog(false);
+    setShowEmailDialog(false);
+    setShowGoalDialog(false);
+    setShowEmailStyleDialog(false);
+    setShowSocialMediaPlatformDialog(false);
+    setAdvertisingGoal('');
+    setEmailStyle(null);
+    setSocialMediaPlatform(null);
   };
 
   // Choice selection handler
@@ -144,8 +158,8 @@ export const useTargetAudienceDialog = ({
       setSelectedAudienceId(data.audience.id);
       
       // Always show goal dialog after form submission
-      setShowGoalDialog(true);
       setShowForm(false);
+      setShowGoalDialog(true);
       
     } catch (error) {
       console.error('Błąd zapisywania grupy docelowej:', error);
@@ -158,6 +172,7 @@ export const useTargetAudienceDialog = ({
   const handleBack = () => {
     setShowForm(false);
     setAudienceChoice(null);
+    setIsProcessing(false);
   };
 
   // Goal submission handler
@@ -173,6 +188,8 @@ export const useTargetAudienceDialog = ({
     } else {
       setShowScriptDialog(true);
     }
+    
+    setIsProcessing(false);
   };
 
   // Goal back button handler

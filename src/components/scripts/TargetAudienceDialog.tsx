@@ -74,13 +74,10 @@ const TargetAudienceDialog = ({
   // Hide the audience dialog when script/email dialog is shown
   const shouldShowAudienceDialog = open && !showScriptDialog && !showEmailDialog;
   
-  // Determine which dialog should be shown
-  const showMainDialog = shouldShowAudienceDialog && !showSocialMediaPlatformDialog && !showEmailStyleDialog && !showGoalDialog && !showForm;
-
   return (
     <>
       {/* Main audience selection dialog */}
-      <Dialog open={showMainDialog} onOpenChange={onOpenChange}>
+      <Dialog open={shouldShowAudienceDialog && !showForm && !showGoalDialog && !showEmailStyleDialog && !showSocialMediaPlatformDialog} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
           <DialogSelectionContent
             isPremium={isPremium}
