@@ -6,8 +6,6 @@ import { toast } from 'sonner';
 import { SocialMediaPlatform } from '../../SocialMediaPlatformDialog';
 import { EmailStyle } from '../../EmailStyleDialog';
 
-// We need to fix the platform selection so it properly shows the script generation dialog
-
 export const useTargetAudienceDialog = ({ 
   open, 
   onOpenChange, 
@@ -41,11 +39,16 @@ export const useTargetAudienceDialog = ({
   const [emailStyle, setEmailStyle] = useState<EmailStyle | null>(null);
   const [socialMediaPlatform, setSocialMediaPlatform] = useState<SocialMediaPlatform | null>(null);
   
-  const { user, session } = useAuth();
+  const { session } = useAuth();
 
   useEffect(() => {
     if (open && userId) {
       fetchAudiences();
+    }
+    
+    // Reset state when dialog opens
+    if (open) {
+      resetState();
     }
   }, [open, userId]);
 
@@ -97,14 +100,8 @@ export const useTargetAudienceDialog = ({
     // Set processing state for UI feedback
     setIsProcessing(true);
     
-    // Based on template type, show different dialogs
-    if (templateId === 'social') {
-      setShowSocialMediaPlatformDialog(true);
-    } else if (templateId === 'email') {
-      setShowEmailStyleDialog(true);
-    } else {
-      setShowGoalDialog(true);
-    }
+    // Always show goal dialog first
+    setShowGoalDialog(true);
   };
 
   // Handler for creating a new audience
@@ -146,17 +143,9 @@ export const useTargetAudienceDialog = ({
       
       setSelectedAudienceId(data.audience.id);
       
-      // Move to the appropriate next step
-      if (templateId === 'social') {
-        setShowSocialMediaPlatformDialog(true);
-        setShowForm(false);
-      } else if (templateId === 'email') {
-        setShowEmailStyleDialog(true);
-        setShowForm(false);
-      } else {
-        setShowGoalDialog(true);
-        setShowForm(false);
-      }
+      // Always show goal dialog after form submission
+      setShowGoalDialog(true);
+      setShowForm(false);
       
     } catch (error) {
       console.error('Błąd zapisywania grupy docelowej:', error);
@@ -175,7 +164,15 @@ export const useTargetAudienceDialog = ({
   const handleGoalSubmit = (goal: string) => {
     setAdvertisingGoal(goal);
     setShowGoalDialog(false);
-    setShowScriptDialog(true);
+    
+    // Based on template type, show different dialogs
+    if (templateId === 'social') {
+      setShowSocialMediaPlatformDialog(true);
+    } else if (templateId === 'email') {
+      setShowEmailStyleDialog(true);
+    } else {
+      setShowScriptDialog(true);
+    }
   };
 
   // Goal back button handler
@@ -189,12 +186,13 @@ export const useTargetAudienceDialog = ({
     setEmailStyle(style);
     setShowEmailStyleDialog(false);
     setShowEmailDialog(true);
+    setIsProcessing(false);
   };
 
   // Email style back button handler
   const handleEmailStyleBack = () => {
     setShowEmailStyleDialog(false);
-    setShowForm(false);
+    setShowGoalDialog(true);
     setIsProcessing(false);
   };
 
@@ -203,14 +201,13 @@ export const useTargetAudienceDialog = ({
     setSocialMediaPlatform(platform);
     setShowSocialMediaPlatformDialog(false);
     setShowScriptDialog(true);
-    // Make sure we reset the isProcessing state
     setIsProcessing(false);
   };
 
   // Social media platform back button handler
   const handleSocialMediaPlatformBack = () => {
     setShowSocialMediaPlatformDialog(false);
-    setShowForm(false);
+    setShowGoalDialog(true);
     setIsProcessing(false);
   };
 

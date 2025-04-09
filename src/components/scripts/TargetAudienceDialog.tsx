@@ -75,34 +75,31 @@ const TargetAudienceDialog = ({
   const shouldShowAudienceDialog = open && !showScriptDialog && !showEmailDialog;
   
   // Determine which dialog should be shown
-  const showMainDialog = shouldShowAudienceDialog && !showSocialMediaPlatformDialog && !showEmailStyleDialog && !showGoalDialog;
-  const showFormContent = shouldShowAudienceDialog && showForm && !showSocialMediaPlatformDialog && !showEmailStyleDialog && !showGoalDialog;
+  const showMainDialog = shouldShowAudienceDialog && !showSocialMediaPlatformDialog && !showEmailStyleDialog && !showGoalDialog && !showForm;
 
   return (
     <>
       {/* Main audience selection dialog */}
       <Dialog open={showMainDialog} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
-          {!showForm && !showGoalDialog && !showEmailStyleDialog && !showSocialMediaPlatformDialog ? (
-            <DialogSelectionContent
-              isPremium={isPremium}
-              isLoading={isLoading}
-              existingAudiences={existingAudiences}
-              selectedAudienceId={selectedAudienceId}
-              audienceChoice={audienceChoice}
-              handleExistingAudienceSelect={handleExistingAudienceSelect}
-              handleChoiceSelection={handleChoiceSelection}
-              handleCreateNewAudience={handleCreateNewAudience}
-              handleContinue={handleContinue}
-              handleCancel={handleDialogClose}
-              isProcessing={isProcessing}
-            />
-          ) : null}
+          <DialogSelectionContent
+            isPremium={isPremium}
+            isLoading={isLoading}
+            existingAudiences={existingAudiences}
+            selectedAudienceId={selectedAudienceId}
+            audienceChoice={audienceChoice}
+            handleExistingAudienceSelect={handleExistingAudienceSelect}
+            handleChoiceSelection={handleChoiceSelection}
+            handleCreateNewAudience={handleCreateNewAudience}
+            handleContinue={handleContinue}
+            handleCancel={handleDialogClose}
+            isProcessing={isProcessing}
+          />
         </DialogContent>
       </Dialog>
       
       {/* Form dialog */}
-      <Dialog open={showFormContent} onOpenChange={onOpenChange}>
+      <Dialog open={shouldShowAudienceDialog && showForm} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
           <TargetAudienceForm 
             onSubmit={handleFormSubmit}
@@ -137,16 +134,18 @@ const TargetAudienceDialog = ({
       </Dialog>
       
       {/* Social media platform dialog */}
-      <SocialMediaPlatformDialog
-        open={shouldShowAudienceDialog && showSocialMediaPlatformDialog}
-        onOpenChange={(open) => {
-          if (!open) handleDialogClose();
-        }}
-        onSelect={handleSocialMediaPlatformSubmit}
-        onBack={handleSocialMediaPlatformBack}
-        onCancel={handleDialogClose}
-        isProcessing={isProcessing}
-      />
+      <Dialog open={shouldShowAudienceDialog && showSocialMediaPlatformDialog} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+          <SocialMediaPlatformDialog
+            open={true}
+            onOpenChange={() => {}}
+            onSelect={handleSocialMediaPlatformSubmit}
+            onBack={handleSocialMediaPlatformBack}
+            onCancel={handleDialogClose}
+            isProcessing={isProcessing}
+          />
+        </DialogContent>
+      </Dialog>
       
       {/* Script Dialog - shown for non-email templates */}
       {templateId !== 'email' && (
