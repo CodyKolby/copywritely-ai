@@ -80,55 +80,97 @@ Zwracasz tylko ponumerowane hooki.
 
     console.log('✏️ Prompt dla Hook Generator przygotowany (fragment):', hookGeneratorPrompt.substring(0, 150) + '...');
 
-    // Wywołanie OpenAI API
+    // Wywołanie OpenAI API z retry logic
     console.log('✏️ Wywołuję OpenAI API dla Hook Generator...');
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: hookGeneratorPrompt }
-        ],
-        temperature: 0.7,
-      }),
-    });
+    
+    // Add retry logic for rate limit issues
+    let attempts = 0;
+    const maxAttempts = 3;
+    let waitTime = 2000; // Start with 2 seconds wait
+    
+    while (attempts < maxAttempts) {
+      try {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openAIApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini', // Use smaller, more efficient model
+            messages: [
+              { role: 'system', content: hookGeneratorPrompt }
+            ],
+            temperature: 0.7,
+          }),
+        });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Błąd API OpenAI podczas generowania hooków:', errorData);
-      return null;
-    }
+        if (response.status === 429) {
+          // Rate limit hit
+          console.log(`Rate limit hit, attempt ${attempts + 1}/${maxAttempts}. Waiting for ${waitTime/1000} seconds...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+          waitTime *= 2; // Exponential backoff
+          attempts++;
+          continue;
+        }
 
-    // Parse response
-    const data = await response.json();
-    console.log('✅ Generator hooków zakończył pracę, model:', data.model);
-    
-    const hooksText = data.choices[0].message.content;
-    console.log('✅ Wygenerowane hooki z rankingiem:', hooksText);
-    
-    // Extract the ranked hooks from the text
-    const rankedHooks: string[] = [];
-    
-    // Extract hooks using regex to match lines that start with a number followed by a period
-    const hookRegex = /^\d+\.\s+(.+)$/gm;
-    let match;
-    
-    while ((match = hookRegex.exec(hooksText)) !== null) {
-      if (match[1]) {
-        rankedHooks.push(match[1].trim());
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error('Błąd API OpenAI podczas generowania hooków:', errorData);
+          
+          if (attempts < maxAttempts - 1) {
+            console.log(`Retrying, attempt ${attempts + 1}/${maxAttempts}`);
+            attempts++;
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+            waitTime *= 1.5;
+            continue;
+          }
+          
+          return null;
+        }
+
+        // Parse response
+        const data = await response.json();
+        console.log('✅ Generator hooków zakończył pracę, model:', data.model);
+        
+        const hooksText = data.choices[0].message.content;
+        console.log('✅ Wygenerowane hooki z rankingiem:', hooksText);
+        
+        // Extract the ranked hooks from the text
+        const rankedHooks: string[] = [];
+        
+        // Extract hooks using regex to match lines that start with a number followed by a period
+        const hookRegex = /^\d+\.\s+(.+)$/gm;
+        let match;
+        
+        while ((match = hookRegex.exec(hooksText)) !== null) {
+          if (match[1]) {
+            rankedHooks.push(match[1].trim());
+          }
+        }
+        
+        console.log('✅ Wyekstrahowane hooki w kolejności rankingu:', rankedHooks);
+        
+        return {
+          allHooks: hooksText,
+          rankedHooks: rankedHooks
+        };
+      } catch (error) {
+        console.error(`Błąd podczas generowania hooków (próba ${attempts + 1}/${maxAttempts}):`, error);
+        
+        if (attempts < maxAttempts - 1) {
+          attempts++;
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+          waitTime *= 1.5;
+          continue;
+        }
+        
+        return null;
       }
     }
     
-    console.log('✅ Wyekstrahowane hooki w kolejności rankingu:', rankedHooks);
-    
-    return {
-      allHooks: hooksText,
-      rankedHooks: rankedHooks
-    };
+    console.error('Wszystkie próby generowania hooków zakończyły się niepowodzeniem');
+    return null;
   } catch (error) {
     console.error('Błąd podczas generowania hooków:', error);
     return null;

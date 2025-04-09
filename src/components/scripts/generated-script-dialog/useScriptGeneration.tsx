@@ -1,8 +1,69 @@
+
 import { useState, useEffect } from 'react';
 import { generateScript, saveScriptAsProject } from './script-utils';
 import { toast } from 'sonner';
 import { SocialMediaPlatform } from '../SocialMediaPlatformDialog';
 import { ScriptGenerationResult } from './types';
+
+// Store generation state in session storage for persistence
+const STORAGE_KEY = 'script_generation_state';
+
+interface StoredGenerationState {
+  generatedScript: string;
+  currentHook: string;
+  allHooks: string[];
+  currentHookIndex: number;
+  totalHooks: number;
+  rawResponse?: string;
+  debugInfo?: any;
+  templateId: string;
+  targetAudienceId: string;
+  advertisingGoal: string;
+  timestamp: number;
+}
+
+const getStoredState = (templateId: string, targetAudienceId: string): StoredGenerationState | null => {
+  try {
+    const stored = sessionStorage.getItem(STORAGE_KEY);
+    if (!stored) return null;
+    
+    const state = JSON.parse(stored) as StoredGenerationState;
+    
+    // Only return if it's for the same script generation attempt
+    if (state.templateId === templateId && state.targetAudienceId === targetAudienceId) {
+      // Check if state is still valid (less than 30 minutes old)
+      const isValid = Date.now() - state.timestamp < 30 * 60 * 1000;
+      return isValid ? state : null;
+    }
+    
+    return null;
+  } catch (e) {
+    console.error('Error retrieving stored generation state:', e);
+    return null;
+  }
+};
+
+const storeGenerationState = (state: Partial<StoredGenerationState> & { templateId: string; targetAudienceId: string }) => {
+  try {
+    const fullState: StoredGenerationState = {
+      generatedScript: state.generatedScript || '',
+      currentHook: state.currentHook || '',
+      allHooks: state.allHooks || [],
+      currentHookIndex: state.currentHookIndex || 0,
+      totalHooks: state.totalHooks || 0,
+      rawResponse: state.rawResponse,
+      debugInfo: state.debugInfo,
+      templateId: state.templateId,
+      targetAudienceId: state.targetAudienceId,
+      advertisingGoal: state.advertisingGoal || '',
+      timestamp: Date.now()
+    };
+    
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(fullState));
+  } catch (e) {
+    console.error('Error storing generation state:', e);
+  }
+};
 
 export const useScriptGeneration = (
   open: boolean,
@@ -28,20 +89,53 @@ export const useScriptGeneration = (
   const [saveAttempted, setSaveAttempted] = useState(false);
   const [rawResponse, setRawResponse] = useState<string | undefined>(undefined);
   const [debugInfo, setDebugInfo] = useState<any | undefined>(undefined);
+  const [generationAttempts, setGenerationAttempts] = useState<number>(0);
+
+  // Load from session storage on initial render
+  useEffect(() => {
+    if (open && targetAudienceId && templateId) {
+      const storedState = getStoredState(templateId, targetAudienceId);
+      
+      if (storedState) {
+        console.log("Restoring script generation state from session storage");
+        setGeneratedScript(storedState.generatedScript);
+        setCurrentHook(storedState.currentHook);
+        setAllHooks(storedState.allHooks);
+        setCurrentHookIndex(storedState.currentHookIndex);
+        setTotalHooks(storedState.totalHooks);
+        setRawResponse(storedState.rawResponse);
+        setDebugInfo(storedState.debugInfo);
+        setIsLoading(false);
+        setGenerationCount(prev => prev + 1);
+        setIsGeneratingNewScript(false);
+        
+        // Attempt to save if userId is available
+        if (userId && storedState.generatedScript && !projectSaved) {
+          saveScriptToProject(storedState.generatedScript, storedState.currentHook, userId);
+        }
+      }
+    }
+  }, [open, targetAudienceId, templateId, userId]);
 
   useEffect(() => {
     let isMounted = true;
+    let abortController = new AbortController();
     
     const verifyAndGenerateScript = async () => {
       if (!open || !targetAudienceId) return;
+      
+      // Check if we have stored data first
+      const storedState = getStoredState(templateId, targetAudienceId);
+      if (storedState && !isGeneratingNewScript) {
+        console.log("Using stored script generation state");
+        return;
+      }
       
       setIsLoading(true);
       setError(null);
       setProjectSaved(false);
       setProjectId(null);
       setSaveAttempted(false);
-      setRawResponse(undefined);
-      setDebugInfo(undefined);
       
       try {
         console.log("Starting script generation for template:", templateId);
@@ -62,6 +156,17 @@ export const useScriptGeneration = (
         // If we have a verified audience ID, use it; otherwise, use the target audience ID
         const audienceId = verifiedAudienceId || targetAudienceId;
         
+        // Add abort signal
+        const signal = abortController.signal;
+        
+        // Increase generation attempts counter
+        setGenerationAttempts(prev => prev + 1);
+        
+        // Only attempt 3 times
+        if (generationAttempts > 3) {
+          throw new Error("Przekroczono maksymalną liczbę prób generowania skryptu (3)");
+        }
+        
         // Generate the script with type assertion to ensure consistent return type
         const result = await generateScript(
           templateId, 
@@ -72,6 +177,20 @@ export const useScriptGeneration = (
         ) as ScriptGenerationResult;
         
         if (isMounted) {
+          // Store the result to session storage
+          storeGenerationState({
+            generatedScript: result.script,
+            currentHook: result.bestHook || '',
+            allHooks: result.allHooks || [],
+            currentHookIndex: result.currentHookIndex || 0,
+            totalHooks: result.totalHooks || 0,
+            rawResponse: result.rawResponse,
+            debugInfo: result.debugInfo,
+            templateId,
+            targetAudienceId,
+            advertisingGoal
+          });
+          
           setGeneratedScript(result.script);
           setCurrentHook(result.bestHook || '');
           setAllHooks(result.allHooks || []);
@@ -83,6 +202,7 @@ export const useScriptGeneration = (
           setIsLoading(false);
           setGenerationCount(prevCount => prevCount + 1);
           setIsGeneratingNewScript(false);
+          setGenerationAttempts(0); // Reset attempts counter on success
           
           console.log("Debug info from result:", result.debugInfo);
           console.log("Raw response from result:", result.rawResponse);
@@ -92,16 +212,32 @@ export const useScriptGeneration = (
             saveScriptToProject(result.script, result.bestHook || '', userId);
           }
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error during script generation:', err);
         if (isMounted) {
-          setError('Wystąpił nieoczekiwany błąd podczas generowania skryptu.');
-          toast.error('Błąd generowania skryptu', {
-            description: 'Spróbuj ponownie lub użyj innej grupy docelowej.',
-            dismissible: true
-          });
+          // Only set error if all attempts have failed
+          if (generationAttempts >= 3) {
+            setError('Wystąpił nieoczekiwany błąd podczas generowania skryptu. Zbyt wiele prób generowania.');
+            toast.error('Błąd generowania skryptu', {
+              description: 'Przekroczono liczbę prób generowania. Spróbuj ponownie za kilka minut.',
+              dismissible: true
+            });
+          } else {
+            // Toast for interim errors
+            toast.error('Problem z generowaniem skryptu', {
+              description: 'Ponawiam próbę...',
+              dismissible: true
+            });
+            
+            // Try again after a short delay
+            setTimeout(() => {
+              if (isMounted) {
+                setIsGeneratingNewScript(true);
+              }
+            }, 3000);
+          }
+          
           setIsLoading(false);
-          setIsGeneratingNewScript(false);
         }
       }
     };
@@ -112,8 +248,9 @@ export const useScriptGeneration = (
     
     return () => {
       isMounted = false;
+      abortController.abort();
     };
-  }, [open, targetAudienceId, templateId, advertisingGoal, socialMediaPlatform, currentHookIndex, isGeneratingNewScript, generationCount, verifiedAudienceId, userId]);
+  }, [open, targetAudienceId, templateId, advertisingGoal, socialMediaPlatform, currentHookIndex, isGeneratingNewScript, generationCount, verifiedAudienceId, userId, generationAttempts]);
 
   const saveScriptToProject = async (scriptContent: string, hookText: string, uid: string) => {
     if (!scriptContent || isSaving || projectSaved || saveAttempted) return;
@@ -172,35 +309,8 @@ export const useScriptGeneration = (
     setError(null);
     setProjectSaved(false);
     setProjectId(null);
-    
-    try {
-      const result = await generateScript(
-        templateId, 
-        verifiedAudienceId || targetAudienceId, 
-        advertisingGoal, 
-        currentHookIndex,
-        socialMediaPlatform
-      ) as ScriptGenerationResult;
-      
-      setGeneratedScript(result.script);
-      setCurrentHook(result.bestHook || '');
-      setAllHooks(result.allHooks || []);
-      setCurrentHookIndex(result.currentHookIndex || 0);
-      setTotalHooks(result.totalHooks || 0);
-      setRawResponse(result.rawResponse);
-      setDebugInfo(result.debugInfo);
-      setIsLoading(false);
-      setGenerationCount(prevCount => prevCount + 1);
-      
-      // Automatycznie zapisz skrypt po ponownym wygenerowaniu
-      if (userId && result.script) {
-        saveScriptToProject(result.script, result.bestHook || '', userId);
-      }
-    } catch (err) {
-      console.error('Error during retry:', err);
-      setError('Nie udało się wygenerować skryptu. Spróbuj ponownie później.');
-      setIsLoading(false);
-    }
+    setGenerationAttempts(0); // Reset attempts counter
+    setIsGeneratingNewScript(true);
   };
 
   const handleGenerateWithNextHook = () => {
@@ -209,6 +319,7 @@ export const useScriptGeneration = (
       setIsGeneratingNewScript(true);
       setProjectSaved(false);
       setProjectId(null);
+      setGenerationAttempts(0); // Reset attempts counter
       console.log(`Generuję nowy skrypt z hookiem o indeksie ${currentHookIndex + 1}`);
     } else {
       toast.info('Wykorzystano już wszystkie dostępne hooki');
@@ -217,6 +328,22 @@ export const useScriptGeneration = (
 
   const handleViewProject = () => {
     if (projectId) {
+      // Store current state before navigating away
+      if (generatedScript) {
+        storeGenerationState({
+          generatedScript,
+          currentHook,
+          allHooks,
+          currentHookIndex,
+          totalHooks,
+          rawResponse,
+          debugInfo,
+          templateId,
+          targetAudienceId,
+          advertisingGoal
+        });
+      }
+      
       window.location.href = `/copy-editor/${projectId}`;
     }
   };

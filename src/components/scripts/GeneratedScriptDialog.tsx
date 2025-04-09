@@ -44,6 +44,12 @@ const GeneratedScriptDialog = ({
   
   // Determine if this is a social media post
   const isSocialMediaPost = templateId === 'social';
+  
+  // Determine if this is an ad (PAS framework)
+  const isAdTemplate = templateId === 'ad';
+  
+  // Determine the loading stage
+  const loadingStage = isGeneratingNewScript ? 'script' : undefined;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -65,7 +71,7 @@ const GeneratedScriptDialog = ({
         )}
 
         {showLoading ? (
-          <LoadingState stage={isGeneratingNewScript ? 'script' : undefined} />
+          <LoadingState stage={loadingStage} />
         ) : error ? (
           <ErrorState error={error} onRetry={handleRetry} />
         ) : (
@@ -76,7 +82,7 @@ const GeneratedScriptDialog = ({
                 bestHook={currentHook} 
                 hookIndex={currentHookIndex}
                 totalHooks={totalHooks}
-                adStructure={isSocialMediaPost ? 'social' : 'PAS'}
+                adStructure={isSocialMediaPost ? 'social' : isAdTemplate ? 'PAS' : 'generic'}
                 rawResponse={rawResponse}
                 debugInfo={debugInfo}
               />

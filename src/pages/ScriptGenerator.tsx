@@ -40,18 +40,10 @@ const ScriptGenerator = () => {
         console.log("Revalidating premium status after dialog close");
         premiumVerification.validatePremiumStatus();
       }
-      
-      // Force update to react to changes
-      const forceUpdate = setTimeout(() => {
-        console.log("Dialog closed - cleaning up state");
-      }, 100);
-      
-      return () => clearTimeout(forceUpdate);
     }
   };
 
   // Determine if we should show the premium feature alert
-  // Only show it if user is not premium and we're not checking
   const shouldShowPremiumAlert = !premiumVerification.isPremium && !premiumVerification.isCheckingPremium;
 
   return (
@@ -93,10 +85,10 @@ const ScriptGenerator = () => {
           onSelectTemplate={templateSelection.handleTemplateSelect}
         />
 
-        {/* Dodajemy key bazujący na templateId, aby wymusić ponowne renderowanie przy zmianie szablonu */}
+        {/* Przechowujemy stały key dla dialogu, aby uniknąć resetowania przy odświeżaniu */}
         {!premiumVerification.isCheckingPremium && (
           <TargetAudienceDialog
-            key={`dialog-${templateSelection.currentTemplateId || 'default'}-${Date.now()}`}
+            key={`dialog-${templateSelection.currentTemplateId || 'default'}`}
             open={templateSelection.targetAudienceDialogOpen}
             onOpenChange={handleDialogOpenChange}
             templateId={templateSelection.currentTemplateId}
