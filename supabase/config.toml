@@ -17,3 +17,4 @@ verify_jwt = false
 
 [functions.social-content-agent]
 verify_jwt = false
+

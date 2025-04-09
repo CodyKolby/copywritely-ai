@@ -18,6 +18,7 @@ export const useDialogState = () => {
   // Dialog flow state
   const [showScriptDialog, setShowScriptDialog] = useState(false);
   const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [showSocialDialog, setShowSocialDialog] = useState(false);
   const [showGoalDialog, setShowGoalDialog] = useState(false);
   const [showEmailStyleDialog, setShowEmailStyleDialog] = useState(false);
   const [showSocialMediaPlatformDialog, setShowSocialMediaPlatformDialog] = useState(false);
@@ -294,6 +295,7 @@ export const useDialogState = () => {
       sessionStorage.removeItem('dialogState_email');
       sessionStorage.removeItem('dialogState_emailStyle');
       sessionStorage.removeItem('dialogState_socialMedia');
+      sessionStorage.removeItem('dialogState_social');
       sessionStorage.removeItem('dialogState'); // legacy key
     } catch (err) {
       console.error("Failed to clear dialog state from session storage:", err);
@@ -305,6 +307,7 @@ export const useDialogState = () => {
     setSelectedAudienceId(null);
     setShowScriptDialog(false);
     setShowEmailDialog(false);
+    setShowSocialDialog(false);
     setShowGoalDialog(false);
     setShowEmailStyleDialog(false);
     setShowSocialMediaPlatformDialog(false);
@@ -359,6 +362,7 @@ export const useDialogState = () => {
     isLoading,
     showScriptDialog,
     showEmailDialog,
+    showSocialDialog,
     showGoalDialog,
     showEmailStyleDialog,
     showSocialMediaPlatformDialog,
@@ -376,6 +380,7 @@ export const useDialogState = () => {
     setIsLoading,
     setShowScriptDialog,
     setShowEmailDialog,
+    setShowSocialDialog,
     setShowGoalDialog,
     setShowEmailStyleDialog,
     setShowSocialMediaPlatformDialog,

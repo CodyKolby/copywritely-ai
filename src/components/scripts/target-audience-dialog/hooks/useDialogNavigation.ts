@@ -10,6 +10,7 @@ interface DialogNavigationParams {
   setShowSocialMediaPlatformDialog: (show: boolean) => void;
   setShowScriptDialog: (show: boolean) => void;
   setShowEmailDialog: (show: boolean) => void;
+  setShowSocialDialog: (show: boolean) => void;
   setAdvertisingGoal: (goal: string) => void;
   setEmailStyle: (style: EmailStyle | null) => void;
   setSocialMediaPlatform: (platform: SocialMediaPlatform | null) => void;
@@ -26,6 +27,7 @@ export const useDialogNavigation = (params: DialogNavigationParams, templateId: 
     setShowSocialMediaPlatformDialog,
     setShowScriptDialog,
     setShowEmailDialog,
+    setShowSocialDialog,
     setAdvertisingGoal,
     setEmailStyle,
     setSocialMediaPlatform,
@@ -117,19 +119,19 @@ export const useDialogNavigation = (params: DialogNavigationParams, templateId: 
     );
   }, [isTransitioning, transitionToDialog, setShowSocialMediaPlatformDialog, setShowGoalDialog]);
   
-  // Submit social media platform and go to script dialog
+  // Submit social media platform and go to social dialog
   const handleSocialMediaPlatformSubmit = useCallback((platform: SocialMediaPlatform) => {
     if (isTransitioning) return;
     setIsProcessing(true);
     
     setSocialMediaPlatform(platform);
-    console.log(`Wybrana platforma social media: ${platform}`);
+    console.log(`Wybrana platforma social media: ${platform.label}`);
     
     transitionToDialog(
       () => setShowSocialMediaPlatformDialog(false),
-      () => setShowScriptDialog(true)
+      () => setShowSocialDialog(true)
     );
-  }, [isTransitioning, setIsProcessing, setSocialMediaPlatform, transitionToDialog, setShowSocialMediaPlatformDialog, setShowScriptDialog]);
+  }, [isTransitioning, setIsProcessing, setSocialMediaPlatform, transitionToDialog, setShowSocialMediaPlatformDialog, setShowSocialDialog]);
 
   // Close script dialog
   const handleScriptDialogClose = useCallback(() => {
@@ -140,6 +142,11 @@ export const useDialogNavigation = (params: DialogNavigationParams, templateId: 
   const handleEmailDialogClose = useCallback(() => {
     setShowEmailDialog(false);
   }, [setShowEmailDialog]);
+  
+  // Close social dialog
+  const handleSocialDialogClose = useCallback(() => {
+    setShowSocialDialog(false);
+  }, [setShowSocialDialog]);
 
   // Common navigation - back from form to audience selection
   const handleBack = useCallback(() => {
@@ -157,6 +164,7 @@ export const useDialogNavigation = (params: DialogNavigationParams, templateId: 
     handleSocialMediaPlatformSubmit,
     handleSocialMediaPlatformBack,
     handleScriptDialogClose,
-    handleEmailDialogClose
+    handleEmailDialogClose,
+    handleSocialDialogClose
   };
 };
