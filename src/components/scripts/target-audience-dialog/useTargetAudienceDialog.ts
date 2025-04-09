@@ -61,16 +61,50 @@ export const useTargetAudienceDialog = ({
     setIsProcessing: dialogState.setIsProcessing
   }, templateId);
 
+  // Dodatkowy efekt do logowania stanu dialogu
+  useEffect(() => {
+    if (open) {
+      console.log("Dialog state:", {
+        audienceChoice: dialogState.audienceChoice,
+        selectedAudienceId: dialogState.selectedAudienceId,
+        isLoading: dialogState.isLoading,
+        showForm: dialogState.showForm,
+        showGoalDialog: dialogState.showGoalDialog,
+        showEmailStyleDialog: dialogState.showEmailStyleDialog,
+        showSocialMediaPlatformDialog: dialogState.showSocialMediaPlatformDialog,
+        showScriptDialog: dialogState.showScriptDialog,
+        showEmailDialog: dialogState.showEmailDialog,
+        isProcessing: dialogState.isProcessing
+      });
+    }
+  }, [
+    open, 
+    dialogState.audienceChoice,
+    dialogState.selectedAudienceId,
+    dialogState.isLoading,
+    dialogState.showForm,
+    dialogState.showGoalDialog,
+    dialogState.showEmailStyleDialog,
+    dialogState.showSocialMediaPlatformDialog,
+    dialogState.showScriptDialog,
+    dialogState.showEmailDialog,
+    dialogState.isProcessing
+  ]);
+
   // Reset state when dialog opens/closes or template changes
   useEffect(() => {
+    console.log(`Dialog ${open ? 'opened' : 'closed'} for template ${templateId}, resetting state`);
+    
     if (!open) {
       dialogState.resetState();
     }
-  }, [open]);
+  }, [open, dialogState.resetState]);
 
   // Reset specific dialog states when template changes
   useEffect(() => {
     if (templateId) {
+      console.log("Template changed to:", templateId, "- resetting dialog flow states");
+      
       // Reset dialog flow states to prevent incorrect dialog sequences
       dialogState.setShowGoalDialog(false);
       dialogState.setShowEmailStyleDialog(false);
@@ -93,13 +127,18 @@ export const useTargetAudienceDialog = ({
       if (audienceId) {
         dialogState.setSelectedAudienceId(audienceId);
         dialogState.setShowForm(false);
-        dialogState.setShowGoalDialog(true);
+        
+        // Ustaw dialog celu z małym opóźnieniem, aby zapewnić poprawne renderowanie
+        setTimeout(() => {
+          dialogState.setShowGoalDialog(true);
+          dialogState.setIsProcessing(false); // Resetuj stan przetwarzania po pokazaniu następnego dialogu
+        }, 100);
+        
         toast.success('Grupa docelowa została utworzona');
       }
     } catch (error) {
       console.error("Error submitting form:", error);
       toast.error('Wystąpił błąd podczas tworzenia grupy docelowej');
-    } finally {
       dialogState.setIsProcessing(false);
     }
   };
@@ -161,5 +200,8 @@ export const useTargetAudienceDialog = ({
     
     // Premium validation
     validatePremiumStatus,
+    
+    // Dodałem resetState, aby był dostępny w komponencie
+    resetState: dialogState.resetState,
   };
 };

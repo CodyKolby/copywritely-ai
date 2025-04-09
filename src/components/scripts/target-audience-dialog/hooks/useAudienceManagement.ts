@@ -20,19 +20,19 @@ export const useAudienceManagement = (
 ) => {
   const { session } = useAuth();
 
-  // Choice selection handler
+  // Choice selection handler - WAŻNE: musi resetować isProcessing
   const handleChoiceSelection = (choice: 'existing' | 'new') => {
     deps.setAudienceChoice(choice);
     deps.setIsProcessing(false); // Reset processing state when changing choice
   };
 
-  // Handlers for existing audience selection
+  // Handlers for existing audience selection - WAŻNE: musi resetować isProcessing
   const handleExistingAudienceSelect = (audienceId: string) => {
     deps.setSelectedAudienceId(audienceId);
     deps.setIsProcessing(false); // Reset processing state when changing selection
   };
 
-  // Continue button handler
+  // Continue button handler - MUSI przestawić isProcessing na false po pokazaniu następnego dialogu
   const handleContinue = () => {
     if (!userId) {
       toast.error('Musisz być zalogowany, aby kontynuować');
@@ -40,11 +40,16 @@ export const useAudienceManagement = (
     }
     
     try {
-      // Set processing state for UI feedback
+      // Ustawiam flagę przetwarzania tylko na czas aktualnej operacji
       deps.setIsProcessing(true);
       
-      // Always show goal dialog next
+      // Pokazuję dialog celu i natychmiast resetuję flagę przetwarzania
       deps.setShowGoalDialog(true);
+      
+      // Ustawienie z opóźnieniem, aby zapewnić poprawną sekwencję renderowania
+      setTimeout(() => {
+        deps.setIsProcessing(false);
+      }, 100);
       
     } catch (error) {
       console.error("Error in continue flow:", error);
@@ -52,7 +57,7 @@ export const useAudienceManagement = (
     }
   };
 
-  // Handler for creating a new audience
+  // Handler for creating a new audience - MUSI przestawić isProcessing na false
   const handleCreateNewAudience = () => {
     if (!userId) {
       toast.error('Musisz być zalogowany, aby kontynuować');

@@ -49,6 +49,7 @@ const TargetAudienceDialog = ({
     handleSocialMediaPlatformBack,
     handleScriptDialogClose,
     handleEmailDialogClose,
+    resetState,
   } = useTargetAudienceDialog({
     open,
     onOpenChange,
@@ -59,28 +60,52 @@ const TargetAudienceDialog = ({
 
   // Force reset isProcessing when component unmounts or dialog closes
   useEffect(() => {
+    // Resetuj stan, gdy dialog się zamyka
     if (!open) {
-      // This will help ensure the isProcessing state is always reset when the dialog closes
+      console.log("Dialog jest zamknięty - resetuję stan");
+      resetState();
+      
+      // Dodatkowe zabezpieczenie - reset po animacji zamknięcia
       const resetTimeout = setTimeout(() => {
-        // This is a no-op if the component is unmounted, but helps ensure state is reset
-        // We use a timeout to ensure this happens after any animations
+        console.log("Wykonuję opóźniony reset stanu dialogu");
+        resetState();
       }, 300);
       
       return () => clearTimeout(resetTimeout);
     }
-  }, [open]);
+  }, [open, resetState]);
+
+  // Dodatkowy efekt, który sprawdza, czy dialog powinien być otwarty
+  useEffect(() => {
+    console.log("Stan dialogu:", {
+      open,
+      showForm,
+      showGoalDialog,
+      showEmailStyleDialog, 
+      showSocialMediaPlatformDialog,
+      showScriptDialog,
+      showEmailDialog,
+      isProcessing
+    });
+  }, [open, showForm, showGoalDialog, showEmailStyleDialog, showSocialMediaPlatformDialog, showScriptDialog, showEmailDialog, isProcessing]);
 
   const handleDialogClose = () => {
+    console.log("handleDialogClose wywołane - zamykanie dialogu");
+    resetState(); // Resetuj wszystkie stany
     onOpenChange(false);
   };
 
   const handleScriptClose = () => {
+    console.log("handleScriptClose wywołane");
     handleScriptDialogClose();
+    resetState(); // Pełny reset stanu
     onOpenChange(false);
   };
 
   const handleEmailClose = () => {
+    console.log("handleEmailClose wywołane");
     handleEmailDialogClose();
+    resetState(); // Pełny reset stanu
     onOpenChange(false);
   };
 
@@ -90,7 +115,10 @@ const TargetAudienceDialog = ({
   return (
     <>
       {/* Main audience selection dialog */}
-      <Dialog open={shouldShowAudienceDialog && !showForm && !showGoalDialog && !showEmailStyleDialog && !showSocialMediaPlatformDialog} onOpenChange={onOpenChange}>
+      <Dialog 
+        open={shouldShowAudienceDialog && !showForm && !showGoalDialog && !showEmailStyleDialog && !showSocialMediaPlatformDialog} 
+        onOpenChange={handleDialogClose}
+      >
         <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
           <DialogSelectionContent
             isPremium={isPremium}
@@ -109,7 +137,10 @@ const TargetAudienceDialog = ({
       </Dialog>
       
       {/* Form dialog */}
-      <Dialog open={shouldShowAudienceDialog && showForm} onOpenChange={onOpenChange}>
+      <Dialog 
+        open={shouldShowAudienceDialog && showForm} 
+        onOpenChange={handleDialogClose}
+      >
         <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
           <TargetAudienceForm 
             onSubmit={handleFormSubmit}
@@ -120,7 +151,10 @@ const TargetAudienceDialog = ({
       </Dialog>
       
       {/* Goal dialog */}
-      <Dialog open={shouldShowAudienceDialog && showGoalDialog} onOpenChange={onOpenChange}>
+      <Dialog 
+        open={shouldShowAudienceDialog && showGoalDialog} 
+        onOpenChange={handleDialogClose}
+      >
         <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
           <AdvertisingGoalDialog 
             onSubmit={handleGoalSubmit}
@@ -132,7 +166,10 @@ const TargetAudienceDialog = ({
       </Dialog>
       
       {/* Email style dialog */}
-      <Dialog open={shouldShowAudienceDialog && showEmailStyleDialog} onOpenChange={onOpenChange}>
+      <Dialog 
+        open={shouldShowAudienceDialog && showEmailStyleDialog} 
+        onOpenChange={handleDialogClose}
+      >
         <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
           <EmailStyleDialog
             onSubmit={handleEmailStyleSubmit}
@@ -144,7 +181,10 @@ const TargetAudienceDialog = ({
       </Dialog>
       
       {/* Social media platform dialog */}
-      <Dialog open={shouldShowAudienceDialog && showSocialMediaPlatformDialog} onOpenChange={onOpenChange}>
+      <Dialog 
+        open={shouldShowAudienceDialog && showSocialMediaPlatformDialog} 
+        onOpenChange={handleDialogClose}
+      >
         <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
           <SocialMediaPlatformDialog
             open={true}

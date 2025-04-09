@@ -24,19 +24,23 @@ export const useDialogNavigation = (deps: DialogNavigationDeps, templateId: stri
 
   // Goal submission handler
   const handleGoalSubmit = (goal: string) => {
+    // Ustaw dane i zmień stan przetwarzania
     deps.setAdvertisingGoal(goal);
     deps.setShowGoalDialog(false);
     deps.setIsProcessing(false); // Reset processing state
     
-    // Based on template type, show different dialogs
-    if (templateId === 'social') {
-      deps.setShowSocialMediaPlatformDialog(true);
-    } else if (templateId === 'email') {
-      deps.setShowEmailStyleDialog(true);
-    } else {
-      // For ad templates or any other type
-      deps.setShowScriptDialog(true);
-    }
+    // Ustaw odpowiedni dialog bazując na typie szablonu
+    setTimeout(() => {
+      // Based on template type, show different dialogs
+      if (templateId === 'social') {
+        deps.setShowSocialMediaPlatformDialog(true);
+      } else if (templateId === 'email') {
+        deps.setShowEmailStyleDialog(true);
+      } else {
+        // For ad templates or any other type
+        deps.setShowScriptDialog(true);
+      }
+    }, 100);
   };
 
   // Goal back button handler
@@ -49,30 +53,46 @@ export const useDialogNavigation = (deps: DialogNavigationDeps, templateId: stri
   const handleEmailStyleSubmit = (style: EmailStyle) => {
     deps.setEmailStyle(style);
     deps.setShowEmailStyleDialog(false);
-    deps.setShowEmailDialog(true);
     deps.setIsProcessing(false); // Reset processing state
+    
+    // Pokazuj dialog email z opóźnieniem
+    setTimeout(() => {
+      deps.setShowEmailDialog(true);
+    }, 100);
   };
 
   // Email style back button handler
   const handleEmailStyleBack = () => {
     deps.setShowEmailStyleDialog(false);
-    deps.setShowGoalDialog(true);
     deps.setIsProcessing(false); // Reset processing state
+    
+    // Pokazuj dialog celu z opóźnieniem
+    setTimeout(() => {
+      deps.setShowGoalDialog(true);
+    }, 100);
   };
 
   // Social media platform submission handler
   const handleSocialMediaPlatformSubmit = (platform: SocialMediaPlatform) => {
     deps.setSocialMediaPlatform(platform);
     deps.setShowSocialMediaPlatformDialog(false);
-    deps.setShowScriptDialog(true);
     deps.setIsProcessing(false); // Reset processing state
+    
+    // Pokazuj dialog skryptu z opóźnieniem
+    setTimeout(() => {
+      deps.setShowScriptDialog(true);
+    }, 100);
   };
 
   // Social media platform back button handler
   const handleSocialMediaPlatformBack = () => {
     deps.setShowSocialMediaPlatformDialog(false);
-    deps.setShowGoalDialog(true);
     deps.setIsProcessing(false); // Reset processing state
+    
+    // Pokazuj dialog celu z opóźnieniem
+    setTimeout(() => {
+      deps.setShowGoalDialog(true);
+    }, 100);
   };
 
   // Script dialog close handler

@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { EmailStyle } from '../../EmailStyleDialog';
 import { SocialMediaPlatform } from '../../SocialMediaPlatformDialog';
 import { TargetAudience } from '../types';
@@ -27,8 +27,9 @@ export const useDialogState = () => {
   const [emailStyle, setEmailStyle] = useState<EmailStyle | null>(null);
   const [socialMediaPlatform, setSocialMediaPlatform] = useState<SocialMediaPlatform | null>(null);
 
-  // Reset all state
-  const resetState = () => {
+  // Reset all state - implementacja z useCallback dla stabilności referencji
+  const resetState = useCallback(() => {
+    console.log("Resetowanie wszystkich stanów dialogu");
     setShowForm(false);
     setAudienceChoice(null);
     setSelectedAudienceId(null);
@@ -41,7 +42,7 @@ export const useDialogState = () => {
     setEmailStyle(null);
     setSocialMediaPlatform(null);
     setIsProcessing(false); // Important: reset processing state
-  };
+  }, []); // Pusta tablica zależności, funkcja nigdy nie jest tworzona na nowo
 
   return {
     // State

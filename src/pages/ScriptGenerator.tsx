@@ -30,12 +30,14 @@ const ScriptGenerator = () => {
   
   // Handle dialog closed - recheck premium status and reset templateId if needed
   const handleDialogOpenChange = (open: boolean) => {
+    console.log(`Dialog ${open ? 'opening' : 'closing'} - handling change`);
     templateSelection.handleDialogOpenChange(open);
     
     // When dialog is closed, perform cleanup
     if (!open) {
       // Revalidate premium after dialog closes
       if (user?.id) {
+        console.log("Revalidating premium status after dialog close");
         premiumVerification.validatePremiumStatus();
       }
       
@@ -91,9 +93,10 @@ const ScriptGenerator = () => {
           onSelectTemplate={templateSelection.handleTemplateSelect}
         />
 
+        {/* Dodajemy key bazujący na templateId, aby wymusić ponowne renderowanie przy zmianie szablonu */}
         {!premiumVerification.isCheckingPremium && (
           <TargetAudienceDialog
-            key={`dialog-${templateSelection.currentTemplateId || 'default'}`} // Add key to force re-render on template change
+            key={`dialog-${templateSelection.currentTemplateId || 'default'}-${Date.now()}`}
             open={templateSelection.targetAudienceDialogOpen}
             onOpenChange={handleDialogOpenChange}
             templateId={templateSelection.currentTemplateId}
