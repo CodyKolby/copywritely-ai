@@ -1,107 +1,94 @@
 
-import { useAuth } from '@/contexts/auth/AuthContext';
-import { toast } from 'sonner';
 import { useCallback } from 'react';
+import { toast } from 'sonner';
+import { AudienceChoice } from '../types';
 
-interface AudienceManagementDeps {
-  setIsLoading: (value: boolean) => void;
-  setExistingAudiences: (value: any[]) => void;
-  setSelectedAudienceId: (value: string | null) => void;
-  setAudienceChoice: (value: 'existing' | 'new' | null) => void;
-  setShowForm: (value: boolean) => void;
-  setShowGoalDialog: (value: boolean) => void;
-  setIsProcessing: (value: boolean) => void;
-  transitionToDialog?: (closeDialog: () => void, openDialog: () => void) => void;
-  audienceChoice: 'existing' | 'new' | null;
+interface AudienceManagementProps {
+  setIsLoading: (isLoading: boolean) => void;
+  setExistingAudiences: (audiences: any[]) => void;
+  setSelectedAudienceId: (id: string | null) => void;
+  setAudienceChoice: (choice: AudienceChoice) => void;
+  setShowForm: (show: boolean) => void;
+  setShowGoalDialog: (show: boolean) => void;
+  setIsProcessing: (isProcessing: boolean) => void;
+  transitionToDialog: (closeDialog: () => void, openDialog: () => void) => void;
+  audienceChoice: AudienceChoice;
   selectedAudienceId: string | null;
 }
 
-export const useAudienceManagement = (
-  userId: string,
-  deps: AudienceManagementDeps
-) => {
-  const { session } = useAuth();
+export const useAudienceManagement = (userId: string, props: AudienceManagementProps) => {
+  const {
+    setAudienceChoice,
+    setSelectedAudienceId,
+    setShowForm,
+    setShowGoalDialog,
+    setIsProcessing,
+    transitionToDialog,
+    audienceChoice,
+    selectedAudienceId
+  } = props;
 
-  // Choice selection handler - memoized with useCallback
-  const handleChoiceSelection = useCallback((choice: 'existing' | 'new') => {
+  // Handle audience choice selection
+  const handleChoiceSelection = useCallback((choice: AudienceChoice) => {
     console.log(`Selected audience choice: ${choice}`);
-    deps.setAudienceChoice(choice);
-    deps.setIsProcessing(false); // Reset processing state when changing choice
-  }, [deps]);
+    setAudienceChoice(choice);
+    
+    if (choice === 'new') {
+      setSelectedAudienceId(null);
+    }
+  }, [setAudienceChoice, setSelectedAudienceId]);
 
-  // Handlers for existing audience selection - memoized with useCallback
-  const handleExistingAudienceSelect = useCallback((audienceId: string) => {
-    console.log(`Selected audience ID: ${audienceId}`);
-    deps.setSelectedAudienceId(audienceId);
-    deps.setIsProcessing(false); // Reset processing state when changing selection
-  }, [deps]);
+  // Handle existing audience selection
+  const handleExistingAudienceSelect = useCallback((id: string) => {
+    console.log(`Selected audience ID: ${id}`);
+    setSelectedAudienceId(id);
+  }, [setSelectedAudienceId]);
 
-  // Continue button handler - memoized with useCallback
+  // Handle continue button click
   const handleContinue = useCallback(() => {
-    if (!userId) {
-      toast.error('Musisz być zalogowany, aby kontynuować');
+    console.log('Continue button clicked');
+    
+    if (!audienceChoice) {
+      toast.error('Proszę wybrać opcję');
       return;
     }
-    
-    try {
-      console.log('Continue button clicked, moving to goal dialog');
-      
-      // Ustawiam flagę przetwarzania
-      deps.setIsProcessing(true);
-      
-      if (deps.transitionToDialog) {
-        // Użyj nowego mechanizmu przejść jeśli jest dostępny
-        deps.transitionToDialog(
-          () => {}, // Nie zamykamy bieżącego dialogu
-          () => deps.setShowGoalDialog(true)
-        );
-      } else {
-        // Fallback do starego podejścia
-        deps.setShowGoalDialog(true);
-        
-        // Reset z opóźnieniem
-        setTimeout(() => {
-          deps.setIsProcessing(false);
-        }, 100);
-      }
-    } catch (error) {
-      console.error("Error in continue flow:", error);
-      deps.setIsProcessing(false);
-    }
-  }, [userId, deps]);
 
-  // Handler for creating a new audience - memoized with useCallback
-  const handleCreateNewAudience = useCallback(() => {
-    if (!userId) {
-      toast.error('Musisz być zalogowany, aby kontynuować');
+    // For existing audiences, check if one is selected
+    if (audienceChoice === 'existing' && !selectedAudienceId) {
+      toast.error('Proszę wybrać grupę docelową');
       return;
     }
     
-    try {
-      console.log('Create new audience button clicked, showing form');
-      deps.setIsProcessing(true);
-      
-      if (deps.transitionToDialog) {
-        // Użyj nowego mechanizmu przejść
-        deps.transitionToDialog(
-          () => {}, // Nie zamykamy bieżącego dialogu
-          () => deps.setShowForm(true)
-        );
-      } else {
-        // Fallback do starego podejścia
-        deps.setShowForm(true);
-        deps.setIsProcessing(false);
-      }
-    } catch (error) {
-      console.error("Error showing form:", error);
-      deps.setIsProcessing(false);
-    }
-  }, [userId, deps]);
+    setIsProcessing(true);
+    
+    // Move to goal dialog
+    transitionToDialog(
+      () => {}, // No dialog to close
+      () => setShowGoalDialog(true)
+    );
+  }, [
+    audienceChoice, 
+    selectedAudienceId, 
+    setIsProcessing, 
+    transitionToDialog, 
+    setShowGoalDialog
+  ]);
+
+  // Handle create new audience button
+  const handleCreateNewAudience = useCallback(() => {
+    console.log('Create new audience button clicked');
+    setIsProcessing(true);
+    
+    transitionToDialog(
+      () => {}, // No dialog to close
+      () => setShowForm(true)
+    );
+  }, [setIsProcessing, transitionToDialog, setShowForm]);
 
   return {
     handleChoiceSelection,
     handleExistingAudienceSelect,
     handleContinue,
-    handleCreateNewAudience
+    handleCreateNewAudience,
   };
 };

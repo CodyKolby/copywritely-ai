@@ -3,7 +3,7 @@ import { useCallback } from 'react';
 import { SocialMediaPlatform } from '../../SocialMediaPlatformDialog';
 import { EmailStyle } from '../../EmailStyleDialog';
 
-interface DialogNavigationParams {
+export interface DialogNavigationParams {
   setShowForm: (show: boolean) => void;
   setShowGoalDialog: (show: boolean) => void;
   setShowEmailStyleDialog: (show: boolean) => void;

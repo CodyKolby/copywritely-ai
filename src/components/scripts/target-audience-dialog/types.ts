@@ -10,6 +10,9 @@ export interface TargetAudienceDialogProps {
   isPremium: boolean;
 }
 
+// Alias for TargetAudienceDialogProps for backward compatibility
+export type TargetAudienceDialogOptions = TargetAudienceDialogProps;
+
 export type AudienceChoice = 'existing' | 'new' | null;
 
 export interface TargetAudience {

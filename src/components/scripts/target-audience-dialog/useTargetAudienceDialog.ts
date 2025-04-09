@@ -10,7 +10,7 @@ import { useAudienceManagement } from './hooks/useAudienceManagement';
 import { useDialogNavigation } from './hooks/useDialogNavigation';
 import { usePremiumVerification } from './hooks/usePremiumVerification';
 import { useAudienceData } from './hooks/useAudienceData';
-import { TargetAudienceDialogOptions } from './types';
+import { TargetAudienceDialogProps } from './types';
 
 export const useTargetAudienceDialog = ({ 
   open, 
@@ -18,7 +18,7 @@ export const useTargetAudienceDialog = ({
   templateId,
   userId,
   isPremium
-}: TargetAudienceDialogOptions) => {
+}: TargetAudienceDialogProps) => {
   // Use the hook for managing dialog state
   const dialogState = useDialogState();
 
@@ -56,6 +56,7 @@ export const useTargetAudienceDialog = ({
     setShowSocialMediaPlatformDialog: dialogState.setShowSocialMediaPlatformDialog,
     setShowScriptDialog: dialogState.setShowScriptDialog,
     setShowEmailDialog: dialogState.setShowEmailDialog,
+    setShowSocialDialog: dialogState.setShowSocialDialog,
     setAdvertisingGoal: dialogState.setAdvertisingGoal,
     setEmailStyle: dialogState.setEmailStyle,
     setSocialMediaPlatform: dialogState.setSocialMediaPlatform,
@@ -178,6 +179,7 @@ export const useTargetAudienceDialog = ({
     existingAudiences: dialogState.existingAudiences,
     showScriptDialog: dialogState.showScriptDialog,
     showEmailDialog: dialogState.showEmailDialog,
+    showSocialDialog: dialogState.showSocialDialog,
     showGoalDialog: dialogState.showGoalDialog,
     showEmailStyleDialog: dialogState.showEmailStyleDialog,
     showSocialMediaPlatformDialog: dialogState.showSocialMediaPlatformDialog,
@@ -204,11 +206,12 @@ export const useTargetAudienceDialog = ({
     handleSocialMediaPlatformBack: dialogNavigation.handleSocialMediaPlatformBack,
     handleScriptDialogClose: dialogNavigation.handleScriptDialogClose,
     handleEmailDialogClose: dialogNavigation.handleEmailDialogClose,
+    handleSocialDialogClose: dialogNavigation.handleSocialDialogClose,
     
     // Premium validation
     validatePremiumStatus,
     
-    // Dodałem resetState, aby był dostępny w komponencie
+    // Added resetState, to be available in the component
     resetState: dialogState.resetState,
   };
 };

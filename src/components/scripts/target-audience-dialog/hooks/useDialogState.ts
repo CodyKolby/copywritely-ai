@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { EmailStyle } from '../../EmailStyleDialog';
 import { SocialMediaPlatform } from '../../SocialMediaPlatformDialog';
@@ -46,6 +45,7 @@ export const useDialogState = () => {
   const getCurrentActiveDialog = useCallback(() => {
     if (showScriptDialog) return 'script';
     if (showEmailDialog) return 'email';
+    if (showSocialDialog) return 'social';
     if (showSocialMediaPlatformDialog) return 'socialMedia';
     if (showEmailStyleDialog) return 'emailStyle';
     if (showGoalDialog) return 'goal';
@@ -54,6 +54,7 @@ export const useDialogState = () => {
   }, [
     showScriptDialog,
     showEmailDialog,
+    showSocialDialog,
     showSocialMediaPlatformDialog,
     showEmailStyleDialog,
     showGoalDialog,
@@ -87,13 +88,14 @@ export const useDialogState = () => {
       showEmailStyleDialog,
       showSocialMediaPlatformDialog,
       showScriptDialog,
-      showEmailDialog
+      showEmailDialog,
+      showSocialDialog
     };
     
     visibilityRef.current.dialogsInProgress = 
       showGoalDialog || showEmailStyleDialog || 
       showSocialMediaPlatformDialog || showScriptDialog || 
-      showEmailDialog || showForm;
+      showEmailDialog || showSocialDialog || showForm;
     
     visibilityRef.current.stateWasSaved = true;
       
@@ -125,6 +127,7 @@ export const useDialogState = () => {
     showSocialMediaPlatformDialog,
     showScriptDialog,
     showEmailDialog,
+    showSocialDialog,
     advertisingGoal,
     socialMediaPlatform, 
     emailStyle,
