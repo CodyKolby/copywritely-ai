@@ -1,17 +1,10 @@
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-// Expanded CORS headers to accept all necessary custom headers
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, cache-control, pragma, expires, x-no-cache, x-cache-buster, x-timestamp, x-random',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS, GET',
-  'Access-Control-Max-Age': '86400', // 24 hours
-  'Cache-Control': 'no-cache, no-store, must-revalidate',
-  'Pragma': 'no-cache',
-  'Expires': '0'
-};
+import { corsHeaders, handleOptions } from "../shared/cors.ts";
+import { generateDeploymentId, generateCacheBuster, getCurrentTimestamp } from "../shared/utils.ts";
+import { callOpenAI, createErrorResponse } from "../shared/openai.ts";
+import { constructContentPrompt } from "./content-service.ts";
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
@@ -25,7 +18,7 @@ const SYSTEM_PROMPT = Deno.env.get('SOCIAL_CONTENT_PROMPT') || DEFAULT_PROMPT;
 const FUNCTION_VERSION = "v1.1.0";
 
 // Generate a deployment ID to track specific deployments
-const DEPLOYMENT_ID = crypto.randomUUID().substring(0, 8);
+const DEPLOYMENT_ID = generateDeploymentId();
 
 console.log(`[STARTUP][${DEPLOYMENT_ID}] SocialContentAgent initialized with version ${FUNCTION_VERSION}`);
 console.log(`[STARTUP][${DEPLOYMENT_ID}] Using prompt from environment: ${Deno.env.get('SOCIAL_CONTENT_PROMPT') ? 'YES' : 'NO'}`);
@@ -33,18 +26,13 @@ console.log(`[STARTUP][${DEPLOYMENT_ID}] Current system prompt: "${SYSTEM_PROMPT
 
 serve(async (req) => {
   const requestId = crypto.randomUUID();
-  const startTime = new Date().toISOString();
+  const startTime = getCurrentTimestamp();
   console.log(`[${startTime}][REQ:${requestId}] SocialContentAgent received request:`, req.method, req.url);
   console.log(`[${startTime}][REQ:${requestId}] Using function version: ${FUNCTION_VERSION}, deployment: ${DEPLOYMENT_ID}`);
   
   // Handle OPTIONS requests for CORS preflight
-  if (req.method === 'OPTIONS') {
-    console.log(`[${startTime}][REQ:${requestId}] Handling OPTIONS preflight request`);
-    return new Response(null, { 
-      status: 204, 
-      headers: corsHeaders 
-    });
-  }
+  const optionsResponse = handleOptions(req);
+  if (optionsResponse) return optionsResponse;
 
   try {
     // Parse request data
@@ -81,77 +69,36 @@ serve(async (req) => {
     console.log(`[${startTime}][REQ:${requestId}] Target audience data:`, JSON.stringify(targetAudience).substring(0, 300));
     console.log(`[${startTime}][REQ:${requestId}] Hook output:`, JSON.stringify(hookOutput));
     
-    // Force a clear timestamp and random value to avoid caching
-    const currentTimestamp = timestamp || startTime;
-    const randomValue = Math.random().toString(36).substring(2, 15);
-    const requestCacheBuster = `${Date.now()}-${randomValue}-${DEPLOYMENT_ID}-${requestId}`;
-    
-    // Determine which hook to use
-    const hookToUse = selectedHook || hookOutput.hooks[0];
-    
-    // Construct prompt for agent with our forced timestamp to avoid caching
-    const userPrompt = `Timestamp to avoid caching: ${currentTimestamp}
-    Random value to break cache: ${requestCacheBuster}
-    Request ID: ${requestId}
-    Deployment ID: ${DEPLOYMENT_ID}
-    Function version: ${FUNCTION_VERSION}
-    
-    Oto dane o grupie docelowej:
-    ${JSON.stringify(targetAudience, null, 2)}
-    
-    Cel reklamy: ${advertisingGoal || 'Brak określonego celu'}
-    
-    Wybrany hook: ${hookToUse}
-    
-    Tematyka posta: ${hookOutput.theme || 'Brak określonej tematyki'}
-    
-    Sugerowana forma: ${hookOutput.form || 'post tekstowy'}
-    
-    Platforma: ${platform || 'Meta (Instagram/Facebook)'}
-    
-    Wezwanie do działania: ${hookOutput.cta || 'Sprawdź więcej'}`;
+    // Construct prompt for agent
+    const userPrompt = constructContentPrompt(requestData, requestId, DEPLOYMENT_ID, FUNCTION_VERSION);
     
     // Log the prompts for debugging
     console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT BEING USED:`, SYSTEM_PROMPT);
     console.log(`[${startTime}][REQ:${requestId}] USER PROMPT BEING USED (with anti-cache measures):`, userPrompt);
     
+    // Prepare cache busting and metadata
+    const currentTimestamp = timestamp || startTime;
+    const randomValue = Math.random().toString(36).substring(2, 15);
+    const requestCacheBuster = generateCacheBuster(requestId, DEPLOYMENT_ID);
+    
     // Get response from OpenAI with cache-busting headers
     console.log(`[${startTime}][REQ:${requestId}] Sending request to OpenAI API with cache-busting parameters`);
-    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-        'X-Request-ID': requestId,
-        'X-Timestamp': currentTimestamp,
-        'X-Cache-Buster': requestCacheBuster,
-        'X-Random': randomValue,
-        'X-Deployment-ID': DEPLOYMENT_ID
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.7,
-      }),
+    
+    const data = await callOpenAI(userPrompt, SYSTEM_PROMPT, openAIApiKey, {
+      requestId,
+      timestamp: currentTimestamp,
+      cacheBuster: requestCacheBuster,
+      deploymentId: DEPLOYMENT_ID,
+      functionVersion: FUNCTION_VERSION
     });
 
-    if (!openAIResponse.ok) {
-      const errorData = await openAIResponse.json().catch(() => ({}));
-      console.error(`[${startTime}][REQ:${requestId}] OpenAI API error:`, errorData);
-      throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
-    }
-
-    const data = await openAIResponse.json();
-    let responseText = data.choices[0].message.content;
+    const responseText = data.choices[0].message.content;
     
     // Log complete response from API
     console.log(`[${startTime}][REQ:${requestId}] Raw OpenAI response:`, responseText);
+    
+    // Determine which hook was used
+    const hookToUse = selectedHook || hookOutput.hooks[0];
     
     // Create a result with the raw response for debugging
     const result = {
@@ -188,30 +135,18 @@ serve(async (req) => {
     );
     
   } catch (error) {
-    const timestamp = new Date().toISOString();
+    const timestamp = getCurrentTimestamp();
     console.error(`[${timestamp}][REQ:${requestId}] Error in social-content-agent:`, error);
-    return new Response(
-      JSON.stringify({ 
-        error: error.message || "Unknown error",
-        timestamp: timestamp,
-        requestId: requestId,
-        deploymentId: DEPLOYMENT_ID,
-        debugInfo: {
-          systemPromptUsed: SYSTEM_PROMPT,
-          promptSource: Deno.env.get('SOCIAL_CONTENT_PROMPT') ? 'environment' : 'default',
-          functionVersion: FUNCTION_VERSION
-        }
-      }),
-      { 
-        status: 500, 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        } 
+    
+    return createErrorResponse(error, {
+      timestamp: timestamp,
+      requestId: requestId,
+      deploymentId: DEPLOYMENT_ID,
+      debugInfo: {
+        systemPromptUsed: SYSTEM_PROMPT,
+        promptSource: Deno.env.get('SOCIAL_CONTENT_PROMPT') ? 'environment' : 'default',
+        functionVersion: FUNCTION_VERSION
       }
-    );
+    });
   }
 });
