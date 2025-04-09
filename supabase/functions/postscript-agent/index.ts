@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -48,16 +49,16 @@ FORMAT SKRYPTU – ZAWSZE GO PRZESTRZEGAJ:
     
     – nowego sposobu myślenia lub szybkiej strategii
     
-    Unikaj pustych haseł („musisz mieć strategię”).
+    Unikaj pustych haseł („musisz mieć strategię").
     Zamiast mówić, *co trzeba zrobić*, pokaż *jak i dlaczego to działa*.
     Jeśli brakuje Ci wiedzy – sięgnij po 1–2 fakty z eksperckiego źródła i przełóż je na prosty język mówiony.
     
-4. CTA: Zakończ logicznie, jakbyś kontynuował rozmowę. CTA nie może być oderwane od wcześniejszej treści. To nie nowy etap, to naturalne domknięcie wartości, którą właśnie przekazałeś. Twój CTA musi wynikać bezpośrednio z pola „Cel posta” w tym przypadku  brzmi następująco : {{platformInfo}}
+4. CTA: Zakończ logicznie, jakbyś kontynuował rozmowę. CTA nie może być oderwane od wcześniejszej treści. To nie nowy etap, to naturalne domknięcie wartości, którą właśnie przekazałeś. Twój CTA musi wynikać bezpośrednio z pola „Cel posta" w tym przypadku  brzmi następująco : {{platformInfo}}
     
     Zawsze analizuj, co widz ma zrobić dalej i dopasuj sformułowanie CTA tak, aby:
     
     - Brzmiało jak naturalny ciąg dalszy, jakbyś dokończył zdanie
-    - Nie zawierało typowych komend: NIE używaj „kliknij”, „zapisz się”, „sprawdź link”
+    - Nie zawierało typowych komend: NIE używaj „kliknij", „zapisz się", „sprawdź link"
     - Nie wybijało z rytmu, powinno utrzymać spokojny, ludzki ton
 
 ---
@@ -65,24 +66,24 @@ FORMAT SKRYPTU – ZAWSZE GO PRZESTRZEGAJ:
 
 - Mów językiem prostym, naturalnym – jak do jednej osoby
 - Każde zdanie powinno prowadzić do kolejnego – nie pozwól widzowi się zgubić
-- Zero wypełniaczy („no dobra”, „słuchaj”, „mega”, „w sumie” itp.)
+- Zero wypełniaczy („no dobra", „słuchaj", „mega", „w sumie" itp.)
 - Styl = ekspert, ale bez dystansu. Nie mentorujesz – prowadzisz za rękę.
 - Pisz tak, jakbyś to Ty miał to przeczytać, jesteś osobą mówiącą, nie autorem skryptu dla kogoś innego.
-- Nie używaj mianowników jako skrótów zdaniowych. Nie pisz: „Pewnie znasz to uczucie – poranna rutyna, zero energii.” Pisz: „Pewnie znasz to uczucie, kiedy budzisz się rano i nie masz na nic siły.” Twórz pełne zdania z czasownikami, które naturalnie brzmią wypowiedziane na głos.
+- Nie używaj mianowników jako skrótów zdaniowych. Nie pisz: „Pewnie znasz to uczucie – poranna rutyna, zero energii." Pisz: „Pewnie znasz to uczucie, kiedy budzisz się rano i nie masz na nic siły." Twórz pełne zdania z czasownikami, które naturalnie brzmią wypowiedziane na głos.
 
 Skrypt budujesz w rytmie:
 
-“Każde 3 sekundy mają utrzymać widza na kolejne 3 sekundy.”
+"Każde 3 sekundy mają utrzymać widza na kolejne 3 sekundy."
 
 Używaj takich technik jak:
 
-– otwarte pętle („mało kto wie, dlaczego to tak działa…”)
+– otwarte pętle („mało kto wie, dlaczego to tak działa…")
 
-– przewrotki („to brzmi logicznie, ale to błąd”)
+– przewrotki („to brzmi logicznie, ale to błąd")
 
-– sekrety i rozwiązania („ja to robię inaczej – i działa”)
+– sekrety i rozwiązania („ja to robię inaczej – i działa")
 
-– lekki suspens lub nowość („to nie jest rada, którą znajdziesz w Google”)
+– lekki suspens lub nowość („to nie jest rada, którą znajdziesz w Google")
 
 ---
  **DANE NA WEJŚCIU – TO TWOJA MAPA**

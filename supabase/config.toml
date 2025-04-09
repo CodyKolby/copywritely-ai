@@ -47,12 +47,6 @@ verify_jwt = false
 [functions.postscript-agent]
 verify_jwt = false
 
-[functions.posthook-agent]
-verify_jwt = false
-
-[functions.postscript-agent]
-verify_jwt = false
-
 [functions.ai-agents]
 verify_jwt = false
 
