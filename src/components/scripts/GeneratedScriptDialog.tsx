@@ -39,6 +39,9 @@ const GeneratedScriptDialog = ({
   const showLoading = isLoading || isGeneratingNewScript;
   const dialogId = 'script-dialog';
   const contentId = 'script-content';
+  
+  // Determine if this is a social media post
+  const isSocialMediaPost = templateId === 'social';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -49,8 +52,8 @@ const GeneratedScriptDialog = ({
       >
         <DialogTitle className="sr-only">Wygenerowany skrypt</DialogTitle>
         
-        {/* Show DialogHeader only when not loading */}
-        {!showLoading && (
+        {/* Show DialogHeader only when not loading and not for social media posts */}
+        {!showLoading && !isSocialMediaPost && (
           <DialogHeader 
             currentHookIndex={currentHookIndex}
             totalHooks={totalHooks}
@@ -71,7 +74,7 @@ const GeneratedScriptDialog = ({
                 bestHook={currentHook} 
                 hookIndex={currentHookIndex}
                 totalHooks={totalHooks}
-                adStructure={templateId === 'social' ? '' : 'PAS'}
+                adStructure={isSocialMediaPost ? '' : 'PAS'}
               />
             </div>
             

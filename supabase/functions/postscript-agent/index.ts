@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -26,11 +25,21 @@ Dopasuj styl do wskazanej platformy:
 - TikTok: krótki, dynamiczny, conversational z silnym hasłem do działania
 - LinkedIn: wartościowy, profesjonalny, budujący autorytet z biznesowym CTA
 
+Dane z ankiety klienta: {{surveyData}}
+
+Gotowy HOOK: {{selectedHook}}
+
+Temat posta: {{postTheme}}
+
+{{platformInfo}}
+
 Zwróć pełną treść postu w formacie JSON z polami:
 - content: główna treść postu (włącznie z hookiem)
 - cta: wyraźne wezwanie do działania`;
 
 console.log("PostscriptAgent Edge Function initialized");
+console.log("First 300 chars of system prompt:", SYSTEM_PROMPT.substring(0, 300));
+console.log("Workflow: 1) Receive request with target audience, hook and theme 2) Process with OpenAI 3) Return formatted post content with CTA");
 
 serve(async (req) => {
   console.log("PostscriptAgent received request:", req.method, req.url);

@@ -27,8 +27,8 @@ const ScriptDisplay = ({
 
   const handleCopy = async () => {
     try {
-      // Łączymy hook i skrypt w jeden tekst do kopiowania
-      const fullScript = `${bestHook}\n\n${script}`;
+      // For social media posts, only copy the script without the hook
+      const fullScript = adStructure ? `${bestHook}\n\n${script}` : script;
       await navigator.clipboard.writeText(fullScript);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -38,8 +38,8 @@ const ScriptDisplay = ({
   };
 
   const handleDownload = () => {
-    // Łączymy hook i skrypt w jeden tekst do pobrania
-    const fullScript = `${bestHook}\n\n${script}`;
+    // For social media posts, only include the script without the hook
+    const fullScript = adStructure ? `${bestHook}\n\n${script}` : script;
     const element = document.createElement('a');
     const file = new Blob([fullScript], { type: 'text/plain' });
     element.href = URL.createObjectURL(file);
@@ -89,7 +89,8 @@ const ScriptDisplay = ({
             </TooltipProvider>
           )}
           
-          {totalHooks > 0 && (
+          {/* Only show hook count for non-social media posts */}
+          {!isSocialMediaPost && totalHooks > 0 && (
             <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300">
               Hook {hookIndex + 1} z {totalHooks}
             </Badge>
@@ -98,9 +99,12 @@ const ScriptDisplay = ({
       </div>
 
       <div className="bg-gray-50 p-4 rounded-md border border-gray-200 max-h-[50vh] overflow-y-auto">
-        <div className="mb-4 py-2 px-3 bg-yellow-50 border-l-4 border-yellow-400 text-sm font-medium">
-          {bestHook}
-        </div>
+        {/* For non-social media posts, show the hook separately */}
+        {!isSocialMediaPost && (
+          <div className="mb-4 py-2 px-3 bg-yellow-50 border-l-4 border-yellow-400 text-sm font-medium">
+            {bestHook}
+          </div>
+        )}
         <pre className="whitespace-pre-wrap text-sm">{displayScript}</pre>
       </div>
 
