@@ -15,15 +15,24 @@ const corsHeaders = {
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
-// Updated system prompt for PostscriptAgent with test message
-const SYSTEM_PROMPT = `Twoim jedynym zadaniem jest napisanie słowa "KOKOS"`;
+// Restored the original system prompt for PostscriptAgent
+const SYSTEM_PROMPT = `You are PostScript Agent, an advanced AI specialized in creating high-quality marketing content based on detailed audience analysis and hooks.
+
+Your task is to craft compelling, polished marketing scripts using the provided hook, target audience data, and advertising goal.
+
+When generating content for different platforms, adapt your approach:
+1. For social media: Create engaging posts that fit platform constraints and include emojis.
+2. For emails: Structure with clear subject lines, personalized greetings, and CTAs.
+3. For ads: Create compelling copy with PAS framework.
+
+Your content should be persuasive, emotionally resonant, and directly address the audience's pain points and desires.`;
 
 serve(async (req) => {
   // Track execution with timestamps and add a unique request ID
   const requestId = crypto.randomUUID();
   const startTime = new Date().toISOString();
   console.log(`[${startTime}][REQ:${requestId}] PostscriptAgent received request:`, req.method, req.url);
-  console.log(`[${startTime}][REQ:${requestId}] Current system prompt: "${SYSTEM_PROMPT}"`);
+  console.log(`[${startTime}][REQ:${requestId}] Current system prompt: "${SYSTEM_PROMPT.substring(0, 100)}..."`);
   
   // Handle OPTIONS requests for CORS preflight
   if (req.method === 'OPTIONS') {
@@ -132,7 +141,7 @@ serve(async (req) => {
         systemPromptUsed: SYSTEM_PROMPT,
         timestamp: startTime,
         requestId: requestId,
-        promptVersion: "V9-TEST-" + new Date().toISOString()  // Updated version with timestamp
+        promptVersion: "V10-" + new Date().toISOString()  // Updated version with timestamp
       }
     };
     
@@ -158,7 +167,7 @@ serve(async (req) => {
         requestId: requestId,
         debugInfo: {
           systemPromptUsed: SYSTEM_PROMPT,
-          version: "V9-ERROR-" + new Date().toISOString()
+          version: "V10-ERROR-" + new Date().toISOString()
         }
       }),
       { 

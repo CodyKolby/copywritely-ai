@@ -14,7 +14,7 @@ export interface DialogNavigationDeps {
   setEmailStyle: (value: EmailStyle | null) => void;
   setSocialMediaPlatform: (value: SocialMediaPlatform | null) => void;
   setIsProcessing: (value: boolean) => void;
-  // Dodane nowe zależności
+  // Dependencies for transitions
   isTransitioning: boolean;
   transitionToDialog: (closeDialog: () => void, openDialog: () => void) => void;
 }
@@ -34,19 +34,22 @@ export const useDialogNavigation = (deps: DialogNavigationDeps, templateId: stri
   // Goal submission handler
   const handleGoalSubmit = useCallback((goal: string) => {
     console.log(`Goal submitted: ${goal}, template: ${templateId}`);
-    // Ustaw dane
+    // Set data
     deps.setAdvertisingGoal(goal);
     deps.setIsProcessing(true);
     
-    // Wykonaj przejście do odpowiedniego dialogu bazując na typie szablonu
+    // Choose the next dialog based on template type
     const closeCurrentDialog = () => deps.setShowGoalDialog(false);
     
     let openNextDialog;
     if (templateId === 'social') {
+      console.log("Social template: transitioning to social media platform dialog");
       openNextDialog = () => deps.setShowSocialMediaPlatformDialog(true);
     } else if (templateId === 'email') {
+      console.log("Email template: transitioning to email style dialog");
       openNextDialog = () => deps.setShowEmailStyleDialog(true);
     } else {
+      console.log("Other template: transitioning directly to script dialog");
       openNextDialog = () => deps.setShowScriptDialog(true);
     }
     
@@ -70,7 +73,7 @@ export const useDialogNavigation = (deps: DialogNavigationDeps, templateId: stri
     deps.setEmailStyle(style);
     deps.setIsProcessing(true);
     
-    // Wykonaj płynne przejście do następnego dialogu
+    // Transition to email dialog
     deps.transitionToDialog(
       () => deps.setShowEmailStyleDialog(false),
       () => deps.setShowEmailDialog(true)
@@ -82,7 +85,7 @@ export const useDialogNavigation = (deps: DialogNavigationDeps, templateId: stri
     console.log("Navigation: going back from email style dialog");
     deps.setIsProcessing(true);
     
-    // Wykonaj płynne przejście do poprzedniego dialogu
+    // Transition to goal dialog
     deps.transitionToDialog(
       () => deps.setShowEmailStyleDialog(false),
       () => deps.setShowGoalDialog(true)
@@ -95,7 +98,7 @@ export const useDialogNavigation = (deps: DialogNavigationDeps, templateId: stri
     deps.setSocialMediaPlatform(platform);
     deps.setIsProcessing(true);
     
-    // Wykonaj płynne przejście do następnego dialogu
+    // Transition to script dialog
     deps.transitionToDialog(
       () => deps.setShowSocialMediaPlatformDialog(false),
       () => deps.setShowScriptDialog(true)
@@ -107,7 +110,7 @@ export const useDialogNavigation = (deps: DialogNavigationDeps, templateId: stri
     console.log("Navigation: going back from social media platform dialog");
     deps.setIsProcessing(true);
     
-    // Wykonaj płynne przejście do poprzedniego dialogu
+    // Transition to goal dialog
     deps.transitionToDialog(
       () => deps.setShowSocialMediaPlatformDialog(false),
       () => deps.setShowGoalDialog(true)
