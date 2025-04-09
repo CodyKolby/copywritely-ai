@@ -105,8 +105,8 @@ async function generateSocialMediaPost(
     targetAudience: '...abbreviated...'
   });
 
-  // IMPORTANT: Always force a new fetch by including a unique timestamp in the URL
-  const posthookUrl = `https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/posthook-agent?_t=${Date.now()}`;
+  // CRITICAL: Force no-cache by appending a unique timestamp to the URL
+  const posthookUrl = `https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/posthook-agent?_nocache=${Date.now()}`;
   
   const posthookResponse = await fetch(posthookUrl, {
     method: 'POST',
@@ -174,8 +174,8 @@ async function generateSocialMediaPost(
   const { data: { session: refreshedSession } } = await supabase.auth.getSession();
   const refreshedAccessToken = refreshedSession?.access_token || accessToken;
 
-  // IMPORTANT: Always force a new fetch by including a unique timestamp in the URL
-  const postscriptUrl = `https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/postscript-agent?_t=${Date.now()}`;
+  // CRITICAL: Force no-cache by appending a unique timestamp to the URL
+  const postscriptUrl = `https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/postscript-agent?_nocache=${Date.now()}`;
   
   const postscriptResponse = await fetch(postscriptUrl, {
     method: 'POST',
@@ -244,7 +244,7 @@ async function generateOnlineAdScript(
 
   // Call the generate-script function
   const cacheBuster = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
-  const response = await fetch(`https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/generate-script`, {
+  const response = await fetch(`https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/generate-script?_nocache=${Date.now()}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

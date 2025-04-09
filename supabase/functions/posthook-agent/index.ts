@@ -20,16 +20,23 @@ const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 const SYSTEM_PROMPT = `Twoim jedynym zadaniem jest napisać "TESTHOOK4"`;
 // ===== EDITABLE PROMPT ENDS HERE =====
 
-// Force redeployment marker: v1.0.4
-console.log("PosthookAgent Edge Function initialized with custom prompt v1.0.4");
+// Force redeployment marker: v1.0.5
+const FUNCTION_VERSION = "v1.0.5";
+
+// Log the prompt and version on function initialization
+console.log(`[STARTUP] PosthookAgent Edge Function initialized with version ${FUNCTION_VERSION}`);
+console.log(`[STARTUP] Current system prompt: "${SYSTEM_PROMPT}"`);
 
 serve(async (req) => {
-  console.log("PosthookAgent received request:", req.method, req.url);
-  console.log("Using prompt version v1.0.4:", SYSTEM_PROMPT.substring(0, 50));
+  const requestId = crypto.randomUUID();
+  const startTime = new Date().toISOString();
+  console.log(`[${startTime}][REQ:${requestId}] PosthookAgent received request:`, req.method, req.url);
+  console.log(`[${startTime}][REQ:${requestId}] Using function version: ${FUNCTION_VERSION}`);
+  console.log(`[${startTime}][REQ:${requestId}] Current system prompt: "${SYSTEM_PROMPT}"`);
   
   // Handle OPTIONS requests for CORS preflight
   if (req.method === 'OPTIONS') {
-    console.log("Handling OPTIONS preflight request");
+    console.log(`[${startTime}][REQ:${requestId}] Handling OPTIONS preflight request`);
     return new Response(null, { 
       status: 204, 
       headers: corsHeaders 
@@ -39,22 +46,22 @@ serve(async (req) => {
   try {
     // Parse request data
     const requestData = await req.json().catch(err => {
-      console.error("Error parsing JSON request:", err);
+      console.error(`[${startTime}][REQ:${requestId}] Error parsing JSON request:`, err);
       throw new Error("Invalid JSON in request body");
     });
     
     const { targetAudience, advertisingGoal, platform, cacheBuster, timestamp } = requestData;
     
-    console.log("PosthookAgent processing request:", { 
+    console.log(`[${startTime}][REQ:${requestId}] Processing request:`, { 
       targetAudienceId: targetAudience?.id, 
       advertisingGoal, 
       platform,
-      timestamp: timestamp || new Date().toISOString(),
+      timestamp: timestamp || startTime,
       cacheBuster: cacheBuster || 'none'
     });
     
     if (!targetAudience) {
-      console.error("Missing target audience data");
+      console.error(`[${startTime}][REQ:${requestId}] Missing target audience data`);
       return new Response(
         JSON.stringify({ error: 'Brak danych o grupie docelowej' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -65,7 +72,11 @@ serve(async (req) => {
     const platformInfo = `Platforma: ${platform || 'Meta (Instagram/Facebook)'}`;
     
     // Construct prompt with survey data
-    const userPrompt = `Oto dane o grupie docelowej:
+    const userPrompt = `Timestamp to avoid caching: ${startTime}
+    Random value to break cache: ${Math.random().toString(36).substring(2, 15)}
+    Request ID: ${requestId}
+    
+    Oto dane o grupie docelowej:
     ${JSON.stringify(targetAudience, null, 2)}
     
     Cel reklamy: ${advertisingGoal || 'Brak określonego celu'}
@@ -75,8 +86,8 @@ serve(async (req) => {
     Stwórz hook, określ tematykę i formę postu.`;
     
     // Log the prompt for debugging
-    console.log("Prompt for PosthookAgent:", userPrompt);
-    console.log("System prompt being used:", SYSTEM_PROMPT);
+    console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT BEING USED:`, SYSTEM_PROMPT);
+    console.log(`[${startTime}][REQ:${requestId}] USER PROMPT BEING USED:`, userPrompt);
     
     // Add anti-caching measures
     const requestTimestamp = timestamp || new Date().toISOString();
@@ -93,7 +104,8 @@ serve(async (req) => {
         'Expires': '0',
         'X-Cache-Buster': cacheBusterValue,
         'X-Timestamp': requestTimestamp,
-        'X-Random': Math.random().toString(36).substring(2, 15)
+        'X-Random': Math.random().toString(36).substring(2, 15),
+        'X-Request-ID': requestId
       },
       body: JSON.stringify({
         model: 'gpt-4o',
@@ -107,7 +119,7 @@ serve(async (req) => {
 
     if (!openAIResponse.ok) {
       const errorData = await openAIResponse.json().catch(() => ({}));
-      console.error("OpenAI API error:", errorData);
+      console.error(`[${startTime}][REQ:${requestId}] OpenAI API error:`, errorData);
       throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
     }
 
@@ -115,7 +127,7 @@ serve(async (req) => {
     let responseText = data.choices[0].message.content;
     
     // Log complete response for debugging
-    console.log("Raw PosthookAgent response:", responseText);
+    console.log(`[${startTime}][REQ:${requestId}] Raw PosthookAgent response:`, responseText);
     
     // Process response as JSON
     let processedResponse;
@@ -129,7 +141,7 @@ serve(async (req) => {
       try {
         processedResponse = JSON.parse(responseText);
       } catch (e) {
-        console.error("Failed to parse JSON response:", e);
+        console.error(`[${startTime}][REQ:${requestId}] Failed to parse JSON response:`, e);
         
         // If not parseable as JSON, manually extract hooks and theme
         const hookMatch = responseText.match(/HOOK:?\s*(.*?)(?=\s*TEMAT|\s*$)/is);
@@ -145,7 +157,7 @@ serve(async (req) => {
         };
       }
     } catch (e) {
-      console.error('Error processing response:', e);
+      console.error(`[${startTime}][REQ:${requestId}] Error processing response:`, e);
       processedResponse = {
         hooks: ["Nie udało się wygenerować hooków"],
         theme: "Nie udało się określić tematyki",
@@ -155,7 +167,7 @@ serve(async (req) => {
     
     // Ensure we have valid hooks array
     if (!processedResponse.hooks || !Array.isArray(processedResponse.hooks) || processedResponse.hooks.length === 0) {
-      console.warn("Generated invalid hooks format, creating fallback");
+      console.warn(`[${startTime}][REQ:${requestId}] Generated invalid hooks format, creating fallback`);
       processedResponse.hooks = ["Nie udało się wygenerować hooków"];
     }
     
@@ -169,26 +181,47 @@ serve(async (req) => {
       processedResponse.form = "post tekstowy";
     }
     
-    console.log("Processed PosthookAgent response:", processedResponse);
+    console.log(`[${startTime}][REQ:${requestId}] Processed PosthookAgent response:`, processedResponse);
     
     // Add version info to help track which version is running
-    processedResponse.version = "v1.0.4";
-    processedResponse.promptUsed = SYSTEM_PROMPT.substring(0, 50) + "...";
+    processedResponse.version = FUNCTION_VERSION;
+    processedResponse.promptUsed = SYSTEM_PROMPT;
+    processedResponse.requestId = requestId;
     
     return new Response(
       JSON.stringify(processedResponse),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { 
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        } 
+      }
     );
     
   } catch (error) {
-    console.error('Error in posthook-agent:', error);
+    const timestamp = new Date().toISOString();
+    console.error(`[${timestamp}][REQ:${requestId}] Error in posthook-agent:`, error);
     return new Response(
       JSON.stringify({ 
         error: error.message || "Unknown error", 
-        version: "v1.0.4-error",
-        promptUsed: SYSTEM_PROMPT.substring(0, 50) + "..."
+        version: FUNCTION_VERSION,
+        promptUsed: SYSTEM_PROMPT,
+        timestamp: timestamp,
+        requestId: requestId
       }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { 
+        status: 500, 
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        } 
+      }
     );
   }
 });

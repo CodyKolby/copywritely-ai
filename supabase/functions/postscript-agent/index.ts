@@ -21,14 +21,19 @@ const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 const SYSTEM_PROMPT = `Twoim jedynym zadaniem jest napisać "TESTSCRIPT4"`;
 // ===== EDITABLE PROMPT ENDS HERE =====
 
-// Force redeployment marker: v1.0.4
-console.log(`PostscriptAgent initialized with version v1.0.4 and prompt: "${SYSTEM_PROMPT}"`);
+// Force redeployment marker: v1.0.5
+const FUNCTION_VERSION = "v1.0.5";
+
+// Log the prompt and version on function initialization (this runs on cold start)
+console.log(`[STARTUP] PostscriptAgent initialized with version ${FUNCTION_VERSION}`);
+console.log(`[STARTUP] Current system prompt: "${SYSTEM_PROMPT}"`);
 
 serve(async (req) => {
   // Track execution with timestamps and add a unique request ID
   const requestId = crypto.randomUUID();
   const startTime = new Date().toISOString();
   console.log(`[${startTime}][REQ:${requestId}] PostscriptAgent received request:`, req.method, req.url);
+  console.log(`[${startTime}][REQ:${requestId}] Using function version: ${FUNCTION_VERSION}`);
   console.log(`[${startTime}][REQ:${requestId}] Current system prompt: "${SYSTEM_PROMPT}"`);
   
   // Handle OPTIONS requests for CORS preflight
@@ -143,7 +148,8 @@ serve(async (req) => {
         systemPromptUsed: SYSTEM_PROMPT,
         timestamp: startTime,
         requestId: requestId,
-        promptVersion: "V15-CUSTOM-" + new Date().toISOString()
+        functionVersion: FUNCTION_VERSION,
+        promptVersion: "PROMPT-" + Date.now()
       }
     };
     
@@ -155,6 +161,10 @@ serve(async (req) => {
         headers: { 
           ...corsHeaders, 
           'Content-Type': 'application/json',
+          // Add extra no-cache headers to response
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
         } 
       }
     );
@@ -169,14 +179,18 @@ serve(async (req) => {
         requestId: requestId,
         debugInfo: {
           systemPromptUsed: SYSTEM_PROMPT,
-          version: "V15-ERROR-" + new Date().toISOString()
+          functionVersion: FUNCTION_VERSION,
+          version: "ERROR-" + Date.now()
         }
       }),
       { 
         status: 500, 
         headers: { 
           ...corsHeaders, 
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
         } 
       }
     );
