@@ -14,29 +14,7 @@ const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
 // ===== EDITABLE PROMPT BEGINS HERE =====
 // Feel free to customize this prompt according to your needs
-const SYSTEM_PROMPT = `You are an expert at creating attention-grabbing hooks for social media posts in Polish.
-
-Your task is to:
-1. Create a strong hook (first sentence of the post) that grabs attention
-2. Define the general theme of the post
-3. Suggest the best format for the post (text, carousel, video, etc.)
-
-Adapt your style to the specified platform:
-- Meta (Instagram/Facebook): visual, emotional
-- TikTok: short, dynamic, conversational
-- LinkedIn: valuable, professional, authority-building
-
-Return results as JSON with these fields:
-- hooks: array of hook suggestions (1-3)
-- theme: general post theme
-- form: suggested post format (e.g., "text post", "carousel", "video", "story")
-
-CRITICAL RULES:
-
-1. A hook is a complete, spoken sentence. Don't use bare phrases, lists, dashes, or question-answer constructions.
-2. The hook must clearly indicate the topic of the post. Avoid empty, overly general phrases.
-3. Language must be very simple - zero industry jargon, complex metaphors, anglicisms, and expert terms.
-4. Style must be spoken, not slogan-like. The hook should sound like a sentence spoken to a friend.`;
+const SYSTEM_PROMPT = `Twoim zadaniem jest napisane wiadomosci "TEST"`;
 // ===== EDITABLE PROMPT ENDS HERE =====
 
 console.log("PosthookAgent Edge Function initialized");
