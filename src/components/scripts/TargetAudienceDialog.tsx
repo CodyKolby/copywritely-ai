@@ -112,7 +112,7 @@ const TargetAudienceDialog = ({
               onOpenChange={(open) => {
                 if (!open) handleDialogClose();
               }}
-              onSubmit={handleSocialMediaPlatformSubmit}
+              onSelect={handleSocialMediaPlatformSubmit}
               onBack={handleSocialMediaPlatformBack}
               onCancel={handleDialogClose}
               isProcessing={isProcessing}
