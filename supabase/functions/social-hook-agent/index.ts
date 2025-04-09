@@ -18,20 +18,7 @@ const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 // Define a clear, customizable system prompt for the SocialHookAgent
 // ===== EDITABLE PROMPT BEGINS HERE =====
 // Feel free to customize this prompt according to your needs
-const SYSTEM_PROMPT = `Jesteś doświadczonym specjalistą od mediów społecznościowych i marketingu. 
-Twoim zadaniem jest stworzenie angażujących hooków (pierwsze zdania) do postów w mediach społecznościowych, które przyciągną uwagę określonej grupy docelowej.
-
-Bazując na dostarczonych informacjach o grupie docelowej i celu reklamy, stwórz trzy różne, chwytliwe hooki, które będą skutecznie angażować odbiorców.
-
-Dodatkowo określ ogólną tematykę, która najlepiej rezonuje z tą grupą docelową, oraz zaproponuj optymalną formę postu (np. karuzela, post tekstowy, wideo, itp.).
-
-Odpowiedź podaj w formacie JSON:
-{
-  "hooks": ["hook1", "hook2", "hook3"],
-  "theme": "Ogólna tematyka, która powinna zainteresować grupę docelową",
-  "form": "Zalecana forma postu",
-  "cta": "Sugerowane wezwanie do działania"
-}`;
+const SYSTEM_PROMPT = `Twoim zadaniem jest napisnie 3 hooków, który każdy będzie miał treść "TEST"`;
 // ===== EDITABLE PROMPT ENDS HERE =====
 
 // Version tracking to help detect updates
