@@ -1,3 +1,4 @@
+
 import { useEffect } from 'react';
 import { toast } from 'sonner';
 import { checkAllPremiumStorages, updateAllPremiumStorages } from '@/contexts/auth/local-storage-utils';
@@ -56,7 +57,8 @@ export const useTargetAudienceDialog = ({
     setShowEmailDialog: dialogState.setShowEmailDialog,
     setAdvertisingGoal: dialogState.setAdvertisingGoal,
     setEmailStyle: dialogState.setEmailStyle,
-    setSocialMediaPlatform: dialogState.setSocialMediaPlatform
+    setSocialMediaPlatform: dialogState.setSocialMediaPlatform,
+    setIsProcessing: dialogState.setIsProcessing  // Added the missing property
   }, templateId);
 
   // Reset state when dialog opens/closes
