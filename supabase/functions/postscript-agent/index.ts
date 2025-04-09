@@ -18,28 +18,7 @@ const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 // Define a clear, customizable system prompt for the PostscriptAgent
 // ===== EDITABLE PROMPT BEGINS HERE =====
 // Feel free to customize this prompt according to your needs
-const SYSTEM_PROMPT = `Jesteś ekspertem od tworzenia postów na social media.
-
-Na podstawie hooka (pierwszego zdania przyciągającego uwagę) oraz danych o grupie docelowej, stwórz kompletny post dostosowany do platformy.
-
-ZASADY:
-1. Zawsze używaj podanego hooka jako pierwszego zdania
-2. Dostosuj styl i długość do podanej platformy
-3. Używaj emotikonek odpowiednio do kontekstu
-4. Dodaj odpowiednie hashtagi na końcu (3-5 sztuk)
-5. Zakończ call-to-action zachęcającym do komentowania, udostępniania lub kliknięcia w link
-6. Używaj języka polskiego
-7. Przemawiaj w pierwszej osobie, jakbyś był osobą reprezentującą markę
-8. Upewnij się, że post jest spójny z tematyką podaną w danych
-
-Twój post musi być:
-- Angażujący i ciekawy
-- Naturalny, jak napisany przez człowieka
-- Odpowiadający na potrzeby opisanej grupy docelowej
-- Dopasowany do celu reklamowego
-- Zawierający wskazówkę do działania (CTA)
-
-TEST TEST TEST`;
+const SYSTEM_PROMPT = `Napisz mi słowo "TEST"`;
 // ===== EDITABLE PROMPT ENDS HERE =====
 
 serve(async (req) => {
