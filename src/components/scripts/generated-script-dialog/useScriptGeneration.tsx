@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { generateScript } from './utils/script-generator';
 import { saveProjectWithContent } from './utils/project-utils';
@@ -23,12 +24,14 @@ export const useScriptGeneration = (
   const [projectSaved, setProjectSaved] = useState(false);
   const [projectId, setProjectId] = useState<string | null>(null);
   
-  const [rawResponse, setRawResponse] = useState<string | null>(null);
+  // Debug information for tracking function versions and prompts
   const [debugInfo, setDebugInfo] = useState<any | null>(null);
   
   const generationInProgress = useRef(false);
   const requestId = useRef(`${Date.now()}-${Math.random().toString(36).substring(2, 15)}`);
   const mountedRef = useRef(true);
+  const retryCount = useRef(0);
+  const maxRetries = 2; // Maximum number of auto-retries for transient errors
 
   useEffect(() => {
     mountedRef.current = true;
@@ -43,6 +46,7 @@ export const useScriptGeneration = (
       setError(null);
       setIsGeneratingNewScript(false);
       setIsSaving(false);
+      retryCount.current = 0; // Reset retry counter when dialog closes
     }
   }, [open]);
 
@@ -101,22 +105,43 @@ export const useScriptGeneration = (
       setCurrentHook(result.bestHook || '');
       setCurrentHookIndex(result.currentHookIndex);
       setTotalHooks(result.totalHooks);
-      
-      setRawResponse(result.rawResponse || null);
       setDebugInfo(result.debugInfo || null);
+      
+      // Check if we got our expected test values
+      if (result.script === 'TESTSCRIPT' || result.bestHook === 'TESTHOOK') {
+        console.log("SUCCESS: Got expected test values, confirming prompts are working correctly!");
+        toast.success("Prompty zaktualizowane pomyślnie!");
+      }
       
       console.log("Script generation completed successfully", {
         scriptLength: result.script?.length || 0,
         hookIndex: result.currentHookIndex,
         totalHooks: result.totalHooks,
         templateId,
-        rawResponse: result.rawResponse,
         debugInfo: result.debugInfo
       });
+
+      // Reset retry counter on success
+      retryCount.current = 0;
 
     } catch (err: any) {
       if (mountedRef.current) {
         console.error("Error generating script:", err);
+        
+        // Implement auto-retry for certain errors
+        if (retryCount.current < maxRetries && 
+            (err.message?.includes('fetch') || err.message?.includes('network') || err.message?.includes('timeout'))) {
+          retryCount.current++;
+          console.log(`Automatically retrying (${retryCount.current}/${maxRetries})...`);
+          toast.error(`Błąd połączenia. Automatyczne ponawianie (${retryCount.current}/${maxRetries})...`);
+          
+          // Add a small delay before retry
+          setTimeout(() => {
+            generateScriptContent(hookIndex, true);
+          }, 1500);
+          return;
+        }
+        
         setError(err);
         toast.error("Błąd podczas generowania skryptu");
       }
@@ -195,7 +220,6 @@ export const useScriptGeneration = (
     handleRetry,
     handleGenerateWithNextHook,
     handleViewProject,
-    rawResponse,
     debugInfo
   };
 };

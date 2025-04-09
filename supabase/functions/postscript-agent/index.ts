@@ -21,6 +21,9 @@ const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 const SYSTEM_PROMPT = `Twoim jedynym zadaniem jest napisać "TESTSCRIPT"`;
 // ===== EDITABLE PROMPT ENDS HERE =====
 
+// Force redeployment marker: v1.0.1
+console.log(`PostscriptAgent initialized with version v1.0.1 and prompt: "${SYSTEM_PROMPT.substring(0, 100)}..."`);
+
 serve(async (req) => {
   // Track execution with timestamps and add a unique request ID
   const requestId = crypto.randomUUID();
@@ -102,6 +105,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
+        'Expires': '0',
         'X-Request-ID': requestId,
         'X-Timestamp': timestamp
       },
@@ -134,7 +138,7 @@ serve(async (req) => {
         systemPromptUsed: SYSTEM_PROMPT,
         timestamp: startTime,
         requestId: requestId,
-        promptVersion: "V13-CUSTOM-" + new Date().toISOString()
+        promptVersion: "V14-CUSTOM-" + new Date().toISOString()
       }
     };
     
@@ -160,7 +164,7 @@ serve(async (req) => {
         requestId: requestId,
         debugInfo: {
           systemPromptUsed: SYSTEM_PROMPT,
-          version: "V13-ERROR-" + new Date().toISOString()
+          version: "V14-ERROR-" + new Date().toISOString()
         }
       }),
       { 

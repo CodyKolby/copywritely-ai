@@ -17,13 +17,15 @@ const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
 // ===== EDITABLE PROMPT BEGINS HERE =====
 // Feel free to customize this prompt according to your needs
-const SYSTEM_PROMPT = `Twoim jedynym zadaniem jest napisać "TESHOOK"`;
+const SYSTEM_PROMPT = `Twoim jedynym zadaniem jest napisać "TESTHOOK"`;
 // ===== EDITABLE PROMPT ENDS HERE =====
 
-console.log("PosthookAgent Edge Function initialized with custom prompt");
+// Force redeployment marker: v1.0.1
+console.log("PosthookAgent Edge Function initialized with custom prompt v1.0.1");
 
 serve(async (req) => {
   console.log("PosthookAgent received request:", req.method, req.url);
+  console.log("Using prompt version v1.0.1:", SYSTEM_PROMPT.substring(0, 50));
   
   // Handle OPTIONS requests for CORS preflight
   if (req.method === 'OPTIONS') {
@@ -35,16 +37,6 @@ serve(async (req) => {
   }
 
   try {
-    // Verify authentication
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      console.error("Missing authorization header");
-      return new Response(
-        JSON.stringify({ error: 'Missing authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     // Parse request data
     const requestData = await req.json().catch(err => {
       console.error("Error parsing JSON request:", err);
@@ -84,6 +76,10 @@ serve(async (req) => {
     console.log("Prompt for PosthookAgent:", userPrompt);
     console.log("System prompt being used:", SYSTEM_PROMPT.substring(0, 100) + "...");
     
+    // Add anti-caching measures
+    const timestamp = new Date().toISOString();
+    const cacheBuster = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+    
     // Get response from OpenAI
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -92,7 +88,9 @@ serve(async (req) => {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
-        'Expires': '0'
+        'Expires': '0',
+        'X-Cache-Buster': cacheBuster,
+        'X-Timestamp': timestamp
       },
       body: JSON.stringify({
         model: 'gpt-4o',
@@ -170,6 +168,10 @@ serve(async (req) => {
     
     console.log("Processed PosthookAgent response:", processedResponse);
     
+    // Add version info to help track which version is running
+    processedResponse.version = "v1.0.1";
+    processedResponse.promptUsed = SYSTEM_PROMPT.substring(0, 20) + "...";
+    
     return new Response(
       JSON.stringify(processedResponse),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -178,7 +180,11 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in posthook-agent:', error);
     return new Response(
-      JSON.stringify({ error: error.message || "Unknown error" }),
+      JSON.stringify({ 
+        error: error.message || "Unknown error", 
+        version: "v1.0.1-error",
+        promptUsed: SYSTEM_PROMPT.substring(0, 20) + "..."
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

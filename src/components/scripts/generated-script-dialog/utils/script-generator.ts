@@ -1,4 +1,3 @@
-
 import type { SocialMediaPlatform } from '../../SocialMediaPlatformDialog';
 import { ScriptGenerationResult, PosthookResponse, PostscriptResponse } from './types';
 import { supabase } from "@/integrations/supabase/client";
@@ -84,15 +83,22 @@ async function generateSocialMediaPost(
   console.log('Używam workflow dla postów w social media');
   
   // Step 1: Generate hooks and theme with PostHook agent
+  const timestamp = new Date().toISOString();
+  const randomValue = Math.random().toString(36).substring(2, 15);
+  
   const posthookRequestBody = {
     targetAudience,
     advertisingGoal,
     platform: socialMediaPlatform?.key || 'meta',
     cacheBuster: cacheBuster || `${Date.now()}`,
-    timestamp: new Date().toISOString()
+    timestamp: timestamp,
+    randomValue: randomValue
   };
 
-  console.log('Wysyłanie żądania do PostHook:', posthookRequestBody);
+  console.log('Wysyłanie żądania do PostHook:', {
+    ...posthookRequestBody,
+    targetAudience: '...abbreviated...'
+  });
 
   // Use the full URL with direct project ID reference to avoid any subdomain resolution issues
   const posthookResponse = await fetch('https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/posthook-agent', {
@@ -103,7 +109,8 @@ async function generateSocialMediaPost(
       'Pragma': 'no-cache',
       'Expires': '0',
       'Authorization': `Bearer ${accessToken}`,
-      'X-Cache-Buster': cacheBuster || `${Date.now()}`
+      'X-Cache-Buster': `${Date.now()}-${randomValue}`,
+      'X-Timestamp': timestamp
     },
     body: JSON.stringify(posthookRequestBody),
   });
@@ -116,6 +123,11 @@ async function generateSocialMediaPost(
 
   const posthookData: PosthookResponse = await posthookResponse.json();
   console.log('Step 1 Complete: PostHook response:', posthookData);
+  
+  // Check if we got version info to confirm we're using the updated function
+  if (posthookData.version) {
+    console.log(`Using PostHook agent version: ${posthookData.version}, prompt: ${posthookData.promptUsed}`);
+  }
 
   if (!posthookData || !posthookData.hooks || posthookData.hooks.length === 0) {
     throw new Error('Nie udało się wygenerować hooków');
@@ -126,14 +138,18 @@ async function generateSocialMediaPost(
   const selectedHook = posthookData.hooks[selectedHookIndex];
 
   // Step 2: Generate the script with PostScript agent
-  const newCacheBuster = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
+  const newTimestamp = new Date().toISOString();
+  const newRandomValue = Math.random().toString(36).substring(2, 15);
+  const newCacheBuster = `${Date.now()}-${newRandomValue}`;
+  
   const postscriptRequestBody = {
     targetAudience,
     advertisingGoal,
     platform: socialMediaPlatform?.key || 'meta',
     posthookOutput: posthookData,
     cacheBuster: newCacheBuster, 
-    timestamp: new Date().toISOString()
+    timestamp: newTimestamp,
+    randomValue: newRandomValue
   };
 
   console.log('Wysyłanie żądania do PostScript:', {
@@ -159,8 +175,8 @@ async function generateSocialMediaPost(
       'Expires': '0',
       'Authorization': `Bearer ${refreshedAccessToken}`,
       'X-Cache-Buster': newCacheBuster,
-      'X-Timestamp': new Date().toISOString(),
-      'X-Random': Math.random().toString(36).substring(2, 15)
+      'X-Timestamp': newTimestamp,
+      'X-Random': newRandomValue
     },
     body: JSON.stringify(postscriptRequestBody),
   });
@@ -188,7 +204,11 @@ async function generateSocialMediaPost(
     theme: posthookData.theme || '',
     form: posthookData.form || '',
     adStructure: 'social',
-    debugInfo: null
+    debugInfo: {
+      posthookVersion: posthookData.version,
+      posthookPromptUsed: posthookData.promptUsed,
+      postscriptDebugInfo: postscriptData.debugInfo
+    }
   };
 }
 
