@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import TargetAudienceForm from './TargetAudienceForm';
@@ -21,6 +20,8 @@ const TargetAudienceDialog = ({
   userId,
   isPremium,
 }: TargetAudienceDialogProps) => {
+  console.log("TargetAudienceDialog rendering with templateId:", templateId);
+
   const {
     isLoading,
     showForm,
@@ -132,6 +133,18 @@ const TargetAudienceDialog = ({
   const showGoalDialogUi = shouldShowAudienceDialog && showGoalDialog && !isTransitioning;
   const showEmailStyleDialogUi = shouldShowAudienceDialog && showEmailStyleDialog && !isTransitioning;
   const showSocialMediaDialogUi = shouldShowAudienceDialog && showSocialMediaPlatformDialog && !isTransitioning;
+
+  useEffect(() => {
+    // Debug social dialog conditions
+    if (templateId === 'social') {
+      console.log('Social Dialog Debug:', { 
+        showSocialDialog,
+        socialMediaPlatform,
+        hasTargetAudience: !!selectedAudienceId,
+        advertisingGoal
+      });
+    }
+  }, [templateId, showSocialDialog, socialMediaPlatform, selectedAudienceId, advertisingGoal]);
 
   return (
     <>

@@ -39,6 +39,7 @@ export const useDialogNavigation = (params: DialogNavigationParams, templateId: 
   // Step back from goal to audience
   const handleGoalBack = useCallback(() => {
     if (isTransitioning) return;
+    console.log('handleGoalBack called');
     
     transitionToDialog(
       () => setShowGoalDialog(false),
@@ -49,6 +50,7 @@ export const useDialogNavigation = (params: DialogNavigationParams, templateId: 
   // Submit goal and move to appropriate next dialog
   const handleGoalSubmit = useCallback((goal: string) => {
     if (isTransitioning) return;
+    console.log(`handleGoalSubmit called with goal: ${goal} and templateId: ${templateId}`);
     setIsProcessing(true);
     
     setAdvertisingGoal(goal);
@@ -56,11 +58,13 @@ export const useDialogNavigation = (params: DialogNavigationParams, templateId: 
     
     // Determine next dialog based on template
     if (templateId === 'email') {
+      console.log('Routing to email style dialog');
       transitionToDialog(
         () => setShowGoalDialog(false),
         () => setShowEmailStyleDialog(true)
       );
     } else if (templateId === 'social') {
+      console.log('Routing to social media platform dialog');
       transitionToDialog(
         () => setShowGoalDialog(false),
         () => setShowSocialMediaPlatformDialog(true)
@@ -88,6 +92,7 @@ export const useDialogNavigation = (params: DialogNavigationParams, templateId: 
   // Step back from email style to goal
   const handleEmailStyleBack = useCallback(() => {
     if (isTransitioning) return;
+    console.log('handleEmailStyleBack called');
     
     transitionToDialog(
       () => setShowEmailStyleDialog(false),
@@ -98,6 +103,7 @@ export const useDialogNavigation = (params: DialogNavigationParams, templateId: 
   // Submit email style and go to email dialog
   const handleEmailStyleSubmit = useCallback((style: EmailStyle) => {
     if (isTransitioning) return;
+    console.log('handleEmailStyleSubmit called with style:', style);
     setIsProcessing(true);
     
     setEmailStyle(style);
@@ -112,6 +118,7 @@ export const useDialogNavigation = (params: DialogNavigationParams, templateId: 
   // Step back from social media platform to goal
   const handleSocialMediaPlatformBack = useCallback(() => {
     if (isTransitioning) return;
+    console.log('handleSocialMediaPlatformBack called');
     
     transitionToDialog(
       () => setShowSocialMediaPlatformDialog(false),
@@ -122,6 +129,7 @@ export const useDialogNavigation = (params: DialogNavigationParams, templateId: 
   // Submit social media platform and go to social dialog
   const handleSocialMediaPlatformSubmit = useCallback((platform: SocialMediaPlatform) => {
     if (isTransitioning) return;
+    console.log('handleSocialMediaPlatformSubmit called with platform:', platform);
     setIsProcessing(true);
     
     setSocialMediaPlatform(platform);
@@ -135,22 +143,26 @@ export const useDialogNavigation = (params: DialogNavigationParams, templateId: 
 
   // Close script dialog
   const handleScriptDialogClose = useCallback(() => {
+    console.log('handleScriptDialogClose called');
     setShowScriptDialog(false);
   }, [setShowScriptDialog]);
   
   // Close email dialog
   const handleEmailDialogClose = useCallback(() => {
+    console.log('handleEmailDialogClose called');
     setShowEmailDialog(false);
   }, [setShowEmailDialog]);
   
   // Close social dialog
   const handleSocialDialogClose = useCallback(() => {
+    console.log('handleSocialDialogClose called');
     setShowSocialDialog(false);
   }, [setShowSocialDialog]);
 
   // Common navigation - back from form to audience selection
   const handleBack = useCallback(() => {
     if (isTransitioning) return;
+    console.log('handleBack called');
     
     setShowForm(false);
   }, [isTransitioning, setShowForm]);
