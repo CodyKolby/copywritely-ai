@@ -1,5 +1,6 @@
 
 import { SocialMediaPlatform } from '../SocialMediaPlatformDialog';
+import { ScriptGenerationResult } from './utils/types';
 
 export interface GeneratedScriptDialogProps {
   open: boolean;
@@ -10,17 +11,4 @@ export interface GeneratedScriptDialogProps {
   socialMediaPlatform?: SocialMediaPlatform;
 }
 
-export interface ScriptGenerationResult {
-  script: string;
-  bestHook: string;
-  allHooks: string[];
-  currentHookIndex: number;
-  totalHooks: number;
-  adStructure: string;
-  rawResponse?: string;
-  debugInfo?: any;
-  // Optional properties for social media posts
-  cta?: string;
-  theme?: string;
-  form?: string;
-}
+export { ScriptGenerationResult };
