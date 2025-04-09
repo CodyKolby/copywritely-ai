@@ -6,7 +6,7 @@ import { corsHeaders } from "./cors.ts";
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
 // System prompt for PostscriptAgent
-const SYSTEM_PROMPT = `Zwróć tylko tekst "DUPA"`;
+const SYSTEM_PROMPT = `Zwróć tylko tekst "CIPA"`;
 
 console.log("PostscriptAgent Edge Function initialized");
 
