@@ -18,15 +18,7 @@ const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 // Define a clear, customizable system prompt for the SocialContentAgent
 // ===== EDITABLE PROMPT BEGINS HERE =====
 // Feel free to customize this prompt according to your needs
-const SYSTEM_PROMPT = `Jesteś ekspertem od tworzenia treści na social media. Na podstawie informacji o grupie docelowej, wybranym hooku i tematyce, twoim zadaniem jest napisać pełną treść posta na wskazanej platformie.
-
-Treść posta musi:
-1. Zaczynać się od hooka
-2. Być zgodna z tematyką określoną wcześniej
-3. Odpowiadać na potrzeby grupy docelowej
-4. Zawierać odpowiednie wezwanie do działania
-
-Treść powinna być dostosowana do platformy pod względem długości i stylu - inaczej piszemy na Facebook (dłuższe treści), LinkedIn (profesjonalnie) czy Instagram (krótko i z emocjami).`;
+const SYSTEM_PROMPT = `Napisz mi słowo "TESTKOKOL"`;
 // ===== EDITABLE PROMPT ENDS HERE =====
 
 // Version tracking to help detect updates
