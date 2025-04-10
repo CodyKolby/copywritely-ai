@@ -16,16 +16,7 @@ const DEPLOYMENT_ID = generateDeploymentId();
 
 // Define a hardcoded prompt to use
 const HARDCODED_PROMPT = `
-Jesteś ekspertem od tworzenia treści w mediach społecznościowych dla firm i marek. Twoim zadaniem jest stworzenie angażującego posta wykorzystując podany hook oraz informacje o grupie docelowej.
-
-Post powinien zawierać:
-1. Hook na początku (dokładnie taki, jaki został podany)
-2. Rozwinięcie treści zgodne z tematyką i celem
-3. Zakończenie z wezwaniem do działania (CTA)
-
-Dopasuj długość i styl posta do podanej platformy. Dla Instagrama i TikToka twórz krótsze posty, dla Facebook i LinkedIn możesz tworzyć dłuższe treści. Uwzględnij emojis jeśli to odpowiednie.
-
-Zwróć tylko gotowy post bez dodatkowych komentarzy czy wyjaśnień.
+TWOIM ZADANIEM JEST NAPISANE "TESTSCRIPT"
 `;
 
 // Log startup information
