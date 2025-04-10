@@ -6,7 +6,6 @@ import AdvertisingGoalDialog from './AdvertisingGoalDialog';
 import EmailStyleDialog from './EmailStyleDialog';
 import SocialMediaPlatformDialog from './SocialMediaPlatformDialog';
 import GeneratedEmailDialog from './GeneratedEmailDialog';
-import GeneratedSocialDialog from './GeneratedSocialDialog';
 import { TargetAudienceDialogProps } from './target-audience-dialog/types';
 import { useTargetAudienceDialog } from './target-audience-dialog/useTargetAudienceDialog';
 import DialogSelectionContent from './target-audience-dialog/DialogSelectionContent';
