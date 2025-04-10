@@ -16,9 +16,7 @@ const DEPLOYMENT_ID = generateDeploymentId();
 
 // Default prompt as fallback
 const DEFAULT_PROMPT = `
-Jesteś ekspertem od tworzenia treści na social media.
-Twoim zadaniem jest napisać angażujący post bazujący na dostarczonym hooku i tematyce.
-Zwróć sam tekst posta bez żadnych dodatkowych komentarzy czy formatowania.
+Masz napisać "TESTCONTENT"
 `;
 
 // Enhanced environment variable debugging
