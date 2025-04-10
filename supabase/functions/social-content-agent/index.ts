@@ -17,7 +17,7 @@ const DEPLOYMENT_ID = generateDeploymentId();
 
 // Define a hardcoded prompt to use - CRITICAL: This is the only prompt that should be used
 const HARDCODED_PROMPT = `
-Napisz post na social media, który zaczyna się od podanego intro. Post powinien być angażujący i zawierać call-to-action na końcu.
+Napisz jedno słowo którym jest "Działahook?"
 `;
 
 // Log startup information with clear identifiers
