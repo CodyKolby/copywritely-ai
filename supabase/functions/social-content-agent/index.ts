@@ -9,7 +9,7 @@ import { constructContentPrompt } from "./content-service.ts";
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
 // Version tracking to help detect updates
-const FUNCTION_VERSION = "v1.3.0"; // Zwiększona wersja po poprawce używania promptów z sekretów
+const FUNCTION_VERSION = "v1.3.1"; // Incremented after debugging env vars
 
 // Generate a deployment ID to track specific deployments
 const DEPLOYMENT_ID = generateDeploymentId();
@@ -21,16 +21,25 @@ Twoim zadaniem jest napisać angażujący post bazujący na dostarczonym hooku i
 Zwróć sam tekst posta bez żadnych dodatkowych komentarzy czy formatowania.
 `;
 
-// Get system prompt from environment variable with fallback
-const envPrompt = Deno.env.get('SOCIAL_CONTENT_PROMPT');
+// Enhanced environment variable debugging
+const allEnvVars = Deno.env.toObject();
+const envVarKeys = Object.keys(allEnvVars);
+const contentPromptExists = envVarKeys.includes('SOCIAL_CONTENT_PROMPT');
+const contentPromptValue = Deno.env.get('SOCIAL_CONTENT_PROMPT');
+
+// Get system prompt with enhanced logging
+const envPrompt = contentPromptValue;
 const SYSTEM_PROMPT = envPrompt || DEFAULT_PROMPT;
 
-// Log startup information
+// Log startup information with enhanced debugging
 console.log(`[STARTUP][${DEPLOYMENT_ID}] SocialContentAgent initialized with version ${FUNCTION_VERSION}`);
-console.log(`[STARTUP][${DEPLOYMENT_ID}] Using prompt from environment: ${envPrompt ? 'YES' : 'NO'}`);
-console.log(`[STARTUP][${DEPLOYMENT_ID}] System prompt length: ${SYSTEM_PROMPT.length} characters`);
-console.log(`[STARTUP][${DEPLOYMENT_ID}] System prompt first 100 chars: "${SYSTEM_PROMPT.substring(0, 100)}..."`);
-console.log(`[STARTUP][${DEPLOYMENT_ID}] FULL SYSTEM PROMPT: ${SYSTEM_PROMPT}`);
+console.log(`[STARTUP][${DEPLOYMENT_ID}] Environment variable debug:`);
+console.log(`[STARTUP][${DEPLOYMENT_ID}] - Available env vars: ${JSON.stringify(envVarKeys)}`);
+console.log(`[STARTUP][${DEPLOYMENT_ID}] - SOCIAL_CONTENT_PROMPT exists: ${contentPromptExists}`);
+console.log(`[STARTUP][${DEPLOYMENT_ID}] - SOCIAL_CONTENT_PROMPT empty: ${contentPromptValue === ""}`);
+console.log(`[STARTUP][${DEPLOYMENT_ID}] - Using prompt from environment: ${envPrompt ? 'YES' : 'NO'}`);
+console.log(`[STARTUP][${DEPLOYMENT_ID}] - System prompt length: ${SYSTEM_PROMPT.length} characters`);
+console.log(`[STARTUP][${DEPLOYMENT_ID}] - System prompt first 100 chars: "${SYSTEM_PROMPT.substring(0, 100)}..."`);
 
 serve(async (req) => {
   const requestId = crypto.randomUUID();
@@ -63,6 +72,9 @@ serve(async (req) => {
       cacheBuster: cacheBuster || 'none'
     });
     
+    // Log env var status with every request
+    console.log(`[${startTime}][REQ:${requestId}] Env var debug - SOCIAL_CONTENT_PROMPT exists: ${contentPromptExists}, empty: ${contentPromptValue === ""}, using env: ${envPrompt ? 'YES' : 'NO'}`);
+    
     // Validate input data
     if (!targetAudience) {
       console.error(`[${startTime}][REQ:${requestId}] Missing target audience data`);
@@ -92,7 +104,12 @@ serve(async (req) => {
           error: 'System prompt is invalid or missing',
           promptLength: SYSTEM_PROMPT?.length || 0,
           promptSource: envPrompt ? 'environment' : 'default',
-          deploymentId: DEPLOYMENT_ID
+          deploymentId: DEPLOYMENT_ID,
+          environmentDebug: {
+            envVarExists: contentPromptExists,
+            envVarEmpty: contentPromptValue === "",
+            availableEnvVars: envVarKeys
+          }
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -111,9 +128,9 @@ serve(async (req) => {
     
     // Log prompt information
     console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT LENGTH: ${SYSTEM_PROMPT.length} characters`);
+    console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT SOURCE: ${envPrompt ? 'ENVIRONMENT VARIABLE' : 'DEFAULT FALLBACK'}`);
     console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT FULL: ${SYSTEM_PROMPT}`);
     console.log(`[${startTime}][REQ:${requestId}] USER PROMPT LENGTH: ${userPrompt.length} characters`);
-    console.log(`[${startTime}][REQ:${requestId}] USER PROMPT FULL: ${userPrompt}`);
     
     // Prepare cache busting and metadata
     const currentTimestamp = timestamp || startTime;
@@ -137,7 +154,6 @@ serve(async (req) => {
     // Log complete response from API
     console.log(`[${startTime}][REQ:${requestId}] Raw OpenAI response length: ${responseText.length} chars`);
     console.log(`[${startTime}][REQ:${requestId}] Raw response preview: ${responseText.substring(0, 200)}...`);
-    console.log(`[${startTime}][REQ:${requestId}] Raw response FULL: ${responseText}`);
     
     // Determine which hook was used
     const hookToUse = selectedHook || hookOutput.hooks[0];
@@ -150,6 +166,13 @@ serve(async (req) => {
       form: hookOutput.form || 'post tekstowy',
       cta: hookOutput.cta || 'Sprawdź więcej',
       platform: platform || 'Meta (Instagram/Facebook)',
+      debug: {
+        systemPromptSource: envPrompt ? 'environment' : 'default',
+        systemPromptLength: SYSTEM_PROMPT.length,
+        envVarExists: contentPromptExists,
+        envVarEmpty: contentPromptValue === "",
+        usingEnvPrompt: envPrompt ? true : false
+      },
       debugInfo: {
         systemPromptSource: envPrompt ? 'environment' : 'default',
         systemPromptLength: SYSTEM_PROMPT.length,
@@ -184,6 +207,11 @@ serve(async (req) => {
       timestamp: timestamp,
       requestId: requestId,
       deploymentId: DEPLOYMENT_ID,
+      debug: {
+        envVarExists: contentPromptExists,
+        envVarEmpty: contentPromptValue === "",
+        availableEnvVars: envVarKeys
+      },
       debugInfo: {
         systemPromptSource: envPrompt ? 'environment' : 'default',
         systemPromptLength: SYSTEM_PROMPT?.length || 0,

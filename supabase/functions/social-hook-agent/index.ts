@@ -9,7 +9,7 @@ import { processHookResponse, constructHookPrompt } from "./hook-service.ts";
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
 // Version tracking to help detect updates
-const FUNCTION_VERSION = "v1.3.0"; // Zwiększona wersja po poprawce używania promptów z sekretów
+const FUNCTION_VERSION = "v1.3.1"; // Incremented after debugging env vars
 
 // Generate a deployment ID to track specific deployments
 const DEPLOYMENT_ID = generateDeploymentId();
@@ -28,16 +28,25 @@ Zwróć odpowiedź w formacie JSON:
 }
 `;
 
-// Get system prompt from environment variable
-const envPrompt = Deno.env.get('SOCIAL_HOOK_PROMPT');
+// Enhanced environment variable debugging
+const allEnvVars = Deno.env.toObject();
+const envVarKeys = Object.keys(allEnvVars);
+const hookPromptExists = envVarKeys.includes('SOCIAL_HOOK_PROMPT');
+const hookPromptValue = Deno.env.get('SOCIAL_HOOK_PROMPT');
+
+// Get system prompt with enhanced logging
+const envPrompt = hookPromptValue;
 const SYSTEM_PROMPT = envPrompt || DEFAULT_PROMPT;
 
-// Log startup information
+// Log startup information with enhanced debugging
 console.log(`[STARTUP][${DEPLOYMENT_ID}] SocialHookAgent initialized with version ${FUNCTION_VERSION}`);
-console.log(`[STARTUP][${DEPLOYMENT_ID}] Using prompt from environment: ${envPrompt ? 'YES' : 'NO'}`);
-console.log(`[STARTUP][${DEPLOYMENT_ID}] System prompt length: ${SYSTEM_PROMPT.length} characters`);
-console.log(`[STARTUP][${DEPLOYMENT_ID}] System prompt first 100 chars: "${SYSTEM_PROMPT.substring(0, 100)}..."`);
-console.log(`[STARTUP][${DEPLOYMENT_ID}] FULL SYSTEM PROMPT: ${SYSTEM_PROMPT}`);
+console.log(`[STARTUP][${DEPLOYMENT_ID}] Environment variable debug:`);
+console.log(`[STARTUP][${DEPLOYMENT_ID}] - Available env vars: ${JSON.stringify(envVarKeys)}`);
+console.log(`[STARTUP][${DEPLOYMENT_ID}] - SOCIAL_HOOK_PROMPT exists: ${hookPromptExists}`);
+console.log(`[STARTUP][${DEPLOYMENT_ID}] - SOCIAL_HOOK_PROMPT empty: ${hookPromptValue === ""}`);
+console.log(`[STARTUP][${DEPLOYMENT_ID}] - Using prompt from environment: ${envPrompt ? 'YES' : 'NO'}`);
+console.log(`[STARTUP][${DEPLOYMENT_ID}] - System prompt length: ${SYSTEM_PROMPT.length} characters`);
+console.log(`[STARTUP][${DEPLOYMENT_ID}] - System prompt first 100 chars: "${SYSTEM_PROMPT.substring(0, 100)}..."`);
 
 serve(async (req) => {
   const requestId = crypto.randomUUID();
@@ -82,20 +91,28 @@ serve(async (req) => {
           error: 'System prompt is invalid or missing',
           promptLength: SYSTEM_PROMPT?.length || 0,
           promptSource: envPrompt ? 'environment' : 'default',
-          deploymentId: DEPLOYMENT_ID
+          deploymentId: DEPLOYMENT_ID,
+          environmentDebug: {
+            envVarExists: hookPromptExists,
+            envVarEmpty: hookPromptValue === "",
+            availableEnvVars: envVarKeys
+          }
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+    
+    // Log env var status with every request
+    console.log(`[${startTime}][REQ:${requestId}] Env var debug - SOCIAL_HOOK_PROMPT exists: ${hookPromptExists}, empty: ${hookPromptValue === ""}, using env: ${envPrompt ? 'YES' : 'NO'}`);
     
     // Construct prompt with provided data
     const userPrompt = constructHookPrompt(requestData, requestId, DEPLOYMENT_ID, FUNCTION_VERSION);
     
     // Log prompt information
     console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT LENGTH: ${SYSTEM_PROMPT.length} characters`);
+    console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT SOURCE: ${envPrompt ? 'ENVIRONMENT VARIABLE' : 'DEFAULT FALLBACK'}`);
     console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT FULL: ${SYSTEM_PROMPT}`);
     console.log(`[${startTime}][REQ:${requestId}] USER PROMPT LENGTH: ${userPrompt.length} characters`);
-    console.log(`[${startTime}][REQ:${requestId}] USER PROMPT FULL: ${userPrompt}`);
     
     // Add anti-caching measures
     const requestTimestamp = timestamp || startTime;
@@ -116,7 +133,6 @@ serve(async (req) => {
     // Log complete response for debugging
     console.log(`[${startTime}][REQ:${requestId}] Raw SocialHookAgent response length: ${responseText.length} chars`);
     console.log(`[${startTime}][REQ:${requestId}] Raw response preview: ${responseText.substring(0, 200)}...`);
-    console.log(`[${startTime}][REQ:${requestId}] Raw response FULL: ${responseText}`);
     
     // Process response to extract hooks, theme, and form
     let processedResponse = processHookResponse(responseText);
@@ -133,8 +149,15 @@ serve(async (req) => {
     // Add deployment and prompt info to help track which version is running
     processedResponse.version = FUNCTION_VERSION;
     processedResponse.deploymentId = DEPLOYMENT_ID;
-    processedResponse.promptSource = Deno.env.get('SOCIAL_HOOK_PROMPT') ? 'environment' : 'default';
+    processedResponse.promptSource = envPrompt ? 'environment' : 'default';
     processedResponse.requestId = requestId;
+    
+    // Add debug information about env vars
+    processedResponse.debug = {
+      envVarExists: hookPromptExists,
+      envVarEmpty: hookPromptValue === "",
+      usingEnvPrompt: envPrompt ? true : false
+    };
     
     return new Response(
       JSON.stringify(processedResponse),
@@ -156,10 +179,15 @@ serve(async (req) => {
     return createErrorResponse(error, {
       version: FUNCTION_VERSION,
       deploymentId: DEPLOYMENT_ID,
-      promptSource: Deno.env.get('SOCIAL_HOOK_PROMPT') ? 'environment' : 'default',
+      promptSource: envPrompt ? 'environment' : 'default',
       systemPromptLength: SYSTEM_PROMPT.length,
       timestamp: timestamp,
-      requestId: requestId
+      requestId: requestId,
+      debug: {
+        envVarExists: hookPromptExists,
+        envVarEmpty: hookPromptValue === "",
+        availableEnvVars: envVarKeys
+      }
     });
   }
 });
