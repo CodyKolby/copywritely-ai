@@ -7,6 +7,7 @@ import { callOpenAI, createErrorResponse } from "../shared/openai.ts";
 import { constructContentPrompt } from "./content-service.ts";
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+const socialContentPrompt = Deno.env.get('SOCIAL_CONTENT_PROMPT');
 
 // Version tracking to help detect updates
 const FUNCTION_VERSION = "v1.8.0"; 
@@ -24,6 +25,14 @@ console.log(`[STARTUP][${DEPLOYMENT_ID}] SocialContentAgent initialized with ver
 console.log(`[STARTUP][${DEPLOYMENT_ID}] Using HARDCODED prompt length: ${HARDCODED_PROMPT.length} characters`);
 console.log(`[STARTUP][${DEPLOYMENT_ID}] Hardcoded prompt full:\n${HARDCODED_PROMPT}`);
 
+// Check if there's an environment variable prompt
+if (socialContentPrompt) {
+  console.log(`[STARTUP][${DEPLOYMENT_ID}] Found SOCIAL_CONTENT_PROMPT env variable of length: ${socialContentPrompt.length}`);
+  console.log(`[STARTUP][${DEPLOYMENT_ID}] ENV prompt first 100 chars: ${socialContentPrompt.substring(0, 100)}`);
+} else {
+  console.log(`[STARTUP][${DEPLOYMENT_ID}] No SOCIAL_CONTENT_PROMPT env variable found, using hardcoded prompt`);
+}
+
 serve(async (req) => {
   const requestId = crypto.randomUUID();
   const startTime = getCurrentTimestamp();
@@ -35,6 +44,13 @@ serve(async (req) => {
   if (optionsResponse) return optionsResponse;
 
   try {
+    // Log full request headers for debugging cache issues
+    const headersLog = {};
+    req.headers.forEach((value, key) => {
+      headersLog[key] = value;
+    });
+    console.log(`[${startTime}][REQ:${requestId}] Request headers:`, JSON.stringify(headersLog));
+    
     // Parse request data
     const requestData = await req.json().catch(err => {
       console.error(`[${startTime}][REQ:${requestId}] Error parsing JSON request:`, err);
@@ -74,13 +90,19 @@ serve(async (req) => {
       );
     }
     
-    // Use hardcoded prompt
+    // Log hook response details to see where it's coming from
+    console.log(`[${startTime}][REQ:${requestId}] Hook response version: ${hookOutput.version || 'unknown'}`);
+    console.log(`[${startTime}][REQ:${requestId}] Hook response deploymentId: ${hookOutput.deploymentId || 'unknown'}`);
+    console.log(`[${startTime}][REQ:${requestId}] Hook response requestId: ${hookOutput.requestId || 'unknown'}`);
+    console.log(`[${startTime}][REQ:${requestId}] Hook response promptSource: ${hookOutput.promptSource || 'unknown'}`);
+    
+    // Use hardcoded prompt - FORCE THIS
     const SYSTEM_PROMPT = HARDCODED_PROMPT;
     
     // Log prompt information
+    console.log(`[${startTime}][REQ:${requestId}] PROMPT SOURCE: Hardcoded in code v${FUNCTION_VERSION}`);
     console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT LENGTH: ${SYSTEM_PROMPT.length} characters`);
     console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT FULL:\n${SYSTEM_PROMPT}`);
-    console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT SOURCE: HARDCODED IN CODE v${FUNCTION_VERSION}`);
     
     // Print hook output for debugging
     console.log(`[${startTime}][REQ:${requestId}] Hook output details:`, {
@@ -97,7 +119,7 @@ serve(async (req) => {
     const currentTimestamp = timestamp || startTime;
     const requestCacheBuster = generateCacheBuster(requestId, DEPLOYMENT_ID);
     
-    // Call OpenAI
+    // Call OpenAI with additional headers to prevent caching
     console.log(`[${startTime}][REQ:${requestId}] Sending request to OpenAI API with model: gpt-4o-mini`);
     console.log(`[${startTime}][REQ:${requestId}] Cache-busting parameters: ${requestCacheBuster}, ${currentTimestamp}`);
     
@@ -107,7 +129,12 @@ serve(async (req) => {
       cacheBuster: requestCacheBuster,
       deploymentId: DEPLOYMENT_ID,
       functionVersion: FUNCTION_VERSION,
-      model: 'gpt-4o-mini'
+      model: 'gpt-4o-mini',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
     });
 
     const responseText = data.choices[0].message.content;
@@ -135,14 +162,16 @@ serve(async (req) => {
         timestamp: startTime,
         functionVersion: FUNCTION_VERSION,
         promptFullText: SYSTEM_PROMPT,
-        fullPrompt: SYSTEM_PROMPT
+        fullPrompt: SYSTEM_PROMPT,
+        hookResponseVersion: hookOutput.version || 'unknown',
+        hookResponseDeploymentId: hookOutput.deploymentId || 'unknown'
       },
       version: FUNCTION_VERSION,
       deploymentId: DEPLOYMENT_ID,
       requestId: requestId
     };
     
-    console.log(`[${startTime}][REQ:${requestId}] Final response sent:`, result);
+    console.log(`[${startTime}][REQ:${requestId}] Final response sent:`, JSON.stringify(result));
     
     return new Response(
       JSON.stringify(result),
@@ -152,7 +181,10 @@ serve(async (req) => {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache',
-          'Expires': '0'
+          'Expires': '0',
+          'X-Function-Version': FUNCTION_VERSION,
+          'X-Deployment-Id': DEPLOYMENT_ID,
+          'X-Cache-Buster': Date.now().toString()
         } 
       }
     );

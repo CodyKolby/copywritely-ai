@@ -11,6 +11,8 @@ export interface SocialHookResponse {
   requestId?: string;
   error?: string;
   debug?: any;
+  promptSource?: string;
+  deploymentId?: string;
 }
 
 export const DEFAULT_SOCIAL_HOOK_PROMPT = `Jesteś ekspertem od marketingu w mediach społecznościowych. Twoim zadaniem jest przygotowanie hooków i tematyki.`;
@@ -27,7 +29,7 @@ export async function generateSocialHooks(
   });
   
   try {
-    // Add anti-caching measures with timestamp to force fresh execution
+    // Add strong anti-caching measures with timestamp
     const timestamp = new Date().toISOString();
     const cacheBuster = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
     
@@ -35,10 +37,11 @@ export async function generateSocialHooks(
     const { data: { session } } = await supabase.auth.getSession();
     const accessToken = session?.access_token || '';
     
-    // Use a direct URL to avoid any proxy caching
-    const directUrl = `https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/social-hook-agent?_nocache=${timestamp}`;
+    // Use the most direct URL possible with clear cache busting
+    const directUrl = `https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/social-hook-agent?_nocache=${Date.now()}`;
     
     console.log(`Sending request to social-hook-agent at ${timestamp} with cache buster: ${cacheBuster}`);
+    console.log(`Direct URL: ${directUrl}`);
     
     // Call with aggressive anti-cache headers
     const fetchResponse = await fetch(directUrl, {
@@ -50,7 +53,9 @@ export async function generateSocialHooks(
         'Pragma': 'no-cache',
         'Expires': '0',
         'X-Cache-Buster': cacheBuster,
-        'X-Timestamp': timestamp
+        'X-Timestamp': timestamp,
+        'X-Client-Info': `v1.8.0-${Date.now()}`,
+        'X-No-Cache': 'true'
       },
       body: JSON.stringify({
         targetAudience: targetAudienceData,
@@ -58,10 +63,15 @@ export async function generateSocialHooks(
         platform,
         cacheBuster,
         timestamp,
-        forcePromptRefresh: true, // Force prompt refresh
-        testMode: process.env.NODE_ENV === 'development' // Add test flag in development
+        forcePromptRefresh: true, 
+        testMode: process.env.NODE_ENV === 'development',
+        clientVersion: 'v1.8.0'
       })
     });
+    
+    // Log response headers for debugging
+    console.log('Response headers:', Object.fromEntries(fetchResponse.headers.entries()));
+    console.log('Response status:', fetchResponse.status);
     
     if (!fetchResponse.ok) {
       const errorText = await fetchResponse.text();
@@ -70,6 +80,19 @@ export async function generateSocialHooks(
     }
     
     const data = await fetchResponse.json();
+    
+    // Log the full response including all metadata
+    console.log('Social hooks generated successfully. Full response:', data);
+    console.log('Version from response:', data.version);
+    console.log('Deployment ID from response:', data.deploymentId);
+    console.log('Prompt source from response:', data.promptSource);
+    console.log('Debug info from response:', data.debug);
+    
+    // Check for environment variables that might be overriding our settings
+    console.log('Environment variables check:', {
+      NODE_ENV: process.env.NODE_ENV,
+      VITE_APP_VERSION: process.env.VITE_APP_VERSION,
+    });
     
     // Validate response data
     if (!data) {
@@ -80,10 +103,6 @@ export async function generateSocialHooks(
     if (data.error) {
       throw new Error(`Błąd z serwisu hooków: ${data.error}`);
     }
-    
-    // Log the full response for debugging
-    console.log('Social hooks generated successfully:', data);
-    console.log('Debug info from hook agent:', data.debug);
     
     // Validate hook data
     if (!data.hooks || data.hooks.length === 0) {
@@ -97,10 +116,12 @@ export async function generateSocialHooks(
       theme: data.theme || "Ogólna tematyka",
       form: data.form || "post tekstowy",
       cta: data.cta || "Sprawdź więcej",
-      version: data.version,
-      promptUsed: data.promptUsed,
-      requestId: data.requestId,
-      debug: data.debug
+      version: data.version || "unknown",
+      promptUsed: data.promptUsed || "unknown",
+      requestId: data.requestId || "unknown",
+      promptSource: data.promptSource || "unknown",
+      deploymentId: data.deploymentId || "unknown",
+      debug: data.debug || {}
     };
     
     return hookResponse;
