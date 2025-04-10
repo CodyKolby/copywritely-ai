@@ -1,3 +1,4 @@
+
 import type { SocialMediaPlatform } from '../../SocialMediaPlatformDialog';
 import { ScriptGenerationResult, PosthookResponse, PostscriptResponse } from './types';
 import { supabase } from "@/integrations/supabase/client";
@@ -45,182 +46,21 @@ export const generateScript = async (
       throw new Error('Użytkownik nie jest zalogowany.');
     }
 
-    // Different workflow for social media posts vs online ads (PAS)
-    if (templateId === 'social') {
-      // Social media posts workflow using social-hook-agent and social-content-agent
-      return generateSocialMediaPost(
-        targetAudience,
-        advertisingGoal,
-        hookIndex,
-        socialMediaPlatform,
-        accessToken,
-        cacheBuster,
-        timestamp
-      );
-    } else {
-      // For online ads (PAS) and other templates, use the generate-script function
-      return generateOnlineAdScript(
-        targetAudience,
-        advertisingGoal,
-        hookIndex,
-        templateId,
-        accessToken
-      );
-    }
+    // Use the generate-script function for all templates
+    return generateOnlineAdScript(
+      targetAudience,
+      advertisingGoal,
+      hookIndex,
+      templateId,
+      accessToken
+    );
   } catch (error: any) {
     console.error('Error generating script:', error);
     throw error;
   }
 };
 
-// Function for generating social media posts using the new social workflow
-async function generateSocialMediaPost(
-  targetAudience: any,
-  advertisingGoal: string,
-  hookIndex: number,
-  socialMediaPlatform?: SocialMediaPlatform,
-  accessToken?: string,
-  cacheBuster?: string,
-  timestamp?: string
-): Promise<ScriptGenerationResult> {
-  console.log('Używam nowego workflow dla postów w social media');
-  
-  // Step 1: Generate hooks and theme with SocialHookAgent
-  const currentTimestamp = timestamp || new Date().toISOString();
-  const randomValue = Math.random().toString(36).substring(2, 15);
-  const currentCacheBuster = cacheBuster || `${Date.now()}-${randomValue}`;
-  
-  const socialHookRequestBody = {
-    targetAudience,
-    advertisingGoal,
-    platform: socialMediaPlatform?.key || 'meta',
-    cacheBuster: currentCacheBuster,
-    timestamp: currentTimestamp,
-    randomValue: randomValue,
-    test: process.env.NODE_ENV === 'development'
-  };
-
-  console.log('Wysyłanie żądania do SocialHookAgent z parametrami:', {
-    targetAudienceId: targetAudience?.id,
-    advertisingGoal,
-    platform: socialMediaPlatform?.key || 'meta',
-    hookIndex,
-    cacheBuster: currentCacheBuster
-  });
-
-  try {
-    // CRITICAL: Use Supabase functions.invoke instead of direct fetch
-    // This ensures proper authentication and CORS handling
-    console.log(`Invoking social-hook-agent function via Supabase SDK`);
-    const { data: socialHookData, error: socialHookError } = await supabase.functions.invoke('social-hook-agent', {
-      body: socialHookRequestBody
-    });
-
-    if (socialHookError) {
-      console.error('Error from social-hook-agent:', socialHookError);
-      throw new Error(`Błąd podczas generowania hooków: ${socialHookError.message}`);
-    }
-
-    console.log('Step 1 Complete: SocialHook response:', socialHookData);
-    
-    // Enhanced validation for hook data
-    if (!socialHookData) {
-      throw new Error('Otrzymano pustą odpowiedź z serwisu generowania hooków');
-    }
-    
-    // Check for error in the response
-    if (socialHookData.error) {
-      throw new Error(`Błąd z serwisu hooków: ${socialHookData.error}`);
-    }
-    
-    // Check if we got valid hooks
-    if (!socialHookData.hooks || socialHookData.hooks.length === 0) {
-      console.error('No hooks returned from social-hook-agent:', socialHookData);
-      throw new Error('Nie udało się wygenerować hooków - brak lub pusta tablica hooków');
-    }
-    
-    // Log detailed information about the hooks
-    console.log('Generated hooks details:', {
-      count: socialHookData.hooks.length,
-      hooks: socialHookData.hooks,
-      theme: socialHookData.theme,
-      form: socialHookData.form,
-      promptSource: socialHookData.promptSource,
-      version: socialHookData.version
-    });
-
-    // Select the hook based on the provided index, defaulting to the first one if out of bounds
-    const selectedHookIndex = hookIndex >= 0 && hookIndex < socialHookData.hooks.length ? hookIndex : 0;
-    const selectedHook = socialHookData.hooks[selectedHookIndex];
-
-    // Step 2: Generate the script with SocialContent agent
-    const newTimestamp = new Date().toISOString();
-    const newRandomValue = Math.random().toString(36).substring(2, 15);
-    const newCacheBuster = `${Date.now()}-${newRandomValue}`;
-    
-    const socialContentRequestBody = {
-      targetAudience,
-      advertisingGoal,
-      platform: socialMediaPlatform?.key || 'meta',
-      hookOutput: socialHookData,
-      selectedHook: selectedHook,
-      cacheBuster: newCacheBuster, 
-      timestamp: newTimestamp,
-      randomValue: newRandomValue
-    };
-
-    console.log('Wysyłanie żądania do SocialContentAgent:', {
-      ...socialContentRequestBody,
-      targetAudience: '...abbreviated...',
-      hookOutput: {
-        hooks: socialHookData.hooks.length ? [socialHookData.hooks[0].substring(0, 30) + '...'] : [],
-        theme: socialHookData.theme?.substring(0, 30) + '...'
-      }
-    });
-
-    // CRITICAL: Use Supabase functions.invoke for content agent too
-    console.log(`Invoking social-content-agent function via Supabase SDK`);
-    const { data: socialContentData, error: socialContentError } = await supabase.functions.invoke('social-content-agent', {
-      body: socialContentRequestBody
-    });
-
-    if (socialContentError) {
-      console.error('Error from social-content-agent:', socialContentError);
-      throw new Error(`Błąd podczas generowania treści posta: ${socialContentError.message}`);
-    }
-
-    console.log('Step 2 Complete: SocialContentAgent full response:', socialContentData);
-
-    if (!socialContentData || !socialContentData.content) {
-      throw new Error('Nie udało się wygenerować treści posta');
-    }
-
-    return {
-      script: socialContentData.content,
-      bestHook: selectedHook,
-      allHooks: socialHookData.hooks,
-      currentHookIndex: selectedHookIndex,
-      totalHooks: socialHookData.hooks.length,
-      cta: socialHookData.cta || '',
-      theme: socialHookData.theme || '',
-      form: socialHookData.form || '',
-      adStructure: 'social',
-      debugInfo: {
-        socialHookVersion: socialHookData.version || 'unknown',
-        socialHookPromptUsed: socialHookData.promptUsed || 'unknown',
-        socialHookDeploymentId: socialHookData.deploymentId || 'unknown',
-        socialHookRequestId: socialHookData.requestId || 'unknown',
-        socialContentDebugInfo: socialContentData.debugInfo
-      }
-    };
-  } catch (error: any) {
-    console.error('Error in generateSocialMediaPost:', error);
-    // Provide more detailed error information for debugging
-    throw new Error(`Błąd generowania posta: ${error.message}`);
-  }
-}
-
-// Function for generating online ad scripts using hook-generator and pas-script-generator
+// Function for generating online ad scripts
 async function generateOnlineAdScript(
   targetAudience: any,
   advertisingGoal: string,
