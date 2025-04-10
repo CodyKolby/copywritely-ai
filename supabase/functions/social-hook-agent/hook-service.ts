@@ -143,20 +143,7 @@ export function constructHookPrompt(requestData: any, requestId: string, deploym
   const surveyData = JSON.stringify(targetAudience, null, 2);
   
   // Construct the prompt with all required variables
-  const prompt = `
-${debugSection}
-
-Dane z ankiety klienta:
-${surveyData}
-
-Cel posta: 
-${advertisingGoal || 'Brak określonego celu'}
-
-${platformInfo}
-
-Bazując na powyższych informacjach, stwórz 3 angażujące hooki, określ tematykę oraz najlepszą formę posta w social media. 
-Pamiętaj o zwróceniu odpowiedzi w formacie JSON z polami: hooks (tablica stringów), theme (string), form (string), cta (string).
-  `;
+  const prompt = `Twoim zadaniem jest napisanie "TESTDUPADUPA"`;
   
   // Log the constructed prompt - dodajemy pełny log
   console.log(`[Hook Prompt] FULL PROMPT:\n${prompt}`);
