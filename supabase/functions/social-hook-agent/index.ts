@@ -17,7 +17,7 @@ const DEPLOYMENT_ID = generateDeploymentId();
 
 // Define a hardcoded prompt to use
 const HARDCODED_PROMPT = `
-Twoim jedynym zadaniem jest napisanie słowa "10kwietnia2009"
+Twoim jedynym zadaniem jest napisanie słowa "MURZYNAFRYKA"
 `;
 
 // Log startup information
