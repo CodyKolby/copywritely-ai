@@ -35,23 +35,29 @@ export function constructContentPrompt(
   Theme: ${postTheme}
   `;
   
-  // Replace template variables in the system prompt (if using them)
-  // This allows the system prompt to use variables like {{surveyData}}, {{selectedHook}}, etc.
-  let prompt = `
+  // Create base prompt template
+  let promptTemplate = `
 ${debugSection}
 
-Dane z ankiety klienta: ${surveyData}
+Dane z ankiety klienta: {surveyData}
 
-Gotowy HOOK: ${hookToUse}
+Gotowy HOOK: {selectedHook}
 
-Temat posta: ${postTheme}
+Temat posta: {postTheme}
 
-Cel posta: ${platformInfo}
+Cel posta: {platformInfo}
 
 Forma: ${hookOutput?.form || 'post tekstowy'}
 
 Wezwanie do działania: ${hookOutput?.cta || 'Sprawdź więcej'}
   `;
+  
+  // Explicitly replace template variables with actual values
+  let prompt = promptTemplate
+    .replace('{surveyData}', surveyData)
+    .replace('{selectedHook}', hookToUse)
+    .replace('{postTheme}', postTheme)
+    .replace('{platformInfo}', platformInfo);
   
   // Log the constructed prompt for debugging - dodajemy pełny log
   console.log(`[Content Prompt] FULL PROMPT:\n${prompt}`);

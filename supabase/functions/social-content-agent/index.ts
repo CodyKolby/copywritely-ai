@@ -9,7 +9,7 @@ import { constructContentPrompt } from "./content-service.ts";
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
 // Version tracking to help detect updates
-const FUNCTION_VERSION = "v1.2.0";
+const FUNCTION_VERSION = "v1.2.1"; // Zwiększona wersja po poprawce zmiennych
 
 // Generate a deployment ID to track specific deployments
 const DEPLOYMENT_ID = generateDeploymentId();
