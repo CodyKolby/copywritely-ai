@@ -38,7 +38,7 @@ export async function generateSocialHooks(
     const { data: { session } } = await supabase.auth.getSession();
     const accessToken = session?.access_token || '';
     
-    const response = await fetch(directUrl, {
+    const fetchResponse = await fetch(directUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -59,13 +59,13 @@ export async function generateSocialHooks(
       })
     });
     
-    if (!response.ok) {
-      const errorText = await response.text();
+    if (!fetchResponse.ok) {
+      const errorText = await fetchResponse.text();
       console.error('Error response from social-hook-agent:', errorText);
-      throw new Error(`Błąd podczas generowania hooków: Status ${response.status} - ${errorText.substring(0, 100)}`);
+      throw new Error(`Błąd podczas generowania hooków: Status ${fetchResponse.status} - ${errorText.substring(0, 100)}`);
     }
     
-    const data = await response.json();
+    const data = await fetchResponse.json();
     
     // Validate response data
     if (!data) {
@@ -87,7 +87,7 @@ export async function generateSocialHooks(
     }
     
     // Ensure the response has the expected structure
-    const response: SocialHookResponse = {
+    const hookResponse: SocialHookResponse = {
       hooks: data.hooks || ["Nie udało się wygenerować hooków"],
       theme: data.theme || "Ogólna tematyka",
       form: data.form || "post tekstowy",
@@ -97,7 +97,7 @@ export async function generateSocialHooks(
       requestId: data.requestId
     };
     
-    return response;
+    return hookResponse;
   } catch (err: any) {
     console.error('Failed to generate social hooks:', err);
     throw new Error(`Nie udało się wygenerować hooków: ${err.message}`);
