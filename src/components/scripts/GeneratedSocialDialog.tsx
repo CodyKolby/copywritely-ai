@@ -36,19 +36,14 @@ const GeneratedSocialDialog = ({
     isLoading,
     error,
     generatedContent,
-    currentHook,
-    selectedHookIndex,
-    totalHooks,
     isGeneratingNewContent,
     isSaving,
     projectSaved,
     projectId,
     hookResponse,
-    selectHook,
     handleRetry,
     saveToProject,
     handleViewProject,
-    generateWithNextHook,
   } = useSocialGeneration({
     open,
     targetAudienceId,
@@ -72,13 +67,7 @@ const GeneratedSocialDialog = ({
         <DialogTitle className="sr-only">Wygenerowany post w social media</DialogTitle>
         
         {!showLoading && (
-          <DialogHeader 
-            currentHookIndex={selectedHookIndex}
-            totalHooks={totalHooks}
-            isLoading={isLoading}
-            isGeneratingNewContent={isGeneratingNewContent}
-            onHookSelect={selectHook}
-          />
+          <DialogHeader />
         )}
 
         {showLoading ? (
@@ -91,9 +80,6 @@ const GeneratedSocialDialog = ({
               <SocialDisplay 
                 platform={platform?.label || 'Meta'}
                 content={generatedContent} 
-                selectedHook={currentHook}
-                hookIndex={selectedHookIndex}
-                totalHooks={totalHooks}
                 theme={hookResponse?.theme}
                 form={hookResponse?.form}
               />
@@ -103,9 +89,6 @@ const GeneratedSocialDialog = ({
               isSaving={isSaving}
               projectSaved={projectSaved}
               projectId={projectId}
-              currentHookIndex={selectedHookIndex}
-              totalHooks={totalHooks}
-              onGenerateNew={generateWithNextHook}
               onViewProject={handleViewProject}
               isGeneratingNewContent={isGeneratingNewContent}
               onSave={saveToProject}

@@ -1,87 +1,55 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { DialogFooter } from '@/components/ui/dialog';
-import { ArrowRight, Loader2, Save, RefreshCw } from 'lucide-react';
+import { Save, ArrowRight } from 'lucide-react';
 
 interface ActionButtonsProps {
   isSaving: boolean;
   projectSaved: boolean;
   projectId: string | null;
-  currentHookIndex: number;
-  totalHooks: number;
-  onGenerateNew: () => void;
-  onViewProject: () => void;
   isGeneratingNewContent: boolean;
   onSave: () => void;
+  onViewProject?: () => void;
 }
 
 const ActionButtons = ({
   isSaving,
   projectSaved,
   projectId,
-  currentHookIndex,
-  totalHooks,
-  onGenerateNew,
-  onViewProject,
   isGeneratingNewContent,
-  onSave
+  onSave,
+  onViewProject
 }: ActionButtonsProps) => {
   return (
-    <DialogFooter className="bg-gray-50 border-t p-6 flex flex-row justify-between items-center">
-      {/* Left side - Generate with new hook button */}
-      <Button
-        variant="outline"
-        onClick={onGenerateNew}
-        disabled={currentHookIndex >= totalHooks - 1 || isGeneratingNewContent}
-        className="flex items-center gap-2"
-      >
-        {isGeneratingNewContent ? (
-          <>
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Generowanie...
-          </>
-        ) : (
-          <>
-            <RefreshCw className="h-4 w-4" />
-            Wypróbuj następny hook
-          </>
-        )}
-      </Button>
-
-      {/* Right side - Save and View Project buttons */}
-      <div className="flex gap-2">
-        {!projectSaved ? (
-          <Button
-            onClick={onSave}
-            disabled={isSaving}
-            className="flex items-center gap-2"
-          >
-            {isSaving ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Zapisywanie...
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4" />
-                Zapisz jako projekt
-              </>
-            )}
-          </Button>
-        ) : (
-          <Button
-            onClick={onViewProject}
-            disabled={!projectId}
-            variant="default"
-            className="flex items-center gap-2"
-          >
-            <ArrowRight className="h-4 w-4" />
-            Przejdź do projektu
-          </Button>
-        )}
-      </div>
-    </DialogFooter>
+    <div className="flex justify-end items-center gap-3 p-4 border-t border-gray-200">
+      {!projectSaved ? (
+        <Button 
+          onClick={onSave}
+          className="bg-copywrite-teal hover:bg-copywrite-teal-dark text-white"
+          disabled={isSaving || isGeneratingNewContent}
+        >
+          {isSaving ? (
+            <>
+              <span className="animate-spin mr-2">&#10227;</span>
+              Zapisywanie...
+            </>
+          ) : (
+            <>
+              <Save className="mr-2 h-4 w-4" />
+              Zapisz post
+            </>
+          )}
+        </Button>
+      ) : projectId && onViewProject ? (
+        <Button 
+          onClick={onViewProject}
+          className="bg-copywrite-teal hover:bg-copywrite-teal-dark text-white"
+        >
+          Przejdź do projektu
+          <ArrowRight className="ml-2 h-4 w-4" />
+        </Button>
+      ) : null}
+    </div>
   );
 };
 

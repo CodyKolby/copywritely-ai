@@ -1,39 +1,18 @@
 
 import React from 'react';
-import { DialogHeader as UIDialogHeader, DialogTitle } from '@/components/ui/dialog';
-import HookSelector from './HookSelector';
+import { X } from 'lucide-react';
 
-interface DialogHeaderProps {
-  currentHookIndex: number;
-  totalHooks: number;
-  isLoading: boolean;
-  isGeneratingNewContent: boolean;
-  onHookSelect?: (index: number) => void;
-}
-
-const DialogHeader = ({
-  currentHookIndex,
-  totalHooks,
-  isLoading,
-  isGeneratingNewContent,
-  onHookSelect
-}: DialogHeaderProps) => {
+const DialogHeader = () => {
   return (
-    <UIDialogHeader className="bg-gray-50 border-b p-6">
-      <div className="flex justify-between items-center">
-        <DialogTitle className="text-xl font-semibold">
-          Post w social media
-        </DialogTitle>
-        
-        {!isLoading && !isGeneratingNewContent && totalHooks > 1 && onHookSelect && (
-          <HookSelector 
-            currentIndex={currentHookIndex}
-            totalHooks={totalHooks}
-            onHookSelect={onHookSelect}
-          />
-        )}
+    <div className="flex justify-between items-center border-b border-gray-200 p-4">
+      <h2 className="text-lg font-semibold text-gray-900">
+        Wygenerowany post
+      </h2>
+      
+      <div className="flex items-center space-x-2">
+        <X className="h-4 w-4 text-gray-500" />
       </div>
-    </UIDialogHeader>
+    </div>
   );
 };
 

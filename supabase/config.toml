@@ -1,19 +1,47 @@
 
-# A string used to distinguish different Supabase projects on the same host. Defaults to the working
-# directory name when running `supabase init`.
 project_id = "jorbqjareswzdrsmepbv"
 
-[functions.stripe-webhook]
-verify_jwt = false
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
 
-[functions.postscript-agent]
-verify_jwt = false
+[db]
+port = 54322
 
-[functions.posthook-agent]
-verify_jwt = false
+[studio]
+enabled = true
+port = 54323
+api_url = "http://localhost"
 
-[functions.social-hook-agent]
-verify_jwt = false
+[inbucket]
+enabled = true
+port = 54324
 
-[functions.social-content-agent]
-verify_jwt = false
+[storage]
+enabled = true
+
+[auth]
+enabled = true
+
+[realtime]
+enabled = true
+
+[analytics]
+enabled = true
+
+[vector]
+enabled = true
+
+[edge_functions]
+[edge_functions.social-hook-agent]
+verify_jwt = true
+
+[edge_functions.social-content-agent]
+verify_jwt = true
+
+[edge_functions.generate-script]
+verify_jwt = true
+
+[edge_functions.generate-subject-lines]
+verify_jwt = true

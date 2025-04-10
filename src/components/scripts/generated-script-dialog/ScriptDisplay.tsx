@@ -55,23 +55,6 @@ const ScriptDisplay = ({
   return (
     <div className="p-6 pt-0">
       <div className="mb-4">
-        {totalHooks > 1 && (
-          <div className="mb-4">
-            <h3 className="text-sm uppercase font-medium text-gray-500 mb-1">
-              Hook {hookIndex + 1} z {totalHooks}
-            </h3>
-            <p className="bg-amber-50 p-3 rounded-lg border border-amber-200 text-amber-900">
-              {bestHook}
-            </p>
-          </div>
-        )}
-
-        {adStructure && (
-          <div className="mb-2 py-1 px-2 text-xs font-medium uppercase tracking-wider bg-slate-100 text-slate-600 inline-block rounded">
-            Format: {adStructure}
-          </div>
-        )}
-        
         {/* Display test message notification with more prominence */}
         {isTestMessage && (
           <div className="mb-4 p-4 bg-green-100 border border-green-300 text-green-800 rounded-lg">
@@ -89,6 +72,12 @@ const ScriptDisplay = ({
                 <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
               </div>
             )}
+          </div>
+        )}
+        
+        {adStructure && (
+          <div className="mb-2 py-1 px-2 text-xs font-medium uppercase tracking-wider bg-slate-100 text-slate-600 inline-block rounded">
+            Format: {adStructure}
           </div>
         )}
         

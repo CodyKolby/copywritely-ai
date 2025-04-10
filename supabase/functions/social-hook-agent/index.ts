@@ -9,27 +9,34 @@ import { processHookResponse, constructHookPrompt } from "./hook-service.ts";
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
 // Version tracking to help detect updates - increment this when making changes
-const FUNCTION_VERSION = "v1.6.0";
+const FUNCTION_VERSION = "v1.7.0";
 
 // Generate a deployment ID to track specific deployments
 const DEPLOYMENT_ID = generateDeploymentId();
 
-// Define a hardcoded prompt to use if the environment variable is not available
+// Define a hardcoded prompt to use
 const HARDCODED_PROMPT = `
-NAPISZ SŁOWO "TESTHOOK"
-`;
+Jesteś ekspertem od marketingu w mediach społecznościowych. Twoim zadaniem jest przygotowanie hooków, które przyciągną uwagę odbiorców.
+Hooki powinny być krótkie, chwytliwe i związane z tematem reklamy. Wygeneruj minimum 3 różne hooki.
 
-// THIS IS IMPORTANT: We'll only use hardcoded prompt to ensure consistent behavior
-function getSystemPrompt(): string {
-  console.log(`[${getCurrentTimestamp()}] USING HARDCODED PROMPT ONLY - NO ENV VARIABLES`);
-  console.log(`[${getCurrentTimestamp()}] Prompt length: ${HARDCODED_PROMPT.length} characters`);
-  return HARDCODED_PROMPT;
-}
+Dodatkowo określ także, w jakiej formie będzie post (np. post tekstowy, carousel, reels itp.) oraz sugerowane wezwanie do działania (CTA).
+
+Odpowiedź przedstaw w formie:
+
+HOOKI:
+1. [Hook 1]
+2. [Hook 2]
+3. [Hook 3]
+
+TEMAT: [Określ główną tematykę/motyw przewodni]
+FORMA: [Preferowany format posta]
+WEZWANIE DO DZIAŁANIA: [Sugerowane CTA]
+`;
 
 // Log startup information
 console.log(`[STARTUP][${DEPLOYMENT_ID}] SocialHookAgent initialized with version ${FUNCTION_VERSION}`);
-console.log(`[STARTUP][${DEPLOYMENT_ID}] USING HARDCODED PROMPT ONLY - Function will ignore env variables`);
-console.log(`[STARTUP][${DEPLOYMENT_ID}] Hardcoded prompt length: ${HARDCODED_PROMPT.length} characters`);
+console.log(`[STARTUP][${DEPLOYMENT_ID}] Using HARDCODED prompt length: ${HARDCODED_PROMPT.length} characters`);
+console.log(`[STARTUP][${DEPLOYMENT_ID}] Hardcoded prompt first 100 chars: ${HARDCODED_PROMPT.substring(0, 100)}`);
 
 serve(async (req) => {
   const requestId = crypto.randomUUID();
@@ -58,13 +65,13 @@ serve(async (req) => {
       );
     }
     
-    // Get the system prompt (hardcoded only)
-    const SYSTEM_PROMPT = getSystemPrompt();
+    // Use hardcoded prompt
+    const SYSTEM_PROMPT = HARDCODED_PROMPT;
     
     // Log prompt information
     console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT LENGTH: ${SYSTEM_PROMPT.length} characters`);
     console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT FIRST 100 CHARS: ${SYSTEM_PROMPT.substring(0, 100)}...`);
-    console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT SOURCE: HARDCODED - ENV VARIABLES IGNORED`);
+    console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT SOURCE: HARDCODED IN CODE v${FUNCTION_VERSION}`);
     
     // Construct user prompt
     const userPrompt = constructHookPrompt(requestData, requestId, DEPLOYMENT_ID, FUNCTION_VERSION);
@@ -88,7 +95,6 @@ serve(async (req) => {
     // Log complete response for debugging
     console.log(`[${startTime}][REQ:${requestId}] Raw response length: ${responseText.length} chars`);
     console.log(`[${startTime}][REQ:${requestId}] Raw response preview: ${responseText.substring(0, 200)}...`);
-    console.log(`[${startTime}][REQ:${requestId}] RESPONSE FULL: ${responseText}`);
     
     // Process response
     const processedResponse = processHookResponse(responseText);
@@ -96,23 +102,24 @@ serve(async (req) => {
     // Add test hooks for verification purposes
     if (requestData.testMode === true || requestData.test === true) {
       console.log(`[${startTime}][REQ:${requestId}] Test mode detected, adding test hooks`);
-      processedResponse.hooks.push("TEST_HOOK_HARDCODED_v1.6.0");
+      processedResponse.hooks.push(`TEST_HOOK_v${FUNCTION_VERSION}`);
       processedResponse.testMode = true;
     }
     
     // Add metadata
     processedResponse.version = FUNCTION_VERSION;
     processedResponse.deploymentId = DEPLOYMENT_ID;
-    processedResponse.promptSource = 'HARDCODED_ONLY';
+    processedResponse.promptSource = 'HARDCODED_IN_CODE';
     processedResponse.promptUsed = SYSTEM_PROMPT.substring(0, 100) + "...";
     processedResponse.requestId = requestId;
     
     // Add debug information
     processedResponse.debug = {
-      promptSource: 'HARDCODED_ONLY - ENV VARIABLES IGNORED',
+      promptSource: 'HARDCODED_IN_CODE',
       timestamp: startTime,
       functionVersion: FUNCTION_VERSION,
-      promptFirstChars: SYSTEM_PROMPT.substring(0, 100)
+      promptFirstChars: SYSTEM_PROMPT.substring(0, 100),
+      fullPrompt: SYSTEM_PROMPT
     };
     
     return new Response(
@@ -138,7 +145,7 @@ serve(async (req) => {
       timestamp: timestamp,
       requestId: requestId,
       debug: {
-        promptSource: 'HARDCODED_ONLY - ENV VARIABLES IGNORED'
+        promptSource: 'HARDCODED_IN_CODE'
       }
     });
   }

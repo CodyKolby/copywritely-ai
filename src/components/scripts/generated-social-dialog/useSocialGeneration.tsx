@@ -19,8 +19,6 @@ export const useSocialGeneration = ({
 }: UseSocialGenerationProps): SocialGenerationHookReturn => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [generatedHooks, setGeneratedHooks] = useState<string[]>([]);
-  const [selectedHookIndex, setSelectedHookIndex] = useState(0);
   const [generatedContent, setGeneratedContent] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
   const [projectSaved, setProjectSaved] = useState(false);
@@ -58,8 +56,6 @@ export const useSocialGeneration = ({
 
   const resetState = () => {
     setError(null);
-    setGeneratedHooks([]);
-    setSelectedHookIndex(0);
     setGeneratedContent('');
     setProjectSaved(false);
     setProjectId(null);
@@ -69,7 +65,7 @@ export const useSocialGeneration = ({
     retryCount.current = 0;
   };
 
-  const generateSocialPost = async (hookIndex = 0, isRetry = false) => {
+  const generateSocialPost = async (isRetry = false) => {
     if (generationInProgress.current) {
       console.log("Social post generation already in progress, skipping duplicate request");
       return;
@@ -103,7 +99,7 @@ export const useSocialGeneration = ({
         requestId: requestId.current
       });
 
-      // First, fetch the target audience data
+      // Fetch the target audience data
       const { data: targetAudienceData, error: targetAudienceError } = await supabase
         .from('target_audiences')
         .select('*')
@@ -126,12 +122,6 @@ export const useSocialGeneration = ({
       console.log('Received hooks response:', hooksResponse);
       
       setHookResponse(hooksResponse);
-      setGeneratedHooks(hooksResponse.hooks);
-      
-      // Get hook from the specified index if available
-      const selectedIndex = hookIndex < hooksResponse.hooks.length ? hookIndex : 0;
-      setSelectedHookIndex(selectedIndex);
-      const selectedHook = hooksResponse.hooks[selectedIndex];
       
       // Store debug info
       setDebugInfo({
@@ -140,7 +130,9 @@ export const useSocialGeneration = ({
         targetAudience: targetAudienceData.id
       });
       
-      // Step 2: Generate content with social-content-agent
+      // Step 2: Generate content with social-content-agent using the first hook
+      const selectedHook = hooksResponse.hooks[0];
+      
       const contentResponse = await generateSocialContent(
         targetAudienceData,
         hooksResponse,
@@ -176,7 +168,7 @@ export const useSocialGeneration = ({
           toast.error(`Błąd połączenia. Automatyczne ponawianie (${retryCount.current}/${maxRetries})...`);
           
           setTimeout(() => {
-            generateSocialPost(hookIndex, true);
+            generateSocialPost(true);
           }, 1500);
           return;
         }
@@ -193,77 +185,13 @@ export const useSocialGeneration = ({
     }
   };
 
-  const selectHook = (index: number) => {
-    if (index >= 0 && index < generatedHooks.length) {
-      setSelectedHookIndex(index);
-      
-      // If we already have content, we need to regenerate it with the new hook
-      if (generatedContent) {
-        setIsGeneratingNewContent(true);
-        generateWithHook(index);
-      }
-    }
-  };
-
-  const generateWithHook = async (hookIndex: number) => {
-    setIsGeneratingNewContent(true);
-    
-    try {
-      // Fetch the target audience data again
-      const { data: targetAudienceData, error: targetAudienceError } = await supabase
-        .from('target_audiences')
-        .select('*')
-        .eq('id', targetAudienceId)
-        .single();
-
-      if (targetAudienceError) {
-        throw new Error(`Nie udało się pobrać danych grupy docelowej: ${targetAudienceError.message}`);
-      }
-      
-      if (!hookResponse) {
-        throw new Error('Brak wygenerowanych hooków');
-      }
-      
-      const selectedHook = hookResponse.hooks[hookIndex];
-      
-      // Generate new content with the selected hook
-      const contentResponse = await generateSocialContent(
-        targetAudienceData,
-        hookResponse,
-        selectedHook,
-        advertisingGoal,
-        platform?.key || 'meta'
-      );
-      
-      setGeneratedContent(contentResponse.content);
-      
-    } catch (err: any) {
-      console.error('Error generating content with new hook:', err);
-      toast.error('Nie udało się wygenerować treści z nowym hookiem');
-    } finally {
-      setIsGeneratingNewContent(false);
-    }
-  };
-
-  const generateWithNextHook = async () => {
-    if (selectedHookIndex >= generatedHooks.length - 1) {
-      toast.info("To już ostatni hook. Nie można wygenerować następnego wariantu.");
-      return;
-    }
-
-    setIsGeneratingNewContent(true);
-    const nextHookIndex = selectedHookIndex + 1;
-    setSelectedHookIndex(nextHookIndex);
-    await generateWithHook(nextHookIndex);
-  };
-
   const handleRetry = () => {
     setError(null);
-    generateSocialPost(selectedHookIndex, true);
+    generateSocialPost(true);
   };
 
   const saveToProject = async () => {
-    if (!userId || !generatedContent || !generatedHooks || !targetAudienceId) {
+    if (!userId || !generatedContent || !targetAudienceId) {
       toast.error("Nie można zapisać projektu");
       return;
     }
@@ -271,7 +199,7 @@ export const useSocialGeneration = ({
     setIsSaving(true);
 
     try {
-      const currentHook = generatedHooks[selectedHookIndex];
+      const currentHook = hookResponse?.hooks[0] || '';
       const platformName = platform?.label || 'Meta';
       
       const savedProject = await saveSocialToProject(
@@ -281,7 +209,7 @@ export const useSocialGeneration = ({
         userId,
         targetAudienceId,
         hookResponse || undefined,
-        generatedHooks
+        hookResponse?.hooks || []
       );
       
       setProjectId(savedProject.id);
@@ -305,22 +233,15 @@ export const useSocialGeneration = ({
   return {
     isLoading,
     error,
-    generatedHooks,
-    selectedHookIndex,
-    currentHook: generatedHooks[selectedHookIndex] || '',
     generatedContent,
     isSaving,
     projectSaved,
     projectId,
     hookResponse,
-    totalHooks: generatedHooks.length,
     isGeneratingNewContent,
-    selectHook,
     handleRetry,
     saveToProject,
     handleViewProject,
-    setGeneratedContent,
-    generateWithNextHook,
-    debugInfo
+    setGeneratedContent
   };
 };

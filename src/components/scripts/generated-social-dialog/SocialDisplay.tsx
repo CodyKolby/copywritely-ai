@@ -5,9 +5,6 @@ import { Card } from '@/components/ui/card';
 interface SocialDisplayProps {
   platform?: string;
   content: string;
-  selectedHook: string;
-  hookIndex: number;
-  totalHooks: number;
   theme?: string;
   form?: string;
 }
@@ -15,9 +12,6 @@ interface SocialDisplayProps {
 const SocialDisplay = ({ 
   platform = 'Meta', 
   content, 
-  selectedHook,
-  hookIndex,
-  totalHooks,
   theme,
   form
 }: SocialDisplayProps) => {
@@ -32,16 +26,6 @@ const SocialDisplay = ({
           <span className="text-xs text-gray-500">
             {theme && `${theme} • `}{form || 'Post tekstowy'}
           </span>
-        </div>
-        
-        {/* Hook display */}
-        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="text-sm font-semibold text-gray-700">
-              Hook {hookIndex + 1}/{totalHooks}
-            </h3>
-          </div>
-          <p className="text-lg font-medium text-gray-800">{selectedHook}</p>
         </div>
         
         {/* Content display */}
