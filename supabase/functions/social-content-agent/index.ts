@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders, handleOptions } from "../shared/cors.ts";
@@ -9,33 +8,48 @@ import { constructContentPrompt } from "./content-service.ts";
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
 // Version tracking to help detect updates
-const FUNCTION_VERSION = "v1.4.0"; // Incremented for new prompt handling logic
+const FUNCTION_VERSION = "v1.5.0"; 
 
 // Generate a deployment ID to track specific deployments
 const DEPLOYMENT_ID = generateDeploymentId();
 
-// Default prompt as fallback
-const DEFAULT_PROMPT = `
-Masz napisać "TESTCONTENT"
+// Define a hardcoded prompt to use if the environment variable is not available
+const HARDCODED_PROMPT = `
+Jesteś ekspertem od tworzenia treści na social media.
+Twoim zadaniem jest napisać angażujący post bazujący na dostarczonym hooku i tematyce.
+Dostosuj styl i długość do wskazanej platformy (np. krótki i dynamiczny dla TikToka, profesjonalny dla LinkedIn).
+Post powinien być napisany prostym językiem, bez żargonu branżowego.
+Wykorzystaj przesłane dane o grupie docelowej, aby dopasować komunikat do jej potrzeb i problemów.
+Na końcu dodaj sugerowane przez hooka wezwanie do działania.
+Zwróć sam tekst posta bez żadnych dodatkowych komentarzy czy formatowania.
 `;
 
-// CRITICAL: Force reload the environment variable directly each time
-const getEnvPrompt = () => {
+// Function to get the prompt from environment or use hardcoded default
+function getSystemPrompt(): string {
   try {
-    const promptValue = Deno.env.get('SOCIAL_CONTENT_PROMPT');
-    return promptValue || null;
+    // Try to get from environment
+    const envPrompt = Deno.env.get('SOCIAL_CONTENT_PROMPT');
+    
+    // Check if exists and has content
+    if (envPrompt && envPrompt.trim().length > 10) {
+      console.log(`[${getCurrentTimestamp()}] Using SOCIAL_CONTENT_PROMPT from environment (${envPrompt.length} chars)`);
+      return envPrompt;
+    }
+    
+    // Otherwise use hardcoded
+    console.log(`[${getCurrentTimestamp()}] Environment variable not found or too short, using hardcoded prompt (${HARDCODED_PROMPT.length} chars)`);
+    return HARDCODED_PROMPT;
   } catch (err) {
-    console.error(`[${getCurrentTimestamp()}] Error accessing SOCIAL_CONTENT_PROMPT:`, err);
-    return null;
+    console.error(`[${getCurrentTimestamp()}] Error accessing environment variables:`, err);
+    return HARDCODED_PROMPT;
   }
-};
+}
 
-// Log startup information with enhanced debugging
+// Log startup information
 console.log(`[STARTUP][${DEPLOYMENT_ID}] SocialContentAgent initialized with version ${FUNCTION_VERSION}`);
-console.log(`[STARTUP][${DEPLOYMENT_ID}] Environment variable keys available:`, JSON.stringify(Object.keys(Deno.env.toObject())));
+console.log(`[STARTUP][${DEPLOYMENT_ID}] Available environment variable keys:`, Object.keys(Deno.env.toObject()));
 console.log(`[STARTUP][${DEPLOYMENT_ID}] SOCIAL_CONTENT_PROMPT exists:`, Deno.env.get('SOCIAL_CONTENT_PROMPT') !== undefined);
 console.log(`[STARTUP][${DEPLOYMENT_ID}] SOCIAL_CONTENT_PROMPT empty:`, Deno.env.get('SOCIAL_CONTENT_PROMPT') === "");
-console.log(`[STARTUP][${DEPLOYMENT_ID}] SOCIAL_CONTENT_PROMPT first 50 chars:`, (Deno.env.get('SOCIAL_CONTENT_PROMPT') || "").substring(0, 50));
 
 serve(async (req) => {
   const requestId = crypto.randomUUID();
@@ -54,10 +68,9 @@ serve(async (req) => {
       throw new Error("Invalid JSON in request body");
     });
     
-    console.log(`[${startTime}][REQ:${requestId}] Request data received with keys:`, Object.keys(requestData));
-    
     const { targetAudience, advertisingGoal, platform, hookOutput, cacheBuster, timestamp, selectedHook } = requestData;
     
+    // Log request summary
     console.log(`[${startTime}][REQ:${requestId}] Processing request with:`, { 
       targetAudienceId: targetAudience?.id, 
       advertisingGoal, 
@@ -68,28 +81,7 @@ serve(async (req) => {
       cacheBuster: cacheBuster || 'none'
     });
     
-    // CRITICAL: Load system prompt directly from environment each time
-    // This bypasses any potential caching of the environment variable
-    const envPrompt = getEnvPrompt();
-    const SYSTEM_PROMPT = envPrompt || DEFAULT_PROMPT;
-    
-    // Even more logging about the prompt
-    console.log(`[${startTime}][REQ:${requestId}] CRITICAL PROMPT DEBUG:`);
-    console.log(`[${startTime}][REQ:${requestId}] - Env var direct check:`, Deno.env.get('SOCIAL_CONTENT_PROMPT') !== undefined);
-    console.log(`[${startTime}][REQ:${requestId}] - Env var length:`, (Deno.env.get('SOCIAL_CONTENT_PROMPT') || "").length);
-    console.log(`[${startTime}][REQ:${requestId}] - Env var first 100 chars:`, (Deno.env.get('SOCIAL_CONTENT_PROMPT') || "").substring(0, 100));
-    console.log(`[${startTime}][REQ:${requestId}] - Using prompt source:`, envPrompt ? 'ENVIRONMENT' : 'DEFAULT');
-    console.log(`[${startTime}][REQ:${requestId}] - Final system prompt:`, SYSTEM_PROMPT);
-    
-    // Log env var status with every request
-    console.log(`[${startTime}][REQ:${requestId}] Env var debug - SOCIAL_CONTENT_PROMPT:`, {
-      exists: Deno.env.get('SOCIAL_CONTENT_PROMPT') !== undefined,
-      empty: Deno.env.get('SOCIAL_CONTENT_PROMPT') === "",
-      length: (Deno.env.get('SOCIAL_CONTENT_PROMPT') || "").length,
-      using: envPrompt ? 'YES' : 'NO'
-    });
-    
-    // Validate input data
+    // Input validation
     if (!targetAudience) {
       console.error(`[${startTime}][REQ:${requestId}] Missing target audience data`);
       return new Response(
@@ -98,7 +90,6 @@ serve(async (req) => {
       );
     }
     
-    // Validate hook output
     if (!hookOutput || !hookOutput.hooks || hookOutput.hooks.length === 0) {
       console.error(`[${startTime}][REQ:${requestId}] Invalid or missing hook output:`, hookOutput);
       return new Response(
@@ -110,26 +101,15 @@ serve(async (req) => {
       );
     }
     
-    // Validate system prompt
-    if (!SYSTEM_PROMPT || SYSTEM_PROMPT.length < 10) {
-      console.error(`[${startTime}][REQ:${requestId}] System prompt is invalid or too short: "${SYSTEM_PROMPT}"`);
-      return new Response(
-        JSON.stringify({ 
-          error: 'System prompt is invalid or missing',
-          promptLength: SYSTEM_PROMPT?.length || 0,
-          promptSource: envPrompt ? 'environment' : 'default',
-          deploymentId: DEPLOYMENT_ID,
-          environmentDebug: {
-            envKeys: Object.keys(Deno.env.toObject()),
-            promptExists: Deno.env.get('SOCIAL_CONTENT_PROMPT') !== undefined,
-            promptEmpty: Deno.env.get('SOCIAL_CONTENT_PROMPT') === ""
-          }
-        }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // Get the system prompt (from environment or hardcoded)
+    const SYSTEM_PROMPT = getSystemPrompt();
     
-    // Print full information about hooks for debugging
+    // Log prompt information
+    console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT LENGTH: ${SYSTEM_PROMPT.length} characters`);
+    console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT FIRST 50 CHARS: ${SYSTEM_PROMPT.substring(0, 50)}...`);
+    console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT SOURCE: ${SYSTEM_PROMPT === HARDCODED_PROMPT ? 'HARDCODED' : 'ENVIRONMENT'}`);
+    
+    // Print hook output for debugging
     console.log(`[${startTime}][REQ:${requestId}] Hook output details:`, {
       hooks: hookOutput.hooks,
       theme: hookOutput.theme,
@@ -140,17 +120,11 @@ serve(async (req) => {
     // Construct prompt for agent
     const userPrompt = constructContentPrompt(requestData, requestId, DEPLOYMENT_ID, FUNCTION_VERSION);
     
-    // Log prompt information
-    console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT LENGTH: ${SYSTEM_PROMPT.length} characters`);
-    console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT SOURCE: ${envPrompt ? 'ENVIRONMENT VARIABLE' : 'DEFAULT FALLBACK'}`);
-    console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT FULL: ${SYSTEM_PROMPT}`);
-    console.log(`[${startTime}][REQ:${requestId}] USER PROMPT LENGTH: ${userPrompt.length} characters`);
-    
     // Prepare cache busting and metadata
     const currentTimestamp = timestamp || startTime;
     const requestCacheBuster = generateCacheBuster(requestId, DEPLOYMENT_ID);
     
-    // Get response from OpenAI with cache-busting headers
+    // Call OpenAI
     console.log(`[${startTime}][REQ:${requestId}] Sending request to OpenAI API with cache-busting parameters`);
     
     const data = await callOpenAI(userPrompt, SYSTEM_PROMPT, openAIApiKey, {
@@ -164,14 +138,15 @@ serve(async (req) => {
 
     const responseText = data.choices[0].message.content;
     
-    // Log complete response from API
-    console.log(`[${startTime}][REQ:${requestId}] Raw OpenAI response length: ${responseText.length} chars`);
+    // Log response
+    console.log(`[${startTime}][REQ:${requestId}] Raw response length: ${responseText.length} chars`);
     console.log(`[${startTime}][REQ:${requestId}] Raw response preview: ${responseText.substring(0, 200)}...`);
+    console.log(`[${startTime}][REQ:${requestId}] RESPONSE FULL: ${responseText}`);
     
     // Determine which hook was used
     const hookToUse = selectedHook || hookOutput.hooks[0];
     
-    // Create a result with the raw response for debugging
+    // Create result with metadata
     const result = {
       content: responseText,
       selectedHook: hookToUse,
@@ -179,16 +154,17 @@ serve(async (req) => {
       form: hookOutput.form || 'post tekstowy',
       cta: hookOutput.cta || 'Sprawdź więcej',
       platform: platform || 'Meta (Instagram/Facebook)',
-      promptSource: envPrompt ? 'environment' : 'default',
+      promptSource: SYSTEM_PROMPT === HARDCODED_PROMPT ? 'hardcoded' : 'environment',
       promptUsed: SYSTEM_PROMPT.substring(0, 100) + "...",
       debug: {
-        systemPromptSource: envPrompt ? 'environment' : 'default',
+        systemPromptSource: SYSTEM_PROMPT === HARDCODED_PROMPT ? 'hardcoded' : 'environment',
         systemPromptLength: SYSTEM_PROMPT.length,
         envVarExists: Deno.env.get('SOCIAL_CONTENT_PROMPT') !== undefined,
         envVarEmpty: Deno.env.get('SOCIAL_CONTENT_PROMPT') === "",
         envVarLength: (Deno.env.get('SOCIAL_CONTENT_PROMPT') || "").length,
-        usingEnvPrompt: envPrompt ? true : false,
-        timestamp: startTime
+        usingEnvPrompt: SYSTEM_PROMPT !== HARDCODED_PROMPT,
+        timestamp: startTime,
+        promptFirstChars: SYSTEM_PROMPT.substring(0, 50)
       },
       version: FUNCTION_VERSION,
       deploymentId: DEPLOYMENT_ID,
@@ -203,7 +179,6 @@ serve(async (req) => {
         headers: { 
           ...corsHeaders, 
           'Content-Type': 'application/json',
-          // Add extra no-cache headers to response
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache',
           'Expires': '0'
@@ -223,8 +198,7 @@ serve(async (req) => {
       debug: {
         envVarExists: Deno.env.get('SOCIAL_CONTENT_PROMPT') !== undefined,
         envVarEmpty: Deno.env.get('SOCIAL_CONTENT_PROMPT') === "",
-        envVarLength: (Deno.env.get('SOCIAL_CONTENT_PROMPT') || "").length,
-        envKeys: Object.keys(Deno.env.toObject())
+        envVarLength: (Deno.env.get('SOCIAL_CONTENT_PROMPT') || "").length
       }
     });
   }

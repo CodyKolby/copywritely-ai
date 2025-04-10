@@ -27,27 +27,26 @@ export async function generateSocialHooks(
   });
   
   try {
-    // Add anti-caching measures
-    const cacheBuster = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+    // Add anti-caching measures with timestamp to force fresh execution
     const timestamp = new Date().toISOString();
+    const cacheBuster = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
     
-    // Log the request details for debugging
-    console.log('Sending request to social-hook-agent with cache buster:', cacheBuster);
-    
-    // Call the social-hook-agent edge function with direct URL to avoid caching
-    const directUrl = `https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/social-hook-agent?_nocache=${Date.now()}`;
+    // Get authentication token
     const { data: { session } } = await supabase.auth.getSession();
     const accessToken = session?.access_token || '';
     
-    // Log the request details for debugging
-    console.log('Sending request to social-hook-agent with cache buster:', cacheBuster);
+    // Use a direct URL to avoid any proxy caching
+    const directUrl = `https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/social-hook-agent?_nocache=${timestamp}`;
     
+    console.log(`Sending request to social-hook-agent at ${timestamp} with cache buster: ${cacheBuster}`);
+    
+    // Call with aggressive anti-cache headers
     const fetchResponse = await fetch(directUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${accessToken}`,
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
         'Pragma': 'no-cache',
         'Expires': '0',
         'X-Cache-Buster': cacheBuster,
@@ -59,7 +58,7 @@ export async function generateSocialHooks(
         platform,
         cacheBuster,
         timestamp,
-        test: process.env.NODE_ENV === 'development' // Add test flag in development
+        testMode: process.env.NODE_ENV === 'development' // Add test flag in development
       })
     });
     
