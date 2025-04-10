@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -68,6 +69,10 @@ ${templateType}
 Na podstawie powyższych informacji, napisz treść główną reklamy, która będzie pasować do podanego hooka i angle.
 `;
 
+    // Dodajemy pełny log promptu
+    console.log("PEŁNY PROMPT DLA SCRIPT-GENERATOR:\n", prompt);
+    console.log("PEŁNY SYSTEM PROMPT DLA SCRIPT-GENERATOR:\n", SYSTEM_PROMPT);
+
     // Call OpenAI API
     console.log("Wysyłanie zapytania do OpenAI...");
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -99,6 +104,8 @@ Na podstawie powyższych informacji, napisz treść główną reklamy, która b�
     const data = await response.json();
     const scriptContent = data.choices[0].message.content;
     
+    // Log pełnej odpowiedzi
+    console.log('PEŁNA ODPOWIEDŹ OD OPENAI:\n', scriptContent);
     console.log('Wygenerowano skrypt');
     
     // Return the generated script content

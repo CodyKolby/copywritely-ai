@@ -53,7 +53,8 @@ Forma: ${hookOutput?.form || 'post tekstowy'}
 Wezwanie do działania: ${hookOutput?.cta || 'Sprawdź więcej'}
   `;
   
-  // Log the constructed prompt for debugging
+  // Log the constructed prompt for debugging - dodajemy pełny log
+  console.log(`[Content Prompt] FULL PROMPT:\n${prompt}`);
   console.log(`[Content Prompt] Constructed prompt with variables replaced:`, prompt.substring(0, 200) + '...');
   
   return prompt;

@@ -156,7 +156,8 @@ Bazując na powyższych informacjach, stwórz 3 angażujące hooki, określ tema
 Pamiętaj o zwróceniu odpowiedzi w formacie JSON z polami: hooks (tablica stringów), theme (string), form (string), cta (string).
   `;
   
-  // Log the constructed prompt
+  // Log the constructed prompt - dodajemy pełny log
+  console.log(`[Hook Prompt] FULL PROMPT:\n${prompt}`);
   console.log(`[Hook Prompt] Constructed prompt:`, prompt.substring(0, 200) + '...');
   
   return prompt;

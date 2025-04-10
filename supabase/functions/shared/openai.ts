@@ -1,4 +1,5 @@
 
+
 // OpenAI API functions
 
 export async function callOpenAI(
@@ -29,6 +30,8 @@ export async function callOpenAI(
   
   console.log(`[${timestamp}][REQ:${requestId}] Calling OpenAI API with model: ${model}`);
   console.log(`[${timestamp}][REQ:${requestId}] Cache buster: ${cacheBuster}`);
+  console.log(`[${timestamp}][REQ:${requestId}] SYSTEM PROMPT FULL:\n${systemPrompt}`);
+  console.log(`[${timestamp}][REQ:${requestId}] USER PROMPT FULL:\n${userPrompt}`);
   
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -67,6 +70,7 @@ export async function callOpenAI(
     const data = await response.json();
     console.log(`[${timestamp}][REQ:${requestId}] OpenAI response received, model used: ${data.model}`);
     console.log(`[${timestamp}][REQ:${requestId}] Response length: ${data.choices[0].message.content.length} chars`);
+    console.log(`[${timestamp}][REQ:${requestId}] RESPONSE FULL:\n${data.choices[0].message.content}`);
     return data;
   } catch (error) {
     console.error(`[${timestamp}][REQ:${requestId}] Error parsing OpenAI response:`, error);

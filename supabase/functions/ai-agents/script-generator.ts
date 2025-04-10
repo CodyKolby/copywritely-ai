@@ -69,6 +69,10 @@ ${templateType}
 Na podstawie powyższych informacji, napisz treść główną reklamy, która będzie pasować do podanego hooka i angle.
 `;
 
+    // Dodajemy pełny log promptu
+    console.log("PEŁNY PROMPT DLA AI-AGENTS SCRIPT-GENERATOR:\n", prompt);
+    console.log("PEŁNY SYSTEM PROMPT DLA AI-AGENTS SCRIPT-GENERATOR:\n", SYSTEM_PROMPT);
+
     // Call OpenAI API
     console.log("Wysyłanie zapytania do OpenAI...");
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -78,7 +82,7 @@ Na podstawie powyższych informacji, napisz treść główną reklamy, która b�
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: prompt }
@@ -100,6 +104,8 @@ Na podstawie powyższych informacji, napisz treść główną reklamy, która b�
     const data = await response.json();
     const scriptContent = data.choices[0].message.content;
     
+    // Log pełnej odpowiedzi
+    console.log('PEŁNA ODPOWIEDŹ OD OPENAI (AI-AGENTS SCRIPT-GENERATOR):\n', scriptContent);
     console.log('Wygenerowano skrypt');
     
     // Return the generated script content
