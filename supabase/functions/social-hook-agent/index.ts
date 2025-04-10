@@ -16,21 +16,7 @@ const DEPLOYMENT_ID = generateDeploymentId();
 
 // Define a hardcoded prompt to use
 const HARDCODED_PROMPT = `
-Jesteś ekspertem od marketingu w mediach społecznościowych. Twoim zadaniem jest przygotowanie hooków, które przyciągną uwagę odbiorców.
-Hooki powinny być krótkie, chwytliwe i związane z tematem reklamy. Wygeneruj minimum 3 różne hooki.
-
-Dodatkowo określ także, w jakiej formie będzie post (np. post tekstowy, carousel, reels itp.) oraz sugerowane wezwanie do działania (CTA).
-
-Odpowiedź przedstaw w formie:
-
-HOOKI:
-1. [Hook 1]
-2. [Hook 2]
-3. [Hook 3]
-
-TEMAT: [Określ główną tematykę/motyw przewodni]
-FORMA: [Preferowany format posta]
-WEZWANIE DO DZIAŁANIA: [Sugerowane CTA]
+Twoim jedynym zadaniem jest napisanie słowa "TESTHOOK"
 `;
 
 // Log startup information
