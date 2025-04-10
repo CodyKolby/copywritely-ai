@@ -9,7 +9,7 @@ import { constructContentPrompt } from "./content-service.ts";
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
 // Version tracking to help detect updates
-const FUNCTION_VERSION = "v1.3.1"; // Incremented after debugging env vars
+const FUNCTION_VERSION = "v1.4.0"; // Incremented for new prompt handling logic
 
 // Generate a deployment ID to track specific deployments
 const DEPLOYMENT_ID = generateDeploymentId();
@@ -19,25 +19,23 @@ const DEFAULT_PROMPT = `
 Masz napisać "TESTCONTENT"
 `;
 
-// Enhanced environment variable debugging
-const allEnvVars = Deno.env.toObject();
-const envVarKeys = Object.keys(allEnvVars);
-const contentPromptExists = envVarKeys.includes('SOCIAL_CONTENT_PROMPT');
-const contentPromptValue = Deno.env.get('SOCIAL_CONTENT_PROMPT');
-
-// Get system prompt with enhanced logging
-const envPrompt = contentPromptValue;
-const SYSTEM_PROMPT = envPrompt || DEFAULT_PROMPT;
+// CRITICAL: Force reload the environment variable directly each time
+const getEnvPrompt = () => {
+  try {
+    const promptValue = Deno.env.get('SOCIAL_CONTENT_PROMPT');
+    return promptValue || null;
+  } catch (err) {
+    console.error(`[${getCurrentTimestamp()}] Error accessing SOCIAL_CONTENT_PROMPT:`, err);
+    return null;
+  }
+};
 
 // Log startup information with enhanced debugging
 console.log(`[STARTUP][${DEPLOYMENT_ID}] SocialContentAgent initialized with version ${FUNCTION_VERSION}`);
-console.log(`[STARTUP][${DEPLOYMENT_ID}] Environment variable debug:`);
-console.log(`[STARTUP][${DEPLOYMENT_ID}] - Available env vars: ${JSON.stringify(envVarKeys)}`);
-console.log(`[STARTUP][${DEPLOYMENT_ID}] - SOCIAL_CONTENT_PROMPT exists: ${contentPromptExists}`);
-console.log(`[STARTUP][${DEPLOYMENT_ID}] - SOCIAL_CONTENT_PROMPT empty: ${contentPromptValue === ""}`);
-console.log(`[STARTUP][${DEPLOYMENT_ID}] - Using prompt from environment: ${envPrompt ? 'YES' : 'NO'}`);
-console.log(`[STARTUP][${DEPLOYMENT_ID}] - System prompt length: ${SYSTEM_PROMPT.length} characters`);
-console.log(`[STARTUP][${DEPLOYMENT_ID}] - System prompt first 100 chars: "${SYSTEM_PROMPT.substring(0, 100)}..."`);
+console.log(`[STARTUP][${DEPLOYMENT_ID}] Environment variable keys available:`, JSON.stringify(Object.keys(Deno.env.toObject())));
+console.log(`[STARTUP][${DEPLOYMENT_ID}] SOCIAL_CONTENT_PROMPT exists:`, Deno.env.get('SOCIAL_CONTENT_PROMPT') !== undefined);
+console.log(`[STARTUP][${DEPLOYMENT_ID}] SOCIAL_CONTENT_PROMPT empty:`, Deno.env.get('SOCIAL_CONTENT_PROMPT') === "");
+console.log(`[STARTUP][${DEPLOYMENT_ID}] SOCIAL_CONTENT_PROMPT first 50 chars:`, (Deno.env.get('SOCIAL_CONTENT_PROMPT') || "").substring(0, 50));
 
 serve(async (req) => {
   const requestId = crypto.randomUUID();
@@ -70,8 +68,26 @@ serve(async (req) => {
       cacheBuster: cacheBuster || 'none'
     });
     
+    // CRITICAL: Load system prompt directly from environment each time
+    // This bypasses any potential caching of the environment variable
+    const envPrompt = getEnvPrompt();
+    const SYSTEM_PROMPT = envPrompt || DEFAULT_PROMPT;
+    
+    // Even more logging about the prompt
+    console.log(`[${startTime}][REQ:${requestId}] CRITICAL PROMPT DEBUG:`);
+    console.log(`[${startTime}][REQ:${requestId}] - Env var direct check:`, Deno.env.get('SOCIAL_CONTENT_PROMPT') !== undefined);
+    console.log(`[${startTime}][REQ:${requestId}] - Env var length:`, (Deno.env.get('SOCIAL_CONTENT_PROMPT') || "").length);
+    console.log(`[${startTime}][REQ:${requestId}] - Env var first 100 chars:`, (Deno.env.get('SOCIAL_CONTENT_PROMPT') || "").substring(0, 100));
+    console.log(`[${startTime}][REQ:${requestId}] - Using prompt source:`, envPrompt ? 'ENVIRONMENT' : 'DEFAULT');
+    console.log(`[${startTime}][REQ:${requestId}] - Final system prompt:`, SYSTEM_PROMPT);
+    
     // Log env var status with every request
-    console.log(`[${startTime}][REQ:${requestId}] Env var debug - SOCIAL_CONTENT_PROMPT exists: ${contentPromptExists}, empty: ${contentPromptValue === ""}, using env: ${envPrompt ? 'YES' : 'NO'}`);
+    console.log(`[${startTime}][REQ:${requestId}] Env var debug - SOCIAL_CONTENT_PROMPT:`, {
+      exists: Deno.env.get('SOCIAL_CONTENT_PROMPT') !== undefined,
+      empty: Deno.env.get('SOCIAL_CONTENT_PROMPT') === "",
+      length: (Deno.env.get('SOCIAL_CONTENT_PROMPT') || "").length,
+      using: envPrompt ? 'YES' : 'NO'
+    });
     
     // Validate input data
     if (!targetAudience) {
@@ -104,9 +120,9 @@ serve(async (req) => {
           promptSource: envPrompt ? 'environment' : 'default',
           deploymentId: DEPLOYMENT_ID,
           environmentDebug: {
-            envVarExists: contentPromptExists,
-            envVarEmpty: contentPromptValue === "",
-            availableEnvVars: envVarKeys
+            envKeys: Object.keys(Deno.env.toObject()),
+            promptExists: Deno.env.get('SOCIAL_CONTENT_PROMPT') !== undefined,
+            promptEmpty: Deno.env.get('SOCIAL_CONTENT_PROMPT') === ""
           }
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -132,7 +148,6 @@ serve(async (req) => {
     
     // Prepare cache busting and metadata
     const currentTimestamp = timestamp || startTime;
-    const randomValue = Math.random().toString(36).substring(2, 15);
     const requestCacheBuster = generateCacheBuster(requestId, DEPLOYMENT_ID);
     
     // Get response from OpenAI with cache-busting headers
@@ -144,7 +159,7 @@ serve(async (req) => {
       cacheBuster: requestCacheBuster,
       deploymentId: DEPLOYMENT_ID,
       functionVersion: FUNCTION_VERSION,
-      model: 'gpt-4o-mini'  // Explicitly setting model here
+      model: 'gpt-4o-mini'
     });
 
     const responseText = data.choices[0].message.content;
@@ -164,21 +179,20 @@ serve(async (req) => {
       form: hookOutput.form || 'post tekstowy',
       cta: hookOutput.cta || 'Sprawdź więcej',
       platform: platform || 'Meta (Instagram/Facebook)',
+      promptSource: envPrompt ? 'environment' : 'default',
+      promptUsed: SYSTEM_PROMPT.substring(0, 100) + "...",
       debug: {
         systemPromptSource: envPrompt ? 'environment' : 'default',
         systemPromptLength: SYSTEM_PROMPT.length,
-        envVarExists: contentPromptExists,
-        envVarEmpty: contentPromptValue === "",
-        usingEnvPrompt: envPrompt ? true : false
+        envVarExists: Deno.env.get('SOCIAL_CONTENT_PROMPT') !== undefined,
+        envVarEmpty: Deno.env.get('SOCIAL_CONTENT_PROMPT') === "",
+        envVarLength: (Deno.env.get('SOCIAL_CONTENT_PROMPT') || "").length,
+        usingEnvPrompt: envPrompt ? true : false,
+        timestamp: startTime
       },
-      debugInfo: {
-        systemPromptSource: envPrompt ? 'environment' : 'default',
-        systemPromptLength: SYSTEM_PROMPT.length,
-        timestamp: startTime,
-        requestId: requestId,
-        deploymentId: DEPLOYMENT_ID,
-        functionVersion: FUNCTION_VERSION
-      }
+      version: FUNCTION_VERSION,
+      deploymentId: DEPLOYMENT_ID,
+      requestId: requestId
     };
     
     console.log(`[${startTime}][REQ:${requestId}] Final response sent with content length: ${result.content.length} chars`);
@@ -205,15 +219,12 @@ serve(async (req) => {
       timestamp: timestamp,
       requestId: requestId,
       deploymentId: DEPLOYMENT_ID,
+      version: FUNCTION_VERSION,
       debug: {
-        envVarExists: contentPromptExists,
-        envVarEmpty: contentPromptValue === "",
-        availableEnvVars: envVarKeys
-      },
-      debugInfo: {
-        systemPromptSource: envPrompt ? 'environment' : 'default',
-        systemPromptLength: SYSTEM_PROMPT?.length || 0,
-        functionVersion: FUNCTION_VERSION
+        envVarExists: Deno.env.get('SOCIAL_CONTENT_PROMPT') !== undefined,
+        envVarEmpty: Deno.env.get('SOCIAL_CONTENT_PROMPT') === "",
+        envVarLength: (Deno.env.get('SOCIAL_CONTENT_PROMPT') || "").length,
+        envKeys: Object.keys(Deno.env.toObject())
       }
     });
   }

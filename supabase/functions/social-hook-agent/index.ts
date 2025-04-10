@@ -9,7 +9,7 @@ import { processHookResponse, constructHookPrompt } from "./hook-service.ts";
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
 // Version tracking to help detect updates
-const FUNCTION_VERSION = "v1.3.1"; // Incremented after debugging env vars
+const FUNCTION_VERSION = "v1.4.0"; // Incremented for new prompt handling logic
 
 // Generate a deployment ID to track specific deployments
 const DEPLOYMENT_ID = generateDeploymentId();
@@ -19,25 +19,23 @@ const DEFAULT_PROMPT = `
 MASZ NAPISAĆ "TESTHOOK"
 `;
 
-// Enhanced environment variable debugging
-const allEnvVars = Deno.env.toObject();
-const envVarKeys = Object.keys(allEnvVars);
-const hookPromptExists = envVarKeys.includes('SOCIAL_HOOK_PROMPT');
-const hookPromptValue = Deno.env.get('SOCIAL_HOOK_PROMPT');
-
-// Get system prompt with enhanced logging
-const envPrompt = hookPromptValue;
-const SYSTEM_PROMPT = envPrompt || DEFAULT_PROMPT;
+// CRITICAL: Force reload the environment variable directly each time
+const getEnvPrompt = () => {
+  try {
+    const promptValue = Deno.env.get('SOCIAL_HOOK_PROMPT');
+    return promptValue || null;
+  } catch (err) {
+    console.error(`[${getCurrentTimestamp()}] Error accessing SOCIAL_HOOK_PROMPT:`, err);
+    return null;
+  }
+};
 
 // Log startup information with enhanced debugging
 console.log(`[STARTUP][${DEPLOYMENT_ID}] SocialHookAgent initialized with version ${FUNCTION_VERSION}`);
-console.log(`[STARTUP][${DEPLOYMENT_ID}] Environment variable debug:`);
-console.log(`[STARTUP][${DEPLOYMENT_ID}] - Available env vars: ${JSON.stringify(envVarKeys)}`);
-console.log(`[STARTUP][${DEPLOYMENT_ID}] - SOCIAL_HOOK_PROMPT exists: ${hookPromptExists}`);
-console.log(`[STARTUP][${DEPLOYMENT_ID}] - SOCIAL_HOOK_PROMPT empty: ${hookPromptValue === ""}`);
-console.log(`[STARTUP][${DEPLOYMENT_ID}] - Using prompt from environment: ${envPrompt ? 'YES' : 'NO'}`);
-console.log(`[STARTUP][${DEPLOYMENT_ID}] - System prompt length: ${SYSTEM_PROMPT.length} characters`);
-console.log(`[STARTUP][${DEPLOYMENT_ID}] - System prompt first 100 chars: "${SYSTEM_PROMPT.substring(0, 100)}..."`);
+console.log(`[STARTUP][${DEPLOYMENT_ID}] Environment variable keys available:`, JSON.stringify(Object.keys(Deno.env.toObject())));
+console.log(`[STARTUP][${DEPLOYMENT_ID}] SOCIAL_HOOK_PROMPT exists:`, Deno.env.get('SOCIAL_HOOK_PROMPT') !== undefined);
+console.log(`[STARTUP][${DEPLOYMENT_ID}] SOCIAL_HOOK_PROMPT empty:`, Deno.env.get('SOCIAL_HOOK_PROMPT') === "");
+console.log(`[STARTUP][${DEPLOYMENT_ID}] SOCIAL_HOOK_PROMPT first 50 chars:`, (Deno.env.get('SOCIAL_HOOK_PROMPT') || "").substring(0, 50));
 
 serve(async (req) => {
   const requestId = crypto.randomUUID();
@@ -74,6 +72,19 @@ serve(async (req) => {
       );
     }
     
+    // CRITICAL: Load system prompt directly from environment each time
+    // This bypasses any potential caching of the environment variable
+    const envPrompt = getEnvPrompt();
+    const SYSTEM_PROMPT = envPrompt || DEFAULT_PROMPT;
+    
+    // Even more logging about the prompt
+    console.log(`[${startTime}][REQ:${requestId}] CRITICAL PROMPT DEBUG:`);
+    console.log(`[${startTime}][REQ:${requestId}] - Env var direct check:`, Deno.env.get('SOCIAL_HOOK_PROMPT') !== undefined);
+    console.log(`[${startTime}][REQ:${requestId}] - Env var length:`, (Deno.env.get('SOCIAL_HOOK_PROMPT') || "").length);
+    console.log(`[${startTime}][REQ:${requestId}] - Env var first 100 chars:`, (Deno.env.get('SOCIAL_HOOK_PROMPT') || "").substring(0, 100));
+    console.log(`[${startTime}][REQ:${requestId}] - Using prompt source:`, envPrompt ? 'ENVIRONMENT' : 'DEFAULT');
+    console.log(`[${startTime}][REQ:${requestId}] - Final system prompt:`, SYSTEM_PROMPT);
+    
     // Validate system prompt
     if (!SYSTEM_PROMPT || SYSTEM_PROMPT.length < 10) {
       console.error(`[${startTime}][REQ:${requestId}] System prompt is invalid or too short: "${SYSTEM_PROMPT}"`);
@@ -84,9 +95,9 @@ serve(async (req) => {
           promptSource: envPrompt ? 'environment' : 'default',
           deploymentId: DEPLOYMENT_ID,
           environmentDebug: {
-            envVarExists: hookPromptExists,
-            envVarEmpty: hookPromptValue === "",
-            availableEnvVars: envVarKeys
+            envKeys: Object.keys(Deno.env.toObject()),
+            promptExists: Deno.env.get('SOCIAL_HOOK_PROMPT') !== undefined,
+            promptEmpty: Deno.env.get('SOCIAL_HOOK_PROMPT') === ""
           }
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -94,7 +105,12 @@ serve(async (req) => {
     }
     
     // Log env var status with every request
-    console.log(`[${startTime}][REQ:${requestId}] Env var debug - SOCIAL_HOOK_PROMPT exists: ${hookPromptExists}, empty: ${hookPromptValue === ""}, using env: ${envPrompt ? 'YES' : 'NO'}`);
+    console.log(`[${startTime}][REQ:${requestId}] Env var debug - SOCIAL_HOOK_PROMPT:`, {
+      exists: Deno.env.get('SOCIAL_HOOK_PROMPT') !== undefined,
+      empty: Deno.env.get('SOCIAL_HOOK_PROMPT') === "",
+      length: (Deno.env.get('SOCIAL_HOOK_PROMPT') || "").length,
+      using: envPrompt ? 'YES' : 'NO'
+    });
     
     // Construct prompt with provided data
     const userPrompt = constructHookPrompt(requestData, requestId, DEPLOYMENT_ID, FUNCTION_VERSION);
@@ -116,7 +132,7 @@ serve(async (req) => {
       cacheBuster: cacheBusterValue,
       deploymentId: DEPLOYMENT_ID,
       functionVersion: FUNCTION_VERSION,
-      model: 'gpt-4o-mini'  // Explicitly setting model here
+      model: 'gpt-4o-mini'
     });
     
     let responseText = data.choices[0].message.content;
@@ -141,13 +157,16 @@ serve(async (req) => {
     processedResponse.version = FUNCTION_VERSION;
     processedResponse.deploymentId = DEPLOYMENT_ID;
     processedResponse.promptSource = envPrompt ? 'environment' : 'default';
+    processedResponse.promptUsed = SYSTEM_PROMPT.substring(0, 100) + "...";
     processedResponse.requestId = requestId;
     
     // Add debug information about env vars
     processedResponse.debug = {
-      envVarExists: hookPromptExists,
-      envVarEmpty: hookPromptValue === "",
-      usingEnvPrompt: envPrompt ? true : false
+      envVarExists: Deno.env.get('SOCIAL_HOOK_PROMPT') !== undefined,
+      envVarEmpty: Deno.env.get('SOCIAL_HOOK_PROMPT') === "",
+      envVarLength: (Deno.env.get('SOCIAL_HOOK_PROMPT') || "").length,
+      usingEnvPrompt: envPrompt ? true : false,
+      timestamp: startTime
     };
     
     return new Response(
@@ -170,14 +189,14 @@ serve(async (req) => {
     return createErrorResponse(error, {
       version: FUNCTION_VERSION,
       deploymentId: DEPLOYMENT_ID,
-      promptSource: envPrompt ? 'environment' : 'default',
-      systemPromptLength: SYSTEM_PROMPT.length,
+      promptSource: getEnvPrompt() ? 'environment' : 'default',
+      systemPromptLength: getEnvPrompt()?.length || 0,
       timestamp: timestamp,
       requestId: requestId,
       debug: {
-        envVarExists: hookPromptExists,
-        envVarEmpty: hookPromptValue === "",
-        availableEnvVars: envVarKeys
+        envVarExists: Deno.env.get('SOCIAL_HOOK_PROMPT') !== undefined,
+        envVarEmpty: Deno.env.get('SOCIAL_HOOK_PROMPT') === "",
+        envKeys: Object.keys(Deno.env.toObject())
       }
     });
   }

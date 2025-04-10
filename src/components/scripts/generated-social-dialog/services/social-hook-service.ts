@@ -10,6 +10,7 @@ export interface SocialHookResponse {
   promptUsed?: string;
   requestId?: string;
   error?: string;
+  debug?: any;
 }
 
 export const DEFAULT_SOCIAL_HOOK_PROMPT = `Jesteś ekspertem od marketingu w mediach społecznościowych. Twoim zadaniem jest przygotowanie hooków i tematyki.`;
@@ -79,6 +80,7 @@ export async function generateSocialHooks(
     
     // Log the full response for debugging
     console.log('Social hooks generated successfully:', data);
+    console.log('Debug info from hook agent:', data.debug);
     
     // Validate hook data
     if (!data.hooks || data.hooks.length === 0) {
@@ -94,7 +96,8 @@ export async function generateSocialHooks(
       cta: data.cta || "Sprawdź więcej",
       version: data.version,
       promptUsed: data.promptUsed,
-      requestId: data.requestId
+      requestId: data.requestId,
+      debug: data.debug
     };
     
     return hookResponse;
