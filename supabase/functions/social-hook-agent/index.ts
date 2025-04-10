@@ -16,16 +16,7 @@ const DEPLOYMENT_ID = generateDeploymentId();
 
 // Get system prompt from environment variable with fallback
 const DEFAULT_PROMPT = `
-Jesteś ekspertem od tworzenia krótkich hooków do social media.
-Twoim zadaniem jest stworzyć 3 angażujące hooki i określić tematykę oraz formę posta.
-
-Zwróć odpowiedź w formacie JSON:
-{
-  "hooks": ["Hook 1", "Hook 2", "Hook 3"],
-  "theme": "Temat posta",
-  "form": "Forma posta (np. post tekstowy, carousel, video)",
-  "cta": "Sugerowane wezwanie do działania"
-}
+MASZ NAPISAĆ "TESTHOOK"
 `;
 
 // Enhanced environment variable debugging
