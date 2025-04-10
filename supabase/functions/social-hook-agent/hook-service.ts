@@ -8,6 +8,7 @@ export function processHookResponse(responseText: string): {
 } {
   console.log(`Processing hook response. Length: ${responseText.length}`);
   console.log(`Response start: ${responseText.substring(0, 200)}...`);
+  console.log(`FULL RESPONSE: ${responseText}`);
   
   // Default response in case of failure
   const defaultResponse = {
@@ -148,7 +149,8 @@ ${debugSection}
 Dane z ankiety klienta:
 ${surveyData}
 
-Cel posta: ${advertisingGoal || 'Brak określonego celu'}
+Cel posta: 
+${advertisingGoal || 'Brak określonego celu'}
 
 ${platformInfo}
 

@@ -33,22 +33,39 @@ export async function generateSocialHooks(
     // Log the request details for debugging
     console.log('Sending request to social-hook-agent with cache buster:', cacheBuster);
     
-    // Call the social-hook-agent edge function
-    const { data, error } = await supabase.functions.invoke('social-hook-agent', {
-      body: {
+    // Call the social-hook-agent edge function with direct URL to avoid caching
+    const directUrl = `https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/social-hook-agent?_nocache=${Date.now()}`;
+    const { data: { session } } = await supabase.auth.getSession();
+    const accessToken = session?.access_token || '';
+    
+    const response = await fetch(directUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'X-Cache-Buster': cacheBuster,
+        'X-Timestamp': timestamp
+      },
+      body: JSON.stringify({
         targetAudience: targetAudienceData,
         advertisingGoal,
         platform,
         cacheBuster,
         timestamp,
         test: process.env.NODE_ENV === 'development' // Add test flag in development
-      }
+      })
     });
     
-    if (error) {
-      console.error('Error generating social hooks:', error);
-      throw new Error(`Błąd podczas generowania hooków: ${error.message}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Error response from social-hook-agent:', errorText);
+      throw new Error(`Błąd podczas generowania hooków: Status ${response.status} - ${errorText.substring(0, 100)}`);
     }
+    
+    const data = await response.json();
     
     // Validate response data
     if (!data) {

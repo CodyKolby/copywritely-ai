@@ -9,7 +9,7 @@ import { processHookResponse, constructHookPrompt } from "./hook-service.ts";
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
 // Version tracking to help detect updates
-const FUNCTION_VERSION = "v1.2.1"; // Zwiększona wersja po poprawce zmiennych
+const FUNCTION_VERSION = "v1.3.0"; // Zwiększona wersja po poprawce używania promptów z sekretów
 
 // Generate a deployment ID to track specific deployments
 const DEPLOYMENT_ID = generateDeploymentId();
@@ -37,6 +37,7 @@ console.log(`[STARTUP][${DEPLOYMENT_ID}] SocialHookAgent initialized with versio
 console.log(`[STARTUP][${DEPLOYMENT_ID}] Using prompt from environment: ${envPrompt ? 'YES' : 'NO'}`);
 console.log(`[STARTUP][${DEPLOYMENT_ID}] System prompt length: ${SYSTEM_PROMPT.length} characters`);
 console.log(`[STARTUP][${DEPLOYMENT_ID}] System prompt first 100 chars: "${SYSTEM_PROMPT.substring(0, 100)}..."`);
+console.log(`[STARTUP][${DEPLOYMENT_ID}] FULL SYSTEM PROMPT: ${SYSTEM_PROMPT}`);
 
 serve(async (req) => {
   const requestId = crypto.randomUUID();
@@ -92,7 +93,9 @@ serve(async (req) => {
     
     // Log prompt information
     console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT LENGTH: ${SYSTEM_PROMPT.length} characters`);
+    console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT FULL: ${SYSTEM_PROMPT}`);
     console.log(`[${startTime}][REQ:${requestId}] USER PROMPT LENGTH: ${userPrompt.length} characters`);
+    console.log(`[${startTime}][REQ:${requestId}] USER PROMPT FULL: ${userPrompt}`);
     
     // Add anti-caching measures
     const requestTimestamp = timestamp || startTime;
@@ -113,6 +116,7 @@ serve(async (req) => {
     // Log complete response for debugging
     console.log(`[${startTime}][REQ:${requestId}] Raw SocialHookAgent response length: ${responseText.length} chars`);
     console.log(`[${startTime}][REQ:${requestId}] Raw response preview: ${responseText.substring(0, 200)}...`);
+    console.log(`[${startTime}][REQ:${requestId}] Raw response FULL: ${responseText}`);
     
     // Process response to extract hooks, theme, and form
     let processedResponse = processHookResponse(responseText);

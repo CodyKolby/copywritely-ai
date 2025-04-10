@@ -36,28 +36,27 @@ export function constructContentPrompt(
   `;
   
   // Create base prompt template
-  let promptTemplate = `
+  let prompt = `
 ${debugSection}
 
-Dane z ankiety klienta: {surveyData}
+Dane z ankiety klienta: 
+${surveyData}
 
-Gotowy HOOK: {selectedHook}
+Gotowy HOOK: 
+${hookToUse}
 
-Temat posta: {postTheme}
+Temat posta: 
+${postTheme}
 
-Cel posta: {platformInfo}
+Cel posta: 
+${platformInfo}
 
-Forma: ${hookOutput?.form || 'post tekstowy'}
+Forma: 
+${hookOutput?.form || 'post tekstowy'}
 
-Wezwanie do działania: ${hookOutput?.cta || 'Sprawdź więcej'}
+Wezwanie do działania: 
+${hookOutput?.cta || 'Sprawdź więcej'}
   `;
-  
-  // Explicitly replace template variables with actual values
-  let prompt = promptTemplate
-    .replace('{surveyData}', surveyData)
-    .replace('{selectedHook}', hookToUse)
-    .replace('{postTheme}', postTheme)
-    .replace('{platformInfo}', platformInfo);
   
   // Log the constructed prompt for debugging - dodajemy pełny log
   console.log(`[Content Prompt] FULL PROMPT:\n${prompt}`);
