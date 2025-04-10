@@ -58,6 +58,7 @@ export async function generateSocialHooks(
         platform,
         cacheBuster,
         timestamp,
+        forcePromptRefresh: true, // Force prompt refresh
         testMode: process.env.NODE_ENV === 'development' // Add test flag in development
       })
     });

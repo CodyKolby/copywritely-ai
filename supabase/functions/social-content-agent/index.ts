@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders, handleOptions } from "../shared/cors.ts";
@@ -8,7 +9,7 @@ import { constructContentPrompt } from "./content-service.ts";
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
 // Version tracking to help detect updates
-const FUNCTION_VERSION = "v1.5.0"; 
+const FUNCTION_VERSION = "v1.6.0"; 
 
 // Generate a deployment ID to track specific deployments
 const DEPLOYMENT_ID = generateDeploymentId();
@@ -24,32 +25,17 @@ Na końcu dodaj sugerowane przez hooka wezwanie do działania.
 Zwróć sam tekst posta bez żadnych dodatkowych komentarzy czy formatowania.
 `;
 
-// Function to get the prompt from environment or use hardcoded default
+// THIS IS IMPORTANT: We'll only use hardcoded prompt to ensure consistent behavior
 function getSystemPrompt(): string {
-  try {
-    // Try to get from environment
-    const envPrompt = Deno.env.get('SOCIAL_CONTENT_PROMPT');
-    
-    // Check if exists and has content
-    if (envPrompt && envPrompt.trim().length > 10) {
-      console.log(`[${getCurrentTimestamp()}] Using SOCIAL_CONTENT_PROMPT from environment (${envPrompt.length} chars)`);
-      return envPrompt;
-    }
-    
-    // Otherwise use hardcoded
-    console.log(`[${getCurrentTimestamp()}] Environment variable not found or too short, using hardcoded prompt (${HARDCODED_PROMPT.length} chars)`);
-    return HARDCODED_PROMPT;
-  } catch (err) {
-    console.error(`[${getCurrentTimestamp()}] Error accessing environment variables:`, err);
-    return HARDCODED_PROMPT;
-  }
+  console.log(`[${getCurrentTimestamp()}] USING HARDCODED PROMPT ONLY - NO ENV VARIABLES`);
+  console.log(`[${getCurrentTimestamp()}] Prompt length: ${HARDCODED_PROMPT.length} characters`);
+  return HARDCODED_PROMPT;
 }
 
 // Log startup information
 console.log(`[STARTUP][${DEPLOYMENT_ID}] SocialContentAgent initialized with version ${FUNCTION_VERSION}`);
-console.log(`[STARTUP][${DEPLOYMENT_ID}] Available environment variable keys:`, Object.keys(Deno.env.toObject()));
-console.log(`[STARTUP][${DEPLOYMENT_ID}] SOCIAL_CONTENT_PROMPT exists:`, Deno.env.get('SOCIAL_CONTENT_PROMPT') !== undefined);
-console.log(`[STARTUP][${DEPLOYMENT_ID}] SOCIAL_CONTENT_PROMPT empty:`, Deno.env.get('SOCIAL_CONTENT_PROMPT') === "");
+console.log(`[STARTUP][${DEPLOYMENT_ID}] USING HARDCODED PROMPT ONLY - Function will ignore env variables`);
+console.log(`[STARTUP][${DEPLOYMENT_ID}] Hardcoded prompt length: ${HARDCODED_PROMPT.length} characters`);
 
 serve(async (req) => {
   const requestId = crypto.randomUUID();
@@ -101,13 +87,13 @@ serve(async (req) => {
       );
     }
     
-    // Get the system prompt (from environment or hardcoded)
+    // Get the system prompt (hardcoded only)
     const SYSTEM_PROMPT = getSystemPrompt();
     
     // Log prompt information
     console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT LENGTH: ${SYSTEM_PROMPT.length} characters`);
-    console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT FIRST 50 CHARS: ${SYSTEM_PROMPT.substring(0, 50)}...`);
-    console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT SOURCE: ${SYSTEM_PROMPT === HARDCODED_PROMPT ? 'HARDCODED' : 'ENVIRONMENT'}`);
+    console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT FIRST 100 CHARS: ${SYSTEM_PROMPT.substring(0, 100)}...`);
+    console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT SOURCE: HARDCODED - ENV VARIABLES IGNORED`);
     
     // Print hook output for debugging
     console.log(`[${startTime}][REQ:${requestId}] Hook output details:`, {
@@ -154,17 +140,14 @@ serve(async (req) => {
       form: hookOutput.form || 'post tekstowy',
       cta: hookOutput.cta || 'Sprawdź więcej',
       platform: platform || 'Meta (Instagram/Facebook)',
-      promptSource: SYSTEM_PROMPT === HARDCODED_PROMPT ? 'hardcoded' : 'environment',
+      promptSource: 'HARDCODED_ONLY',
       promptUsed: SYSTEM_PROMPT.substring(0, 100) + "...",
       debug: {
-        systemPromptSource: SYSTEM_PROMPT === HARDCODED_PROMPT ? 'hardcoded' : 'environment',
+        systemPromptSource: 'HARDCODED_ONLY - ENV VARIABLES IGNORED',
         systemPromptLength: SYSTEM_PROMPT.length,
-        envVarExists: Deno.env.get('SOCIAL_CONTENT_PROMPT') !== undefined,
-        envVarEmpty: Deno.env.get('SOCIAL_CONTENT_PROMPT') === "",
-        envVarLength: (Deno.env.get('SOCIAL_CONTENT_PROMPT') || "").length,
-        usingEnvPrompt: SYSTEM_PROMPT !== HARDCODED_PROMPT,
         timestamp: startTime,
-        promptFirstChars: SYSTEM_PROMPT.substring(0, 50)
+        functionVersion: FUNCTION_VERSION,
+        promptFirstChars: SYSTEM_PROMPT.substring(0, 100)
       },
       version: FUNCTION_VERSION,
       deploymentId: DEPLOYMENT_ID,
@@ -196,9 +179,7 @@ serve(async (req) => {
       deploymentId: DEPLOYMENT_ID,
       version: FUNCTION_VERSION,
       debug: {
-        envVarExists: Deno.env.get('SOCIAL_CONTENT_PROMPT') !== undefined,
-        envVarEmpty: Deno.env.get('SOCIAL_CONTENT_PROMPT') === "",
-        envVarLength: (Deno.env.get('SOCIAL_CONTENT_PROMPT') || "").length
+        promptSource: 'HARDCODED_ONLY - ENV VARIABLES IGNORED'
       }
     });
   }

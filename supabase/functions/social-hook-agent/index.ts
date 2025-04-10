@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders, handleOptions } from "../shared/cors.ts";
@@ -8,7 +9,7 @@ import { processHookResponse, constructHookPrompt } from "./hook-service.ts";
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
 // Version tracking to help detect updates - increment this when making changes
-const FUNCTION_VERSION = "v1.5.0";
+const FUNCTION_VERSION = "v1.6.0";
 
 // Generate a deployment ID to track specific deployments
 const DEPLOYMENT_ID = generateDeploymentId();
@@ -41,32 +42,17 @@ Hooks powinny być:
 - Budzące emocje (ciekawość, zaskoczenie)
 `;
 
-// Function to get the prompt from environment or use hardcoded default
+// THIS IS IMPORTANT: We'll only use hardcoded prompt to ensure consistent behavior
 function getSystemPrompt(): string {
-  try {
-    // Try to get from environment
-    const envPrompt = Deno.env.get('SOCIAL_HOOK_PROMPT');
-    
-    // Check if exists and has content
-    if (envPrompt && envPrompt.trim().length > 10) {
-      console.log(`[${getCurrentTimestamp()}] Using SOCIAL_HOOK_PROMPT from environment (${envPrompt.length} chars)`);
-      return envPrompt;
-    }
-    
-    // Otherwise use hardcoded
-    console.log(`[${getCurrentTimestamp()}] Environment variable not found or too short, using hardcoded prompt (${HARDCODED_PROMPT.length} chars)`);
-    return HARDCODED_PROMPT;
-  } catch (err) {
-    console.error(`[${getCurrentTimestamp()}] Error accessing environment variables:`, err);
-    return HARDCODED_PROMPT;
-  }
+  console.log(`[${getCurrentTimestamp()}] USING HARDCODED PROMPT ONLY - NO ENV VARIABLES`);
+  console.log(`[${getCurrentTimestamp()}] Prompt length: ${HARDCODED_PROMPT.length} characters`);
+  return HARDCODED_PROMPT;
 }
 
 // Log startup information
 console.log(`[STARTUP][${DEPLOYMENT_ID}] SocialHookAgent initialized with version ${FUNCTION_VERSION}`);
-console.log(`[STARTUP][${DEPLOYMENT_ID}] Available environment variable keys:`, Object.keys(Deno.env.toObject()));
-console.log(`[STARTUP][${DEPLOYMENT_ID}] SOCIAL_HOOK_PROMPT exists:`, Deno.env.get('SOCIAL_HOOK_PROMPT') !== undefined);
-console.log(`[STARTUP][${DEPLOYMENT_ID}] SOCIAL_HOOK_PROMPT empty:`, Deno.env.get('SOCIAL_HOOK_PROMPT') === "");
+console.log(`[STARTUP][${DEPLOYMENT_ID}] USING HARDCODED PROMPT ONLY - Function will ignore env variables`);
+console.log(`[STARTUP][${DEPLOYMENT_ID}] Hardcoded prompt length: ${HARDCODED_PROMPT.length} characters`);
 
 serve(async (req) => {
   const requestId = crypto.randomUUID();
@@ -95,13 +81,13 @@ serve(async (req) => {
       );
     }
     
-    // Get the system prompt (from environment or hardcoded)
+    // Get the system prompt (hardcoded only)
     const SYSTEM_PROMPT = getSystemPrompt();
     
     // Log prompt information
     console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT LENGTH: ${SYSTEM_PROMPT.length} characters`);
-    console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT FIRST 50 CHARS: ${SYSTEM_PROMPT.substring(0, 50)}...`);
-    console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT SOURCE: ${SYSTEM_PROMPT === HARDCODED_PROMPT ? 'HARDCODED' : 'ENVIRONMENT'}`);
+    console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT FIRST 100 CHARS: ${SYSTEM_PROMPT.substring(0, 100)}...`);
+    console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT SOURCE: HARDCODED - ENV VARIABLES IGNORED`);
     
     // Construct user prompt
     const userPrompt = constructHookPrompt(requestData, requestId, DEPLOYMENT_ID, FUNCTION_VERSION);
@@ -133,25 +119,23 @@ serve(async (req) => {
     // Add test hooks for verification purposes
     if (requestData.testMode === true || requestData.test === true) {
       console.log(`[${startTime}][REQ:${requestId}] Test mode detected, adding test hooks`);
-      processedResponse.hooks.push("TESTHOOK4");
+      processedResponse.hooks.push("TEST_HOOK_HARDCODED_v1.6.0");
       processedResponse.testMode = true;
     }
     
     // Add metadata
     processedResponse.version = FUNCTION_VERSION;
     processedResponse.deploymentId = DEPLOYMENT_ID;
-    processedResponse.promptSource = SYSTEM_PROMPT === HARDCODED_PROMPT ? 'hardcoded' : 'environment';
+    processedResponse.promptSource = 'HARDCODED_ONLY';
     processedResponse.promptUsed = SYSTEM_PROMPT.substring(0, 100) + "...";
     processedResponse.requestId = requestId;
     
     // Add debug information
     processedResponse.debug = {
-      envVarExists: Deno.env.get('SOCIAL_HOOK_PROMPT') !== undefined,
-      envVarEmpty: Deno.env.get('SOCIAL_HOOK_PROMPT') === "",
-      envVarLength: (Deno.env.get('SOCIAL_HOOK_PROMPT') || "").length,
-      usingEnvPrompt: SYSTEM_PROMPT !== HARDCODED_PROMPT,
+      promptSource: 'HARDCODED_ONLY - ENV VARIABLES IGNORED',
       timestamp: startTime,
-      promptFirstChars: SYSTEM_PROMPT.substring(0, 50)
+      functionVersion: FUNCTION_VERSION,
+      promptFirstChars: SYSTEM_PROMPT.substring(0, 100)
     };
     
     return new Response(
@@ -177,8 +161,7 @@ serve(async (req) => {
       timestamp: timestamp,
       requestId: requestId,
       debug: {
-        envVarExists: Deno.env.get('SOCIAL_HOOK_PROMPT') !== undefined,
-        envVarEmpty: Deno.env.get('SOCIAL_HOOK_PROMPT') === ""
+        promptSource: 'HARDCODED_ONLY - ENV VARIABLES IGNORED'
       }
     });
   }
