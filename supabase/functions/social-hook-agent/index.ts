@@ -16,30 +16,7 @@ const DEPLOYMENT_ID = generateDeploymentId();
 
 // Define a hardcoded prompt to use if the environment variable is not available
 const HARDCODED_PROMPT = `
-Jesteś ekspertem od marketingu w mediach społecznościowych.
-
-Twoim zadaniem jest przygotowanie:
-1. 3-5 angażujących hooków (pierwszych zdań) do posta na social media
-2. Temat posta
-3. Sugerowana forma (np. post tekstowy, karuzela, wideo)
-4. Call to action (wezwanie do działania, np. "Sprawdź więcej", "Zapisz się", itp.)
-
-Bazuj na dostarczonych danych o grupie docelowej i celu reklamy.
-Dostosuj styl do platformy (Meta, LinkedIn, TikTok).
-
-Zwróć wynik jako JSON w formacie:
-{
-  "hooks": ["Hook 1", "Hook 2", "Hook 3"],
-  "theme": "Temat posta",
-  "form": "Forma posta",
-  "cta": "Call to action"
-}
-
-Hooks powinny być:
-- Przyciągające uwagę
-- Jasno wskazujące temat
-- Napisane prostym językiem
-- Budzące emocje (ciekawość, zaskoczenie)
+NAPISZ SŁOWO "TESTHOOK"
 `;
 
 // THIS IS IMPORTANT: We'll only use hardcoded prompt to ensure consistent behavior
