@@ -40,7 +40,7 @@ export async function generateSocialHooks(
     const accessToken = session?.access_token || '';
     
     // Use the most direct URL possible with clear cache busting appended to URL
-    const directUrl = `https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/social-hook-agent?_nocache=${Date.now()}-${randomValue}`;
+    const directUrl = `https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/social-hook-agent?_nocache=${Date.now()}-${randomValue}-${Math.random()}`;
     
     console.log(`Sending request to social-hook-agent at ${timestamp}`);
     console.log(`Direct URL with cache busting: ${directUrl}`);
@@ -58,7 +58,7 @@ export async function generateSocialHooks(
         'X-Timestamp': timestamp,
         'X-Random': randomValue,
         'X-No-Cache': 'true',
-        'X-Client-Info': `v1.8.0-${Date.now()}`
+        'X-Client-Info': `v1.9.0-${Date.now()}`
       },
       body: JSON.stringify({
         targetAudience: targetAudienceData,
@@ -69,7 +69,7 @@ export async function generateSocialHooks(
         randomValue,
         forcePromptRefresh: true, 
         testMode: process.env.NODE_ENV === 'development',
-        clientVersion: 'v1.8.0'
+        clientVersion: 'v1.9.0'
       })
     });
     
@@ -90,7 +90,14 @@ export async function generateSocialHooks(
     console.log('Version from response:', data.version);
     console.log('Deployment ID from response:', data.deploymentId);
     console.log('Prompt source from response:', data.promptSource);
+    console.log('All hooks:', data.hooks);
     console.log('Debug info from response:', data.debug);
+    
+    // Make sure we have only 1 hook
+    if (data && data.hooks && data.hooks.length > 1) {
+      console.log('Multiple hooks detected in response, keeping only the first one');
+      data.hooks = [data.hooks[0]];
+    }
     
     // Check for environment variables that might be overriding our settings
     console.log('Environment variables check:', {

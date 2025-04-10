@@ -20,6 +20,8 @@ export interface SocialContentResponse {
     requestId?: string;
     functionVersion?: string;
     promptFullText?: string;
+    selectedHookText?: string;
+    receivedHooks?: string[];
   };
   error?: string;
 }
@@ -54,14 +56,22 @@ export async function generateSocialContent(
       throw new Error('Brak prawidłowych danych o hookach');
     }
     
+    // NEW: Ensure we only pass the first hook (even if there are more)
+    const simplifiedHookOutput = {
+      ...hookOutput,
+      hooks: hookOutput.hooks.length > 0 ? [hookOutput.hooks[0]] : hookOutput.hooks,
+      version: hookOutput.version || 'v1.9.0',
+      promptSource: hookOutput.promptSource || 'HARDCODED_IN_CODE'
+    };
+    
     // Log the hook data for debugging
     console.log('Hook data being sent to content agent:', {
-      hooks: hookOutput.hooks,
-      theme: hookOutput.theme,
-      form: hookOutput.form,
-      selectedHook: selectedHook || hookOutput.hooks[0],
-      version: hookOutput.version,
-      promptSource: hookOutput.promptSource
+      hooks: simplifiedHookOutput.hooks,
+      theme: simplifiedHookOutput.theme,
+      form: simplifiedHookOutput.form,
+      selectedHook: selectedHook || simplifiedHookOutput.hooks[0],
+      version: simplifiedHookOutput.version,
+      promptSource: simplifiedHookOutput.promptSource
     });
     
     // Get authentication token
@@ -69,7 +79,7 @@ export async function generateSocialContent(
     const accessToken = session?.access_token || '';
     
     // Use the most direct URL possible with clear cache busting appended to URL
-    const contentDirectUrl = `https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/social-content-agent?_nocache=${Date.now()}-${randomValue}`;
+    const contentDirectUrl = `https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/social-content-agent?_nocache=${Date.now()}-${randomValue}-${Math.random()}`;
     
     console.log(`Sending request to social-content-agent at ${timestamp}`);
     console.log(`Direct URL with cache busting: ${contentDirectUrl}`);
@@ -87,12 +97,12 @@ export async function generateSocialContent(
         'X-Timestamp': timestamp,
         'X-Random': randomValue,
         'X-No-Cache': 'true',
-        'X-Client-Info': `v1.8.0-${Date.now()}`
+        'X-Client-Info': `v1.9.0-${Date.now()}`
       },
       body: JSON.stringify({
         targetAudience: targetAudienceData,
-        hookOutput,
-        selectedHook,
+        hookOutput: simplifiedHookOutput,
+        selectedHook: selectedHook || (simplifiedHookOutput.hooks && simplifiedHookOutput.hooks.length > 0 ? simplifiedHookOutput.hooks[0] : null),
         advertisingGoal,
         platform,
         cacheBuster,
@@ -100,7 +110,7 @@ export async function generateSocialContent(
         randomValue,
         testMode: process.env.NODE_ENV === 'development',
         forcePromptRefresh: true,
-        clientVersion: 'v1.8.0'
+        clientVersion: 'v1.9.0'
       })
     });
     

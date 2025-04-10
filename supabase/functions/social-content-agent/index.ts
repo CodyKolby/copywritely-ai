@@ -10,7 +10,7 @@ const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 const socialContentPrompt = Deno.env.get('SOCIAL_CONTENT_PROMPT');
 
 // Version tracking to help detect updates - ENSURE THIS IS ALWAYS UPDATED TO MATCH social-hook-agent
-const FUNCTION_VERSION = "v1.8.0"; 
+const FUNCTION_VERSION = "v1.9.0"; 
 
 // Generate a deployment ID to track specific deployments
 const DEPLOYMENT_ID = generateDeploymentId();
@@ -71,6 +71,9 @@ serve(async (req) => {
       cacheBuster: cacheBuster || 'none'
     });
     
+    // NEW: Log the full raw hookOutput to help debugging
+    console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] RAW HOOK OUTPUT:`, JSON.stringify(hookOutput));
+    
     // Input validation
     if (!targetAudience) {
       console.error(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Missing target audience data`);
@@ -97,6 +100,7 @@ serve(async (req) => {
     console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Hook response deploymentId: ${hookOutput.deploymentId || 'unknown'}`);
     console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Hook response requestId: ${hookOutput.requestId || 'unknown'}`);
     console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Hook response promptSource: ${hookOutput.promptSource || 'unknown'}`);
+    console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] FULL HOOK ARRAY:`, JSON.stringify(hookOutput.hooks));
     
     // CRITICAL: ALWAYS use hardcoded prompt - NEVER use environment variable
     const SYSTEM_PROMPT = HARDCODED_PROMPT;
@@ -108,7 +112,7 @@ serve(async (req) => {
     
     // Print hook output for debugging
     console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Hook output details:`, {
-      hooks: hookOutput.hooks?.map(h => h?.substring(0, 50)),
+      hooks: hookOutput.hooks?.map(h => `"${h}"`.substring(0, 100)),
       theme: hookOutput.theme,
       form: hookOutput.form,
       cta: hookOutput.cta
@@ -135,7 +139,8 @@ serve(async (req) => {
       headers: {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
-        'Expires': '0'
+        'Expires': '0',
+        'X-No-Cache': Date.now().toString()
       }
     });
 
@@ -147,6 +152,7 @@ serve(async (req) => {
     
     // Determine which hook was used
     const hookToUse = selectedHook || hookOutput.hooks[0];
+    console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Using hook: "${hookToUse}"`);
     
     // Create result with metadata - CRITICAL to set version and promptSource correctly
     const result = {
@@ -166,7 +172,9 @@ serve(async (req) => {
         functionVersion: FUNCTION_VERSION,
         promptFullText: SYSTEM_PROMPT,
         hookResponseVersion: hookOutput.version || 'unknown',
-        hookResponseDeploymentId: hookOutput.deploymentId || 'unknown'
+        hookResponseDeploymentId: hookOutput.deploymentId || 'unknown',
+        selectedHookText: hookToUse,
+        receivedHooks: hookOutput.hooks || []
       },
       version: FUNCTION_VERSION,
       deploymentId: DEPLOYMENT_ID,
@@ -174,7 +182,7 @@ serve(async (req) => {
     };
     
     console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Final response sent with version ${FUNCTION_VERSION}, promptSource: HARDCODED_IN_CODE`);
-    console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Response object: ${JSON.stringify(result).slice(0, 500)}...`);
+    console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Response object keys: ${Object.keys(result).join(', ')}`);
     
     return new Response(
       JSON.stringify(result),
@@ -203,7 +211,8 @@ serve(async (req) => {
       deploymentId: DEPLOYMENT_ID,
       version: FUNCTION_VERSION,
       debug: {
-        promptSource: 'HARDCODED_IN_CODE'
+        promptSource: 'HARDCODED_IN_CODE',
+        hardcodedPrompt: HARDCODED_PROMPT
       }
     });
   }
