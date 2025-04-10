@@ -39,6 +39,9 @@ export async function generateSocialHooks(
     const { data: { session } } = await supabase.auth.getSession();
     const accessToken = session?.access_token || '';
     
+    // Log the request details for debugging
+    console.log('Sending request to social-hook-agent with cache buster:', cacheBuster);
+    
     const fetchResponse = await fetch(directUrl, {
       method: 'POST',
       headers: {
