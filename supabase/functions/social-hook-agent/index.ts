@@ -9,7 +9,7 @@ import { processHookResponse, constructHookPrompt } from "./hook-service.ts";
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
 // Version tracking to help detect updates - increment this when making changes
-const FUNCTION_VERSION = "v1.7.0";
+const FUNCTION_VERSION = "v1.8.0";
 
 // Generate a deployment ID to track specific deployments
 const DEPLOYMENT_ID = generateDeploymentId();
@@ -56,7 +56,7 @@ serve(async (req) => {
     
     // Log prompt information
     console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT LENGTH: ${SYSTEM_PROMPT.length} characters`);
-    console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT FIRST 100 CHARS: ${SYSTEM_PROMPT.substring(0, 100)}...`);
+    console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT FULL:\n${SYSTEM_PROMPT}`);
     console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT SOURCE: HARDCODED IN CODE v${FUNCTION_VERSION}`);
     
     // Construct user prompt
@@ -67,6 +67,9 @@ serve(async (req) => {
     const cacheBusterValue = generateCacheBuster(requestId, DEPLOYMENT_ID);
     
     // Call OpenAI
+    console.log(`[${startTime}][REQ:${requestId}] Calling OpenAI API with model: gpt-4o-mini`);
+    console.log(`[${startTime}][REQ:${requestId}] Cache buster: ${cacheBusterValue}`);
+    
     const data = await callOpenAI(userPrompt, SYSTEM_PROMPT, openAIApiKey, {
       requestId,
       timestamp: requestTimestamp,
@@ -80,7 +83,7 @@ serve(async (req) => {
     
     // Log complete response for debugging
     console.log(`[${startTime}][REQ:${requestId}] Raw response length: ${responseText.length} chars`);
-    console.log(`[${startTime}][REQ:${requestId}] Raw response preview: ${responseText.substring(0, 200)}...`);
+    console.log(`[${startTime}][REQ:${requestId}] Raw response full:\n${responseText}`);
     
     // Process response
     const processedResponse = processHookResponse(responseText);
@@ -96,7 +99,7 @@ serve(async (req) => {
     processedResponse.version = FUNCTION_VERSION;
     processedResponse.deploymentId = DEPLOYMENT_ID;
     processedResponse.promptSource = 'HARDCODED_IN_CODE';
-    processedResponse.promptUsed = SYSTEM_PROMPT.substring(0, 100) + "...";
+    processedResponse.promptUsed = SYSTEM_PROMPT;
     processedResponse.requestId = requestId;
     
     // Add debug information
@@ -107,6 +110,8 @@ serve(async (req) => {
       promptFirstChars: SYSTEM_PROMPT.substring(0, 100),
       fullPrompt: SYSTEM_PROMPT
     };
+    
+    console.log(`[${startTime}][REQ:${requestId}] Returning processed response:`, processedResponse);
     
     return new Response(
       JSON.stringify(processedResponse),

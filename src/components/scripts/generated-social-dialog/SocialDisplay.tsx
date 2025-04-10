@@ -30,7 +30,6 @@ const SocialDisplay = ({
         
         {/* Content display */}
         <Card className="bg-white p-6">
-          <h3 className="text-sm font-medium text-gray-500 mb-2">Treść posta:</h3>
           <div className="whitespace-pre-wrap text-gray-800">
             {content}
           </div>

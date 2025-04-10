@@ -9,20 +9,20 @@ import { constructContentPrompt } from "./content-service.ts";
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
 // Version tracking to help detect updates
-const FUNCTION_VERSION = "v1.7.0"; 
+const FUNCTION_VERSION = "v1.8.0"; 
 
 // Generate a deployment ID to track specific deployments
 const DEPLOYMENT_ID = generateDeploymentId();
 
 // Define a hardcoded prompt to use
 const HARDCODED_PROMPT = `
-TWOIM ZADANIEM JEST NAPISANE "TESTSCRIPT"
+TWOIM ZADANIEM JEST NAPISANIE "TESTSCRIPT"
 `;
 
 // Log startup information
 console.log(`[STARTUP][${DEPLOYMENT_ID}] SocialContentAgent initialized with version ${FUNCTION_VERSION}`);
 console.log(`[STARTUP][${DEPLOYMENT_ID}] Using HARDCODED prompt length: ${HARDCODED_PROMPT.length} characters`);
-console.log(`[STARTUP][${DEPLOYMENT_ID}] Hardcoded prompt first 100 chars: ${HARDCODED_PROMPT.substring(0, 100)}`);
+console.log(`[STARTUP][${DEPLOYMENT_ID}] Hardcoded prompt full:\n${HARDCODED_PROMPT}`);
 
 serve(async (req) => {
   const requestId = crypto.randomUUID();
@@ -79,7 +79,7 @@ serve(async (req) => {
     
     // Log prompt information
     console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT LENGTH: ${SYSTEM_PROMPT.length} characters`);
-    console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT FIRST 100 CHARS: ${SYSTEM_PROMPT.substring(0, 100)}...`);
+    console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT FULL:\n${SYSTEM_PROMPT}`);
     console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT SOURCE: HARDCODED IN CODE v${FUNCTION_VERSION}`);
     
     // Print hook output for debugging
@@ -98,7 +98,8 @@ serve(async (req) => {
     const requestCacheBuster = generateCacheBuster(requestId, DEPLOYMENT_ID);
     
     // Call OpenAI
-    console.log(`[${startTime}][REQ:${requestId}] Sending request to OpenAI API with cache-busting parameters`);
+    console.log(`[${startTime}][REQ:${requestId}] Sending request to OpenAI API with model: gpt-4o-mini`);
+    console.log(`[${startTime}][REQ:${requestId}] Cache-busting parameters: ${requestCacheBuster}, ${currentTimestamp}`);
     
     const data = await callOpenAI(userPrompt, SYSTEM_PROMPT, openAIApiKey, {
       requestId,
@@ -113,7 +114,7 @@ serve(async (req) => {
     
     // Log response
     console.log(`[${startTime}][REQ:${requestId}] Raw response length: ${responseText.length} chars`);
-    console.log(`[${startTime}][REQ:${requestId}] Raw response preview: ${responseText.substring(0, 200)}...`);
+    console.log(`[${startTime}][REQ:${requestId}] Raw response full:\n${responseText}`);
     
     // Determine which hook was used
     const hookToUse = selectedHook || hookOutput.hooks[0];
@@ -127,13 +128,13 @@ serve(async (req) => {
       cta: hookOutput.cta || 'Sprawdź więcej',
       platform: platform || 'Meta (Instagram/Facebook)',
       promptSource: 'HARDCODED_IN_CODE',
-      promptUsed: SYSTEM_PROMPT.substring(0, 100) + "...",
+      promptUsed: SYSTEM_PROMPT,
       debugInfo: {
         systemPromptSource: 'HARDCODED_IN_CODE',
         systemPromptLength: SYSTEM_PROMPT.length,
         timestamp: startTime,
         functionVersion: FUNCTION_VERSION,
-        promptFirstChars: SYSTEM_PROMPT.substring(0, 100),
+        promptFullText: SYSTEM_PROMPT,
         fullPrompt: SYSTEM_PROMPT
       },
       version: FUNCTION_VERSION,
@@ -141,7 +142,7 @@ serve(async (req) => {
       requestId: requestId
     };
     
-    console.log(`[${startTime}][REQ:${requestId}] Final response sent with content length: ${result.content.length} chars`);
+    console.log(`[${startTime}][REQ:${requestId}] Final response sent:`, result);
     
     return new Response(
       JSON.stringify(result),
