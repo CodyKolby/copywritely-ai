@@ -1,4 +1,3 @@
-
 // Function for generating hooks based on processed audience data
 export async function generateHooks(hookData: string, openAIApiKey: string): Promise<{ allHooks: string; rankedHooks: string[] } | null> {
   console.log('✏️ Generuję hooki reklamowe na podstawie przetworzonych danych');

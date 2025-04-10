@@ -1,100 +1,97 @@
 
-import { corsHeaders } from "./cors.ts";
+// OpenAI API functions
 
-// Function to call OpenAI API
 export async function callOpenAI(
-  prompt: string, 
+  userPrompt: string, 
   systemPrompt: string, 
-  openAIApiKey: string, 
-  requestMetadata: {
-    requestId: string;
-    timestamp: string;
-    cacheBuster: string;
-    deploymentId: string;
-    functionVersion: string;
+  openAIApiKey: string,
+  metadata: {
+    requestId: string,
+    timestamp: string,
+    cacheBuster: string,
+    deploymentId: string,
+    functionVersion: string,
+    model?: string
   }
 ) {
-  const { requestId, timestamp, cacheBuster, deploymentId, functionVersion } = requestMetadata;
+  if (!openAIApiKey) {
+    throw new Error('OpenAI API key not found');
+  }
   
-  console.log(`[OpenAI Request][${requestId}] Calling OpenAI API with system prompt (first 100 chars): ${systemPrompt.substring(0, 100)}...`);
-  console.log(`[OpenAI Request][${requestId}] Using model: gpt-4o`);
+  const { 
+    requestId,
+    timestamp, 
+    cacheBuster, 
+    deploymentId, 
+    functionVersion,
+    model = 'gpt-4o-mini' // Default to gpt-4o-mini if not specified
+  } = metadata;
+  
+  console.log(`[${timestamp}][REQ:${requestId}] Calling OpenAI API with model: ${model}`);
+  console.log(`[${timestamp}][REQ:${requestId}] Cache buster: ${cacheBuster}`);
+  
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${openAIApiKey}`,
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'X-Request-ID': requestId,
+      'X-Timestamp': timestamp,
+      'X-Cache-Buster': cacheBuster,
+      'X-Deployment-ID': deploymentId,
+      'X-Function-Version': functionVersion
+    },
+    body: JSON.stringify({
+      model: model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ],
+      temperature: 0.7,
+    }),
+  });
 
-  try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-        'X-Cache-Buster': cacheBuster,
-        'X-Timestamp': timestamp,
-        'X-Random': Math.random().toString(36).substring(2, 15),
-        'X-Request-ID': requestId,
-        'X-Deployment-ID': deploymentId,
-        'X-Function-Version': functionVersion
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.7,
-      }),
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    console.error(`[${timestamp}][REQ:${requestId}] OpenAI API error:`, {
+      status: response.status,
+      error: errorData
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      let errorData;
-      
-      try {
-        errorData = JSON.parse(errorText);
-      } catch {
-        errorData = { error: { message: errorText } };
-      }
-      
-      console.error(`[OpenAI Error][${requestId}] API returned status ${response.status}: ${errorData.error?.message || 'Unknown error'}`);
-      throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'} (Status ${response.status})`);
-    }
-
+    throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
+  }
+  
+  try {
     const data = await response.json();
-    console.log(`[OpenAI Success][${requestId}] Response received with ${data.choices?.length || 0} choices`);
-    
-    // Log part of the response for debugging
-    if (data.choices && data.choices.length > 0 && data.choices[0].message) {
-      const content = data.choices[0].message.content;
-      console.log(`[OpenAI Response][${requestId}] First 200 chars of content: ${content.substring(0, 200)}...`);
-    }
-    
+    console.log(`[${timestamp}][REQ:${requestId}] OpenAI response received, model used: ${data.model}`);
+    console.log(`[${timestamp}][REQ:${requestId}] Response length: ${data.choices[0].message.content.length} chars`);
     return data;
   } catch (error) {
-    console.error(`[OpenAI Exception][${requestId}] Error calling OpenAI API:`, error);
-    throw error;
+    console.error(`[${timestamp}][REQ:${requestId}] Error parsing OpenAI response:`, error);
+    throw new Error(`Error parsing OpenAI response: ${error.message}`);
   }
 }
 
-// Create an error response
-export function createErrorResponse(error: Error, metadata: any) {
-  const errorMessage = error.message || "Unknown error";
-  console.error(`Creating error response: ${errorMessage}`, metadata);
-  
+export function createErrorResponse(error: any, metadata: any) {
   return new Response(
-    JSON.stringify({ 
-      error: errorMessage, 
-      ...metadata,
-      timestamp: new Date().toISOString()
+    JSON.stringify({
+      error: error.message || "Unknown error",
+      timestamp: metadata.timestamp,
+      requestId: metadata.requestId,
+      ...metadata
     }),
-    { 
-      status: 500, 
-      headers: { 
-        ...corsHeaders, 
+    {
+      status: 500,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
         'Content-Type': 'application/json',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
         'Expires': '0'
-      } 
+      }
     }
   );
 }

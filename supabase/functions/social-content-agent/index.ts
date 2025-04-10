@@ -125,7 +125,8 @@ serve(async (req) => {
       timestamp: currentTimestamp,
       cacheBuster: requestCacheBuster,
       deploymentId: DEPLOYMENT_ID,
-      functionVersion: FUNCTION_VERSION
+      functionVersion: FUNCTION_VERSION,
+      model: 'gpt-4o-mini'  // Explicitly setting model here
     });
 
     const responseText = data.choices[0].message.content;

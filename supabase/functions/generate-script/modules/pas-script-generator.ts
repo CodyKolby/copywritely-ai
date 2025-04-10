@@ -1,4 +1,3 @@
-
 // Function for generating PAS script based on best hook, advertising goal and script data
 export async function generatePASScript(
   bestHook: string, 
