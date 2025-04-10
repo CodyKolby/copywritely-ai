@@ -16,13 +16,7 @@ const DEPLOYMENT_ID = generateDeploymentId();
 
 // Define a hardcoded prompt to use if the environment variable is not available
 const HARDCODED_PROMPT = `
-Jesteś ekspertem od tworzenia treści na social media.
-Twoim zadaniem jest napisać angażujący post bazujący na dostarczonym hooku i tematyce.
-Dostosuj styl i długość do wskazanej platformy (np. krótki i dynamiczny dla TikToka, profesjonalny dla LinkedIn).
-Post powinien być napisany prostym językiem, bez żargonu branżowego.
-Wykorzystaj przesłane dane o grupie docelowej, aby dopasować komunikat do jej potrzeb i problemów.
-Na końcu dodaj sugerowane przez hooka wezwanie do działania.
-Zwróć sam tekst posta bez żadnych dodatkowych komentarzy czy formatowania.
+NAPISZ SŁOWO "TESTSCRIPT"
 `;
 
 // THIS IS IMPORTANT: We'll only use hardcoded prompt to ensure consistent behavior
