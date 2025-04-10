@@ -24,7 +24,7 @@ export function constructContentPrompt(
   
   // Create debug information for troubleshooting
   const debugSection = `
-  --- DEBUG INFO ---
+  --- DEBUG INFO v${functionVersion} ---
   Timestamp: ${currentTimestamp}
   Request ID: ${requestId}
   Deployment ID: ${deploymentId}
@@ -59,8 +59,8 @@ ${hookOutput?.cta || 'Sprawdź więcej'}
   `;
   
   // Log the constructed prompt for debugging - dodajemy pełny log
-  console.log(`[Content Prompt] FULL PROMPT:\n${prompt}`);
-  console.log(`[Content Prompt] Constructed prompt with variables replaced:`, prompt.substring(0, 200) + '...');
+  console.log(`[Content Prompt][${requestId}][${functionVersion}] FULL PROMPT:\n${prompt}`);
+  console.log(`[Content Prompt][${requestId}][${functionVersion}] Constructed prompt with variables replaced:`, prompt.substring(0, 200) + '...');
   
   return prompt;
 }

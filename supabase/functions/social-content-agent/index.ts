@@ -9,35 +9,36 @@ import { constructContentPrompt } from "./content-service.ts";
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 const socialContentPrompt = Deno.env.get('SOCIAL_CONTENT_PROMPT');
 
-// Version tracking to help detect updates
+// Version tracking to help detect updates - ENSURE THIS IS ALWAYS UPDATED TO MATCH social-hook-agent
 const FUNCTION_VERSION = "v1.8.0"; 
 
 // Generate a deployment ID to track specific deployments
 const DEPLOYMENT_ID = generateDeploymentId();
 
-// Define a hardcoded prompt to use
+// Define a hardcoded prompt to use - CRITICAL: This is the only prompt that should be used
 const HARDCODED_PROMPT = `
 TWOIM ZADANIEM JEST NAPISANIE "TESTSCRIPT"
 `;
 
-// Log startup information
-console.log(`[STARTUP][${DEPLOYMENT_ID}] SocialContentAgent initialized with version ${FUNCTION_VERSION}`);
-console.log(`[STARTUP][${DEPLOYMENT_ID}] Using HARDCODED prompt length: ${HARDCODED_PROMPT.length} characters`);
-console.log(`[STARTUP][${DEPLOYMENT_ID}] Hardcoded prompt full:\n${HARDCODED_PROMPT}`);
+// Log startup information with clear identifiers
+console.log(`[STARTUP][${DEPLOYMENT_ID}][${FUNCTION_VERSION}] SocialContentAgent initialized with version ${FUNCTION_VERSION}`);
+console.log(`[STARTUP][${DEPLOYMENT_ID}][${FUNCTION_VERSION}] Using HARDCODED prompt length: ${HARDCODED_PROMPT.length} characters`);
+console.log(`[STARTUP][${DEPLOYMENT_ID}][${FUNCTION_VERSION}] Hardcoded prompt full:\n${HARDCODED_PROMPT}`);
 
-// Check if there's an environment variable prompt
+// Check if there's an environment variable prompt - log info but WE WILL NOT USE IT
 if (socialContentPrompt) {
-  console.log(`[STARTUP][${DEPLOYMENT_ID}] Found SOCIAL_CONTENT_PROMPT env variable of length: ${socialContentPrompt.length}`);
-  console.log(`[STARTUP][${DEPLOYMENT_ID}] ENV prompt first 100 chars: ${socialContentPrompt.substring(0, 100)}`);
+  console.log(`[STARTUP][${DEPLOYMENT_ID}][${FUNCTION_VERSION}] Found SOCIAL_CONTENT_PROMPT env variable of length: ${socialContentPrompt.length}`);
+  console.log(`[STARTUP][${DEPLOYMENT_ID}][${FUNCTION_VERSION}] ENV prompt first 100 chars: ${socialContentPrompt.substring(0, 100)}`);
+  console.log(`[STARTUP][${DEPLOYMENT_ID}][${FUNCTION_VERSION}] !!! IMPORTANT: We will IGNORE this and use HARDCODED_PROMPT instead !!!`);
 } else {
-  console.log(`[STARTUP][${DEPLOYMENT_ID}] No SOCIAL_CONTENT_PROMPT env variable found, using hardcoded prompt`);
+  console.log(`[STARTUP][${DEPLOYMENT_ID}][${FUNCTION_VERSION}] No SOCIAL_CONTENT_PROMPT env variable found, using hardcoded prompt`);
 }
 
 serve(async (req) => {
   const requestId = crypto.randomUUID();
   const startTime = getCurrentTimestamp();
-  console.log(`[${startTime}][REQ:${requestId}] SocialContentAgent received request:`, req.method, req.url);
-  console.log(`[${startTime}][REQ:${requestId}] Using function version: ${FUNCTION_VERSION}, deployment: ${DEPLOYMENT_ID}`);
+  console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] SocialContentAgent received request:`, req.method, req.url);
+  console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Using function version: ${FUNCTION_VERSION}, deployment: ${DEPLOYMENT_ID}`);
   
   // Handle OPTIONS requests for CORS preflight
   const optionsResponse = handleOptions(req);
@@ -49,20 +50,20 @@ serve(async (req) => {
     req.headers.forEach((value, key) => {
       headersLog[key] = value;
     });
-    console.log(`[${startTime}][REQ:${requestId}] Request headers:`, JSON.stringify(headersLog));
+    console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Request headers:`, JSON.stringify(headersLog));
     
     // Parse request data
     const requestData = await req.json().catch(err => {
-      console.error(`[${startTime}][REQ:${requestId}] Error parsing JSON request:`, err);
+      console.error(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Error parsing JSON request:`, err);
       throw new Error("Invalid JSON in request body");
     });
     
     const { targetAudience, advertisingGoal, platform, hookOutput, cacheBuster, timestamp, selectedHook } = requestData;
     
     // Log request summary
-    console.log(`[${startTime}][REQ:${requestId}] Processing request with:`, { 
+    console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Processing request with:`, { 
       targetAudienceId: targetAudience?.id, 
-      advertisingGoal, 
+      advertisingGoal,
       platform,
       hookOutputPresent: !!hookOutput,
       selectedHook: selectedHook || (hookOutput?.hooks?.[0] || 'Brak hooka'),
@@ -72,7 +73,7 @@ serve(async (req) => {
     
     // Input validation
     if (!targetAudience) {
-      console.error(`[${startTime}][REQ:${requestId}] Missing target audience data`);
+      console.error(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Missing target audience data`);
       return new Response(
         JSON.stringify({ error: 'Brak danych o grupie docelowej' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -80,7 +81,7 @@ serve(async (req) => {
     }
     
     if (!hookOutput || !hookOutput.hooks || hookOutput.hooks.length === 0) {
-      console.error(`[${startTime}][REQ:${requestId}] Invalid or missing hook output:`, hookOutput);
+      console.error(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Invalid or missing hook output:`, hookOutput);
       return new Response(
         JSON.stringify({ 
           error: 'Brak lub nieprawidłowe dane o hookach',
@@ -91,22 +92,23 @@ serve(async (req) => {
     }
     
     // Log hook response details to see where it's coming from
-    console.log(`[${startTime}][REQ:${requestId}] Hook response version: ${hookOutput.version || 'unknown'}`);
-    console.log(`[${startTime}][REQ:${requestId}] Hook response deploymentId: ${hookOutput.deploymentId || 'unknown'}`);
-    console.log(`[${startTime}][REQ:${requestId}] Hook response requestId: ${hookOutput.requestId || 'unknown'}`);
-    console.log(`[${startTime}][REQ:${requestId}] Hook response promptSource: ${hookOutput.promptSource || 'unknown'}`);
+    console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Hook response metadata:`);
+    console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Hook response version: ${hookOutput.version || 'unknown'}`);
+    console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Hook response deploymentId: ${hookOutput.deploymentId || 'unknown'}`);
+    console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Hook response requestId: ${hookOutput.requestId || 'unknown'}`);
+    console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Hook response promptSource: ${hookOutput.promptSource || 'unknown'}`);
     
-    // Use hardcoded prompt - FORCE THIS
+    // CRITICAL: ALWAYS use hardcoded prompt - NEVER use environment variable
     const SYSTEM_PROMPT = HARDCODED_PROMPT;
     
-    // Log prompt information
-    console.log(`[${startTime}][REQ:${requestId}] PROMPT SOURCE: Hardcoded in code v${FUNCTION_VERSION}`);
-    console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT LENGTH: ${SYSTEM_PROMPT.length} characters`);
-    console.log(`[${startTime}][REQ:${requestId}] SYSTEM PROMPT FULL:\n${SYSTEM_PROMPT}`);
+    // Log prompt information with clear indicators of source
+    console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] PROMPT SOURCE: HARDCODED_IN_CODE v${FUNCTION_VERSION}`);
+    console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] SYSTEM PROMPT LENGTH: ${SYSTEM_PROMPT.length} characters`);
+    console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] SYSTEM PROMPT FULL:\n${SYSTEM_PROMPT}`);
     
     // Print hook output for debugging
-    console.log(`[${startTime}][REQ:${requestId}] Hook output details:`, {
-      hooks: hookOutput.hooks,
+    console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Hook output details:`, {
+      hooks: hookOutput.hooks?.map(h => h?.substring(0, 50)),
       theme: hookOutput.theme,
       form: hookOutput.form,
       cta: hookOutput.cta
@@ -120,8 +122,8 @@ serve(async (req) => {
     const requestCacheBuster = generateCacheBuster(requestId, DEPLOYMENT_ID);
     
     // Call OpenAI with additional headers to prevent caching
-    console.log(`[${startTime}][REQ:${requestId}] Sending request to OpenAI API with model: gpt-4o-mini`);
-    console.log(`[${startTime}][REQ:${requestId}] Cache-busting parameters: ${requestCacheBuster}, ${currentTimestamp}`);
+    console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Sending request to OpenAI API with model: gpt-4o-mini`);
+    console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Cache-busting parameters: ${requestCacheBuster}, ${currentTimestamp}`);
     
     const data = await callOpenAI(userPrompt, SYSTEM_PROMPT, openAIApiKey, {
       requestId,
@@ -140,13 +142,13 @@ serve(async (req) => {
     const responseText = data.choices[0].message.content;
     
     // Log response
-    console.log(`[${startTime}][REQ:${requestId}] Raw response length: ${responseText.length} chars`);
-    console.log(`[${startTime}][REQ:${requestId}] Raw response full:\n${responseText}`);
+    console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Raw response length: ${responseText.length} chars`);
+    console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Raw response full:\n${responseText}`);
     
     // Determine which hook was used
     const hookToUse = selectedHook || hookOutput.hooks[0];
     
-    // Create result with metadata
+    // Create result with metadata - CRITICAL to set version and promptSource correctly
     const result = {
       content: responseText,
       selectedHook: hookToUse,
@@ -160,9 +162,9 @@ serve(async (req) => {
         systemPromptSource: 'HARDCODED_IN_CODE',
         systemPromptLength: SYSTEM_PROMPT.length,
         timestamp: startTime,
+        requestId: requestId,
         functionVersion: FUNCTION_VERSION,
         promptFullText: SYSTEM_PROMPT,
-        fullPrompt: SYSTEM_PROMPT,
         hookResponseVersion: hookOutput.version || 'unknown',
         hookResponseDeploymentId: hookOutput.deploymentId || 'unknown'
       },
@@ -171,7 +173,8 @@ serve(async (req) => {
       requestId: requestId
     };
     
-    console.log(`[${startTime}][REQ:${requestId}] Final response sent:`, JSON.stringify(result));
+    console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Final response sent with version ${FUNCTION_VERSION}, promptSource: HARDCODED_IN_CODE`);
+    console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Response object: ${JSON.stringify(result).slice(0, 500)}...`);
     
     return new Response(
       JSON.stringify(result),
@@ -184,14 +187,15 @@ serve(async (req) => {
           'Expires': '0',
           'X-Function-Version': FUNCTION_VERSION,
           'X-Deployment-Id': DEPLOYMENT_ID,
-          'X-Cache-Buster': Date.now().toString()
+          'X-Cache-Buster': Date.now().toString(),
+          'X-Prompt-Source': 'HARDCODED_IN_CODE'
         } 
       }
     );
     
   } catch (error) {
     const timestamp = getCurrentTimestamp();
-    console.error(`[${timestamp}][REQ:${requestId}] Error in social-content-agent:`, error);
+    console.error(`[${timestamp}][REQ:${requestId}][${FUNCTION_VERSION}] Error in social-content-agent:`, error);
     
     return createErrorResponse(error, {
       timestamp: timestamp,

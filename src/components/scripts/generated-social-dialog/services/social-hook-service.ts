@@ -25,23 +25,25 @@ export async function generateSocialHooks(
   console.log('Generating social media hooks with parameters:', {
     targetAudienceId: targetAudienceData?.id,
     goalLength: advertisingGoal?.length || 0,
-    platform
+    platform,
+    timestamp: new Date().toISOString()
   });
   
   try {
-    // Add strong anti-caching measures with timestamp
+    // Add extremely strong anti-caching measures with multiple random values
     const timestamp = new Date().toISOString();
     const cacheBuster = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+    const randomValue = Math.random().toString(36).substring(2, 15);
     
     // Get authentication token
     const { data: { session } } = await supabase.auth.getSession();
     const accessToken = session?.access_token || '';
     
-    // Use the most direct URL possible with clear cache busting
-    const directUrl = `https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/social-hook-agent?_nocache=${Date.now()}`;
+    // Use the most direct URL possible with clear cache busting appended to URL
+    const directUrl = `https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/social-hook-agent?_nocache=${Date.now()}-${randomValue}`;
     
-    console.log(`Sending request to social-hook-agent at ${timestamp} with cache buster: ${cacheBuster}`);
-    console.log(`Direct URL: ${directUrl}`);
+    console.log(`Sending request to social-hook-agent at ${timestamp}`);
+    console.log(`Direct URL with cache busting: ${directUrl}`);
     
     // Call with aggressive anti-cache headers
     const fetchResponse = await fetch(directUrl, {
@@ -54,8 +56,9 @@ export async function generateSocialHooks(
         'Expires': '0',
         'X-Cache-Buster': cacheBuster,
         'X-Timestamp': timestamp,
-        'X-Client-Info': `v1.8.0-${Date.now()}`,
-        'X-No-Cache': 'true'
+        'X-Random': randomValue,
+        'X-No-Cache': 'true',
+        'X-Client-Info': `v1.8.0-${Date.now()}`
       },
       body: JSON.stringify({
         targetAudience: targetAudienceData,
@@ -63,6 +66,7 @@ export async function generateSocialHooks(
         platform,
         cacheBuster,
         timestamp,
+        randomValue,
         forcePromptRefresh: true, 
         testMode: process.env.NODE_ENV === 'development',
         clientVersion: 'v1.8.0'
