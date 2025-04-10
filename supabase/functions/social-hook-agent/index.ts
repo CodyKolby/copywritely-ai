@@ -77,7 +77,8 @@ serve(async (req) => {
     console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] SYSTEM PROMPT FULL:\n${SYSTEM_PROMPT}`);
     
     // Construct user prompt
-    const userPrompt = constructHookPrompt(requestData, requestId, DEPLOYMENT_ID, FUNCTION_VERSION);
+    // const userPrompt = constructHookPrompt(requestData, requestId, DEPLOYMENT_ID, FUNCTION_VERSION);
+    const userPrompt = HARDCODED_PROMPT;
     
     // Add anti-caching measures
     const requestTimestamp = timestamp || startTime;
