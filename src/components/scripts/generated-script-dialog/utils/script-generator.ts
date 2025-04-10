@@ -46,19 +46,127 @@ export const generateScript = async (
       throw new Error('Użytkownik nie jest zalogowany.');
     }
 
-    // Use the generate-script function for all templates
-    return generateOnlineAdScript(
-      targetAudience,
-      advertisingGoal,
-      hookIndex,
-      templateId,
-      accessToken
-    );
+    // Use template specific generators
+    if (templateId === 'social') {
+      return generateSocialMedia(
+        targetAudience,
+        advertisingGoal,
+        socialMediaPlatform,
+        accessToken
+      );
+    } else {
+      // Default to online ad script for other templates
+      return generateOnlineAdScript(
+        targetAudience,
+        advertisingGoal,
+        hookIndex,
+        templateId,
+        accessToken
+      );
+    }
   } catch (error: any) {
     console.error('Error generating script:', error);
     throw error;
   }
 };
+
+// Function for generating social media posts
+async function generateSocialMedia(
+  targetAudience: any,
+  advertisingGoal: string,
+  socialMediaPlatform?: SocialMediaPlatform,
+  accessToken?: string
+): Promise<ScriptGenerationResult> {
+  console.log('Używam workflow dla postów na social media');
+  
+  // Get a fresh access token
+  const { data: { session } } = await supabase.auth.getSession();
+  const freshAccessToken = session?.access_token || accessToken || '';
+
+  if (!freshAccessToken) {
+    throw new Error('Nie można uzyskać tokenu dostępu');
+  }
+
+  const platform = socialMediaPlatform?.label || 'Meta (Facebook/Instagram)';
+  const cacheBuster = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
+  
+  try {
+    // Step 1: Generate intro with social-intro-agent
+    console.log('Generowanie intro dla postu na platformę:', platform);
+    const introResponse = await fetch(`https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/social-intro-agent?_nocache=${cacheBuster}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${freshAccessToken}`,
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
+      body: JSON.stringify({
+        targetAudience,
+        advertisingGoal,
+        platform,
+        cacheBuster
+      }),
+    });
+    
+    if (!introResponse.ok) {
+      const errorText = await introResponse.text();
+      console.error('Social Intro API error:', errorText);
+      throw new Error(`Błąd podczas generowania intro: ${errorText}`);
+    }
+    
+    const introData = await introResponse.json();
+    const generatedIntro = introData.intro;
+    
+    console.log('Wygenerowano intro:', generatedIntro.substring(0, 50) + '...');
+    
+    // Step 2: Generate the full post with social-post-agent
+    console.log('Generowanie pełnej treści postu na platformę:', platform);
+    const postResponse = await fetch(`https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/social-post-agent?_nocache=${cacheBuster}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${freshAccessToken}`,
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
+      body: JSON.stringify({
+        targetAudience,
+        advertisingGoal,
+        intro: generatedIntro,
+        platform,
+        cacheBuster
+      }),
+    });
+    
+    if (!postResponse.ok) {
+      const errorText = await postResponse.text();
+      console.error('Social Post API error:', errorText);
+      throw new Error(`Błąd podczas generowania pełnego postu: ${errorText}`);
+    }
+    
+    const postData = await postResponse.json();
+    const fullPost = postData.post;
+    
+    console.log('Wygenerowano pełny post:', fullPost.substring(0, 50) + '...');
+    
+    return {
+      script: fullPost,
+      bestHook: generatedIntro,
+      allHooks: [generatedIntro],
+      currentHookIndex: 0,
+      totalHooks: 1,
+      adStructure: 'social',
+      rawResponse: fullPost,
+      debugInfo: null
+    };
+  } catch (error) {
+    console.error('Error generating social media post:', error);
+    throw error;
+  }
+}
 
 // Function for generating online ad scripts
 async function generateOnlineAdScript(
