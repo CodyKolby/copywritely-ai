@@ -33,12 +33,15 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
     isLoading,
     generatedScript,
     currentHook,
+    currentHookIndex,
+    totalHooks,
     error,
     isGeneratingNewScript,
     isSaving,
     projectSaved,
     projectId,
     handleRetry,
+    handleGenerateWithNextHook,
     handleViewProject,
   } = useScriptGeneration(open, targetAudienceId, templateId, advertisingGoal, user?.id, platform);
   
@@ -93,6 +96,9 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
               projectId={projectId}
               onViewProject={handleViewProject}
               isGeneratingNewScript={isGeneratingNewScript}
+              currentHookIndex={currentHookIndex}
+              totalHooks={totalHooks}
+              onGenerateNew={handleGenerateWithNextHook}
             />
           </>
         )}
