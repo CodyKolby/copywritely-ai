@@ -30,23 +30,24 @@ export function constructContentPrompt(
   Platform: ${platform || 'Meta (Instagram/Facebook)'}
   `;
   
-  // Create base prompt template
+  // Create prompt template with proper replacements for the new prompt format
   let prompt = `
 ${debugSection}
 
-Dane z ankiety klienta: 
+Dane z ankiety klienta (surveyData): 
 ${surveyData}
 
-Intro do posta: 
+Intro do posta (selectedHook): 
 ${finalIntro}
 
-Cel posta: 
+Cel posta (platformInfo): 
 ${platformInfo}
   `;
   
   // Log the constructed prompt for debugging
-  console.log(`[Content Prompt][${requestId}][${functionVersion}] FULL PROMPT:\n${prompt}`);
-  console.log(`[Content Prompt][${requestId}][${functionVersion}] Constructed prompt with variables replaced:`, prompt.substring(0, 200) + '...');
+  console.log(`[Content Prompt][${requestId}][${functionVersion}] Constructed prompt length: ${prompt.length}`);
+  console.log(`[Content Prompt][${requestId}][${functionVersion}] Constructed prompt first 200 chars: ${prompt.substring(0, 200)}...`);
+  console.log(`[Content Prompt][${requestId}][${functionVersion}] Constructed prompt last 200 chars: ...${prompt.substring(prompt.length - 200)}`);
   
   return prompt;
 }
