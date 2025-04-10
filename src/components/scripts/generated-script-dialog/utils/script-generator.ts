@@ -108,48 +108,19 @@ async function generateSocialMediaPost(
     cacheBuster: currentCacheBuster
   });
 
-  // CRITICAL: Force no-cache by appending a unique timestamp to the URL
-  const socialHookUrl = `https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/social-hook-agent?_nocache=${Date.now()}-${randomValue}`;
-  
   try {
-    console.log('Calling social-hook-agent with URL:', socialHookUrl);
-    
-    const socialHookResponse = await fetch(socialHookUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-        'Authorization': `Bearer ${accessToken}`,
-        'X-Cache-Buster': currentCacheBuster,
-        'X-Timestamp': currentTimestamp,
-        'X-Random': randomValue,
-        'X-No-Cache': 'true'
-      },
-      body: JSON.stringify(socialHookRequestBody),
+    // CRITICAL: Use Supabase functions.invoke instead of direct fetch
+    // This ensures proper authentication and CORS handling
+    console.log(`Invoking social-hook-agent function via Supabase SDK`);
+    const { data: socialHookData, error: socialHookError } = await supabase.functions.invoke('social-hook-agent', {
+      body: socialHookRequestBody
     });
 
-    // Log detailed response information for debugging
-    console.log('SocialHook Response Status:', socialHookResponse.status);
-    console.log('SocialHook Response Headers:', Object.fromEntries(socialHookResponse.headers.entries()));
-    
-    if (!socialHookResponse.ok) {
-      const errorText = await socialHookResponse.text();
-      console.error('SocialHook API error:', errorText);
-      
-      // Try to parse as JSON if possible
-      try {
-        const errorJson = JSON.parse(errorText);
-        console.error('SocialHook API error JSON:', errorJson);
-        throw new Error(`Błąd podczas generowania hooków: ${errorJson.error || `Status ${socialHookResponse.status}`}`);
-      } catch (e) {
-        // If not JSON or parsing error, just use the text
-        throw new Error(`Błąd podczas generowania hooków: Status ${socialHookResponse.status} - ${errorText.substring(0, 100)}`);
-      }
+    if (socialHookError) {
+      console.error('Error from social-hook-agent:', socialHookError);
+      throw new Error(`Błąd podczas generowania hooków: ${socialHookError.message}`);
     }
 
-    const socialHookData = await socialHookResponse.json();
     console.log('Step 1 Complete: SocialHook response:', socialHookData);
     
     // Enhanced validation for hook data
@@ -207,36 +178,17 @@ async function generateSocialMediaPost(
       }
     });
 
-    // Use a fresh copy of the access token to ensure it's not expired
-    const { data: { session: refreshedSession } } = await supabase.auth.getSession();
-    const refreshedAccessToken = refreshedSession?.access_token || accessToken;
-
-    // CRITICAL: Force no-cache by appending a unique timestamp to the URL
-    const socialContentUrl = `https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/social-content-agent?_nocache=${Date.now()}`;
-    
-    const socialContentResponse = await fetch(socialContentUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-        'Authorization': `Bearer ${refreshedAccessToken}`,
-        'X-Cache-Buster': newCacheBuster,
-        'X-Timestamp': newTimestamp,
-        'X-Random': newRandomValue,
-        'X-No-Cache': 'true'
-      },
-      body: JSON.stringify(socialContentRequestBody),
+    // CRITICAL: Use Supabase functions.invoke for content agent too
+    console.log(`Invoking social-content-agent function via Supabase SDK`);
+    const { data: socialContentData, error: socialContentError } = await supabase.functions.invoke('social-content-agent', {
+      body: socialContentRequestBody
     });
 
-    if (!socialContentResponse.ok) {
-      const errorText = await socialContentResponse.text();
-      console.error('SocialContent API error:', errorText);
-      throw new Error(`Błąd podczas generowania treści posta: ${errorText}`);
+    if (socialContentError) {
+      console.error('Error from social-content-agent:', socialContentError);
+      throw new Error(`Błąd podczas generowania treści posta: ${socialContentError.message}`);
     }
 
-    const socialContentData = await socialContentResponse.json();
     console.log('Step 2 Complete: SocialContentAgent full response:', socialContentData);
 
     if (!socialContentData || !socialContentData.content) {

@@ -74,32 +74,11 @@ export async function generateSocialContent(
       promptSource: simplifiedHookOutput.promptSource
     });
     
-    // Get authentication token
-    const { data: { session } } = await supabase.auth.getSession();
-    const accessToken = session?.access_token || '';
-    
-    // Use the most direct URL possible with clear cache busting appended to URL
-    const contentDirectUrl = `https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/social-content-agent?_nocache=${Date.now()}-${randomValue}-${Math.random()}`;
-    
-    console.log(`Sending request to social-content-agent at ${timestamp}`);
-    console.log(`Direct URL with cache busting: ${contentDirectUrl}`);
-    
-    // Call with aggressive anti-cache headers
-    const contentResponse = await fetch(contentDirectUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}`,
-        'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-        'X-Cache-Buster': cacheBuster,
-        'X-Timestamp': timestamp,
-        'X-Random': randomValue,
-        'X-No-Cache': 'true',
-        'X-Client-Info': `v1.9.0-${Date.now()}`
-      },
-      body: JSON.stringify({
+    // CRITICAL: Use Supabase functions.invoke instead of direct fetch
+    // This ensures proper authentication and CORS handling
+    console.log(`Invoking social-content-agent function with cacheBuster: ${cacheBuster}`);
+    const { data, error } = await supabase.functions.invoke('social-content-agent', {
+      body: {
         targetAudience: targetAudienceData,
         hookOutput: simplifiedHookOutput,
         selectedHook: selectedHook || (simplifiedHookOutput.hooks && simplifiedHookOutput.hooks.length > 0 ? simplifiedHookOutput.hooks[0] : null),
@@ -111,20 +90,13 @@ export async function generateSocialContent(
         testMode: process.env.NODE_ENV === 'development',
         forcePromptRefresh: true,
         clientVersion: 'v1.9.0'
-      })
+      }
     });
     
-    // Log response headers for debugging
-    console.log('Content Response headers:', Object.fromEntries(contentResponse.headers.entries()));
-    console.log('Content Response status:', contentResponse.status);
-    
-    if (!contentResponse.ok) {
-      const errorText = await contentResponse.text();
-      console.error('Error response from social-content-agent:', errorText);
-      throw new Error(`Błąd podczas generowania treści postu: Status ${contentResponse.status} - ${errorText.substring(0, 100)}`);
+    if (error) {
+      console.error('Error from supabase.functions.invoke social-content-agent:', error);
+      throw new Error(`Błąd podczas generowania treści postu: ${error.message}`);
     }
-    
-    const data = await contentResponse.json();
     
     // Log the full response including all metadata
     console.log('Social content generated successfully. Full response:', data);

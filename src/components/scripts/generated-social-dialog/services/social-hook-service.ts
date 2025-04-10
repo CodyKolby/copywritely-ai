@@ -35,32 +35,15 @@ export async function generateSocialHooks(
     const cacheBuster = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
     const randomValue = Math.random().toString(36).substring(2, 15);
     
-    // Get authentication token
+    // Get authentication token from Supabase session
     const { data: { session } } = await supabase.auth.getSession();
     const accessToken = session?.access_token || '';
     
-    // Use the most direct URL possible with clear cache busting appended to URL
-    const directUrl = `https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/social-hook-agent?_nocache=${Date.now()}-${randomValue}-${Math.random()}`;
-    
-    console.log(`Sending request to social-hook-agent at ${timestamp}`);
-    console.log(`Direct URL with cache busting: ${directUrl}`);
-    
-    // Call with aggressive anti-cache headers
-    const fetchResponse = await fetch(directUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}`,
-        'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-        'X-Cache-Buster': cacheBuster,
-        'X-Timestamp': timestamp,
-        'X-Random': randomValue,
-        'X-No-Cache': 'true',
-        'X-Client-Info': `v1.9.0-${Date.now()}`
-      },
-      body: JSON.stringify({
+    // CRITICAL: Use Supabase function invoke instead of direct fetch
+    // This ensures proper authentication and CORS handling
+    console.log(`Invoking social-hook-agent function with cacheBuster: ${cacheBuster}`);
+    const { data, error } = await supabase.functions.invoke('social-hook-agent', {
+      body: {
         targetAudience: targetAudienceData,
         advertisingGoal,
         platform,
@@ -70,20 +53,13 @@ export async function generateSocialHooks(
         forcePromptRefresh: true, 
         testMode: process.env.NODE_ENV === 'development',
         clientVersion: 'v1.9.0'
-      })
+      }
     });
-    
-    // Log response headers for debugging
-    console.log('Response headers:', Object.fromEntries(fetchResponse.headers.entries()));
-    console.log('Response status:', fetchResponse.status);
-    
-    if (!fetchResponse.ok) {
-      const errorText = await fetchResponse.text();
-      console.error('Error response from social-hook-agent:', errorText);
-      throw new Error(`Błąd podczas generowania hooków: Status ${fetchResponse.status} - ${errorText.substring(0, 100)}`);
+
+    if (error) {
+      console.error('Error from supabase.functions.invoke social-hook-agent:', error);
+      throw new Error(`Błąd podczas generowania hooków: ${error.message}`);
     }
-    
-    const data = await fetchResponse.json();
     
     // Log the full response including all metadata
     console.log('Social hooks generated successfully. Full response:', data);
