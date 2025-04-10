@@ -10,14 +10,14 @@ const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 const socialContentPrompt = Deno.env.get('SOCIAL_CONTENT_PROMPT');
 
 // Version tracking to help detect updates - ENSURE THIS IS ALWAYS UPDATED TO MATCH social-hook-agent
-const FUNCTION_VERSION = "v1.9.0"; 
+const FUNCTION_VERSION = "v1.9.1"; 
 
 // Generate a deployment ID to track specific deployments
 const DEPLOYMENT_ID = generateDeploymentId();
 
 // Define a hardcoded prompt to use - CRITICAL: This is the only prompt that should be used
 const HARDCODED_PROMPT = `
-TWOIM ZADANIEM JEST NAPISANIE "NICOLAKOCHAM"
+Napisz post na social media, który zaczyna się od podanego intro. Post powinien być angażujący i zawierać call-to-action na końcu.
 `;
 
 // Log startup information with clear identifiers
@@ -58,7 +58,7 @@ serve(async (req) => {
       throw new Error("Invalid JSON in request body");
     });
     
-    const { targetAudience, advertisingGoal, platform, hookOutput, cacheBuster, timestamp, selectedHook } = requestData;
+    const { targetAudience, advertisingGoal, platform, hookOutput, cacheBuster, timestamp } = requestData;
     
     // Log request summary
     console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Processing request with:`, { 
@@ -66,7 +66,7 @@ serve(async (req) => {
       advertisingGoal,
       platform,
       hookOutputPresent: !!hookOutput,
-      selectedHook: selectedHook || (hookOutput?.hooks?.[0] || 'Brak hooka'),
+      finalIntro: hookOutput?.finalIntro || 'No intro provided',
       timestamp: timestamp || startTime,
       cacheBuster: cacheBuster || 'none'
     });
@@ -83,11 +83,11 @@ serve(async (req) => {
       );
     }
     
-    if (!hookOutput || !hookOutput.hooks || hookOutput.hooks.length === 0) {
+    if (!hookOutput || !hookOutput.finalIntro) {
       console.error(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Invalid or missing hook output:`, hookOutput);
       return new Response(
         JSON.stringify({ 
-          error: 'Brak lub nieprawidłowe dane o hookach',
+          error: 'Brak lub nieprawidłowe dane intro',
           hookOutput: hookOutput || 'undefined'
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -100,7 +100,7 @@ serve(async (req) => {
     console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Hook response deploymentId: ${hookOutput.deploymentId || 'unknown'}`);
     console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Hook response requestId: ${hookOutput.requestId || 'unknown'}`);
     console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Hook response promptSource: ${hookOutput.promptSource || 'unknown'}`);
-    console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] FULL HOOK ARRAY:`, JSON.stringify(hookOutput.hooks));
+    console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] FINAL INTRO: ${hookOutput.finalIntro}`);
     
     // CRITICAL: ALWAYS use hardcoded prompt - NEVER use environment variable
     const SYSTEM_PROMPT = HARDCODED_PROMPT;
@@ -112,10 +112,7 @@ serve(async (req) => {
     
     // Print hook output for debugging
     console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Hook output details:`, {
-      hooks: hookOutput.hooks?.map(h => `"${h}"`.substring(0, 100)),
-      theme: hookOutput.theme,
-      form: hookOutput.form,
-      cta: hookOutput.cta
+      finalIntro: hookOutput.finalIntro?.substring(0, 100) + '...',
     });
     
     // Construct prompt for agent
@@ -150,17 +147,14 @@ serve(async (req) => {
     console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Raw response length: ${responseText.length} chars`);
     console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Raw response full:\n${responseText}`);
     
-    // Determine which hook was used
-    const hookToUse = selectedHook || hookOutput.hooks[0];
-    console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Using hook: "${hookToUse}"`);
+    // Get the final intro that was used
+    const finalIntro = hookOutput.finalIntro;
+    console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Using finalIntro: "${finalIntro}"`);
     
     // Create result with metadata - CRITICAL to set version and promptSource correctly
     const result = {
       content: responseText,
-      selectedHook: hookToUse,
-      theme: hookOutput.theme || 'Ogólna tematyka',
-      form: hookOutput.form || 'post tekstowy',
-      cta: hookOutput.cta || 'Sprawdź więcej',
+      finalIntro: finalIntro,
       platform: platform || 'Meta (Instagram/Facebook)',
       promptSource: 'HARDCODED_IN_CODE',
       promptUsed: SYSTEM_PROMPT,
@@ -171,10 +165,7 @@ serve(async (req) => {
         requestId: requestId,
         functionVersion: FUNCTION_VERSION,
         promptFullText: SYSTEM_PROMPT,
-        hookResponseVersion: hookOutput.version || 'unknown',
-        hookResponseDeploymentId: hookOutput.deploymentId || 'unknown',
-        selectedHookText: hookToUse,
-        receivedHooks: hookOutput.hooks || []
+        finalIntroText: finalIntro
       },
       version: FUNCTION_VERSION,
       deploymentId: DEPLOYMENT_ID,

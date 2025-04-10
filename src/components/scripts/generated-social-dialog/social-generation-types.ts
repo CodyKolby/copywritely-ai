@@ -1,6 +1,6 @@
 
-import { SocialHookResponse } from './services/social-hook-service';
 import { SocialMediaPlatform } from '../SocialMediaPlatformDialog';
+import { SocialHookResponse } from './services/social-hook-service';
 
 export interface UseSocialGenerationProps {
   open: boolean;
@@ -15,13 +15,13 @@ export interface SocialGenerationHookReturn {
   isLoading: boolean;
   error: string | null;
   generatedContent: string;
+  isGeneratingNewContent: boolean;
   isSaving: boolean;
   projectSaved: boolean;
   projectId: string | null;
   hookResponse: SocialHookResponse | null;
-  isGeneratingNewContent: boolean;
   handleRetry: () => void;
-  saveToProject: () => void;
+  saveToProject: () => Promise<void>;
   handleViewProject: () => void;
   setGeneratedContent: (content: string) => void;
 }

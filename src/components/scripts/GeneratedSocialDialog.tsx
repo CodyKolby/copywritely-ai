@@ -80,8 +80,7 @@ const GeneratedSocialDialog = ({
               <SocialDisplay 
                 platform={platform?.label || 'Meta'}
                 content={generatedContent} 
-                theme={hookResponse?.theme}
-                form={hookResponse?.form}
+                finalIntro={hookResponse?.finalIntro}
               />
             </div>
             

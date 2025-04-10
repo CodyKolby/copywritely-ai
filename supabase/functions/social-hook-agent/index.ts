@@ -10,14 +10,14 @@ const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 const socialHookPrompt = Deno.env.get('SOCIAL_HOOK_PROMPT');
 
 // Version tracking to help detect updates - increment this when making changes
-const FUNCTION_VERSION = "v1.9.0";
+const FUNCTION_VERSION = "v1.9.1";
 
 // Generate a deployment ID to track specific deployments
 const DEPLOYMENT_ID = generateDeploymentId();
 
 // Define a hardcoded prompt to use
 const HARDCODED_PROMPT = `
-Twoim jedynym zadaniem jest napisanie słowa "MURZYNAFRYKA"
+Napisz intro dla posta, które będzie przyciągało uwagę. Zacznij od pytania lub ciekawostki.
 `;
 
 // Log startup information
@@ -77,8 +77,7 @@ serve(async (req) => {
     console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] SYSTEM PROMPT FULL:\n${SYSTEM_PROMPT}`);
     
     // Construct user prompt
-    // const userPrompt = constructHookPrompt(requestData, requestId, DEPLOYMENT_ID, FUNCTION_VERSION);
-    const userPrompt = HARDCODED_PROMPT;
+    const userPrompt = constructHookPrompt(requestData, requestId, DEPLOYMENT_ID, FUNCTION_VERSION);
     
     // Add anti-caching measures
     const requestTimestamp = timestamp || startTime;
@@ -109,49 +108,26 @@ serve(async (req) => {
     console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Raw response length: ${responseText.length} chars`);
     console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Raw response full:\n${responseText}`);
     
-    // Process response
-    const processedResponse = processHookResponse(responseText);
+    // SIMPLIFY: Now we directly use the response as finalIntro
+    const finalIntro = responseText.trim();
+    
+    // Create simplified response
+    const processedResponse = {
+      finalIntro,
+      version: FUNCTION_VERSION,
+      deploymentId: DEPLOYMENT_ID,
+      promptSource: 'HARDCODED_IN_CODE',
+      promptUsed: SYSTEM_PROMPT,
+      requestId: requestId
+    };
     
     // Add test hooks for verification purposes
     if (requestData.testMode === true || requestData.test === true) {
-      console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Test mode detected, adding test hooks`);
-      processedResponse.hooks = ["TEST_HOOK_v1.9.0"];
+      console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Test mode detected, adding test data`);
       processedResponse.testMode = true;
     }
     
-    // CRITICAL: Ensure we only have one hook
-    if (processedResponse.hooks && processedResponse.hooks.length > 1) {
-      console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Multiple hooks detected (${processedResponse.hooks.length}), keeping only the first one`);
-      processedResponse.hooks = [processedResponse.hooks[0]];
-    }
-    
-    // If no hooks were generated, create a consistent test hook
-    if (!processedResponse.hooks || processedResponse.hooks.length === 0) {
-      console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] No hooks detected, creating default test hook`);
-      processedResponse.hooks = ["TESTHOOK_v1.9.0"];
-    }
-    
-    // Add metadata
-    processedResponse.version = FUNCTION_VERSION;
-    processedResponse.deploymentId = DEPLOYMENT_ID;
-    processedResponse.promptSource = 'HARDCODED_IN_CODE';
-    processedResponse.promptUsed = SYSTEM_PROMPT;
-    processedResponse.requestId = requestId;
-    
-    // Add debug information
-    processedResponse.debug = {
-      timestamp: startTime,
-      functionVersion: FUNCTION_VERSION,
-      deploymentId: DEPLOYMENT_ID,
-      promptSource: 'HARDCODED_IN_CODE',
-      promptFirstChars: SYSTEM_PROMPT.substring(0, 100),
-      fullPrompt: SYSTEM_PROMPT,
-      requestHeaders: headersLog,
-      responseUrl: req.url,
-      responseText: responseText
-    };
-    
-    console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Returning processed response with hooks:`, JSON.stringify(processedResponse.hooks));
+    console.log(`[${startTime}][REQ:${requestId}][${FUNCTION_VERSION}] Returning processed response with finalIntro:`, finalIntro.substring(0, 50) + (finalIntro.length > 50 ? '...' : ''));
     
     return new Response(
       JSON.stringify(processedResponse),

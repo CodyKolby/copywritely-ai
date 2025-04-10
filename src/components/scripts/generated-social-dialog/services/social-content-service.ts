@@ -4,10 +4,7 @@ import { SocialHookResponse } from './social-hook-service';
 
 export interface SocialContentResponse {
   content: string;
-  selectedHook: string;
-  theme?: string;
-  form?: string;
-  cta?: string;
+  finalIntro: string;
   platform?: string;
   promptSource?: string;
   version?: string;
@@ -20,8 +17,7 @@ export interface SocialContentResponse {
     requestId?: string;
     functionVersion?: string;
     promptFullText?: string;
-    selectedHookText?: string;
-    receivedHooks?: string[];
+    finalIntroText?: string;
   };
   error?: string;
 }
@@ -31,14 +27,13 @@ export const DEFAULT_SOCIAL_CONTENT_PROMPT = `Jesteś ekspertem od tworzenia tre
 export async function generateSocialContent(
   targetAudienceData: any,
   hookOutput: SocialHookResponse,
-  selectedHook: string | null,
   advertisingGoal: string = '',
   platform: string = 'meta'
 ): Promise<SocialContentResponse> {
   console.log('Generating social media content with parameters:', {
     targetAudienceId: targetAudienceData?.id,
-    hooksAvailable: hookOutput?.hooks?.length || 0,
-    selectedHook: selectedHook,
+    introAvailable: !!hookOutput?.finalIntro,
+    finalIntro: hookOutput?.finalIntro?.substring(0, 50) + '...',
     goalLength: advertisingGoal?.length || 0,
     platform,
     timestamp: new Date().toISOString()
@@ -50,28 +45,17 @@ export async function generateSocialContent(
     const cacheBuster = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
     const randomValue = Math.random().toString(36).substring(2, 15);
     
-    // Ensure we have valid hook data
-    if (!hookOutput || !hookOutput.hooks || hookOutput.hooks.length === 0) {
+    // Ensure we have valid intro data
+    if (!hookOutput || !hookOutput.finalIntro) {
       console.error('Invalid hook output:', hookOutput);
-      throw new Error('Brak prawidłowych danych o hookach');
+      throw new Error('Brak prawidłowego intro');
     }
-    
-    // NEW: Ensure we only pass the first hook (even if there are more)
-    const simplifiedHookOutput = {
-      ...hookOutput,
-      hooks: hookOutput.hooks.length > 0 ? [hookOutput.hooks[0]] : hookOutput.hooks,
-      version: hookOutput.version || 'v1.9.0',
-      promptSource: hookOutput.promptSource || 'HARDCODED_IN_CODE'
-    };
     
     // Log the hook data for debugging
     console.log('Hook data being sent to content agent:', {
-      hooks: simplifiedHookOutput.hooks,
-      theme: simplifiedHookOutput.theme,
-      form: simplifiedHookOutput.form,
-      selectedHook: selectedHook || simplifiedHookOutput.hooks[0],
-      version: simplifiedHookOutput.version,
-      promptSource: simplifiedHookOutput.promptSource
+      finalIntro: hookOutput.finalIntro?.substring(0, 100) + '...',
+      version: hookOutput.version,
+      promptSource: hookOutput.promptSource
     });
     
     // CRITICAL: Use Supabase functions.invoke instead of direct fetch
@@ -80,8 +64,7 @@ export async function generateSocialContent(
     const { data, error } = await supabase.functions.invoke('social-content-agent', {
       body: {
         targetAudience: targetAudienceData,
-        hookOutput: simplifiedHookOutput,
-        selectedHook: selectedHook || (simplifiedHookOutput.hooks && simplifiedHookOutput.hooks.length > 0 ? simplifiedHookOutput.hooks[0] : null),
+        hookOutput: hookOutput,
         advertisingGoal,
         platform,
         cacheBuster,
@@ -89,7 +72,7 @@ export async function generateSocialContent(
         randomValue,
         testMode: process.env.NODE_ENV === 'development',
         forcePromptRefresh: true,
-        clientVersion: 'v1.9.0'
+        clientVersion: 'v1.9.1'
       }
     });
     
@@ -123,7 +106,7 @@ export async function generateSocialContent(
     
     console.log('Social content generated successfully', {
       contentLength: data.content?.length || 0,
-      selectedHook: data.selectedHook,
+      finalIntro: data.finalIntro?.substring(0, 50) + '...',
       promptSource: data.promptSource,
       version: data.version
     });

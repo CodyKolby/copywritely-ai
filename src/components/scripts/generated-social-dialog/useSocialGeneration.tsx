@@ -112,38 +112,35 @@ export const useSocialGeneration = ({
 
       console.log('Target audience data fetched:', targetAudienceData.name || 'Unnamed');
 
-      // Step 1: Generate hooks with social-hook-agent
+      // Step 1: Generate intro with social-hook-agent
       const hooksResponse = await generateSocialHooks(
         targetAudienceData,
         advertisingGoal,
         platform?.key || 'meta'
       );
       
-      console.log('Received hooks response:', hooksResponse);
+      console.log('Received intro response:', hooksResponse);
       
       setHookResponse(hooksResponse);
       
       // Store debug info
       setDebugInfo({
-        hooks: hooksResponse,
+        intro: hooksResponse,
         platform: platform,
         targetAudience: targetAudienceData.id
       });
       
-      // Step 2: Generate content with social-content-agent using the first hook
-      const selectedHook = hooksResponse.hooks[0];
-      
+      // Step 2: Generate content with social-content-agent using the intro
       const contentResponse = await generateSocialContent(
         targetAudienceData,
         hooksResponse,
-        selectedHook,
         advertisingGoal,
         platform?.key || 'meta'
       );
       
       console.log('Received social content:', {
         contentLength: contentResponse.content?.length || 0,
-        selectedHook: contentResponse.selectedHook
+        finalIntro: contentResponse.finalIntro?.substring(0, 50) + '...'
       });
       
       // Set the generated content
@@ -199,17 +196,16 @@ export const useSocialGeneration = ({
     setIsSaving(true);
 
     try {
-      const currentHook = hookResponse?.hooks[0] || '';
+      const finalIntro = hookResponse?.finalIntro || '';
       const platformName = platform?.label || 'Meta';
       
       const savedProject = await saveSocialToProject(
         generatedContent,
-        currentHook,
+        finalIntro,
         platformName,
         userId,
         targetAudienceId,
-        hookResponse || undefined,
-        hookResponse?.hooks || []
+        hookResponse || undefined
       );
       
       setProjectId(savedProject.id);
