@@ -100,7 +100,7 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
           <>
             <div id={contentId} className="overflow-hidden">
               <ScriptDisplay 
-                script={generatedScript} 
+                script={postContentOnly} 
               />
             </div>
             
