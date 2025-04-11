@@ -12,6 +12,7 @@ const SYSTEM_PROMPT = `
 Twoim zadaniem jest napisanie słowa "TESTSYSTEM11"
 `;
 
+// 🔥 DEBUG START
 console.log("🔥🔥🔥 SOCIAL INTRO AGENT ACTIVE 🔥🔥🔥");
 
 serve(async (req) => {
