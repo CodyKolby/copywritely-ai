@@ -49,6 +49,21 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
   const dialogId = 'social-dialog';
   const contentId = 'social-content';
   
+  // Extract only post content from the full script
+  const postContentOnly = React.useMemo(() => {
+    if (!generatedScript) return '';
+    
+    // If the response contains the intro and the post content, extract only the post content
+    // Find where intro ends and actual content begins 
+    const contentStartIndex = generatedScript.indexOf('\n\n', generatedScript.indexOf('\n\n') + 2);
+    if (contentStartIndex !== -1) {
+      return generatedScript.substring(contentStartIndex).trim();
+    }
+    
+    // If we can't find a clean separation, return the original
+    return generatedScript;
+  }, [generatedScript]);
+  
   // Log the script generation state
   React.useEffect(() => {
     if (open) {
@@ -70,11 +85,13 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange} key={dialogKey}>
       <DialogContent 
-        className="max-w-[700px] p-0 rounded-xl overflow-hidden bg-white" 
+        className="max-w-[700px] p-0 rounded-xl overflow-hidden bg-white max-h-[85vh]" 
         aria-describedby={contentId}
         id={dialogId}
       >
-        <DialogTitle className="sr-only">Wygenerowany post dla {platform?.label || 'mediów społecznościowych'}</DialogTitle>
+        <DialogTitle className="p-4 border-b border-gray-100 text-lg font-medium">
+          Wygenerowany post dla {platform?.label || 'mediów społecznościowych'}
+        </DialogTitle>
         
         {showLoading ? (
           <LoadingState stage="script" />
@@ -82,11 +99,12 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
           <ErrorState error={error} onRetry={handleRetry} />
         ) : (
           <>
-            <div id={contentId}>
+            <div id={contentId} className="overflow-hidden">
               <ScriptDisplay 
-                script={generatedScript} 
+                script={postContentOnly} 
                 bestHook={currentHook} 
                 adStructure="social"
+                showIntro={false}
               />
             </div>
             

@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface ScriptDisplayProps {
   script: string;
@@ -9,6 +10,7 @@ interface ScriptDisplayProps {
   adStructure?: string;
   rawResponse?: string;
   debugInfo?: any;
+  showIntro?: boolean;
 }
 
 const ScriptDisplay = ({
@@ -18,7 +20,8 @@ const ScriptDisplay = ({
   totalHooks = 0,
   adStructure = '',
   rawResponse,
-  debugInfo
+  debugInfo,
+  showIntro = true
 }: ScriptDisplayProps) => {
   // Always hide debug information in production
   const isDevelopment = false; // Set this to false to always hide debug info
@@ -83,15 +86,17 @@ const ScriptDisplay = ({
         
         {/* Display the content only if there's something to display */}
         {displayScript && (
-          <div className="prose max-w-none">
-            {displayScript.split('\n').map((line, i) => (
-              line ? (
-                <p key={i} className="mb-4 last:mb-0">
-                  {line}
-                </p>
-              ) : <br key={i} />
-            ))}
-          </div>
+          <ScrollArea className="h-[300px] pr-4">
+            <div className="prose max-w-none">
+              {displayScript.split('\n').map((line, i) => (
+                line ? (
+                  <p key={i} className="mb-4 last:mb-0">
+                    {line}
+                  </p>
+                ) : <br key={i} />
+              ))}
+            </div>
+          </ScrollArea>
         )}
 
         {/* Display empty state message if no content after cleanup */}
