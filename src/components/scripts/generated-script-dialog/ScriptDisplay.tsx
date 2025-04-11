@@ -92,7 +92,7 @@ const ScriptDisplay = ({
       
       {/* Display the content only if there's something to display */}
       {displayScript && (
-        <ScrollArea className="h-auto max-h-[400px] overflow-auto">
+        <ScrollArea className="h-auto max-h-[50vh] overflow-auto pr-4">
           <div className="prose max-w-none text-gray-800">
             {displayScript.split('\n').map((line, i) => (
               line ? (

@@ -1,12 +1,11 @@
 
-import React, { useCallback } from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { useScriptGeneration } from './generated-script-dialog/useScriptGeneration';
 import { useAuth } from '@/contexts/auth/AuthContext';
 import LoadingState from './generated-script-dialog/LoadingState';
 import ScriptDisplay from './generated-script-dialog/ScriptDisplay';
 import ErrorState from './generated-script-dialog/ErrorState';
-import ActionButtons from './generated-script-dialog/ActionButtons';
 import { SocialMediaPlatform } from './SocialMediaPlatformDialog';
 import { X, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -30,7 +29,7 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
   platform,
 }) => {
   const { user } = useAuth();
-  const [copied, setCopied] = React.useState(false);
+  const [copied, setCopied] = useState(false);
   
   // Use the script generation hook
   const {
@@ -91,18 +90,21 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange} key={dialogKey}>
       <DialogContent 
-        className="max-w-[700px] p-0 overflow-hidden bg-white max-h-[85vh] rounded-2xl shadow-lg border-0"
+        className="max-w-[700px] max-h-[80vh] overflow-hidden bg-white rounded-lg border-0 flex flex-col"
         aria-describedby={contentId}
         id={dialogId}
       >
-        <DialogTitle className="p-6 text-lg font-semibold text-gray-800">
-          Wygenerowany post dla {platform?.label || 'mediów społecznościowych'}
-        </DialogTitle>
-        
-        <DialogClose className="absolute right-4 top-4 rounded-full p-2 bg-gray-100 hover:bg-gray-200 transition-colors">
-          <X className="h-4 w-4 text-gray-700" />
-          <span className="sr-only">Zamknij</span>
-        </DialogClose>
+        <div className="border-b border-gray-200 p-4">
+          <div className="flex justify-between items-center">
+            <DialogTitle className="text-xl font-semibold text-gray-800">
+              Wygenerowany post dla {platform?.label || 'mediów społecznościowych'}
+            </DialogTitle>
+            <DialogClose className="rounded-full p-1 hover:bg-gray-100 transition-colors">
+              <X className="h-5 w-5 text-gray-500" />
+              <span className="sr-only">Zamknij</span>
+            </DialogClose>
+          </div>
+        </div>
         
         {showLoading ? (
           <LoadingState stage="script" />
@@ -110,30 +112,27 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
           <ErrorState error={error} onRetry={handleRetry} />
         ) : (
           <>
-            <div id={contentId} className="px-6 pb-6 pt-0">
-              <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100">
-                <ScriptDisplay 
-                  script={postContent || ''}
-                  bestHook={currentHook}
-                />
-              </div>
+            <div id={contentId} className="p-6 overflow-y-auto flex-grow">
+              <ScriptDisplay 
+                script={postContent || ''}
+              />
             </div>
             
-            <div className="flex justify-between items-center p-6 pt-0">
+            <div className="border-t border-gray-200 p-4 flex justify-between items-center mt-auto">
               <Button
                 onClick={handleCopyToClipboard}
                 variant="outline"
-                className="border-copywrite-teal text-copywrite-teal hover:bg-copywrite-teal hover:text-white transition-colors"
+                className="border-gray-300 hover:bg-gray-100 text-gray-700 transition-colors flex items-center gap-2"
               >
                 {copied ? (
                   <>
-                    <Check className="mr-2 h-4 w-4" />
-                    Skopiowano
+                    <Check className="h-4 w-4" />
+                    <span>Skopiowano</span>
                   </>
                 ) : (
                   <>
-                    <Copy className="mr-2 h-4 w-4" />
-                    Kopiuj do schowka
+                    <Copy className="h-4 w-4" />
+                    <span>Kopiuj do schowka</span>
                   </>
                 )}
               </Button>
