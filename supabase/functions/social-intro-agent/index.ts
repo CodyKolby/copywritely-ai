@@ -12,6 +12,8 @@ const SYSTEM_PROMPT = `
 Twoim zadaniem jest napisanie słowa "TESTSYSTEM11"
 `;
 
+console.log(`[DEBUG] SYSTEM_PROMPT loaded:\n${SYSTEM_PROMPT}`);
+
 serve(async (req) => {
   // Generate a unique request ID and timestamp
   const requestId = crypto.randomUUID();
