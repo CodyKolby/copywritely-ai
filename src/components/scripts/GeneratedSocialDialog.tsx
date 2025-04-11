@@ -1,13 +1,8 @@
 
-import React, { useCallback } from 'react';
+import React from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useScriptGeneration } from './generated-script-dialog/useScriptGeneration';
 import { useAuth } from '@/contexts/auth/AuthContext';
-import LoadingState from './generated-script-dialog/LoadingState';
-import ScriptDisplay from './generated-script-dialog/ScriptDisplay';
-import ErrorState from './generated-script-dialog/ErrorState';
-import ActionButtons from './generated-script-dialog/ActionButtons';
-import { SocialMediaPlatform } from './SocialMediaPlatformDialog';
 
 interface GeneratedSocialDialogProps {
   open: boolean;
@@ -15,7 +10,7 @@ interface GeneratedSocialDialogProps {
   targetAudienceId: string;
   templateId: string;
   advertisingGoal: string;
-  platform?: SocialMediaPlatform;
+  platform?: { label: string; key: string };
 }
 
 const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
@@ -27,99 +22,37 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
   platform,
 }) => {
   const { user } = useAuth();
-  
-  // Use the script generation hook
+
   const {
     isLoading,
     generatedScript,
-    currentHook,
-    currentHookIndex,
-    totalHooks,
     error,
-    isGeneratingNewScript,
-    isSaving,
-    projectSaved,
-    projectId,
     handleRetry,
-    handleGenerateWithNextHook,
-    handleViewProject,
   } = useScriptGeneration(open, targetAudienceId, templateId, advertisingGoal, user?.id, platform);
-  
-  const showLoading = isLoading || isGeneratingNewScript;
-  const dialogId = 'social-dialog';
-  const contentId = 'social-content';
-  
-  // Extract only post content from the full script
-  const postContentOnly = React.useMemo(() => {
-    if (!generatedScript) return '';
-    
-    // If the response contains the intro and the post content, extract only the post content
-    // Find where intro ends and actual content begins 
-    const contentStartIndex = generatedScript.indexOf('\n\n', generatedScript.indexOf('\n\n') + 2);
-    if (contentStartIndex !== -1) {
-      return generatedScript.substring(contentStartIndex).trim();
-    }
-    
-    // If we can't find a clean separation, return the original
-    return generatedScript;
-  }, [generatedScript]);
-  
-  // Log the script generation state
-  React.useEffect(() => {
-    if (open) {
-      console.log("Social post generation dialog state:", {
-        isLoading,
-        templateId,
-        platform: platform?.label || 'unknown',
-        advertisingGoal,
-        error: error ? true : false,
-        isGeneratingNewScript,
-        projectSaved
-      });
-    }
-  }, [open, isLoading, templateId, platform, advertisingGoal, error, isGeneratingNewScript, projectSaved]);
 
-  // Generate a stable key for the dialog
   const dialogKey = `${templateId}-${targetAudienceId}-${platform?.key || 'unknown'}-${open ? 'open' : 'closed'}`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange} key={dialogKey}>
       <DialogContent 
-        className="max-w-[700px] p-0 rounded-xl overflow-hidden bg-white max-h-[85vh]" 
-        aria-describedby={contentId}
-        id={dialogId}
+        className="max-w-[700px] p-0 rounded-xl overflow-hidden bg-white max-h-[85vh]"
       >
         <DialogTitle className="p-4 border-b border-gray-100 text-lg font-medium">
           Wygenerowany post dla {platform?.label || 'mediów społecznościowych'}
         </DialogTitle>
-        
-        {showLoading ? (
-          <LoadingState stage="script" />
-        ) : error ? (
-          <ErrorState error={error} onRetry={handleRetry} />
-        ) : (
-          <>
-            <div id={contentId} className="overflow-hidden">
-              <ScriptDisplay 
-                script={postContentOnly} 
-                bestHook={currentHook} 
-                adStructure="social"
-                showIntro={false}
-              />
+
+        <div className="p-6 overflow-auto max-h-[60vh] whitespace-pre-line">
+          {isLoading ? (
+            <div className="text-center py-8 text-gray-500 text-sm">Trwa generowanie posta...</div>
+          ) : error ? (
+            <div className="text-center py-8 text-red-500 text-sm">
+              Nie udało się wygenerować posta.
+              <button onClick={handleRetry} className="ml-2 text-blue-600 underline">Spróbuj ponownie</button>
             </div>
-            
-            <ActionButtons 
-              isSaving={isSaving}
-              projectSaved={projectSaved}
-              projectId={projectId}
-              onViewProject={handleViewProject}
-              isGeneratingNewScript={isGeneratingNewScript}
-              currentHookIndex={currentHookIndex}
-              totalHooks={totalHooks}
-              onGenerateNew={handleGenerateWithNextHook}
-            />
-          </>
-        )}
+          ) : (
+            generatedScript || 'Brak wygenerowanego posta.'
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );
