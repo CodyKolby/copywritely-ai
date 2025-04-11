@@ -156,5 +156,5 @@ function formatFullPrompt(targetAudience: any, advertisingGoal: string, platform
   }
 
   return `
-Twoim zadaniem jest napisanie słowa "TOZNOWUDZIAŁA"`;
+Twoim zadaniem jest napisanie słowa "TONIEDZIAŁA"`;
 }
