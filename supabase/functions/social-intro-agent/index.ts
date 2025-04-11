@@ -7,11 +7,6 @@ import { corsHeaders, handleOptions } from "../shared/cors.ts";
 // OpenAI API key from environment
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
-// System prompt for social media intro generation
-const SYSTEM_PROMPT = `
-Twoim zadaniem jest napisanie słowa "TOZNOWUDZIAŁA"
-`;
-
 // 🔥 DEBUG START
 console.log("🔥🔥🔥 SOCIAL INTRO AGENT ACTIVE 🔥🔥🔥");
 
@@ -20,7 +15,7 @@ serve(async (req) => {
   const requestId = crypto.randomUUID();
   const timestamp = new Date().toISOString();
   const cacheBuster = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
-  const functionVersion = "v1.0.1";
+  const functionVersion = "v1.0.2";
   const deploymentId = Deno.env.get('DEPLOYMENT_ID') || 'development';
 
   console.log(`[${timestamp}][REQ:${requestId}] Received request to social-intro-agent`);
@@ -52,32 +47,72 @@ serve(async (req) => {
       model: "gpt-4o-mini"
     };
 
-    // Format the target audience data into a user prompt
-    const userPrompt = formatPrompt(targetAudience, advertisingGoal, platform);
+    // Format the full prompt including what was previously system and user prompts
+    const fullPrompt = formatFullPrompt(targetAudience, advertisingGoal, platform);
 
-    console.log(`[${timestamp}][REQ:${requestId}] Calling OpenAI with user prompt`);
+    console.log(`[${timestamp}][REQ:${requestId}] Calling OpenAI with full prompt`);
     
-    // Call OpenAI
-    const response = await callOpenAI(userPrompt, SYSTEM_PROMPT, openAIApiKey, metadata);
-    
-    // Extract the generated content
-    const generatedIntro = response.choices[0].message.content;
-    
-    console.log(`[${timestamp}][REQ:${requestId}] Successfully generated intro for ${platform}`);
-
-    // Return the response
-    return new Response(
-      JSON.stringify({
-        intro: generatedIntro,
-        model: response.model,
-        timestamp,
-        requestId,
+    // Call OpenAI with a single prompt
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'X-Request-ID': requestId,
+        'X-Timestamp': timestamp,
+        'X-Cache-Buster': cacheBuster,
+        'X-Deployment-ID': deploymentId,
+        'X-Function-Version': functionVersion
+      },
+      body: JSON.stringify({
+        model: metadata.model,
+        messages: [
+          { role: 'user', content: fullPrompt }
+        ],
+        temperature: 0.7,
       }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      }
-    );
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error(`[${timestamp}][REQ:${requestId}] OpenAI API error:`, {
+        status: response.status,
+        error: errorData
+      });
+      throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
+    }
+    
+    try {
+      const data = await response.json();
+      console.log(`[${timestamp}][REQ:${requestId}] OpenAI response received, model used: ${data.model}`);
+      console.log(`[${timestamp}][REQ:${requestId}] Response length: ${data.choices[0].message.content.length} chars`);
+      console.log(`[${timestamp}][REQ:${requestId}] RESPONSE FULL:\n${data.choices[0].message.content}`);
+      
+      // Extract the generated content
+      const generatedIntro = data.choices[0].message.content;
+      
+      console.log(`[${timestamp}][REQ:${requestId}] Successfully generated intro for ${platform}`);
+
+      // Return the response
+      return new Response(
+        JSON.stringify({
+          intro: generatedIntro,
+          model: data.model,
+          timestamp,
+          requestId,
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
+    } catch (error) {
+      console.error(`[${timestamp}][REQ:${requestId}] Error parsing OpenAI response:`, error);
+      throw new Error(`Error parsing OpenAI response: ${error.message}`);
+    }
   } catch (error) {
     console.error(`[${timestamp}][REQ:${requestId}] Error:`, error.message);
     return createErrorResponse(error, { 
@@ -89,8 +124,8 @@ serve(async (req) => {
   }
 });
 
-// Helper function to format the prompt for OpenAI
-function formatPrompt(targetAudience: any, advertisingGoal: string, platform: string) {
+// Helper function to format the complete prompt for OpenAI
+function formatFullPrompt(targetAudience: any, advertisingGoal: string, platform: string) {
   let audienceDescription = '';
   
   // Build audience description
@@ -121,6 +156,10 @@ function formatPrompt(targetAudience: any, advertisingGoal: string, platform: st
   }
 
   return `
+Twoim zadaniem jest napisanie słowa "TOZNOWUDZIAŁA"
+
+---
+
 # Informacje o grupie docelowej
 ${audienceDescription}
 
