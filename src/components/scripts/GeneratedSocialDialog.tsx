@@ -32,6 +32,18 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
 
   const dialogKey = `${templateId}-${targetAudienceId}-${platform?.key || 'unknown'}-${open ? 'open' : 'closed'}`;
 
+  // Extract only the post content (from postPrompt output, without intro)
+  const postPromptOutput = React.useMemo(() => {
+    if (!generatedScript) return '';
+
+    try {
+      const response = JSON.parse(generatedScript);
+      return response?.content?.trim() || response?.post?.trim() || generatedScript;
+    } catch {
+      return generatedScript;
+    }
+  }, [generatedScript]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange} key={dialogKey}>
       <DialogContent 
@@ -50,7 +62,7 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
               <button onClick={handleRetry} className="ml-2 text-blue-600 underline">Spróbuj ponownie</button>
             </div>
           ) : (
-            generatedScript || 'Brak wygenerowanego posta.'
+            postPromptOutput || 'Brak wygenerowanego posta.'
           )}
         </div>
       </DialogContent>
