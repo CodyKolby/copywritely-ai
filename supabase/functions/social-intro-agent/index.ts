@@ -54,6 +54,8 @@ serve(async (req) => {
     // Format the target audience data into a user prompt
     const userPrompt = formatPrompt(targetAudience, advertisingGoal, platform);
 
+    console.log(`[DEBUG] USER_PROMPT:\n${userPrompt}`);
+
     console.log(`[${timestamp}][REQ:${requestId}] Calling OpenAI with user prompt`);
     
     // Call OpenAI
