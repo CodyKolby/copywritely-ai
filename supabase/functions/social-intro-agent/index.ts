@@ -9,16 +9,7 @@ const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
 // System prompt for social media intro generation
 const SYSTEM_PROMPT = `
-Jesteś ekspertem od tworzenia mówionych wprowadzeń do postów w mediach społecznościowych.
-Twoją specjalizacją są krótkie, emocjonalne otwarcia (intro), które przyciągają uwagę i sprawiają, że użytkownik zostaje na kolejne sekundy.
-
-Twoje intro ma:
-– jasno wskazywać temat postu,
-– opisywać aktualny stan odbiorcy,
-– budować napięcie i ciekawość,
-– nie zdradzać żadnych rozwiązań.
-
-To intro, które ma płynnie przejść w wartość przygotowaną przez kolejnego agenta.
+Twoim zadaniem jest napisanie słowa "TESTSYSTEM11"
 `;
 
 serve(async (req) => {
