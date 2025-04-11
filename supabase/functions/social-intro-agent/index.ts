@@ -9,7 +9,7 @@ const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
 // System prompt for social media intro generation
 const SYSTEM_PROMPT = `
-Twoim zadaniem jest napisanie słowa "OGNIEPOTEZNE"
+Twoim zadaniem jest napisanie słowa "TESTZNOWYMGITEM"
 `;
 
 // 🔥 DEBUG START
