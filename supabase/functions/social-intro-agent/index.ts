@@ -156,23 +156,5 @@ function formatFullPrompt(targetAudience: any, advertisingGoal: string, platform
   }
 
   return `
-Twoim zadaniem jest napisanie słowa "TOZNOWUDZIAŁA"
-
----
-
-# Informacje o grupie docelowej
-${audienceDescription}
-
-# Cel marketingowy
-${advertisingGoal || "Zwiększenie świadomości marki"}
-
-# Platforma docelowa
-${platform || "Meta (Facebook/Instagram)"}
-
-Na podstawie powyższych informacji, stwórz krótkie, emocjonalne intro (2-3 zdania) które przyciągnie uwagę określonej grupy docelowej na platformie ${platform || "Meta (Facebook/Instagram)"}.
-
-Intro powinno być mówione, naturalne, skierowane do jednej osoby, nie do grupy. Ma wprowadzać w temat i zostawiać miejsce na dalszą część postu.
-
-Pamiętaj, aby intro było dopasowane do języka i emocji odbiorcy, odnosiło się do jego problemów i pragnień, ale nie zdradzało rozwiązań.
-`;
+Twoim zadaniem jest napisanie słowa "TOZNOWUDZIAŁA"`;
 }
