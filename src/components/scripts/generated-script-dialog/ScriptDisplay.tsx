@@ -4,7 +4,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface ScriptDisplayProps {
   script: string;
-  bestHook: string;
+  bestHook?: string;
   hookIndex?: number;
   totalHooks?: number;
   adStructure?: string;
@@ -15,13 +15,13 @@ interface ScriptDisplayProps {
 
 const ScriptDisplay = ({
   script,
-  bestHook,
+  bestHook = '',
   hookIndex = 0,
   totalHooks = 0,
   adStructure = '',
   rawResponse,
   debugInfo,
-  showIntro = true
+  showIntro = false
 }: ScriptDisplayProps) => {
   // Always hide debug information in production
   const isDevelopment = false; // Set this to false to always hide debug info
@@ -81,6 +81,13 @@ const ScriptDisplay = ({
         {adStructure && (
           <div className="mb-2 py-1 px-2 text-xs font-medium uppercase tracking-wider bg-slate-100 text-slate-600 inline-block rounded">
             Format: {adStructure}
+          </div>
+        )}
+        
+        {/* Display the intro if requested */}
+        {showIntro && bestHook && (
+          <div className="mb-4 font-medium">
+            {bestHook}
           </div>
         )}
         

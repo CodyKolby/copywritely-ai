@@ -15,6 +15,7 @@ export const useScriptGeneration = (
 ) => {
   const [isLoading, setIsLoading] = useState(true);
   const [generatedScript, setGeneratedScript] = useState('');
+  const [postContent, setPostContent] = useState('');
   const [currentHook, setCurrentHook] = useState('');
   const [currentHookIndex, setCurrentHookIndex] = useState(0);
   const [totalHooks, setTotalHooks] = useState(0);
@@ -106,6 +107,30 @@ export const useScriptGeneration = (
 
       setGeneratedScript(result.script || '');
       setCurrentHook(result.bestHook || '');
+      
+      // For social media posts, extract only the post content without the intro
+      if (templateId === 'social' && result.script) {
+        // The post content should be what comes after the intro (the bestHook)
+        const introLength = result.bestHook ? result.bestHook.length : 0;
+        
+        // If we have both script and bestHook, extract just the post content
+        if (result.script && introLength > 0) {
+          // Find where the post content actually begins after the intro
+          // We're looking for the post content after a double line break
+          const contentStartIndex = result.script.indexOf('\n\n', result.script.indexOf(result.bestHook) + introLength);
+          
+          if (contentStartIndex !== -1) {
+            // Extract only the post content
+            setPostContent(result.script.substring(contentStartIndex).trim());
+          } else {
+            // If we can't find a clean separation, use the whole script
+            setPostContent(result.script);
+          }
+        } else {
+          setPostContent(result.script);
+        }
+      }
+      
       setCurrentHookIndex(result.currentHookIndex);
       setTotalHooks(result.totalHooks);
       setDebugInfo(result.debugInfo || null);
@@ -210,6 +235,7 @@ export const useScriptGeneration = (
   return {
     isLoading,
     generatedScript,
+    postContent,
     currentHook,
     currentHookIndex,
     totalHooks,

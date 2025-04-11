@@ -148,9 +148,13 @@ async function generateSocialMedia(
     }
     
     const postData = await postResponse.json();
-    const fullPost = postData.post;
+    // Use the content field that contains only the post part without the intro
+    const postContent = postData.content || '';
+    // Use the full post that contains both the intro and content
+    const fullPost = postData.post || '';
     
     console.log('Wygenerowano pełny post:', fullPost.substring(0, 50) + '...');
+    console.log('Wygenerowano treść postu (bez intro):', postContent.substring(0, 50) + '...');
     
     return {
       script: fullPost,
@@ -159,7 +163,7 @@ async function generateSocialMedia(
       currentHookIndex: 0,
       totalHooks: 1,
       adStructure: 'social',
-      rawResponse: fullPost,
+      rawResponse: postContent,
       debugInfo: null
     };
   } catch (error) {

@@ -1,3 +1,4 @@
+
 import React, { useCallback } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useScriptGeneration } from './generated-script-dialog/useScriptGeneration';
@@ -31,6 +32,7 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
   const {
     isLoading,
     generatedScript,
+    postContent,
     currentHook,
     currentHookIndex,
     totalHooks,
@@ -47,21 +49,6 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
   const showLoading = isLoading || isGeneratingNewScript;
   const dialogId = 'social-dialog';
   const contentId = 'social-content';
-  
-  // Extract only post content from the full script
-  const postContentOnly = React.useMemo(() => {
-    if (!generatedScript) return '';
-    
-    // If the response contains the intro and the post content, extract only the post content
-    // Find where intro ends and actual content begins 
-    const contentStartIndex = generatedScript.indexOf('\n\n', generatedScript.indexOf('\n\n') + 2);
-    if (contentStartIndex !== -1) {
-      return generatedScript.substring(contentStartIndex).trim();
-    }
-    
-    // If we can't find a clean separation, return the original
-    return generatedScript;
-  }, [generatedScript]);
   
   // Log the script generation state
   React.useEffect(() => {
@@ -100,7 +87,8 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
           <>
             <div id={contentId} className="overflow-hidden">
               <ScriptDisplay 
-                script={generatedScript} 
+                script={postContent || generatedScript}
+                bestHook={currentHook}
               />
             </div>
             
