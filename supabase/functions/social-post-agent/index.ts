@@ -2,16 +2,10 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { callOpenAI, createErrorResponse } from "../shared/openai.ts";
+import { corsHeaders, handleOptions } from "../shared/cors.ts";
 
 // OpenAI API key from environment
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-
-// CORS headers
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
 
 // System prompt for social media post content generation
 const SYSTEM_PROMPT = `
@@ -33,18 +27,14 @@ serve(async (req) => {
   const requestId = crypto.randomUUID();
   const timestamp = new Date().toISOString();
   const cacheBuster = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
-  const functionVersion = "v1.0.0";
+  const functionVersion = "v1.0.1";
   const deploymentId = Deno.env.get('DEPLOYMENT_ID') || 'development';
 
   console.log(`[${timestamp}][REQ:${requestId}] Received request to social-post-agent`);
   
   // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { 
-      status: 204, 
-      headers: corsHeaders 
-    });
-  }
+  const optionsResponse = handleOptions(req);
+  if (optionsResponse) return optionsResponse;
 
   try {
     if (!openAIApiKey) {
