@@ -103,8 +103,9 @@ export const useScriptGeneration = (
         console.log("Component unmounted or newer request started, discarding results");
         return;
       }
+      console.log("💬 Content from result:", result.content);
 
-      setGeneratedScript(result.script || '');
+      setGeneratedScript(result.content || '');
       setCurrentHook(result.bestHook || '');
       setCurrentHookIndex(result.currentHookIndex);
       setTotalHooks(result.totalHooks);
