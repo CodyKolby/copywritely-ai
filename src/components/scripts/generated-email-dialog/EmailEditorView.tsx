@@ -29,6 +29,9 @@ const EmailEditorView = ({
         />
       </div>
       
+      {/* Toolbar (commented out for now as it's just a placeholder) */}
+      {/* <EmailToolbar /> */}
+      
       {/* Content Area */}
       <div className="max-h-[400px] overflow-y-auto">
         <Textarea 
