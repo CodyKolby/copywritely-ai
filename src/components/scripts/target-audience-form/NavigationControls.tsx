@@ -24,12 +24,12 @@ const NavigationControls = ({
 }: NavigationControlsProps) => {
   const handleSubmitOrNext = () => {
     if (!isSubmitting) {
-      // Jeśli to ostatni krok, wywołaj onSubmit, w przeciwnym razie przejdź do następnego kroku
       if (isLastStep) {
-        // Przycisk submit wywoła onSubmit dzięki formie
+        // On last step, trigger the form submission
         const form = document.querySelector('form');
         if (form) {
-          form.requestSubmit();
+          console.log("Submitting form on last step");
+          form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
         }
       } else {
         goToNextStep();
@@ -55,7 +55,7 @@ const NavigationControls = ({
         </div>
 
         <Button 
-          type="button" // Zmiana na button type
+          type="button"
           onClick={handleSubmitOrNext}
           className="bg-copywrite-teal hover:bg-copywrite-teal-dark text-white"
           disabled={isSubmitting}

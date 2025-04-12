@@ -1,5 +1,5 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
-// Just re-export the shared Supabase client
+// Re-export the Supabase client for easier imports
 export { supabase };

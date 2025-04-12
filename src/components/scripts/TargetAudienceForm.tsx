@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/auth/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
 
 // Import refactored components
 import StepContainer from './target-audience-form/StepContainer';
@@ -110,6 +110,7 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
       console.log("Dane do zapisania w bazie:", formDataWithName);
       
       try {
+        // Directly use submitTargetAudienceForm function for submission
         const targetAudienceId = await submitTargetAudienceForm(formDataWithName, userId);
         console.log("Form submitted, target audience ID:", targetAudienceId);
         
@@ -118,9 +119,8 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
           // Call the onSubmit function with the target audience ID
           onSubmit(formDataWithName, targetAudienceId);
         } else {
-          toast.warning('Brak ID grupy docelowej, używam tymczasowego ID');
-          const tempId = crypto.randomUUID();
-          onSubmit(formDataWithName, tempId);
+          toast.error('Wystąpił błąd podczas zapisywania grupy docelowej');
+          setIsSubmitting(false);
         }
       } catch (submitError: any) {
         console.error("Error in submitTargetAudienceForm:", submitError);
