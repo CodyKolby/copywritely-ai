@@ -23,7 +23,7 @@ const NavigationControls = ({
   isSubmitting = false,
 }: NavigationControlsProps) => {
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 p-2 md:p-4">
       <div className="flex justify-between items-center">
         <Button 
           type="button" 

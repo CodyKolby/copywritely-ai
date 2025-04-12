@@ -48,7 +48,7 @@ const DialogSelectionContent = ({
       {!isPremium ? (
         <PremiumAlert onCancel={handleCancel} />
       ) : (
-        <div className="py-4">
+        <div className="py-4 px-4">
           <ExistingAudiencesList
             isLoading={isLoading}
             existingAudiences={existingAudiences}

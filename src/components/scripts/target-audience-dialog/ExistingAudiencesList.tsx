@@ -30,7 +30,7 @@ const ExistingAudiencesList = ({
   }
 
   return (
-    <div className="mb-6">
+    <div className="mb-6 px-2">
       {existingAudiences.length === 0 ? (
         <div className="text-center py-6 text-gray-500">
           <HelpCircle className="mx-auto h-12 w-12 opacity-50 mb-2" />
@@ -40,11 +40,11 @@ const ExistingAudiencesList = ({
         <>
           <h3 className="font-medium text-lg mb-3">Istniejące grupy docelowe</h3>
           <ScrollArea className="h-[200px] w-full rounded-md border">
-            <div className="space-y-2 p-3">
+            <div className="space-y-2 p-4">
               {existingAudiences.map((audience) => (
                 <div 
                   key={audience.id}
-                  className={`flex items-center justify-between rounded-md p-3 cursor-pointer transition-colors ${
+                  className={`flex items-center justify-between rounded-md p-4 cursor-pointer transition-colors ${
                     selectedAudienceId === audience.id 
                       ? 'bg-copywrite-teal text-white' 
                       : 'bg-copywrite-teal-light text-copywrite-teal hover:bg-copywrite-teal hover:text-white'

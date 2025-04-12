@@ -60,7 +60,7 @@ const SocialMediaPlatformDialog: React.FC<SocialMediaPlatformDialogProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4 md:p-6">
       <DialogHeader>
         <DialogTitle className="text-2xl font-semibold">Wybierz platformę social media</DialogTitle>
         <DialogDescription>
@@ -68,8 +68,8 @@ const SocialMediaPlatformDialog: React.FC<SocialMediaPlatformDialogProps> = ({
         </DialogDescription>
       </DialogHeader>
 
-      <RadioGroup value={selectedPlatform || ''} onValueChange={(value) => setSelectedPlatform(value)}>
-        <div className="grid gap-4">
+      <RadioGroup value={selectedPlatform || ''} onValueChange={(value) => setSelectedPlatform(value)} className="px-2">
+        <div className="grid gap-4 mt-4">
           {platforms.map((platform) => (
             <Card key={platform.key} className={`p-4 cursor-pointer transition-all ${selectedPlatform === platform.key ? 'border-copywrite-teal ring-2 ring-copywrite-teal/20' : 'hover:border-gray-300'}`}>
               <div className="flex items-start space-x-3">
@@ -88,7 +88,7 @@ const SocialMediaPlatformDialog: React.FC<SocialMediaPlatformDialogProps> = ({
         </div>
       </RadioGroup>
 
-      <DialogFooter className="flex justify-between">
+      <DialogFooter className="flex justify-between px-2">
         <div className="flex gap-2">
           {onCancel && (
             <Button type="button" variant="outline" onClick={onCancel} disabled={isProcessing}>

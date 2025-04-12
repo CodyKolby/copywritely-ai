@@ -35,7 +35,7 @@ const AdvertisingGoalDialog = ({ onSubmit, onBack, onCancel, isProcessing }: Adv
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4">
       <DialogHeader>
         <DialogTitle className="text-2xl font-semibold">Następny krok klienta</DialogTitle>
         <DialogDescription>
@@ -44,7 +44,7 @@ const AdvertisingGoalDialog = ({ onSubmit, onBack, onCancel, isProcessing }: Adv
       </DialogHeader>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 px-2">
           <FormField
             control={form.control}
             name="advertisingGoal"

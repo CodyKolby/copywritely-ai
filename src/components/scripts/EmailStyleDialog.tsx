@@ -55,7 +55,7 @@ const EmailStyleDialog = ({ onSubmit, onBack, onCancel, isProcessing }: EmailSty
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4 md:p-6">
       <DialogHeader>
         <DialogTitle className="text-2xl font-semibold">Jaki styl ma mieć mail marketingowy?</DialogTitle>
         <DialogDescription>
@@ -63,8 +63,8 @@ const EmailStyleDialog = ({ onSubmit, onBack, onCancel, isProcessing }: EmailSty
         </DialogDescription>
       </DialogHeader>
 
-      <RadioGroup value={selectedStyle || ''} onValueChange={(value) => setSelectedStyle(value as EmailStyle)}>
-        <div className="grid gap-4">
+      <RadioGroup value={selectedStyle || ''} onValueChange={(value) => setSelectedStyle(value as EmailStyle)} className="px-2">
+        <div className="grid gap-4 mt-4">
           {emailStyleOptions.map((option) => (
             <Card key={option.id} className={`p-4 cursor-pointer transition-all ${selectedStyle === option.id ? 'border-copywrite-teal ring-2 ring-copywrite-teal/20' : 'hover:border-gray-300'}`}>
               <div className="flex items-start space-x-3">
@@ -83,7 +83,7 @@ const EmailStyleDialog = ({ onSubmit, onBack, onCancel, isProcessing }: EmailSty
         </div>
       </RadioGroup>
 
-      <DialogFooter className="flex justify-between">
+      <DialogFooter className="flex justify-between px-2">
         <div className="flex gap-2">
           <Button type="button" variant="outline" onClick={onCancel} disabled={isProcessing}>
             Anuluj

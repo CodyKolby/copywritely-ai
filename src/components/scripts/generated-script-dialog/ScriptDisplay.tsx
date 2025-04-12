@@ -56,7 +56,7 @@ const ScriptDisplay = ({
   const displayScript = isTestMessage ? '' : cleanedScript;
 
   return (
-    <div className="w-full">
+    <div className="w-full p-4">
       {/* Display test message notification with more prominence */}
       {isTestMessage && (
         <div className="mb-6 p-6 bg-green-100 border border-green-300 text-green-800 rounded-lg">
@@ -92,7 +92,7 @@ const ScriptDisplay = ({
       
       {/* Display the content only if there's something to display */}
       {displayScript && (
-        <div className="max-h-[400px] overflow-y-auto pr-3">
+        <div className="max-h-[400px] overflow-y-auto pr-4">
           <div className="text-black text-base leading-relaxed">
             {displayScript.split('\n').map((line, i) => (
               line ? (
@@ -107,7 +107,7 @@ const ScriptDisplay = ({
 
       {/* Display empty state message if no content after cleanup */}
       {!displayScript && !isTestMessage && (
-        <div className="text-center p-6 border border-dashed border-gray-300 rounded-lg bg-gray-50">
+        <div className="text-center p-6 border border-dashed border-gray-300 rounded-lg bg-gray-50 m-4">
           <p className="text-gray-500">Brak treści do wyświetlenia.</p>
         </div>
       )}

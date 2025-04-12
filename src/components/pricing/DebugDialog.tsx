@@ -24,15 +24,15 @@ export const DebugDialog = ({
 }: DebugDialogProps) => {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
+      <DialogContent className="max-w-md p-6">
+        <DialogHeader className="pb-2">
           <DialogTitle>Informacje diagnostyczne</DialogTitle>
           <DialogDescription>
             Informacje o statusie płatności i sesji
           </DialogDescription>
         </DialogHeader>
         
-        <div className="mt-4 text-sm">
+        <div className="mt-4 text-sm px-2">
           <div className="bg-gray-50 p-4 rounded-md max-h-60 overflow-y-auto">
             {Object.entries(debugInfo).map(([key, value]) => (
               <div key={key} className="mb-2">

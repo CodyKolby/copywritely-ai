@@ -45,8 +45,8 @@ const AdObjectiveDialog = ({ open, onOpenChange, onSubmit }: AdObjectiveDialogPr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[500px] p-6">
+        <DialogHeader className="pb-2">
           <DialogTitle className="text-xl font-semibold">Wybierz cel reklamowy</DialogTitle>
           <DialogDescription>
             Wybór celu kampanii reklamowej pomoże nam dopasować odpowiednie elementy briefu.
@@ -54,7 +54,7 @@ const AdObjectiveDialog = ({ open, onOpenChange, onSubmit }: AdObjectiveDialogPr
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 px-2">
             <FormField
               control={form.control}
               name="objective"
@@ -70,7 +70,7 @@ const AdObjectiveDialog = ({ open, onOpenChange, onSubmit }: AdObjectiveDialogPr
                       {adObjectives.map((objective) => (
                         <FormItem 
                           key={objective.id} 
-                          className="flex items-center space-x-3 space-y-0 border rounded-md p-3 hover:bg-gray-50"
+                          className="flex items-center space-x-3 space-y-0 border rounded-md p-4 hover:bg-gray-50"
                         >
                           <FormControl>
                             <RadioGroupItem value={objective.id} />
