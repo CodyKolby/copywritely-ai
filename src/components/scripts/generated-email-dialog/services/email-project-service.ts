@@ -37,7 +37,7 @@ export async function saveEmailToProject(
   try {
     console.log('EMAIL PROJECT SERVICE: Preparing project data for insert');
 
-    const projectData = {
+    const projectData: any = {
       id: projectId,
       title: `Email: ${generatedSubject.substring(0, 50)}`,
       content: generatedEmail,
@@ -51,16 +51,14 @@ export async function saveEmailToProject(
     
     // If we have a narrative blueprint, include it in the metadata
     if (narrativeBlueprint) {
-      Object.assign(projectData, {
-        metadata: {
-          narrativeBlueprint: {
-            punktyEmocjonalne: narrativeBlueprint.punktyemocjonalne,
-            specyfikaMaila: narrativeBlueprint.specyfikamaila,
-            osNarracyjna: narrativeBlueprint.osnarracyjna
-          },
-          alternativeSubject: alternativeSubject
-        }
-      });
+      projectData.metadata = {
+        narrativeBlueprint: {
+          punktyEmocjonalne: narrativeBlueprint.punktyemocjonalne,
+          specyfikaMaila: narrativeBlueprint.specyfikamaila,
+          osNarracyjna: narrativeBlueprint.osnarracyjna
+        },
+        alternativeSubject: alternativeSubject
+      };
     }
     
     console.log('EMAIL PROJECT SERVICE: Inserting project into database:', {
@@ -76,7 +74,8 @@ export async function saveEmailToProject(
       titleLength: projectData.title.length,
       contentLength: projectData.content.length,
       hasUserId: !!projectData.user_id,
-      hasTargetAudienceId: !!projectData.target_audience_id
+      hasTargetAudienceId: !!projectData.target_audience_id,
+      hasMetadata: !!projectData.metadata
     });
     
     // Save to database

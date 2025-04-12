@@ -65,18 +65,19 @@ export const saveProjectWithContent = async (
       subtype: projectSubtype
     });
     
+    const projectData = {
+      title: title.substring(0, 255), // Ensure title is not too long
+      content,
+      user_id: userId,
+      type: projectType,
+      subtype: projectSubtype,
+      platform: platform?.key || null,
+      status: 'Draft' as 'Draft' | 'Completed' | 'Reviewed',
+    };
+    
     const { data, error } = await supabase
       .from('projects')
-      .insert([
-        {
-          title: title.substring(0, 255), // Ensure title is not too long
-          content,
-          user_id: userId,
-          type: projectType,
-          subtype: projectSubtype,
-          platform: platform?.key || null
-        }
-      ])
+      .insert([projectData])
       .select()
       .single();
 

@@ -86,9 +86,15 @@ export type Database = {
           content: string | null
           created_at: string
           id: string
+          metadata: Json | null
+          platform: string | null
           status: Database["public"]["Enums"]["project_status"]
+          subject: string | null
+          subtype: string | null
+          target_audience_id: string | null
           title: string
           title_auto_generated: boolean | null
+          type: string | null
           updated_at: string
           user_id: string
         }
@@ -96,9 +102,15 @@ export type Database = {
           content?: string | null
           created_at?: string
           id?: string
+          metadata?: Json | null
+          platform?: string | null
           status?: Database["public"]["Enums"]["project_status"]
+          subject?: string | null
+          subtype?: string | null
+          target_audience_id?: string | null
           title: string
           title_auto_generated?: boolean | null
+          type?: string | null
           updated_at?: string
           user_id: string
         }
@@ -106,9 +118,15 @@ export type Database = {
           content?: string | null
           created_at?: string
           id?: string
+          metadata?: Json | null
+          platform?: string | null
           status?: Database["public"]["Enums"]["project_status"]
+          subject?: string | null
+          subtype?: string | null
+          target_audience_id?: string | null
           title?: string
           title_auto_generated?: boolean | null
+          type?: string | null
           updated_at?: string
           user_id?: string
         }
