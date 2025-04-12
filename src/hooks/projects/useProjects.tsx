@@ -10,8 +10,9 @@ interface Project {
   status: 'Draft' | 'Completed' | 'Reviewed';
   created_at: string;
   updated_at: string;
-  type: 'brief' | 'script'; // Changed from optional to required
+  type: 'brief' | 'script' | 'email' | 'social'; // Updated type options
   title_auto_generated?: boolean;
+  subtype?: string; // Added for additional categorization
 }
 
 interface RawProject {
@@ -22,8 +23,10 @@ interface RawProject {
   created_at: string;
   updated_at: string;
   user_id: string;
-  type?: 'brief' | 'script';
+  type?: 'brief' | 'script' | 'email' | 'social';
   title_auto_generated?: boolean;
+  subtype?: string;
+  platform?: string;
 }
 
 export const useProjects = (userId: string | undefined) => {
@@ -55,13 +58,28 @@ export const useProjects = (userId: string | undefined) => {
       }
       
       // Handle the case where the 'type' field may not exist in some records
-      const processedData = (data as RawProject[]).map(project => ({
-        ...project,
-        // Set a default 'script' type if type is missing
-        type: project.type || 'script',
-        // Ensure title_auto_generated is defined
-        title_auto_generated: project.title_auto_generated || false
-      }));
+      const processedData = (data as RawProject[]).map(project => {
+        let type = project.type || 'script';
+        let subtype = project.subtype;
+        
+        // Convert platform to subtype if it exists
+        if (project.platform && type === 'script') {
+          type = 'social';
+        }
+        
+        // If the type is 'script' but originally had no type, set subtype to 'ad' as default
+        if ((type === 'script' && !project.type) || type === 'script') {
+          subtype = subtype || 'ad';
+        }
+        
+        return {
+          ...project,
+          type,
+          subtype,
+          // Ensure title_auto_generated is defined
+          title_auto_generated: project.title_auto_generated || false
+        };
+      });
       
       setProjects(processedData);
       console.log('Pobrano projekty:', processedData);
@@ -93,13 +111,9 @@ export const useProjects = (userId: string | undefined) => {
       toast.info('Funkcja edycji briefu będzie dostępna wkrótce', {
         dismissible: true
       });
-    } else if (project?.type === 'script') {
-      // Dla skryptów przekierowujemy do edytora kopii
-      window.location.href = `/copy-editor/${projectId}`;
     } else {
-      toast.info('Funkcja edycji projektu będzie dostępna wkrótce', {
-        dismissible: true
-      });
+      // For scripts, emails, and social posts we redirect to the copy editor
+      window.location.href = `/copy-editor/${projectId}`;
     }
   };
 
@@ -123,7 +137,7 @@ export const useProjects = (userId: string | undefined) => {
         throw error;
       }
       
-      // Usuń projekt z lokalnego stanu
+      // Remove the project from local state
       setProjects(projects.filter(project => project.id !== selectedProjectId));
       toast.success('Projekt został usunięty', {
         dismissible: true

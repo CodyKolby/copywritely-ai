@@ -29,7 +29,18 @@ const Projekty = () => {
 
   const filteredProjects = activeTab === 'all' 
     ? projects 
-    : projects.filter(project => project.type === activeTab);
+    : projects.filter(project => {
+        switch (activeTab) {
+          case 'ad':
+            return project.type === 'script' && project.subtype === 'ad';
+          case 'email':
+            return project.type === 'email';
+          case 'social':
+            return project.type === 'social';
+          default:
+            return false;
+        }
+      });
 
   return (
     <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8 bg-gray-50">

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogClose } from '@/components/ui/dialog';
 import { useScriptGeneration } from './generated-script-dialog/useScriptGeneration';
 import { useAuth } from '@/contexts/auth/AuthContext';
@@ -10,6 +10,7 @@ import { SocialMediaPlatform } from './SocialMediaPlatformDialog';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { saveScriptAsProject } from './generated-script-dialog/script-utils';
 
 interface GeneratedSocialDialogProps {
   open: boolean;
@@ -30,6 +31,7 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
 }) => {
   const { user } = useAuth();
   const [copied, setCopied] = useState(false);
+  const [projectSaved, setProjectSaved] = useState(false);
   
   // Use the script generation hook
   const {
@@ -42,7 +44,6 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
     error,
     isGeneratingNewScript,
     isSaving,
-    projectSaved,
     projectId,
     handleRetry,
     handleGenerateWithNextHook,
@@ -52,6 +53,39 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
   const showLoading = isLoading || isGeneratingNewScript;
   const dialogId = 'social-dialog';
   const contentId = 'social-content';
+
+  // Auto-save the post when generated
+  useEffect(() => {
+    const autoSavePost = async () => {
+      if (!isLoading && !error && postContent && user?.id && !projectSaved && !isSaving) {
+        try {
+          const title = `Post na ${platform?.label || 'social media'}: ${postContent.substring(0, 30)}...`;
+          await saveScriptAsProject(
+            postContent,
+            title,
+            'social',
+            user.id,
+            platform
+          );
+          setProjectSaved(true);
+          console.log('Post automatycznie zapisany w projektach');
+        } catch (err) {
+          console.error('Błąd przy automatycznym zapisywaniu postu:', err);
+        }
+      }
+    };
+
+    if (open) {
+      autoSavePost();
+    }
+  }, [isLoading, error, postContent, user?.id, projectSaved, open]);
+
+  // Reset saved state when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setProjectSaved(false);
+    }
+  }, [open]);
 
   const handleCopyToClipboard = async () => {
     if (postContent) {
@@ -123,13 +157,20 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
               </div>
             </div>
             
-            <div className="p-8 pt-4 flex justify-end">
-              <Button
-                onClick={handleCopyToClipboard}
-                className="bg-[#0D3F40] hover:bg-[#062727] text-white text-base font-medium py-3 px-8 rounded-xl"
-              >
-                {copied ? 'Skopiowano' : 'Kopiuj'}
-              </Button>
+            <div className="p-8 pt-4 flex justify-between">
+              {projectSaved && (
+                <div className="text-sm text-green-600 flex items-center gap-1">
+                  <span>✓</span> Zapisano w projektach
+                </div>
+              )}
+              <div className="ml-auto">
+                <Button
+                  onClick={handleCopyToClipboard}
+                  className="bg-[#0D3F40] hover:bg-[#062727] text-white text-base font-medium py-3 px-8 rounded-xl"
+                >
+                  {copied ? 'Skopiowano' : 'Kopiuj'}
+                </Button>
+              </div>
             </div>
           </>
         )}

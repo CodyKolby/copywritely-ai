@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FileText, Newspaper, File, Trash2 } from 'lucide-react';
+import { FileText, Newspaper, File, Trash2, Mail, Share2 } from 'lucide-react';
 import { 
   Card, 
   CardContent, 
@@ -19,7 +19,8 @@ interface ProjectCardProps {
     content: string;
     status: 'Draft' | 'Completed' | 'Reviewed';
     created_at: string;
-    type: 'brief' | 'script';
+    type: 'brief' | 'script' | 'email' | 'social';
+    subtype?: string;
   };
   onDelete: (id: string) => void;
   onOpen: (id: string) => void;
@@ -29,10 +30,28 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onDelete, onOpen }) 
   const getProjectIcon = () => {
     if (project.type === 'brief') {
       return <FileText className="text-copywrite-teal" />;
-    } else if (project.type === 'script') {
+    } else if (project.type === 'script' || project.subtype === 'ad') {
       return <Newspaper className="text-copywrite-teal-dark" />;
+    } else if (project.type === 'email') {
+      return <Mail className="text-blue-600" />;
+    } else if (project.type === 'social') {
+      return <Share2 className="text-purple-600" />;
     } else {
       return <File className="text-gray-400" />;
+    }
+  };
+  
+  const getProjectTypeName = () => {
+    if (project.type === 'brief') {
+      return "Brief";
+    } else if (project.type === 'script' || project.subtype === 'ad') {
+      return "Reklama internetowa";
+    } else if (project.type === 'email') {
+      return "Mail marketingowy";
+    } else if (project.type === 'social') {
+      return "Post na social media";
+    } else {
+      return "Tekst";
     }
   };
 
@@ -70,7 +89,12 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onDelete, onOpen }) 
             {getProjectIcon()}
             <div className="flex-1">
               <CardTitle className="text-lg">{project.title}</CardTitle>
-              <CardDescription>{formatDate(project.created_at)}</CardDescription>
+              <div className="flex items-center gap-2">
+                <CardDescription>{formatDate(project.created_at)}</CardDescription>
+                <Badge variant="secondary" className="text-xs font-normal">
+                  {getProjectTypeName()}
+                </Badge>
+              </div>
             </div>
           </div>
         </CardHeader>

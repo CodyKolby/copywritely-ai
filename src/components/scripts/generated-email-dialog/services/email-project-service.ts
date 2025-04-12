@@ -18,6 +18,7 @@ export async function saveEmailToProject(
     subject: generatedSubject,
     user_id: userId,
     type: 'email',
+    subtype: 'email',
     status: 'Draft' as 'Draft' | 'Completed' | 'Reviewed', // Explicitly cast as enum type
     target_audience_id: targetAudienceId
   };

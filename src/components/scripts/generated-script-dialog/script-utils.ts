@@ -27,6 +27,22 @@ export const saveScriptAsProject = async (
       platform: socialMediaPlatform?.key
     });
 
+    // Determine the project type based on the template
+    let projectType = 'script';
+    let projectSubtype = 'ad';
+    
+    if (template_type === 'email') {
+      projectType = 'email';
+      projectSubtype = 'email';
+    } else if (template_type === 'social') {
+      projectType = 'social';
+      projectSubtype = 'social';
+    } else {
+      // Default to ad script
+      projectType = 'script';
+      projectSubtype = 'ad';
+    }
+
     // Create a new project in the database
     const { data: project, error } = await supabase
       .from('projects')
@@ -34,6 +50,9 @@ export const saveScriptAsProject = async (
         title: title.substring(0, 255), // Ensure title is not too long
         content: content,
         user_id: userId,
+        type: projectType,
+        subtype: projectSubtype,
+        platform: socialMediaPlatform?.key || null,
         title_auto_generated: true,
         status: 'Draft'
       })

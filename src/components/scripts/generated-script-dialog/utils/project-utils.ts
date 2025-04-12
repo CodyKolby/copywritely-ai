@@ -11,6 +11,22 @@ export const saveProjectWithContent = async (
   platform?: SocialMediaPlatform
 ): Promise<SavedProject | null> => {
   try {
+    // Determine the correct project type based on the template type
+    let projectType = 'script';
+    let projectSubtype = 'ad';
+    
+    if (type === 'email') {
+      projectType = 'email';
+      projectSubtype = 'email';
+    } else if (type === 'social') {
+      projectType = 'social';
+      projectSubtype = 'social';
+    } else {
+      // Default to ad script
+      projectType = 'script';
+      projectSubtype = 'ad';
+    }
+    
     const { data, error } = await supabase
       .from('projects')
       .insert([
@@ -18,7 +34,8 @@ export const saveProjectWithContent = async (
           title,
           content,
           user_id: userId,
-          type,
+          type: projectType,
+          subtype: projectSubtype,
           platform: platform?.key || null
         }
       ])
