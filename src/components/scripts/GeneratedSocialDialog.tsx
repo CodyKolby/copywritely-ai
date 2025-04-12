@@ -94,14 +94,14 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
         aria-describedby={contentId}
         id={dialogId}
       >
-        <div className="p-6 pb-4 relative">
+        <div className="p-8 pb-4 relative">
           <h2 className="text-2xl font-bold text-gray-900 pr-8">
             Wygenerowany post dla {platform?.label || 'mediów społecznościowych'}
           </h2>
           
-          <DialogClose className="absolute right-6 top-6 rounded-full p-1 hover:bg-gray-100 transition-colors">
+          <DialogClose className="absolute right-8 top-8 rounded-full p-1 hover:bg-gray-100 transition-colors">
             <X className="h-6 w-6 text-gray-500" />
-            <span className="sr-only">Kopiuj</span>
+            <span className="sr-only">Zamknij</span>
           </DialogClose>
         </div>
         
@@ -113,14 +113,14 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
           <>
             <div 
               id={contentId} 
-              className="px-6 flex-grow"
+              className="px-8 flex-grow"
             >
-              <div className="bg-gray-50 rounded-2xl border border-gray-200 p-6 overflow-y-auto">
+              <div className="bg-gray-50 rounded-2xl border border-gray-200 p-8 overflow-y-auto mb-4">
                 <ScriptDisplay script={postContent || ''} />
               </div>
             </div>
             
-            <div className="p-6 pt-4 flex justify-end">
+            <div className="p-8 pt-4 flex justify-end">
               <Button
                 onClick={handleCopyToClipboard}
                 className="bg-[#0D3F40] hover:bg-[#062727] text-white text-base font-medium py-3 px-8 rounded-xl"
