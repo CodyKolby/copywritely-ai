@@ -7,7 +7,7 @@ interface ScriptDisplayProps {
   bestHook?: string;
   hookIndex?: number;
   totalHooks?: number;
-  adStructure?: 'PAS' | 'generic' | 'social';
+  adStructure?: 'PAS' | 'generic' | 'social' | '';
   rawResponse?: string;
   debugInfo?: any;
   showIntro?: boolean;
@@ -18,7 +18,7 @@ const ScriptDisplay = ({
   bestHook = '',
   hookIndex = 0,
   totalHooks = 0,
-  adStructure = '',
+  adStructure = 'generic',
   rawResponse,
   debugInfo,
   showIntro = false

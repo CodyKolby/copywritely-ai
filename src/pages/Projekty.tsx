@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Loader2, RefreshCw } from 'lucide-react';
@@ -14,11 +13,8 @@ import GeneratedScriptDialog from '@/components/scripts/GeneratedScriptDialog';
 import GeneratedSocialDialog from '@/components/scripts/GeneratedSocialDialog';
 import { EmailStyle } from '@/components/scripts/EmailStyleDialog';
 
-// Dummy values for dialogs when opening existing projects
-const DEFAULT_EMAIL_STYLE: EmailStyle = {
-  tone: "professional",
-  style: "conversational"
-};
+// Correctly defined DEFAULT_EMAIL_STYLE according to EmailStyle type
+const DEFAULT_EMAIL_STYLE: EmailStyle = "direct-sales";
 
 const Projekty = () => {
   const { user } = useAuth();
