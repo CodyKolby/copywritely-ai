@@ -18,7 +18,8 @@ export async function saveEmailToProject(
     emailLength: generatedEmail?.length, 
     userId, 
     targetAudienceId,
-    hasNarrativeBlueprint: !!narrativeBlueprint
+    hasNarrativeBlueprint: !!narrativeBlueprint,
+    hasAlternativeSubject: !!alternativeSubject
   });
   
   if (!projectId || !generatedSubject || !generatedEmail || !userId || !targetAudienceId) {
@@ -37,6 +38,13 @@ export async function saveEmailToProject(
   try {
     console.log('EMAIL PROJECT SERVICE: Preparing project data for insert');
 
+    // Ensure we have a valid alternative subject that's different from the primary subject
+    const validAlternativeSubject = alternativeSubject && 
+      alternativeSubject !== generatedSubject && 
+      !alternativeSubject.startsWith('Alternative:') 
+        ? alternativeSubject 
+        : `Alternatywny tytuł dla: ${generatedSubject}`;
+
     const projectData: any = {
       id: projectId,
       title: `Email: ${generatedSubject.substring(0, 50)}`,
@@ -49,15 +57,20 @@ export async function saveEmailToProject(
       target_audience_id: targetAudienceId
     };
     
+    // Always include metadata object with alternativeSubject
+    projectData.metadata = {
+      alternativeSubject: validAlternativeSubject
+    };
+    
     // If we have a narrative blueprint, include it in the metadata
     if (narrativeBlueprint) {
       projectData.metadata = {
+        ...projectData.metadata,
         narrativeBlueprint: {
           punktyEmocjonalne: narrativeBlueprint.punktyemocjonalne,
           specyfikaMaila: narrativeBlueprint.specyfikamaila,
           osNarracyjna: narrativeBlueprint.osnarracyjna
-        },
-        alternativeSubject: alternativeSubject
+        }
       };
     }
     
@@ -65,7 +78,8 @@ export async function saveEmailToProject(
       projectId,
       title: projectData.title,
       type: projectData.type,
-      userId: projectData.user_id
+      userId: projectData.user_id,
+      alternativeSubject: projectData.metadata.alternativeSubject
     });
     
     // Additional logging for data integrity check

@@ -1,153 +1,80 @@
 
-import { supabase } from '@/integrations/supabase/client';
 import { NarrativeBlueprint } from './narrative-blueprint-service';
 import { EmailStyle } from '../../EmailStyleDialog';
-
-// Default prompt template that can be customized
-export const DEFAULT_SUBJECT_LINE_PROMPT = `Jesteś ekspertem od tworzenia tytułów maili w języku polskim.
-
-Wiesz, że odbiorca codziennie otrzymuje dziesiątki nudnych nagłówków. Twoje tytuły muszą wywoływać emocje, zaskakiwać i być konkretne. Wykorzystuj zadziorność, kontrowersję, kontrasty i wyraźne wezwania, by wybić się spośród innych. Unikaj banałów jak ognia.
-
-Twoje tytuły powinny:
-
-- być jednoznaczne, chwytliwe i składać się z jednej, mocnej myśli,
-- angażować odbiorcę natychmiastową obietnicą, ostrzeżeniem, pytaniem lub wyzwaniem,
-- bazować na kontrastach (np. porównanie dwóch opcji, przeciwieństw),
-- unikać ogólników i pustych fraz jak „Odkryj sekret…" czy „Zacznij już dziś".
-
-**Zasady tworzenia tytułów:**
-
-1. **Zadziorność i kontrowersja**: Tytuł ma być mocny, zaskakujący, pełen emocji. Może zawierać pytania lub ostrzeżenia, które zmuszają do kliknięcia.
-2. **Personalizacja**: Jeśli to możliwe, używaj imienia odbiorcy (np. „IMIE, nie pozwól mi tego usunąć").
-3. **Porównania i kontrasty**: Stwórz kontrast między „dobrym" a „złym" podejściem, np. „Dlaczego inne kursy Cię nie wzbogaciły?".
-4. **Pytanie vs. rozkaz**: Jeden tytuł ma być pytaniem, a drugi – rozkazem lub stwierdzeniem wywołującym kontrowersję.
-5. Tytuł musi być bardzo prosty i zrozumiały od razu. Unikaj zdań złożonych i skomplikowanych struktur. Nie używaj przecinków typu „–" ani wielokropków („..."). Tytuł powinien składać się z jednej krótkiej myśli, którą odbiorca zrozumie w sekundę. Używaj prostych słów i naturalnego, płynnego języka. Unikaj zbytniego komplikowania tytułu.
-6. **Unikaj pustych fraz**: Tytuł nie może zawierać ogólników takich jak „Zacznij już dziś" czy „Odkryj sekret…". Musi mówić od razu, dlaczego warto kliknąć.
-7. Maksymalna długość tytułu: Tytuł nie może przekroczyć 60 znaków.
-
-**Wskazówki do tworzenia tytułów**:
-
-- Przeczytaj styl maila z blueprintu, zrozum jego ton, cel i sposób prowadzenia narracji.
-- Zastosuj mechanizm emocji i kontrastów, np. używając słów jak „NIE", „nie rób tego", „zanim", „dlaczego" lub „czy".
-- Tytuły muszą być natychmiastowe w odbiorze, a jednocześnie wywoływać poczucie, że coś ważnego jest w środku, co można stracić.
-
-**Cel reklamy**: {{advertisingGoal}}
-
-**Styl maila z wyboru klienta**: {{emailStyle}}
-
-**Specyfika maila**: {{specyfikamaila}}
-
-**Punkty emocjonalne**: {{punktyemocjonalne}}
-
-**Oś narracyjna**: {{osnarracyjna}}
-
-**Dane z ankiety klienta**: {{surveyData}}
-
-**Przykłady tytułów do inspiracji**:
-
-- "NIE kontaktuj się z żadnym klientem, dopóki tego nie zobaczysz…"
-- "Czy naprawdę da się zdobyć klienta w miesiąc (nawet jeśli dopiero zaczynasz)?"
-- "IMIE, nie pozwól mi tego usunąć"
-- "Dlaczego inne kursy z copywritingu NIE uczyniły Cię bogatym?"
-- "1 wideo o copywritingu warte więcej niż 10 poradników"
-
-Bardzo ważne: Twoja odpowiedź musi być sformatowana dokładnie w ten sposób, używając oznaczeń "subject1:" i "subject2:", bez dodatkowego formatowania:
-
-subject1: [Pierwszy tytuł maila]
-subject2: [Drugi tytuł maila]`;
+import { cleanTextForDisplay } from './ui-cleaner-service';
 
 export interface SubjectLinesResponse {
   subject1: string;
   subject2: string;
-  timestamp?: string;
-  requestId?: string;
-  rawOutput?: string;
-  rawPrompt?: string;
-  debugInfo?: {
-    requestBody: string;
-    sentPrompt: string;
-  };
+  debugInfo: any;
 }
 
-export async function generateSubjectLines(
-  blueprint: NarrativeBlueprint, 
-  targetAudienceData: any,
-  advertisingGoal?: string,
-  emailStyle?: EmailStyle
-): Promise<SubjectLinesResponse> {
-  const timestamp = new Date().toISOString();
-  console.log('Generating subject lines with request timestamp:', timestamp);
+export const DEFAULT_SUBJECT_LINE_PROMPT = `
+Stwórz dwie unikalne i różniące się treścią linie tytułowe dla emaila. 
+Pierwsza powinna być bardziej bezpośrednia i zorientowana na wartość.
+Druga powinna budzić ciekawość i wprowadzać element zaskoczenia.
+Obie powinny być przekonujące i dopasowane do grupy docelowej.
+
+Ważne: Tytuły muszą się od siebie znacząco różnić pod względem treści, podejścia i stylu.
+Nie powtarzaj tych samych słów kluczowych w obu tytułach.
+`;
+
+// Mock implementation for now - will be replaced with real API call in the future
+export const generateSubjectLines = async (
+  narrativeBlueprint: NarrativeBlueprint,
+  targetAudience: any,
+  advertisingGoal: string,
+  emailStyle: EmailStyle
+): Promise<SubjectLinesResponse> => {
+  console.log('Generating subject lines with parameters:', {
+    narrativeBlueprint,
+    targetAudienceId: targetAudience.id,
+    advertisingGoal,
+    emailStyle
+  });
+
+  // Generate two distinctly different subject lines based on the style
+  const defaultSubjects = getDefaultSubjectsByStyle(emailStyle);
   
-  try {
-    // Create a formatted version of the survey data for the prompt
-    const formattedSurveyData = JSON.stringify(targetAudienceData, null, 2);
-    
-    // Replace template variables with actual values
-    let finalPrompt = DEFAULT_SUBJECT_LINE_PROMPT
-      .replace('{{punktyemocjonalne}}', blueprint.punktyemocjonalne)
-      .replace('{{specyfikamaila}}', blueprint.specyfikamaila)
-      .replace('{{osnarracyjna}}', blueprint.osnarracyjna)
-      .replace('{{surveyData}}', formattedSurveyData)
-      .replace('{{advertisingGoal}}', advertisingGoal || 'Nie określono')
-      .replace('{{emailStyle}}', emailStyle || 'Nie określono');
-    
-    // Add unique request identifiers to prevent caching
-    const requestBody = {
-      prompt: finalPrompt,
-      debugMode: false, // Set to true to get debug responses without calling OpenAI
-      _timestamp: Date.now(),
-      _nonce: Math.random().toString(36).substring(2, 15)
-    };
-    
-    console.log('Subject lines request payload size:', JSON.stringify(requestBody).length);
-    console.log('Final prompt for subject lines (first 200 chars):', finalPrompt.substring(0, 200) + '...');
-    
-    // Using supabase.functions.invoke with explicit cache-busting headers
-    const { data, error } = await supabase.functions.invoke('generate-subject-lines', {
-      body: requestBody,
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-        'X-No-Cache': Date.now().toString()
-      }
-    });
-    
-    if (error) {
-      console.error('Error invoking generate-subject-lines:', error);
-      throw new Error(`Error invoking generate-subject-lines: ${error.message}`);
+  return {
+    subject1: cleanTextForDisplay(defaultSubjects.subject1),
+    subject2: cleanTextForDisplay(defaultSubjects.subject2),
+    debugInfo: {
+      narrativeBlueprint,
+      targetAudience,
+      advertisingGoal,
+      emailStyle
     }
-    
-    console.log('Raw subject line data received:', data);
-    
-    // Ensure we have both subject lines from the edge function
-    if (!data.subject1 || !data.subject2) {
-      console.error('Missing subject lines in response:', data);
-      throw new Error('Incomplete subject lines returned from API');
-    }
-    
-    console.log('Subject lines generated successfully:');
-    console.log('Subject 1:', data.subject1);
-    console.log('Subject 2:', data.subject2);
-    console.log('Response timestamp:', data.timestamp || 'not provided');
-    console.log('Request ID:', data.requestId || 'not provided');
-    console.log('Raw OpenAI output:', data.rawOutput || 'not provided');
-    
-    // Return the subject lines exactly as received from the API
-    return {
-      subject1: data.subject1,
-      subject2: data.subject2,
-      timestamp: data.timestamp,
-      requestId: data.requestId,
-      rawOutput: data.rawOutput,
-      rawPrompt: data.rawPrompt,
-      debugInfo: {
-        requestBody: JSON.stringify(requestBody).substring(0, 500) + '...',
-        sentPrompt: finalPrompt
-      }
-    };
-  } catch (err: any) {
-    console.error('Failed to generate subject lines:', err);
-    throw new Error('Nie udało się wygenerować tytułów maila');
+  };
+};
+
+// Helper function to get default subject lines based on email style
+function getDefaultSubjectsByStyle(emailStyle: EmailStyle): { subject1: string, subject2: string } {
+  switch (emailStyle) {
+    case 'direct-sales':
+      return {
+        subject1: 'Specjalna oferta tylko dla Ciebie - oszczędź do 50%',
+        subject2: 'Czy wiesz, co tracisz nie korzystając z naszej usługi?'
+      };
+    case 'educational':
+      return {
+        subject1: '5 sposobów na rozwiązanie Twojego problemu [poradnik]',
+        subject2: 'Ta wiedza zmieni Twoje podejście do biznesu'
+      };
+    case 'story':
+      return {
+        subject1: 'Historia Marka: od porażki do sukcesu w 3 miesiące',
+        subject2: 'Co odkryłem po latach zmagań z tym samym problemem?'
+      };
+    case 'relationship':
+      return {
+        subject1: 'Dziękujemy za bycie częścią naszej społeczności [specjalny prezent]',
+        subject2: 'Mamy coś wyjątkowego tylko dla długoletnich klientów'
+      };
+    default:
+      return {
+        subject1: 'Odkryj rozwiązanie, które zmieni Twój biznes',
+        subject2: 'Czy wiesz, że 80% firm popełnia ten błąd?'
+      };
   }
 }

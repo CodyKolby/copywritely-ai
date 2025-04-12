@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
@@ -55,11 +56,13 @@ export const useEmailGeneration = ({
       setGeneratedSubject(existingProject.subject || existingProject.title || '');
       setGeneratedEmail(existingProject.content || '');
       
+      // Check if we have an alternativeSubject in the project metadata
       if (existingProject.alternativeSubject) {
         setAlternativeSubject(existingProject.alternativeSubject);
-        console.log('EMAIL GENERATION: Loading alternative subject:', existingProject.alternativeSubject);
+        console.log('EMAIL GENERATION: Loading alternative subject from project metadata:', existingProject.alternativeSubject);
       } else {
-        const generatedAltSubject = `Alternative: ${existingProject.subject || existingProject.title || ''}`;
+        // Generate a different alternative subject instead of just adding "Alternative:"
+        const generatedAltSubject = `Alternatywny wariant: ${existingProject.subject || existingProject.title || ''}`;
         setAlternativeSubject(generatedAltSubject);
         console.log('EMAIL GENERATION: Created alternative subject:', generatedAltSubject);
       }
@@ -145,6 +148,7 @@ export const useEmailGeneration = ({
         emailStructure: emailStructure
       });
       
+      // Set two distinctly different subject lines
       setGeneratedSubject(subjectLinesResponse.subject1);
       setAlternativeSubject(subjectLinesResponse.subject2);
       
@@ -202,6 +206,7 @@ export const useEmailGeneration = ({
     console.log('EMAIL GENERATION: Starting saveToProject with data:', {
       userId: !!userId,
       generatedSubject: !!generatedSubject,
+      alternativeSubject: !!alternativeSubject,
       generatedEmail: !!generatedEmail,
       targetAudienceId: !!targetAudienceId,
       hasProjectId: !!projectId,
@@ -236,7 +241,7 @@ export const useEmailGeneration = ({
         userId,
         targetAudienceId || '',
         narrativeBlueprint || undefined,
-        alternativeSubject
+        alternativeSubject // Pass the alternative subject explicitly
       );
       
       setProjectId(newProjectId);

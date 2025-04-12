@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -29,7 +30,10 @@ interface RawProject {
   subtype?: string;
   platform?: string;
   subject?: string;
-  alternativeSubject?: string;
+  metadata?: {
+    alternativeSubject?: string;
+    [key: string]: any;
+  };
 }
 
 export const useProjects = (userId: string | undefined) => {
@@ -81,14 +85,17 @@ export const useProjects = (userId: string | undefined) => {
           subtype = subtype || 'ad';
         }
         
+        // Extract alternativeSubject from metadata if it exists
+        const alternativeSubject = project.metadata?.alternativeSubject;
+        
         return {
           ...project,
           type,
           subtype,
           // Ensure title_auto_generated is defined
           title_auto_generated: project.title_auto_generated || false,
-          // Keep the alternativeSubject if it exists
-          alternativeSubject: project.alternativeSubject
+          // Extract alternativeSubject from metadata
+          alternativeSubject: alternativeSubject || project.alternativeSubject
         };
       });
       
