@@ -57,6 +57,14 @@ export const saveProjectWithContent = async (
       platform: platform?.key
     });
     
+    // Additional logging before database operation
+    console.log('PROJECT UTILS: Final project data before save:', {
+      titleTruncated: title.substring(0, 50),
+      contentFirstChars: content.substring(0, 100) + '...',
+      type: projectType,
+      subtype: projectSubtype
+    });
+    
     const { data, error } = await supabase
       .from('projects')
       .insert([

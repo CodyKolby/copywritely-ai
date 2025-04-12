@@ -184,7 +184,7 @@ export const useEmailGeneration = ({
     generateEmail();
   };
 
-  // Use useCallback to prevent useEffect dependency issues
+  // Modify saveToProject to return a Promise that can be awaited or have .catch() called on it
   const saveToProject = useCallback(async () => {
     console.log('EMAIL GENERATION: Starting saveToProject with data:', {
       userId: !!userId,
@@ -196,7 +196,7 @@ export const useEmailGeneration = ({
     
     if (!userId || !generatedSubject || !generatedEmail || !targetAudienceId) {
       console.log('EMAIL GENERATION: Missing data for saving email project');
-      return;
+      return Promise.resolve(); // Return resolved promise when no action is taken
     }
 
     setIsSaving(true);
@@ -219,10 +219,12 @@ export const useEmailGeneration = ({
       setProjectSaved(true);
       
       console.log('EMAIL GENERATION: Email successfully saved to projects with ID:', newProjectId);
+      return Promise.resolve(); // Return resolved promise for successful save
 
     } catch (err: any) {
       console.error('EMAIL GENERATION: Error saving email to projects:', err);
       // Toast is handled in the saveEmailToProject function
+      return Promise.reject(err); // Return rejected promise so error can be caught
     } finally {
       setIsSaving(false);
     }
@@ -252,7 +254,12 @@ export const useEmailGeneration = ({
       ) {
         console.log('EMAIL GENERATION: Auto-save triggered');
         setAutoSaveAttempted(true);
-        await saveToProject();
+        try {
+          await saveToProject();
+        } catch (err) {
+          console.error('EMAIL GENERATION: Auto-save failed:', err);
+          // Error notification handled in saveToProject
+        }
       }
     };
     

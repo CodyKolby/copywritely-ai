@@ -95,10 +95,13 @@ const GeneratedEmailDialog = ({
     
     if (shouldAttemptSave) {
       console.log('EMAIL DIALOG: Triggering saveToProject() from useEffect');
-      saveToProject().catch(err => {
+      // Fix: Remove .catch() since saveToProject() returns void, not a Promise
+      try {
+        saveToProject();
+      } catch (err) {
         console.error('EMAIL DIALOG: Error in auto-save effect:', err);
         toast.error('Nie udało się zapisać emaila');
-      });
+      }
     }
   }, [isLoading, error, generatedSubject, generatedEmail, projectSaved, user?.id, isSaving, open, saveToProject]);
   

@@ -70,6 +70,15 @@ export async function saveEmailToProject(
       userId: projectData.user_id
     });
     
+    // Additional logging for data integrity check
+    console.log('EMAIL PROJECT SERVICE: Checking data integrity before save', {
+      hasId: !!projectData.id,
+      titleLength: projectData.title.length,
+      contentLength: projectData.content.length,
+      hasUserId: !!projectData.user_id,
+      hasTargetAudienceId: !!projectData.target_audience_id
+    });
+    
     // Save to database
     const { data, error } = await supabase
       .from('projects')
