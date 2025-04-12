@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import LoadingState from './generated-email-dialog/LoadingState';
 import EmailDisplay from './generated-email-dialog/EmailDisplay';
@@ -22,6 +22,7 @@ interface GeneratedEmailDialogProps {
     title: string;
     content: string;
     subject?: string;
+    alternativeSubject?: string;
   };
 }
 
@@ -35,6 +36,7 @@ const GeneratedEmailDialog = ({
   existingProject
 }: GeneratedEmailDialogProps) => {
   const { user } = useAuth();
+  const [showAlternativeSubject, setShowAlternativeSubject] = useState(false);
   
   const {
     isLoading,
@@ -50,7 +52,8 @@ const GeneratedEmailDialog = ({
     setGeneratedSubject,
     setGeneratedEmail,
     narrativeBlueprint,
-    emailStructure
+    emailStructure,
+    setAlternativeSubject
   } = useEmailGeneration({
     open,
     targetAudienceId,
@@ -60,6 +63,20 @@ const GeneratedEmailDialog = ({
     userId: user?.id,
     existingProject
   });
+
+  // Check if we have an existing project with stored alternative subject
+  useEffect(() => {
+    if (existingProject && open) {
+      // Check if there's an alternative subject in the project
+      if (existingProject.alternativeSubject) {
+        setAlternativeSubject(existingProject.alternativeSubject);
+        setShowAlternativeSubject(true);
+      } else if (alternativeSubject) {
+        // If not in existingProject but we have one from generation
+        setShowAlternativeSubject(true);
+      }
+    }
+  }, [existingProject, open, alternativeSubject, setAlternativeSubject]);
   
   // Only show the dialog content after loading or if there's an error
   // This prevents showing empty content briefly during load
@@ -76,7 +93,7 @@ const GeneratedEmailDialog = ({
           <ErrorState error={error} onRetry={handleRetry} />
         ) : (
           <div className="p-6 max-h-[calc(90vh-100px)] overflow-y-auto">
-            {alternativeSubject && (
+            {(showAlternativeSubject || alternativeSubject) && (
               <SubjectLineToggle 
                 currentSubject={generatedSubject}
                 alternativeSubject={alternativeSubject}

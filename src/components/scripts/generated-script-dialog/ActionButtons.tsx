@@ -12,7 +12,6 @@ interface ActionButtonsProps {
   onGenerateNew: () => void;
   onViewProject?: () => void;
   isGeneratingNewScript: boolean;
-  onCopyToClipboard?: () => void;
   copied?: boolean;
 }
 
@@ -25,7 +24,6 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
   onGenerateNew,
   onViewProject,
   isGeneratingNewScript,
-  onCopyToClipboard,
   copied = false
 }) => {
   return (
@@ -65,8 +63,17 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
         
         {projectSaved && projectId && onViewProject && (
           <Button onClick={onViewProject} className="bg-copywrite-teal text-white hover:bg-copywrite-teal-dark">
-            <Copy className="mr-2 h-4 w-4" />
-            <span>Kopiuj</span>
+            {copied ? (
+              <>
+                <Check className="mr-2 h-4 w-4" />
+                <span>Skopiowano</span>
+              </>
+            ) : (
+              <>
+                <Copy className="mr-2 h-4 w-4" />
+                <span>Kopiuj</span>
+              </>
+            )}
           </Button>
         )}
       </div>

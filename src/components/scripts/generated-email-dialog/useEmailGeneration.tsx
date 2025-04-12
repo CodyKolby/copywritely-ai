@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
@@ -50,18 +49,26 @@ export const useEmailGeneration = ({
   
   const navigate = useNavigate();
 
-  // If existingProject is provided, we don't need to generate anything
   useEffect(() => {
     if (existingProject && open) {
       console.log('EMAIL GENERATION: Loading existing project:', existingProject.id);
       setGeneratedSubject(existingProject.subject || existingProject.title || '');
       setGeneratedEmail(existingProject.content || '');
+      
+      if (existingProject.alternativeSubject) {
+        setAlternativeSubject(existingProject.alternativeSubject);
+        console.log('EMAIL GENERATION: Loading alternative subject:', existingProject.alternativeSubject);
+      } else {
+        const generatedAltSubject = `Alternative: ${existingProject.subject || existingProject.title || ''}`;
+        setAlternativeSubject(generatedAltSubject);
+        console.log('EMAIL GENERATION: Created alternative subject:', generatedAltSubject);
+      }
+      
       setProjectId(existingProject.id);
       setProjectSaved(true);
       setIsLoading(false);
       setAutoSaveAttempted(true);
     } else if (open && !existingProject) {
-      // Only reset state if we're not loading an existing project
       resetState();
     }
   }, [existingProject, open]);
@@ -73,7 +80,6 @@ export const useEmailGeneration = ({
   }, [open]);
 
   useEffect(() => {
-    // Only generate email if we're not loading an existing project
     if (open && targetAudienceId && !existingProject && !generatedEmail) {
       generateEmail();
     }
@@ -110,7 +116,6 @@ export const useEmailGeneration = ({
       console.log('EMAIL GENERATION: Advertising goal:', advertisingGoal);
       console.log('EMAIL GENERATION: Request timestamp:', requestTimestamp);
 
-      // First, fetch the target audience data
       const { data: targetAudienceData, error: targetAudienceError } = await supabase
         .from('target_audiences')
         .select('*')
@@ -121,13 +126,11 @@ export const useEmailGeneration = ({
         throw new Error(`Nie udało się pobrać danych grupy docelowej: ${targetAudienceError.message}`);
       }
 
-      // Generate narrative blueprint using the target audience data
       const blueprint = await generateNarrativeBlueprint(targetAudienceData, emailStyle, advertisingGoal);
       setNarrativeBlueprint(blueprint);
       
       console.log('EMAIL GENERATION: Narrative blueprint generated:', blueprint);
       
-      // Generate subject lines using the narrative blueprint and prompt
       const subjectLinesResponse = await generateSubjectLines(
         blueprint, 
         targetAudienceData, 
@@ -137,22 +140,18 @@ export const useEmailGeneration = ({
       
       console.log('EMAIL GENERATION: Subject lines generated:', subjectLinesResponse);
       
-      // Store debug info
       setDebugInfo({
         subjectLines: subjectLinesResponse.debugInfo,
         emailStructure: emailStructure
       });
       
-      // Set the subject lines exactly as received from the API
       setGeneratedSubject(subjectLinesResponse.subject1);
       setAlternativeSubject(subjectLinesResponse.subject2);
       
-      // Randomly select email structure (PAS or CJN)
       const selectedStructure = selectRandomEmailStructure();
       setEmailStructure(selectedStructure);
       console.log(`EMAIL GENERATION: Selected email structure: ${selectedStructure}`);
       
-      // Generate email content based on narrative blueprint and selected structure
       const emailContentResponse = await generateEmailContent(
         blueprint, 
         targetAudienceData, 
@@ -163,10 +162,8 @@ export const useEmailGeneration = ({
       
       console.log(`EMAIL GENERATION: Email content generated using structure: ${emailContentResponse.structureUsed}`);
       
-      // Set the generated email content
       setGeneratedEmail(emailContentResponse.emailContent);
       
-      // Update debug info with email content generation details
       setDebugInfo(prev => ({
         ...prev,
         emailContent: emailContentResponse.debugInfo,
@@ -187,7 +184,6 @@ export const useEmailGeneration = ({
     
     setIsShowingAlternative(!isShowingAlternative);
     
-    // Swap the subject lines
     const temp = generatedSubject;
     setGeneratedSubject(alternativeSubject);
     setAlternativeSubject(temp);
@@ -202,7 +198,6 @@ export const useEmailGeneration = ({
     generateEmail();
   };
 
-  // Modify saveToProject to return a Promise that can be awaited or have .catch() called on it
   const saveToProject = useCallback(async () => {
     console.log('EMAIL GENERATION: Starting saveToProject with data:', {
       userId: !!userId,
@@ -213,7 +208,6 @@ export const useEmailGeneration = ({
       existingProject: !!existingProject
     });
     
-    // Skip saving if we're viewing an existing project
     if (existingProject) {
       console.log('EMAIL GENERATION: Using existing project, skipping save');
       return Promise.resolve();
@@ -221,10 +215,9 @@ export const useEmailGeneration = ({
     
     if (!userId || !generatedSubject || !generatedEmail) {
       console.log('EMAIL GENERATION: Missing data for saving email project');
-      return Promise.resolve(); // Return resolved promise when no action is taken
+      return Promise.resolve();
     }
     
-    // Check if project already saved to prevent double saving
     if (projectSaved) {
       console.log('EMAIL GENERATION: Project already saved, skipping save operation');
       return Promise.resolve();
@@ -241,7 +234,7 @@ export const useEmailGeneration = ({
         generatedSubject,
         generatedEmail,
         userId,
-        targetAudienceId || '', // Default to empty string if no target audience
+        targetAudienceId || '',
         narrativeBlueprint || undefined,
         alternativeSubject
       );
@@ -250,12 +243,11 @@ export const useEmailGeneration = ({
       setProjectSaved(true);
       
       console.log('EMAIL GENERATION: Email successfully saved to projects with ID:', newProjectId);
-      return Promise.resolve(); // Return resolved promise for successful save
+      return Promise.resolve();
 
     } catch (err: any) {
       console.error('EMAIL GENERATION: Error saving email to projects:', err);
-      // Toast is handled in the saveEmailToProject function
-      return Promise.reject(err); // Return rejected promise so error can be caught
+      return Promise.reject(err);
     } finally {
       setIsSaving(false);
     }
@@ -269,10 +261,8 @@ export const useEmailGeneration = ({
     }
   }, [projectId, navigate]);
 
-  // Auto-save Effect - we want this enabled only for new projects, not existing ones
   useEffect(() => {
     const performAutoSave = async () => {
-      // Don't auto-save if viewing an existing project
       if (existingProject) {
         return;
       }
@@ -343,6 +333,7 @@ export const useEmailGeneration = ({
     setGeneratedSubject,
     setGeneratedEmail,
     debugInfo,
-    emailStructure
+    emailStructure,
+    setAlternativeSubject
   };
 };

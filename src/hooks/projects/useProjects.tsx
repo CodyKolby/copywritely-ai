@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -14,6 +13,7 @@ interface Project {
   title_auto_generated?: boolean;
   subtype?: string; // Added for additional categorization
   subject?: string; // Added for email projects
+  alternativeSubject?: string; // Added for alternative email subjects
 }
 
 interface RawProject {
@@ -29,6 +29,7 @@ interface RawProject {
   subtype?: string;
   platform?: string;
   subject?: string;
+  alternativeSubject?: string;
 }
 
 export const useProjects = (userId: string | undefined) => {
@@ -85,7 +86,9 @@ export const useProjects = (userId: string | undefined) => {
           type,
           subtype,
           // Ensure title_auto_generated is defined
-          title_auto_generated: project.title_auto_generated || false
+          title_auto_generated: project.title_auto_generated || false,
+          // Keep the alternativeSubject if it exists
+          alternativeSubject: project.alternativeSubject
         };
       });
       

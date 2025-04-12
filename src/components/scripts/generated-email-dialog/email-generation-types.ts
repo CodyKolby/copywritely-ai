@@ -15,6 +15,7 @@ export interface UseEmailGenerationProps {
     title: string;
     content: string;
     subject?: string;
+    alternativeSubject?: string;
   };
 }
 
@@ -39,6 +40,7 @@ export interface EmailGenerationActions {
   handleViewProject: () => void;
   setGeneratedSubject: (subject: string) => void;
   setGeneratedEmail: (email: string) => void;
+  setAlternativeSubject: (subject: string) => void;
 }
 
 export type EmailGenerationHookReturn = EmailGenerationState & EmailGenerationActions & {
