@@ -63,7 +63,7 @@ const Projekty = () => {
             </Button>
           </div>
           <p className="text-gray-600 mb-8">
-            Tutaj znajdziesz wszystkie swoje briefy i teksty stworzone w Copywritely AI.
+            Tutaj znajdziesz wszystkie skrypty wygenerowane przez Copility.
           </p>
 
           <ProjectFilters activeTab={activeTab} onTabChange={setActiveTab} />
