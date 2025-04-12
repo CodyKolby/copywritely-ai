@@ -101,7 +101,7 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
           
           <DialogClose className="absolute right-6 top-6 rounded-full p-1 hover:bg-gray-100 transition-colors">
             <X className="h-6 w-6 text-gray-500" />
-            <span className="sr-only">Zamknij</span>
+            <span className="sr-only">Kopiuj</span>
           </DialogClose>
         </div>
         
