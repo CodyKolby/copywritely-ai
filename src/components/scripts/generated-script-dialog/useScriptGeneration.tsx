@@ -1,9 +1,9 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { toast } from 'sonner';
 import { generateScript } from './utils/script-generator';
 import { saveProjectWithContent } from './utils/project-utils';
 import { SocialMediaPlatform } from '../SocialMediaPlatformDialog';
-import { toast } from 'sonner';
 
 export const useScriptGeneration = (
   open: boolean, 
@@ -56,17 +56,17 @@ export const useScriptGeneration = (
 
   const generateScriptContent = async (hookIndex = 0, isRetry = false) => {
     if (generationInProgress.current) {
-      console.log("Script generation already in progress, skipping duplicate request");
+      console.log("SCRIPT GENERATION: Generation already in progress, skipping duplicate request");
       return;
     }
     
     if (!open) {
-      console.log("Dialog is not open, not generating script");
+      console.log("SCRIPT GENERATION: Dialog is not open, not generating script");
       return;
     }
 
     if (!targetAudienceId || !templateId) {
-      console.error("Missing required parameters:", { targetAudienceId, templateId });
+      console.error("SCRIPT GENERATION: Missing required parameters:", { targetAudienceId, templateId });
       setError(new Error("Brakuje wymaganych parametrów do wygenerowania skryptu."));
       setIsLoading(false);
       return;
@@ -85,7 +85,7 @@ export const useScriptGeneration = (
       const currentRequestId = `${lastRequestTimestamp.current}-${Math.random().toString(36).substring(2, 15)}`;
       requestId.current = currentRequestId;
       
-      console.log("Starting script generation with params:", { 
+      console.log("SCRIPT GENERATION: Starting script generation with params:", { 
         templateId, 
         targetAudienceId, 
         advertisingGoal,
@@ -103,7 +103,7 @@ export const useScriptGeneration = (
       );
 
       if (!mountedRef.current || requestId.current !== currentRequestId) {
-        console.log("Component unmounted or newer request started, discarding results");
+        console.log("SCRIPT GENERATION: Component unmounted or newer request started, discarding results");
         return;
       }
 
@@ -130,29 +130,23 @@ export const useScriptGeneration = (
       setTotalHooks(result.totalHooks);
       setDebugInfo(result.debugInfo || null);
       
-      if (result.script === 'TESTSCRIPT4' || result.bestHook === 'TESTHOOK4') {
-        console.log("SUCCESS: Got expected test values, confirming prompts are working correctly!");
-        toast.success("Prompty zaktualizowane pomyślnie!");
-      }
-      
-      console.log("Script generation completed successfully", {
+      console.log("SCRIPT GENERATION: Script generation completed successfully", {
         scriptLength: result.script?.length || 0,
         hookIndex: result.currentHookIndex,
         totalHooks: result.totalHooks,
-        templateId,
-        debugInfo: result.debugInfo
+        templateId
       });
 
       retryCount.current = 0;
 
     } catch (err: any) {
       if (mountedRef.current) {
-        console.error("Error generating script:", err);
+        console.error("SCRIPT GENERATION: Error generating script:", err);
         
         if (retryCount.current < maxRetries && 
             (err.message?.includes('fetch') || err.message?.includes('network') || err.message?.includes('timeout'))) {
           retryCount.current++;
-          console.log(`Automatically retrying (${retryCount.current}/${maxRetries})...`);
+          console.log(`SCRIPT GENERATION: Automatically retrying (${retryCount.current}/${maxRetries})...`);
           toast.error(`Błąd połączenia. Automatyczne ponawianie (${retryCount.current}/${maxRetries})...`);
           
           setTimeout(() => {
@@ -175,7 +169,7 @@ export const useScriptGeneration = (
 
   useEffect(() => {
     if (open && targetAudienceId && templateId) {
-      console.log("Dialog opened, generating initial script");
+      console.log("SCRIPT GENERATION: Dialog opened, generating initial script");
       generateScriptContent(0);
     }
   }, [open, targetAudienceId, templateId]);
@@ -199,11 +193,14 @@ export const useScriptGeneration = (
 
   // Use useCallback to avoid dependency issues with useEffect
   const saveToProjectImpl = useCallback(async () => {
+    console.log("SCRIPT GENERATION: Starting saveToProjectImpl with data:", {
+      hasUserId: !!userId,
+      hasGeneratedScript: !!generatedScript,
+      scriptLength: generatedScript?.length || 0
+    });
+    
     if (!userId || !generatedScript) {
-      console.log("Cannot save project - missing data:", {
-        userId: !!userId,
-        generatedScript: !!generatedScript
-      });
+      console.log("SCRIPT GENERATION: Cannot save project - missing data");
       return null;
     }
     
@@ -211,9 +208,10 @@ export const useScriptGeneration = (
       setIsSaving(true);
       
       const title = currentHook || "Nowy skrypt";
+      const content = templateId === 'social' ? (postContent || generatedScript) : generatedScript;
       
-      console.log("Saving project with data:", {
-        contentLength: generatedScript.length,
+      console.log("SCRIPT GENERATION: Saving project with data:", {
+        contentLength: content.length,
         title: title,
         templateId: templateId || 'unknown',
         userId: userId,
@@ -221,7 +219,7 @@ export const useScriptGeneration = (
       });
       
       const savedProject = await saveProjectWithContent(
-        generatedScript,
+        content,
         title,
         templateId || 'unknown',
         userId,
@@ -231,22 +229,20 @@ export const useScriptGeneration = (
       if (savedProject && savedProject.id) {
         setProjectId(savedProject.id);
         setProjectSaved(true);
-        toast.success("Skrypt zapisany w Twoich projektach");
-        console.log("Project saved successfully with ID:", savedProject.id);
+        console.log("SCRIPT GENERATION: Project saved successfully with ID:", savedProject.id);
         return savedProject;
       } else {
-        console.error("Save returned but without project ID");
-        toast.error("Nie udało się zapisać projektu");
+        console.error("SCRIPT GENERATION: Save returned but without project ID");
         return null;
       }
     } catch (err) {
-      console.error("Error saving project:", err);
-      toast.error("Nie udało się zapisać projektu");
+      console.error("SCRIPT GENERATION: Error saving project:", err);
+      // Toast is handled in the saveProjectWithContent function
       return null;
     } finally {
       setIsSaving(false);
     }
-  }, [userId, generatedScript, currentHook, templateId, socialMediaPlatform]);
+  }, [userId, generatedScript, currentHook, templateId, socialMediaPlatform, postContent]);
 
   const handleViewProject = async () => {
     if (projectId && projectSaved) {
@@ -261,7 +257,7 @@ export const useScriptGeneration = (
     }
   };
 
-  // Auto-save effect
+  // Auto-save effect - this is critical for ensuring scripts are saved
   useEffect(() => {
     const performAutoSave = async () => {
       if (!isLoading && 
@@ -271,13 +267,23 @@ export const useScriptGeneration = (
           !projectSaved && 
           !autoSaveAttempted && 
           !isSaving) {
-        console.log("Attempting auto-save of script");
+        console.log("SCRIPT GENERATION: Attempting auto-save of script");
         setAutoSaveAttempted(true);
         await saveToProjectImpl();
       }
     };
     
     if (open) {
+      console.log("SCRIPT GENERATION: Checking conditions for auto-save:", {
+        isLoading,
+        hasError: !!error,
+        hasScript: !!generatedScript,
+        scriptLength: generatedScript?.length || 0,
+        hasUserId: !!userId,
+        projectSaved,
+        autoSaveAttempted,
+        isSaving
+      });
       performAutoSave();
     }
   }, [isLoading, error, generatedScript, userId, projectSaved, autoSaveAttempted, isSaving, open, saveToProjectImpl]);

@@ -87,10 +87,10 @@ export const useEmailGeneration = ({
     setRequestTimestamp(new Date().toISOString());
 
     try {
-      console.log('Rozpoczynam generowanie emaila dla grupy docelowej:', targetAudienceId);
-      console.log('Styl emaila:', emailStyle);
-      console.log('Cel reklamy:', advertisingGoal);
-      console.log('Timestamp żądania:', requestTimestamp);
+      console.log('EMAIL GENERATION: Starting email generation for target audience:', targetAudienceId);
+      console.log('EMAIL GENERATION: Email style:', emailStyle);
+      console.log('EMAIL GENERATION: Advertising goal:', advertisingGoal);
+      console.log('EMAIL GENERATION: Request timestamp:', requestTimestamp);
 
       // First, fetch the target audience data
       const { data: targetAudienceData, error: targetAudienceError } = await supabase
@@ -107,7 +107,7 @@ export const useEmailGeneration = ({
       const blueprint = await generateNarrativeBlueprint(targetAudienceData, emailStyle, advertisingGoal);
       setNarrativeBlueprint(blueprint);
       
-      console.log('Blueprint narracyjny wygenerowany:', blueprint);
+      console.log('EMAIL GENERATION: Narrative blueprint generated:', blueprint);
       
       // Generate subject lines using the narrative blueprint and prompt
       const subjectLinesResponse = await generateSubjectLines(
@@ -117,9 +117,7 @@ export const useEmailGeneration = ({
         emailStyle
       );
       
-      console.log('Otrzymane tytuły maila w useEmailGeneration:', subjectLinesResponse);
-      console.log('Subject line response timestamp:', subjectLinesResponse.timestamp || 'not provided');
-      console.log('Raw output from OpenAI:', subjectLinesResponse.rawOutput || 'not provided');
+      console.log('EMAIL GENERATION: Subject lines generated:', subjectLinesResponse);
       
       // Store debug info
       setDebugInfo({
@@ -134,7 +132,7 @@ export const useEmailGeneration = ({
       // Randomly select email structure (PAS or CJN)
       const selectedStructure = selectRandomEmailStructure();
       setEmailStructure(selectedStructure);
-      console.log(`Wylosowana struktura emaila: ${selectedStructure}`);
+      console.log(`EMAIL GENERATION: Selected email structure: ${selectedStructure}`);
       
       // Generate email content based on narrative blueprint and selected structure
       const emailContentResponse = await generateEmailContent(
@@ -145,7 +143,7 @@ export const useEmailGeneration = ({
         emailStyle
       );
       
-      console.log(`Email wygenerowany z użyciem struktury: ${emailContentResponse.structureUsed}`);
+      console.log(`EMAIL GENERATION: Email content generated using structure: ${emailContentResponse.structureUsed}`);
       
       // Set the generated email content
       setGeneratedEmail(emailContentResponse.emailContent);
@@ -158,7 +156,7 @@ export const useEmailGeneration = ({
       }));
 
     } catch (err: any) {
-      console.error('Error generating email:', err);
+      console.error('EMAIL GENERATION: Error generating email:', err);
       setError(err.message || 'Nie udało się wygenerować emaila');
       toast.error('Wystąpił błąd podczas generowania emaila');
     } finally {
@@ -167,13 +165,7 @@ export const useEmailGeneration = ({
   };
 
   const toggleSubjectLine = () => {
-    console.log('Toggling subject lines:', {
-      before: {
-        current: generatedSubject,
-        alternative: alternativeSubject,
-        isShowingAlternative
-      }
-    });
+    console.log('EMAIL GENERATION: Toggling subject lines');
     
     setIsShowingAlternative(!isShowingAlternative);
     
@@ -182,12 +174,9 @@ export const useEmailGeneration = ({
     setGeneratedSubject(alternativeSubject);
     setAlternativeSubject(temp);
     
-    console.log('Subject lines after toggle:', {
-      after: {
-        current: alternativeSubject, // This will be the new current
-        alternative: temp, // This will be the new alternative
-        isShowingAlternative: !isShowingAlternative
-      }
+    console.log('EMAIL GENERATION: Subject lines after toggle:', {
+      current: alternativeSubject, 
+      alternative: temp
     });
   };
 
@@ -197,13 +186,16 @@ export const useEmailGeneration = ({
 
   // Use useCallback to prevent useEffect dependency issues
   const saveToProject = useCallback(async () => {
+    console.log('EMAIL GENERATION: Starting saveToProject with data:', {
+      userId: !!userId,
+      generatedSubject: !!generatedSubject,
+      generatedEmail: !!generatedEmail,
+      targetAudienceId: !!targetAudienceId,
+      hasProjectId: !!projectId
+    });
+    
     if (!userId || !generatedSubject || !generatedEmail || !targetAudienceId) {
-      console.log('Missing data for saving email project:', {
-        userId: !!userId,
-        generatedSubject: !!generatedSubject,
-        generatedEmail: !!generatedEmail,
-        targetAudienceId: !!targetAudienceId
-      });
+      console.log('EMAIL GENERATION: Missing data for saving email project');
       return;
     }
 
@@ -211,7 +203,7 @@ export const useEmailGeneration = ({
 
     try {
       const newProjectId = projectId || uuidv4();
-      console.log('Saving email to project with ID:', newProjectId);
+      console.log('EMAIL GENERATION: Saving email to project with ID:', newProjectId);
       
       await saveEmailToProject(
         newProjectId,
@@ -226,12 +218,11 @@ export const useEmailGeneration = ({
       setProjectId(newProjectId);
       setProjectSaved(true);
       
-      toast.success('Email zapisany w Twoich projektach');
-      console.log('Email successfully saved to projects');
+      console.log('EMAIL GENERATION: Email successfully saved to projects with ID:', newProjectId);
 
     } catch (err: any) {
-      console.error('Error saving email to projects:', err);
-      toast.error('Nie udało się zapisać emaila w projektach');
+      console.error('EMAIL GENERATION: Error saving email to projects:', err);
+      // Toast is handled in the saveEmailToProject function
     } finally {
       setIsSaving(false);
     }
@@ -244,6 +235,54 @@ export const useEmailGeneration = ({
       toast.error('Nie można otworzyć projektu - brak ID projektu');
     }
   }, [projectId, navigate]);
+
+  // Auto-save Effect
+  useEffect(() => {
+    const performAutoSave = async () => {
+      if (
+        !isLoading && 
+        !error && 
+        generatedSubject && 
+        generatedEmail && 
+        userId && 
+        targetAudienceId && 
+        !projectSaved && 
+        !autoSaveAttempted && 
+        !isSaving
+      ) {
+        console.log('EMAIL GENERATION: Auto-save triggered');
+        setAutoSaveAttempted(true);
+        await saveToProject();
+      }
+    };
+    
+    if (open) {
+      console.log('EMAIL GENERATION: Checking conditions for auto-save:', {
+        isLoading,
+        hasError: !!error,
+        hasSubject: !!generatedSubject,
+        hasEmail: !!generatedEmail,
+        hasUserId: !!userId,
+        hasTargetAudience: !!targetAudienceId,
+        projectSaved,
+        autoSaveAttempted,
+        isSaving
+      });
+      performAutoSave();
+    }
+  }, [
+    isLoading, 
+    error, 
+    generatedSubject, 
+    generatedEmail, 
+    userId, 
+    targetAudienceId, 
+    projectSaved, 
+    autoSaveAttempted, 
+    isSaving, 
+    open, 
+    saveToProject
+  ]);
 
   return {
     isLoading,

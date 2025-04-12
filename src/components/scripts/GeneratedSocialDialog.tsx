@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogClose } from '@/components/ui/dialog';
 import { useScriptGeneration } from './generated-script-dialog/useScriptGeneration';
 import { useAuth } from '@/contexts/auth/AuthContext';
@@ -53,6 +53,21 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
   const dialogId = 'social-dialog';
   const contentId = 'social-content';
   
+  // Debug save state changes
+  useEffect(() => {
+    console.log('SOCIAL DIALOG: Save state change:', {
+      isLoading, 
+      hasError: !!error, 
+      projectSaved, 
+      isSaving,
+      hasUser: !!user?.id,
+      hasScript: !!generatedScript,
+      hasPostContent: !!postContent,
+      postContentLength: postContent?.length || 0,
+      scriptLength: generatedScript?.length || 0
+    });
+  }, [isLoading, error, projectSaved, isSaving, user?.id, generatedScript, postContent]);
+
   const handleCopyToClipboard = async () => {
     if (postContent) {
       try {
@@ -117,6 +132,12 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
                   >
                     Otwórz w edytorze
                   </button>
+                )}
+                
+                {isSaving && (
+                  <span className="text-sm text-gray-500 mr-4">
+                    Zapisywanie...
+                  </span>
                 )}
               </div>
               <div className="ml-auto">

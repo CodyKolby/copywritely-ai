@@ -1,5 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import type { SocialMediaPlatform } from '../../SocialMediaPlatformDialog';
 import { SavedProject } from './types';
 
@@ -10,10 +11,25 @@ export const saveProjectWithContent = async (
   userId: string,
   platform?: SocialMediaPlatform
 ): Promise<SavedProject | null> => {
+  console.log('PROJECT UTILS: Starting saveProjectWithContent with params:', { 
+    contentLength: content?.length, 
+    title, 
+    type, 
+    userId,
+    platform: platform?.key 
+  });
+  
   try {
     if (!content || !title || !userId) {
-      console.error('Missing required data for saving project', { content: !!content, title, userId });
-      throw new Error('Missing required data for saving project');
+      const error = 'Missing required data for saving project';
+      console.error('PROJECT UTILS: ' + error, { 
+        content: !!content, 
+        contentLength: content?.length,
+        title: !!title, 
+        userId: !!userId 
+      });
+      toast.error('Nie udało się zapisać projektu: brakujące dane');
+      throw new Error(error);
     }
     
     // Determine the correct project type based on the template type
@@ -32,7 +48,7 @@ export const saveProjectWithContent = async (
       projectSubtype = 'ad';
     }
     
-    console.log('Saving project with data:', { 
+    console.log('PROJECT UTILS: Inserting project into database:', { 
       title, 
       contentLength: content.length, 
       userId,
@@ -45,7 +61,7 @@ export const saveProjectWithContent = async (
       .from('projects')
       .insert([
         {
-          title,
+          title: title.substring(0, 255), // Ensure title is not too long
           content,
           user_id: userId,
           type: projectType,
@@ -57,14 +73,18 @@ export const saveProjectWithContent = async (
       .single();
 
     if (error) {
-      console.error('Error saving project:', error);
+      console.error('PROJECT UTILS: Error saving project:', error);
+      toast.error(`Nie udało się zapisać projektu: ${error.message}`);
       throw new Error(`Failed to save project: ${error.message}`);
     }
 
-    console.log('Project saved successfully:', data);
+    console.log('PROJECT UTILS: Project saved successfully:', data);
+    toast.success('Projekt został zapisany');
+    
     return data as SavedProject;
-  } catch (err) {
-    console.error('Exception saving project:', err);
+  } catch (err: any) {
+    console.error('PROJECT UTILS: Exception during save:', err);
+    toast.error(`Nie udało się zapisać projektu: ${err.message || 'nieznany błąd'}`);
     throw err;
   }
 };

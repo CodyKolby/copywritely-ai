@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { NarrativeBlueprint } from './narrative-blueprint-service';
+import { toast } from 'sonner';
 
 export async function saveEmailToProject(
   projectId: string, 
@@ -10,62 +11,82 @@ export async function saveEmailToProject(
   targetAudienceId: string,
   narrativeBlueprint?: NarrativeBlueprint,
   alternativeSubject?: string
-) {
+): Promise<string> {
+  console.log('EMAIL PROJECT SERVICE: Starting saveEmailToProject with params:', { 
+    projectId, 
+    subjectLength: generatedSubject?.length, 
+    emailLength: generatedEmail?.length, 
+    userId, 
+    targetAudienceId,
+    hasNarrativeBlueprint: !!narrativeBlueprint
+  });
+  
   if (!projectId || !generatedSubject || !generatedEmail || !userId || !targetAudienceId) {
-    console.error('Missing required data for saving email', {
+    const error = 'Missing required data for saving email';
+    console.error('EMAIL PROJECT SERVICE: ' + error, {
       projectId: !!projectId,
       generatedSubject: !!generatedSubject, 
       generatedEmail: !!generatedEmail,
       userId: !!userId,
       targetAudienceId: !!targetAudienceId
     });
-    throw new Error('Missing required data for saving email');
+    toast.error('Nie udało się zapisać maila: brakujące dane');
+    throw new Error(error);
   }
 
-  console.log('Saving email to project:', {
-    projectId,
-    subjectLength: generatedSubject.length,
-    emailLength: generatedEmail.length,
-    userId,
-    targetAudienceId
-  });
+  try {
+    console.log('EMAIL PROJECT SERVICE: Preparing project data for insert');
 
-  const projectData = {
-    id: projectId,
-    title: `Email: ${generatedSubject.substring(0, 50)}`,
-    content: generatedEmail,
-    subject: generatedSubject,
-    user_id: userId,
-    type: 'email',
-    subtype: 'email',
-    status: 'Draft' as 'Draft' | 'Completed' | 'Reviewed', // Explicitly cast as enum type
-    target_audience_id: targetAudienceId
-  };
-  
-  // If we have a narrative blueprint, include it in the metadata
-  if (narrativeBlueprint) {
-    Object.assign(projectData, {
-      metadata: {
-        narrativeBlueprint: {
-          punktyEmocjonalne: narrativeBlueprint.punktyemocjonalne,
-          specyfikaMaila: narrativeBlueprint.specyfikamaila,
-          osNarracyjna: narrativeBlueprint.osnarracyjna
-        },
-        alternativeSubject: alternativeSubject
-      }
+    const projectData = {
+      id: projectId,
+      title: `Email: ${generatedSubject.substring(0, 50)}`,
+      content: generatedEmail,
+      subject: generatedSubject,
+      user_id: userId,
+      type: 'email',
+      subtype: 'email',
+      status: 'Draft' as 'Draft' | 'Completed' | 'Reviewed',
+      target_audience_id: targetAudienceId
+    };
+    
+    // If we have a narrative blueprint, include it in the metadata
+    if (narrativeBlueprint) {
+      Object.assign(projectData, {
+        metadata: {
+          narrativeBlueprint: {
+            punktyEmocjonalne: narrativeBlueprint.punktyemocjonalne,
+            specyfikaMaila: narrativeBlueprint.specyfikamaila,
+            osNarracyjna: narrativeBlueprint.osnarracyjna
+          },
+          alternativeSubject: alternativeSubject
+        }
+      });
+    }
+    
+    console.log('EMAIL PROJECT SERVICE: Inserting project into database:', {
+      projectId,
+      title: projectData.title,
+      type: projectData.type,
+      userId: projectData.user_id
     });
-  }
-  
-  // Save to database
-  const { data, error } = await supabase
-    .from('projects')
-    .insert(projectData);
-  
-  if (error) {
-    console.error('Error saving email project:', error);
+    
+    // Save to database
+    const { data, error } = await supabase
+      .from('projects')
+      .insert(projectData);
+    
+    if (error) {
+      console.error('EMAIL PROJECT SERVICE: Error saving email project:', error);
+      toast.error(`Nie udało się zapisać maila: ${error.message}`);
+      throw error;
+    }
+    
+    console.log('EMAIL PROJECT SERVICE: Email project saved successfully');
+    toast.success('Email został zapisany w Twoich projektach');
+    return projectId;
+  } catch (error: any) {
+    console.error('EMAIL PROJECT SERVICE: Exception during save:', error);
+    toast.error(`Nie udało się zapisać maila: ${error.message || 'nieznany błąd'}`);
     throw error;
   }
-  
-  console.log('Email project saved successfully');
-  return projectId;
 }

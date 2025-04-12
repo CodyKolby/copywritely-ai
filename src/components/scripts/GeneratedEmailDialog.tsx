@@ -9,6 +9,7 @@ import ErrorState from './generated-email-dialog/ErrorState';
 import { useEmailGeneration } from './generated-email-dialog/useEmailGeneration';
 import { EmailStyle } from './EmailStyleDialog';
 import SubjectLineToggle from './generated-email-dialog/SubjectLineToggle';
+import { toast } from 'sonner';
 
 interface GeneratedEmailDialogProps {
   open: boolean;
@@ -44,7 +45,8 @@ const GeneratedEmailDialog = ({
     setGeneratedEmail,
     narrativeBlueprint,
     emailStructure,
-    saveToProject
+    saveToProject,
+    isSaving
   } = useEmailGeneration({
     open,
     targetAudienceId,
@@ -53,13 +55,52 @@ const GeneratedEmailDialog = ({
     emailStyle,
     userId: user?.id
   });
-  
-  // Automatically save email when generated - fixed to avoid TypeScript error
+
+  // Debug save state changes
   useEffect(() => {
-    if (!isLoading && !error && generatedSubject && generatedEmail && !projectSaved && user?.id) {
-      saveToProject();
+    console.log('EMAIL DIALOG: Save state change:', {
+      isLoading, 
+      hasError: !!error, 
+      projectSaved, 
+      isSaving,
+      hasUser: !!user?.id
+    });
+  }, [isLoading, error, projectSaved, isSaving, user?.id]);
+  
+  // Automatically try to save email when generated
+  useEffect(() => {
+    // Explicit check for conditions when we should attempt to save
+    const shouldAttemptSave = (
+      !isLoading && 
+      !error && 
+      generatedSubject && 
+      generatedEmail && 
+      !projectSaved && 
+      user?.id && 
+      !isSaving &&
+      open // Only save when dialog is open
+    );
+    
+    console.log('EMAIL DIALOG: Checking auto-save conditions:', {
+      shouldAttemptSave,
+      isLoading,
+      hasError: !!error,
+      hasSubject: !!generatedSubject,
+      hasEmail: !!generatedEmail,
+      projectSaved,
+      hasUser: !!user?.id,
+      isSaving,
+      open
+    });
+    
+    if (shouldAttemptSave) {
+      console.log('EMAIL DIALOG: Triggering saveToProject() from useEffect');
+      saveToProject().catch(err => {
+        console.error('EMAIL DIALOG: Error in auto-save effect:', err);
+        toast.error('Nie udało się zapisać emaila');
+      });
     }
-  }, [isLoading, error, generatedSubject, generatedEmail, projectSaved, user?.id, saveToProject]);
+  }, [isLoading, error, generatedSubject, generatedEmail, projectSaved, user?.id, isSaving, open, saveToProject]);
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -88,6 +129,12 @@ const GeneratedEmailDialog = ({
               onEmailContentChange={setGeneratedEmail}
               onViewProject={projectSaved ? handleViewProject : undefined}
             />
+            
+            {isSaving && (
+              <div className="text-center mt-4 text-sm text-gray-500">
+                Zapisywanie...
+              </div>
+            )}
           </div>
         )}
       </DialogContent>
