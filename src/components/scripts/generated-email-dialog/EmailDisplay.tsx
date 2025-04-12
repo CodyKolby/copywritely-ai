@@ -29,10 +29,7 @@ const EmailDisplay = ({
     <div className="space-y-4">
       <Tabs defaultValue="editor">
         <div className="flex justify-between items-center mb-4">
-          <TabsList>
-            <TabsTrigger value="editor">Edytor</TabsTrigger>
-            <TabsTrigger value="preview" disabled>Podgląd (wkrótce)</TabsTrigger>
-          </TabsList>
+        <div />
           
           <EmailToolbar 
             onSaveToProject={onSaveToProject}
