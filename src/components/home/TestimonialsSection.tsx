@@ -24,39 +24,39 @@ const TestimonialsSection = () => {
   const testimonials: Testimonial[] = [
     {
       id: 1,
-      text: "Dzięki Copility udało mi się w ciągu kilku minut stworzyć kampanię, która wygenerowała trzykrotny zwrot z inwestycji. Jestem pod ogromnym wrażeniem jakości generowanych tekstów!",
-      author: "Marta Kowalska",
-      date: "15 marca, 2023"
+      text: "Na początku byłam totalnie sceptyczna. Pomyślałam sobie że Copility to pewnie kolejne AI które produkuje suche, bezwartościowe teksty. Wystarczył jeden skrypt żeby zmienić moje podejście. Wygenerowałam go, wrzuciłam do kampanii i po tygodniu koszt za rezultat spadł trzy razy.",
+      author: "Beata Janiecka",
+      date: "07 stycznia, 2025"
     },
     {
       id: 2,
-      text: "Korzystam z Copility od trzech miesięcy i mogę śmiało powiedzieć, że to najlepsze narzędzie tego typu na rynku. Skrypty reklamowe, które generuje, są nie tylko skuteczne, ale też idealnie dopasowane do mojej grupy docelowej.",
-      author: "Tomasz Wiśniewski",
-      date: "7 kwietnia, 2023"
+      text: "Korzystam z Copility od trzech miesięcy i od tamtej pory moje konto na TikToku przebiło 5 milionów wyświetleń. Skrypty które generuję wrzucam praktycznie bez większych zmian. Trafiają idealnie w moją grupę docelową i oszczędzają mi mnóstwo czasu. Szczerze, nie wyobrażam sobie teraz prowadzić mojego biznesu bez Copility.",
+      author: "Szymon Zaremba",
+      date: "12 marca, 2025"
     },
     {
       id: 3,
-      text: "Od kiedy zacząłem używać Copility, moje kampanie reklamowe generują o 40% więcej konwersji. To naprawdę działa! Polecam każdemu, kto chce zaoszczędzić czas i zwiększyć skuteczność swoich reklam.",
-      author: "Adam Nowak",
-      date: "22 maja, 2023"
+      text: "Nie wiem jak wcześniej ogarniałem reklamy bez Copility. Potrafiłem siedzieć po kilka godzin dziennie i kombinować ze skryptami, które i tak nie działały, a od kiedy go używam, moja konwersja poszła w górę o 40 procent, a ja mam znacznie więcej czasu dla siebie.",
+      author: "Maciej Graczykowski",
+      date: "22 marca, 2025"
     },
     {
       id: 4,
-      text: "Jako agencja marketingowa, testowaliśmy wiele narzędzi AI do tworzenia tekstów reklamowych. Copility zdecydowanie wyróżnia się na tle konkurencji - generuje treści, które rzeczywiście zwiększają sprzedaż.",
-      author: "Joanna Dąbrowska",
-      date: "10 czerwca, 2023"
+      text: "Jako agencja przetestowaliśmy chyba wszystkie możliwe narzędzia AI do pisania tekstów reklamowych. Większość wyglądała dobrze tylko na papierze. Copility realnie nas zaskoczyło. Skrypty które generuje nie tylko brzmią dobrze, ale przede wszystkim dowożą wyniki. Zwiększyły sprzedaż u naszych klientów, więc sami zaczęliśmy je polecać dalej.",
+      author: "Marcin Rak",
+      date: "10 kwietnia, 2025"
     },
     {
       id: 5,
-      text: "Bałem się, że treści generowane przez AI będą brzmiały sztucznie, ale Copility pozytywnie mnie zaskoczyło. Teksty są naturalne, perswazyjne i idealnie trafiają w potrzeby moich klientów.",
-      author: "Piotr Zieliński",
-      date: "3 lipca, 2023"
+      text: "Zanim trafiłem na Copility, byłem o krok od zamknięcia sklepu. Przychody leżały, nic się nie spinało. Zacząłem używać ich gotowych maili i postów na social media i wszystko się zmieniło. W zeszłym miesiącu pierwszy raz od dawna wyszedłem na konkretny plus. 30 tysięcy zł zysku.",
+      author: "Joanna Kolber",
+      date: "18 marca, 2025"
     },
     {
       id: 6,
-      text: "Nie jestem specjalistą od marketingu, ale dzięki Copility moje reklamy wyglądają profesjonalnie i przyciągają klientów. To narzędzie znacząco uprościło prowadzenie mojego biznesu online.",
-      author: "Aleksandra Majewska",
-      date: "19 sierpnia, 2023"
+      text: "Nie jestem ekspertem od marketingu. Moją misją jest pomaganie kobietom w osiąganiu wymarzonej sylwetki, a sprzedaż i pisanie tekstów to była dla mnie czysta męczarnia. Aż jeden znajomy wspomniał mi o Copility. Od tamtej pory marketing ogarniam w kilkanaście minut dziennie, tylko czytam gotowe skrypty. A resztę dnia mogę poświęcić na to, co kocham najbardziej.",
+      author: "Maja Pawluk",
+      date: "4 kwietnia, 2025"
     }
   ];
 
