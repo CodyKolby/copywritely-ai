@@ -142,15 +142,6 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
             
             <div className="p-8 pt-4 flex justify-between">
               <div>
-                {projectSaved && (
-                  <button 
-                    onClick={handleViewProject}
-                    className="bg-copywrite-teal hover:bg-copywrite-teal/90 text-white py-2 px-6 rounded-lg text-sm font-medium transition-colors mr-4"
-                  >
-                    Otwórz w edytorze
-                  </button>
-                )}
-                
                 {isSaving && (
                   <span className="text-sm text-gray-500 mr-4">
                     Zapisywanie...

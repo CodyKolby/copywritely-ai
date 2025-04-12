@@ -76,7 +76,7 @@ const GeneratedEmailDialog = ({
           <ErrorState error={error} onRetry={handleRetry} />
         ) : (
           <div className="p-6 max-h-[calc(90vh-100px)] overflow-y-auto">
-            {alternativeSubject && !existingProject && (
+            {alternativeSubject && (
               <SubjectLineToggle 
                 currentSubject={generatedSubject}
                 alternativeSubject={alternativeSubject}
@@ -90,7 +90,7 @@ const GeneratedEmailDialog = ({
               emailContent={generatedEmail} 
               onSubjectChange={setGeneratedSubject}
               onEmailContentChange={setGeneratedEmail}
-              onViewProject={projectSaved ? handleViewProject : undefined}
+              onViewProject={null} // Set to null to remove the button
             />
           </div>
         )}

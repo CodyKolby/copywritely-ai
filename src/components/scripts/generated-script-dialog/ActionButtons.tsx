@@ -81,10 +81,10 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
           </Button>
         )}
         
-        {projectSaved && projectId && (
+        {projectSaved && projectId && onViewProject && (
           <Button onClick={onViewProject} className="bg-copywrite-teal text-white hover:bg-copywrite-teal-dark">
-            <span>Edytuj w projektach</span>
-            <ArrowRight className="ml-2 h-4 w-4" />
+            <Copy className="mr-2 h-4 w-4" />
+            <span>Kopiuj</span>
           </Button>
         )}
       </div>

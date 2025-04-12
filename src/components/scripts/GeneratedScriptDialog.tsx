@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import LoadingState from './generated-script-dialog/LoadingState';
 import ScriptDisplay from './generated-script-dialog/ScriptDisplay';
@@ -9,6 +9,7 @@ import DialogHeader from './generated-script-dialog/DialogHeader';
 import ErrorState from './generated-script-dialog/ErrorState';
 import ActionButtons from './generated-script-dialog/ActionButtons';
 import { useScriptGeneration } from './generated-script-dialog/useScriptGeneration';
+import { toast } from 'sonner';
 
 interface ExtendedScriptDialogProps extends GeneratedScriptDialogProps {
   existingProject?: {
@@ -28,6 +29,7 @@ const GeneratedScriptDialog = ({
   existingProject
 }: ExtendedScriptDialogProps) => {
   const { user } = useAuth();
+  const [copied, setCopied] = useState(false);
   
   // Prevent duplicate renders by using a stable key
   const dialogKey = `${templateId}-${targetAudienceId}-${open ? 'open' : 'closed'}-${existingProject?.id || 'new'}`;
@@ -65,6 +67,24 @@ const GeneratedScriptDialog = ({
   
   // Determine if this is an ad (PAS framework)
   const isAdTemplate = templateId === 'ad';
+
+  // Handle copy to clipboard
+  const handleCopyToClipboard = async () => {
+    if (generatedScript) {
+      try {
+        await navigator.clipboard.writeText(generatedScript);
+        setCopied(true);
+        toast.success('Skopiowano do schowka');
+        
+        setTimeout(() => {
+          setCopied(false);
+        }, 2000);
+      }
+      catch (err) {
+        toast.error('Nie udało się skopiować do schowka');
+      }
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange} key={dialogKey}>
@@ -108,8 +128,10 @@ const GeneratedScriptDialog = ({
               currentHookIndex={currentHookIndex}
               totalHooks={totalHooks}
               onGenerateNew={!existingProject ? handleGenerateWithNextHook : undefined}
-              onViewProject={handleViewProject}
+              onViewProject={handleCopyToClipboard}
               isGeneratingNewScript={isGeneratingNewScript}
+              onCopyToClipboard={handleCopyToClipboard}
+              copied={copied}
             />
           </>
         )}

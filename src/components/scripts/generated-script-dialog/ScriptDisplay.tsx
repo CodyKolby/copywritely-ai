@@ -7,7 +7,7 @@ interface ScriptDisplayProps {
   bestHook?: string;
   hookIndex?: number;
   totalHooks?: number;
-  adStructure?: string;
+  adStructure?: 'PAS' | 'generic' | 'social';
   rawResponse?: string;
   debugInfo?: any;
   showIntro?: boolean;
@@ -77,11 +77,7 @@ const ScriptDisplay = ({
         </div>
       )}
       
-      {adStructure && (
-        <div className="mb-4 py-2 px-3 text-xs font-medium uppercase tracking-wider bg-slate-100 text-slate-600 inline-block rounded">
-          Format: {adStructure}
-        </div>
-      )}
+      {/* Removed the adStructure display div that showed "FORMAT: PAS" */}
       
       {/* Display the intro if requested */}
       {showIntro && bestHook && (

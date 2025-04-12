@@ -15,5 +15,5 @@ export interface ScriptDisplayProps {
   bestHook?: string; 
   hookIndex?: number;
   totalHooks?: number;
-  adStructure: 'PAS' | 'generic' | 'social';
+  adStructure?: 'PAS' | 'generic' | 'social';
 }

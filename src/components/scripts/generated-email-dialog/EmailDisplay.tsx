@@ -26,16 +26,7 @@ const EmailDisplay = ({
         onEmailContentChange={onEmailContentChange}
       />
       
-      {onViewProject && (
-        <div className="mt-6 text-center">
-          <button
-            onClick={onViewProject}
-            className="bg-copywrite-teal hover:bg-copywrite-teal/90 text-white py-2 px-6 rounded-lg text-sm font-medium transition-colors"
-          >
-            Otwórz w edytorze
-          </button>
-        </div>
-      )}
+      {/* The "Otwórz w edytorze" button has been removed */}
     </div>
   );
 };
