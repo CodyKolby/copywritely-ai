@@ -31,7 +31,6 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
 }) => {
   const { user } = useAuth();
   const [copied, setCopied] = useState(false);
-  const [projectSaved, setProjectSaved] = useState(false);
   
   // Use the script generation hook
   const {
@@ -44,6 +43,7 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
     error,
     isGeneratingNewScript,
     isSaving,
+    projectSaved,
     projectId,
     handleRetry,
     handleGenerateWithNextHook,
@@ -53,16 +53,7 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
   const showLoading = isLoading || isGeneratingNewScript;
   const dialogId = 'social-dialog';
   const contentId = 'social-content';
-
-  // Auto-save the post when generated - this is already handled in useScriptGeneration
   
-  // Reset saved state when dialog closes
-  useEffect(() => {
-    if (!open) {
-      setProjectSaved(false);
-    }
-  }, [open]);
-
   const handleCopyToClipboard = async () => {
     if (postContent) {
       try {
@@ -80,21 +71,6 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
     }
   };
   
-  // Log the script generation state
-  React.useEffect(() => {
-    if (open) {
-      console.log("Social post generation dialog state:", {
-        isLoading,
-        templateId,
-        platform: platform?.label || 'unknown',
-        advertisingGoal,
-        error: error ? true : false,
-        isGeneratingNewScript,
-        projectSaved
-      });
-    }
-  }, [open, isLoading, templateId, platform, advertisingGoal, error, isGeneratingNewScript, projectSaved]);
-
   // Generate a stable key for the dialog
   const dialogKey = `${templateId}-${targetAudienceId}-${platform?.key || 'unknown'}-${open ? 'open' : 'closed'}`;
 
