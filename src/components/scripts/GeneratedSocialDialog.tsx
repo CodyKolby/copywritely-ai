@@ -125,7 +125,7 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
                 onClick={handleCopyToClipboard}
                 className="bg-[#0D3F40] hover:bg-[#062727] text-white text-base font-medium py-3 px-8 rounded-xl"
               >
-                {copied ? 'Skopiowano' : 'Zamknij'}
+                {copied ? 'Skopiowano' : 'Kopiuj'}
               </Button>
             </div>
           </>
