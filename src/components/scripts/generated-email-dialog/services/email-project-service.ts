@@ -11,6 +11,25 @@ export async function saveEmailToProject(
   narrativeBlueprint?: NarrativeBlueprint,
   alternativeSubject?: string
 ) {
+  if (!projectId || !generatedSubject || !generatedEmail || !userId || !targetAudienceId) {
+    console.error('Missing required data for saving email', {
+      projectId: !!projectId,
+      generatedSubject: !!generatedSubject, 
+      generatedEmail: !!generatedEmail,
+      userId: !!userId,
+      targetAudienceId: !!targetAudienceId
+    });
+    throw new Error('Missing required data for saving email');
+  }
+
+  console.log('Saving email to project:', {
+    projectId,
+    subjectLength: generatedSubject.length,
+    emailLength: generatedEmail.length,
+    userId,
+    targetAudienceId
+  });
+
   const projectData = {
     id: projectId,
     title: `Email: ${generatedSubject.substring(0, 50)}`,
@@ -38,11 +57,15 @@ export async function saveEmailToProject(
   }
   
   // Save to database
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('projects')
     .insert(projectData);
   
-  if (error) throw error;
+  if (error) {
+    console.error('Error saving email project:', error);
+    throw error;
+  }
   
+  console.log('Email project saved successfully');
   return projectId;
 }

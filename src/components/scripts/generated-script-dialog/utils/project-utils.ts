@@ -11,6 +11,11 @@ export const saveProjectWithContent = async (
   platform?: SocialMediaPlatform
 ): Promise<SavedProject | null> => {
   try {
+    if (!content || !title || !userId) {
+      console.error('Missing required data for saving project', { content: !!content, title, userId });
+      throw new Error('Missing required data for saving project');
+    }
+    
     // Determine the correct project type based on the template type
     let projectType = 'script';
     let projectSubtype = 'ad';
@@ -26,6 +31,15 @@ export const saveProjectWithContent = async (
       projectType = 'script';
       projectSubtype = 'ad';
     }
+    
+    console.log('Saving project with data:', { 
+      title, 
+      contentLength: content.length, 
+      userId,
+      type: projectType, 
+      subtype: projectSubtype, 
+      platform: platform?.key
+    });
     
     const { data, error } = await supabase
       .from('projects')
@@ -47,6 +61,7 @@ export const saveProjectWithContent = async (
       throw new Error(`Failed to save project: ${error.message}`);
     }
 
+    console.log('Project saved successfully:', data);
     return data as SavedProject;
   } catch (err) {
     console.error('Exception saving project:', err);

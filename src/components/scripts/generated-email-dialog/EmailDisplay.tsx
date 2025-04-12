@@ -30,9 +30,9 @@ const EmailDisplay = ({
         <div className="mt-6 text-center">
           <button
             onClick={onViewProject}
-            className="text-sm text-copywrite-teal hover:underline"
+            className="bg-copywrite-teal hover:bg-copywrite-teal/90 text-white py-2 px-6 rounded-lg text-sm font-medium transition-colors"
           >
-            Otwórz w projektach
+            Otwórz w edytorze
           </button>
         </div>
       )}

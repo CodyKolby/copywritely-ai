@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogClose } from '@/components/ui/dialog';
 import { useScriptGeneration } from './generated-script-dialog/useScriptGeneration';
 import { useAuth } from '@/contexts/auth/AuthContext';
@@ -10,7 +10,6 @@ import { SocialMediaPlatform } from './SocialMediaPlatformDialog';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { saveScriptAsProject } from './generated-script-dialog/script-utils';
 
 interface GeneratedSocialDialogProps {
   open: boolean;
@@ -111,12 +110,14 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
             
             <div className="p-8 pt-4 flex justify-between">
               <div>
-                <button 
-                  onClick={handleViewProject}
-                  className="text-sm text-copywrite-teal hover:underline flex items-center gap-1"
-                >
-                  Otwórz projekt
-                </button>
+                {projectSaved && (
+                  <button 
+                    onClick={handleViewProject}
+                    className="bg-copywrite-teal hover:bg-copywrite-teal/90 text-white py-2 px-6 rounded-lg text-sm font-medium transition-colors mr-4"
+                  >
+                    Otwórz w edytorze
+                  </button>
+                )}
               </div>
               <div className="ml-auto">
                 <Button

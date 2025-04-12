@@ -54,12 +54,12 @@ const GeneratedEmailDialog = ({
     userId: user?.id
   });
   
-  // Automatically save email when generated
+  // Automatically save email when generated - fixed to avoid TypeScript error
   useEffect(() => {
     if (!isLoading && !error && generatedSubject && generatedEmail && !projectSaved && user?.id) {
       saveToProject();
     }
-  }, [isLoading, error, generatedSubject, generatedEmail, projectSaved]);
+  }, [isLoading, error, generatedSubject, generatedEmail, projectSaved, user?.id, saveToProject]);
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

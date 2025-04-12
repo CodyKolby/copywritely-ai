@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { generateScript } from './utils/script-generator';
 import { saveProjectWithContent } from './utils/project-utils';
 import { SocialMediaPlatform } from '../SocialMediaPlatformDialog';
@@ -48,6 +49,8 @@ export const useScriptGeneration = (
       setIsSaving(false);
       retryCount.current = 0;
       lastRequestTimestamp.current = Date.now();
+      setAutoSaveAttempted(false);
+      setProjectSaved(false);
     }
   }, [open]);
 
@@ -194,75 +197,90 @@ export const useScriptGeneration = (
     await generateScriptContent(currentHookIndex + 1);
   };
 
-  const handleViewProject = async () => {
-    if (!projectId && !projectSaved && generatedScript && userId) {
-      try {
-        setIsSaving(true);
-        
-        const savedProject = await saveProjectWithContent(
-          generatedScript,
-          currentHook || "Nowy skrypt",
-          templateId || 'unknown',
-          userId,
-          socialMediaPlatform
-        );
-        
-        if (savedProject && savedProject.id) {
-          setProjectId(savedProject.id);
-          setProjectSaved(true);
-          window.location.href = `/copy-editor/${savedProject.id}`;
-        }
-      } catch (err) {
-        console.error("Error saving project:", err);
+  // Use useCallback to avoid dependency issues with useEffect
+  const saveToProjectImpl = useCallback(async () => {
+    if (!userId || !generatedScript) {
+      console.log("Cannot save project - missing data:", {
+        userId: !!userId,
+        generatedScript: !!generatedScript
+      });
+      return null;
+    }
+    
+    try {
+      setIsSaving(true);
+      
+      const title = currentHook || "Nowy skrypt";
+      
+      console.log("Saving project with data:", {
+        contentLength: generatedScript.length,
+        title: title,
+        templateId: templateId || 'unknown',
+        userId: userId,
+        platform: socialMediaPlatform?.key
+      });
+      
+      const savedProject = await saveProjectWithContent(
+        generatedScript,
+        title,
+        templateId || 'unknown',
+        userId,
+        socialMediaPlatform
+      );
+      
+      if (savedProject && savedProject.id) {
+        setProjectId(savedProject.id);
+        setProjectSaved(true);
+        toast.success("Skrypt zapisany w Twoich projektach");
+        console.log("Project saved successfully with ID:", savedProject.id);
+        return savedProject;
+      } else {
+        console.error("Save returned but without project ID");
         toast.error("Nie udało się zapisać projektu");
-      } finally {
-        setIsSaving(false);
+        return null;
       }
-    } else if (projectId) {
+    } catch (err) {
+      console.error("Error saving project:", err);
+      toast.error("Nie udało się zapisać projektu");
+      return null;
+    } finally {
+      setIsSaving(false);
+    }
+  }, [userId, generatedScript, currentHook, templateId, socialMediaPlatform]);
+
+  const handleViewProject = async () => {
+    if (projectId && projectSaved) {
       window.location.href = `/copy-editor/${projectId}`;
+    } else if (!projectSaved && generatedScript && userId) {
+      const savedProject = await saveToProjectImpl();
+      if (savedProject && savedProject.id) {
+        window.location.href = `/copy-editor/${savedProject.id}`;
+      }
+    } else {
+      toast.error("Nie można otworzyć projektu - wystąpił problem");
     }
   };
 
+  // Auto-save effect
   useEffect(() => {
     const performAutoSave = async () => {
-      if (!isLoading && !error && generatedScript && userId && !projectSaved && !autoSaveAttempted && !isSaving) {
-        try {
-          setIsSaving(true);
-          setAutoSaveAttempted(true);
-          
-          const title = currentHook || "Nowy skrypt";
-          
-          const savedProject = await saveProjectWithContent(
-            generatedScript,
-            title,
-            templateId || 'unknown',
-            userId,
-            socialMediaPlatform
-          );
-          
-          if (savedProject && savedProject.id) {
-            setProjectId(savedProject.id);
-            setProjectSaved(true);
-            console.log('Script automatically saved to projects');
-          }
-        } catch (err) {
-          console.error("Error auto-saving project:", err);
-        } finally {
-          setIsSaving(false);
-        }
+      if (!isLoading && 
+          !error && 
+          generatedScript && 
+          userId && 
+          !projectSaved && 
+          !autoSaveAttempted && 
+          !isSaving) {
+        console.log("Attempting auto-save of script");
+        setAutoSaveAttempted(true);
+        await saveToProjectImpl();
       }
     };
     
     if (open) {
       performAutoSave();
     }
-  }, [isLoading, error, generatedScript, userId, projectSaved, autoSaveAttempted, isSaving, open]);
-  
-  useEffect(() => {
-    if (!open) {
-      setAutoSaveAttempted(false);
-    }
-  }, [open]);
+  }, [isLoading, error, generatedScript, userId, projectSaved, autoSaveAttempted, isSaving, open, saveToProjectImpl]);
 
   return {
     isLoading,

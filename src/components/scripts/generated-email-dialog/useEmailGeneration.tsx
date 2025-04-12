@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 import { useNavigate } from 'react-router-dom';
@@ -72,6 +73,7 @@ export const useEmailGeneration = ({
     setRequestTimestamp(null);
     setDebugInfo(null);
     setEmailStructure('PAS');
+    setAutoSaveAttempted(false);
   };
 
   const generateEmail = async () => {
@@ -193,40 +195,23 @@ export const useEmailGeneration = ({
     generateEmail();
   };
 
-  useEffect(() => {
-    const autoSaveEmail = async () => {
-      if (!isLoading && !error && generatedSubject && generatedEmail && userId && !projectSaved && !autoSaveAttempted && !isSaving) {
-        try {
-          setIsSaving(true);
-          setAutoSaveAttempted(true);
-          await saveToProject();
-          console.log('Email automatically saved to projects');
-        } catch (err) {
-          console.error('Error auto-saving email:', err);
-        } finally {
-          setIsSaving(false);
-        }
-      }
-    };
-    
-    if (open) {
-      autoSaveEmail();
+  // Use useCallback to prevent useEffect dependency issues
+  const saveToProject = useCallback(async () => {
+    if (!userId || !generatedSubject || !generatedEmail || !targetAudienceId) {
+      console.log('Missing data for saving email project:', {
+        userId: !!userId,
+        generatedSubject: !!generatedSubject,
+        generatedEmail: !!generatedEmail,
+        targetAudienceId: !!targetAudienceId
+      });
+      return;
     }
-  }, [isLoading, error, generatedSubject, generatedEmail, userId, projectSaved, autoSaveAttempted]);
-  
-  useEffect(() => {
-    if (!open) {
-      setAutoSaveAttempted(false);
-    }
-  }, [open]);
-
-  const saveToProject = async () => {
-    if (!userId || !generatedSubject || !generatedEmail || !targetAudienceId) return;
 
     setIsSaving(true);
 
     try {
       const newProjectId = projectId || uuidv4();
+      console.log('Saving email to project with ID:', newProjectId);
       
       await saveEmailToProject(
         newProjectId,
@@ -241,21 +226,24 @@ export const useEmailGeneration = ({
       setProjectId(newProjectId);
       setProjectSaved(true);
       
-      // We're auto-saving, so don't show a toast notification
-      console.log('Email saved to projects');
+      toast.success('Email zapisany w Twoich projektach');
+      console.log('Email successfully saved to projects');
 
     } catch (err: any) {
       console.error('Error saving email to projects:', err);
+      toast.error('Nie udało się zapisać emaila w projektach');
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [userId, generatedSubject, generatedEmail, targetAudienceId, projectId, narrativeBlueprint, alternativeSubject]);
 
-  const handleViewProject = () => {
+  const handleViewProject = useCallback(() => {
     if (projectId) {
       navigate(`/copy-editor/${projectId}`);
+    } else {
+      toast.error('Nie można otworzyć projektu - brak ID projektu');
     }
-  };
+  }, [projectId, navigate]);
 
   return {
     isLoading,
