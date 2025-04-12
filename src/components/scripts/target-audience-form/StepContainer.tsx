@@ -17,9 +17,9 @@ const StepContainer = ({ currentStep, form, handleKeyDown, onSubmit, children }:
   return (
     <Form {...form}>
       <form className="space-y-8 relative" onKeyDown={handleKeyDown} onSubmit={onSubmit} style={{ overflow: 'visible' }}>
-        <div className="py-6 px-4 md:px-6" style={{ overflow: 'visible' }}>
+        <div className="py-6 px-6 md:px-8" style={{ overflow: 'visible' }}>
           <Tabs value={currentStep.toString()}>
-            <TabsContent value={currentStep.toString()} className="mt-0 pb-4 px-2 md:px-4" style={{ overflow: 'visible' }}>
+            <TabsContent value={currentStep.toString()} className="mt-0 pb-6 px-4 md:px-6" style={{ overflow: 'visible' }}>
               {children}
             </TabsContent>
           </Tabs>

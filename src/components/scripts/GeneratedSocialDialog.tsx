@@ -63,7 +63,8 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
         setTimeout(() => {
           setCopied(false);
         }, 2000);
-      } catch (err) {
+      }
+      catch (err) {
         toast.error('Nie udało się skopiować do schowka');
       }
     }
@@ -94,16 +95,18 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
         aria-describedby={contentId}
         id={dialogId}
       >
-        <div className="p-8 pb-4 relative">
-          <h2 className="text-2xl font-bold text-gray-900 pr-8">
-            Wygenerowany post dla {platform?.label || 'mediów społecznościowych'}
-          </h2>
-          
-          <DialogClose className="absolute right-8 top-8 rounded-full p-1 hover:bg-gray-100 transition-colors">
-            <X className="h-6 w-6 text-gray-500" />
-            <span className="sr-only">Zamknij</span>
-          </DialogClose>
-        </div>
+        {!showLoading && (
+          <div className="p-8 pb-4 relative">
+            <h2 className="text-2xl font-bold text-gray-900 pr-8">
+              Wygenerowany post dla {platform?.label || 'mediów społecznościowych'}
+            </h2>
+            
+            <DialogClose className="absolute right-8 top-8 rounded-full p-1 hover:bg-gray-100 transition-colors">
+              <X className="h-6 w-6 text-gray-500" />
+              <span className="sr-only">Zamknij</span>
+            </DialogClose>
+          </div>
+        )}
         
         {showLoading ? (
           <LoadingState stage="script" />

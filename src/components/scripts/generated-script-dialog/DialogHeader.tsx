@@ -17,16 +17,16 @@ const DialogHeader: React.FC<DialogHeaderProps> = ({
   isGeneratingNewScript
 }) => {
   return (
-    <UIDialogHeader className="p-2">
+    <UIDialogHeader className="p-6">
       <DialogTitle className="flex items-center gap-2">
         <FileText className="h-5 w-5" />
         <span>Wygenerowany Skrypt</span>
       </DialogTitle>
-      <DialogDescription className="px-1">
+      <DialogDescription className="px-1 mt-1">
         Oto skrypt wygenerowany na podstawie informacji o Twojej grupie docelowej.
         Możesz go skopiować lub pobrać do dalszej edycji.
         {currentHookIndex + 1 < totalHooks && !isLoading && !isGeneratingNewScript && (
-          <span className="block mt-1 text-copywrite-teal">
+          <span className="block mt-2 text-copywrite-teal">
             Nie pasuje? Wygeneruj nowy skrypt z innym hookiem startowym.
           </span>
         )}

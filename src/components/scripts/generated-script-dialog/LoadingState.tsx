@@ -107,18 +107,18 @@ const LoadingState = ({ stage = 'hooks' }: LoadingStateProps) => {
   const IconComponent = currentStep.icon;
   
   return (
-    <div className="flex flex-col items-center justify-center min-h-[250px] py-8 bg-white rounded-xl">
-      <div className="mb-6">
+    <div className="flex flex-col items-center justify-center min-h-[350px] py-12 px-8 bg-white rounded-xl w-full">
+      <div className="mb-8">
         <div className="flex items-center justify-center p-6 rounded-full bg-copywrite-teal bg-opacity-10 h-24 w-24">
           <IconComponent className="h-12 w-12 text-copywrite-teal animate-pulse" />
         </div>
       </div>
       
-      <div className="text-center mb-6">
-        <p className="text-gray-600 text-sm">{currentStep.text}</p>
+      <div className="text-center mb-8">
+        <p className="text-gray-600 text-lg">{currentStep.text}</p>
       </div>
       
-      <div className="w-48 mt-2">
+      <div className="w-72 mt-4">
         <Progress value={progress} className="h-2 bg-gray-100" indicatorClassName="bg-copywrite-teal" />
       </div>
     </div>
