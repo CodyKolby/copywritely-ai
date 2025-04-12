@@ -81,9 +81,6 @@ const GeneratedEmailDialog = ({
               emailContent={generatedEmail} 
               onSubjectChange={setGeneratedSubject}
               onEmailContentChange={setGeneratedEmail}
-              onSaveToProject={saveToProject}
-              isSaving={isSaving}
-              projectSaved={projectSaved}
               onViewProject={handleViewProject}
             />
           </div>
