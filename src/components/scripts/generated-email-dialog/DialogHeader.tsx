@@ -18,6 +18,9 @@ const DialogHeader = ({ isLoading }: DialogHeaderProps) => {
       <DialogTitle className="text-2xl font-semibold">
         Wygenerowany email
       </DialogTitle>
+      <DialogDescription>
+        Możesz edytować temat i treść emaila bezpośrednio tutaj.
+      </DialogDescription>
     </div>
   );
 };
