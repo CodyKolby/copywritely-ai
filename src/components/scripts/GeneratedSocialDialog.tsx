@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { useScriptGeneration } from './generated-script-dialog/useScriptGeneration';
 import { useAuth } from '@/contexts/auth/AuthContext';
@@ -30,25 +29,22 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
 }) => {
   const { user } = useAuth();
   const [copied, setCopied] = useState(false);
-  
-  // Use the script generation hook
+
   const {
     isLoading,
     generatedScript,
     postContent,
-    currentHook,
     currentHookIndex,
     totalHooks,
     error,
     isGeneratingNewScript,
-    isSaving,
     projectSaved,
     projectId,
     handleRetry,
     handleGenerateWithNextHook,
     handleViewProject,
   } = useScriptGeneration(open, targetAudienceId, templateId, advertisingGoal, user?.id, platform);
-  
+
   const showLoading = isLoading || isGeneratingNewScript;
   const dialogId = 'social-dialog';
   const contentId = 'social-content';
@@ -59,53 +55,48 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
         await navigator.clipboard.writeText(postContent);
         setCopied(true);
         toast.success('Skopiowano do schowka');
-        
-        setTimeout(() => {
-          setCopied(false);
-        }, 2000);
+        setTimeout(() => setCopied(false), 2000);
       } catch (err) {
         toast.error('Nie udało się skopiować do schowka');
       }
     }
   };
-  
-  // Log the script generation state
-  React.useEffect(() => {
+
+  useEffect(() => {
     if (open) {
       console.log("Social post generation dialog state:", {
         isLoading,
         templateId,
         platform: platform?.label || 'unknown',
         advertisingGoal,
-        error: error ? true : false,
+        error: !!error,
         isGeneratingNewScript,
         projectSaved
       });
     }
   }, [open, isLoading, templateId, platform, advertisingGoal, error, isGeneratingNewScript, projectSaved]);
 
-  // Generate a stable key for the dialog
   const dialogKey = `${templateId}-${targetAudienceId}-${platform?.key || 'unknown'}-${open ? 'open' : 'closed'}`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange} key={dialogKey}>
       <DialogContent 
-        className="max-w-[700px] max-h-[80vh] overflow-hidden bg-white rounded-lg border-0 flex flex-col"
+        className="max-w-[700px] max-h-[80vh] overflow-hidden bg-white rounded-2xl shadow-xl border-0 p-0 relative"
         aria-describedby={contentId}
         id={dialogId}
       >
-        <div className="border-b border-gray-200 p-4">
+        <div className="p-6 border-b border-gray-100 bg-[#f8faf9] rounded-t-2xl">
           <div className="flex justify-between items-center">
-            <DialogTitle className="text-xl font-semibold text-gray-800">
+            <DialogTitle className="text-lg font-semibold text-[#2A5C56]">
               Wygenerowany post dla {platform?.label || 'mediów społecznościowych'}
             </DialogTitle>
-            <DialogClose className="rounded-full p-1 hover:bg-gray-100 transition-colors">
+            <DialogClose className="rounded-full p-1 hover:bg-gray-200 transition-colors">
               <X className="h-5 w-5 text-gray-500" />
               <span className="sr-only">Zamknij</span>
             </DialogClose>
           </div>
         </div>
-        
+
         {showLoading ? (
           <LoadingState stage="script" />
         ) : error ? (
@@ -113,16 +104,15 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
         ) : (
           <>
             <div id={contentId} className="p-6 overflow-y-auto flex-grow">
-              <ScriptDisplay 
-                script={postContent || ''}
-              />
+              <div className="bg-gray-50 rounded-xl p-4 text-gray-800 leading-relaxed whitespace-pre-line">
+                <ScriptDisplay script={postContent || ''} />
+              </div>
             </div>
-            
-            <div className="border-t border-gray-200 p-4 flex justify-between items-center mt-auto">
+
+            <div className="p-6 border-t border-gray-100 bg-[#f8faf9] rounded-b-2xl flex justify-end">
               <Button
                 onClick={handleCopyToClipboard}
-                variant="outline"
-                className="border-gray-300 hover:bg-gray-100 text-gray-700 transition-colors flex items-center gap-2"
+                className="bg-[#2A5C56] hover:bg-[#244b47] text-white transition-colors flex items-center gap-2 rounded-full px-5 py-2"
               >
                 {copied ? (
                   <>
@@ -136,25 +126,6 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
                   </>
                 )}
               </Button>
-              
-              <div className="flex gap-2">
-                {currentHookIndex + 1 < totalHooks && (
-                  <Button
-                    onClick={handleGenerateWithNextHook}
-                    variant="outline"
-                    disabled={isGeneratingNewScript}
-                    className="border-copywrite-teal text-copywrite-teal"
-                  >
-                    Generuj inny
-                  </Button>
-                )}
-                
-                {projectSaved && projectId && (
-                  <Button onClick={handleViewProject} className="bg-copywrite-teal text-white hover:bg-copywrite-teal-dark">
-                    Edytuj w projektach
-                  </Button>
-                )}
-              </div>
             </div>
           </>
         )}
