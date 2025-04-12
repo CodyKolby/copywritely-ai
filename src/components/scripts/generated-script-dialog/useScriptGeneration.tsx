@@ -11,7 +11,12 @@ export const useScriptGeneration = (
   templateId: string | undefined,
   advertisingGoal: string,
   userId: string | undefined,
-  socialMediaPlatform?: SocialMediaPlatform
+  socialMediaPlatform?: SocialMediaPlatform,
+  existingProject?: {
+    id: string;
+    title: string;
+    content: string;
+  }
 ) => {
   const [isLoading, setIsLoading] = useState(true);
   const [generatedScript, setGeneratedScript] = useState('');
@@ -33,6 +38,19 @@ export const useScriptGeneration = (
   const retryCount = useRef(0);
   const maxRetries = 2;
   const lastRequestTimestamp = useRef(Date.now());
+
+  // Handle existingProject if provided
+  useEffect(() => {
+    if (existingProject && open) {
+      console.log("SCRIPT GENERATION: Loading existing project:", existingProject.id);
+      setGeneratedScript(existingProject.content);
+      setCurrentHook(existingProject.title);
+      setProjectId(existingProject.id);
+      setProjectSaved(true);
+      setIsLoading(false);
+      setAutoSaveAttempted(true);
+    }
+  }, [existingProject, open]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -168,11 +186,12 @@ export const useScriptGeneration = (
   };
 
   useEffect(() => {
-    if (open && targetAudienceId && templateId) {
+    // Don't generate script if we're using an existing project
+    if (open && targetAudienceId && templateId && !existingProject) {
       console.log("SCRIPT GENERATION: Dialog opened, generating initial script");
       generateScriptContent(0);
     }
-  }, [open, targetAudienceId, templateId]);
+  }, [open, targetAudienceId, templateId, existingProject]);
 
   const handleRetry = () => {
     setError(null);
@@ -193,6 +212,12 @@ export const useScriptGeneration = (
 
   // Use useCallback to avoid dependency issues with useEffect
   const saveToProjectImpl = useCallback(async () => {
+    // Skip saving if we're viewing an existing project
+    if (existingProject) {
+      console.log("SCRIPT GENERATION: Using existing project, skipping save");
+      return null;
+    }
+    
     console.log("SCRIPT GENERATION: Starting saveToProjectImpl with data:", {
       hasUserId: !!userId,
       hasGeneratedScript: !!generatedScript,
@@ -242,7 +267,7 @@ export const useScriptGeneration = (
     } finally {
       setIsSaving(false);
     }
-  }, [userId, generatedScript, currentHook, templateId, socialMediaPlatform, postContent]);
+  }, [userId, generatedScript, currentHook, templateId, socialMediaPlatform, postContent, existingProject]);
 
   const handleViewProject = async () => {
     if (projectId && projectSaved) {
@@ -258,8 +283,14 @@ export const useScriptGeneration = (
   };
 
   // Auto-save effect - this is critical for ensuring scripts are saved
+  // Don't auto-save for existing projects
   useEffect(() => {
     const performAutoSave = async () => {
+      // Skip auto-save for existing projects
+      if (existingProject) {
+        return;
+      }
+      
       if (!isLoading && 
           !error && 
           generatedScript && 
@@ -273,7 +304,7 @@ export const useScriptGeneration = (
       }
     };
     
-    if (open) {
+    if (open && !existingProject) {
       console.log("SCRIPT GENERATION: Checking conditions for auto-save:", {
         isLoading,
         hasError: !!error,
@@ -286,7 +317,7 @@ export const useScriptGeneration = (
       });
       performAutoSave();
     }
-  }, [isLoading, error, generatedScript, userId, projectSaved, autoSaveAttempted, isSaving, open, saveToProjectImpl]);
+  }, [isLoading, error, generatedScript, userId, projectSaved, autoSaveAttempted, isSaving, open, saveToProjectImpl, existingProject]);
 
   return {
     isLoading,

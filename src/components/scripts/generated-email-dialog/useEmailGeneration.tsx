@@ -30,7 +30,8 @@ export const useEmailGeneration = ({
   templateId,
   advertisingGoal,
   emailStyle,
-  userId
+  userId,
+  existingProject
 }: UseEmailGenerationProps): EmailGenerationHookReturn => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,6 +50,22 @@ export const useEmailGeneration = ({
   
   const navigate = useNavigate();
 
+  // If existingProject is provided, we don't need to generate anything
+  useEffect(() => {
+    if (existingProject && open) {
+      console.log('EMAIL GENERATION: Loading existing project:', existingProject.id);
+      setGeneratedSubject(existingProject.subject || existingProject.title || '');
+      setGeneratedEmail(existingProject.content || '');
+      setProjectId(existingProject.id);
+      setProjectSaved(true);
+      setIsLoading(false);
+      setAutoSaveAttempted(true);
+    } else if (open && !existingProject) {
+      // Only reset state if we're not loading an existing project
+      resetState();
+    }
+  }, [existingProject, open]);
+
   useEffect(() => {
     if (!open) {
       resetState();
@@ -56,10 +73,11 @@ export const useEmailGeneration = ({
   }, [open]);
 
   useEffect(() => {
-    if (open && targetAudienceId && !generatedEmail) {
+    // Only generate email if we're not loading an existing project
+    if (open && targetAudienceId && !existingProject && !generatedEmail) {
       generateEmail();
     }
-  }, [open, targetAudienceId]);
+  }, [open, targetAudienceId, existingProject]);
 
   const resetState = () => {
     setError(null);
@@ -191,15 +209,22 @@ export const useEmailGeneration = ({
       generatedSubject: !!generatedSubject,
       generatedEmail: !!generatedEmail,
       targetAudienceId: !!targetAudienceId,
-      hasProjectId: !!projectId
+      hasProjectId: !!projectId,
+      existingProject: !!existingProject
     });
     
-    if (!userId || !generatedSubject || !generatedEmail || !targetAudienceId) {
+    // Skip saving if we're viewing an existing project
+    if (existingProject) {
+      console.log('EMAIL GENERATION: Using existing project, skipping save');
+      return Promise.resolve();
+    }
+    
+    if (!userId || !generatedSubject || !generatedEmail) {
       console.log('EMAIL GENERATION: Missing data for saving email project');
       return Promise.resolve(); // Return resolved promise when no action is taken
     }
     
-    // Sprawdźmy czy projekt już został zapisany - unikamy podwójnego zapisu
+    // Check if project already saved to prevent double saving
     if (projectSaved) {
       console.log('EMAIL GENERATION: Project already saved, skipping save operation');
       return Promise.resolve();
@@ -216,7 +241,7 @@ export const useEmailGeneration = ({
         generatedSubject,
         generatedEmail,
         userId,
-        targetAudienceId,
+        targetAudienceId || '', // Default to empty string if no target audience
         narrativeBlueprint || undefined,
         alternativeSubject
       );
@@ -234,7 +259,7 @@ export const useEmailGeneration = ({
     } finally {
       setIsSaving(false);
     }
-  }, [userId, generatedSubject, generatedEmail, targetAudienceId, projectId, narrativeBlueprint, alternativeSubject, projectSaved]);
+  }, [userId, generatedSubject, generatedEmail, targetAudienceId, projectId, narrativeBlueprint, alternativeSubject, projectSaved, existingProject]);
 
   const handleViewProject = useCallback(() => {
     if (projectId) {
@@ -244,16 +269,20 @@ export const useEmailGeneration = ({
     }
   }, [projectId, navigate]);
 
-  // Auto-save Effect - zostaje, ale zapobiega podwójnemu zapisowi
+  // Auto-save Effect - we want this enabled only for new projects, not existing ones
   useEffect(() => {
     const performAutoSave = async () => {
+      // Don't auto-save if viewing an existing project
+      if (existingProject) {
+        return;
+      }
+      
       if (
         !isLoading && 
         !error && 
         generatedSubject && 
         generatedEmail && 
         userId && 
-        targetAudienceId && 
         !projectSaved && 
         !autoSaveAttempted && 
         !isSaving &&
@@ -265,19 +294,17 @@ export const useEmailGeneration = ({
           await saveToProject();
         } catch (err) {
           console.error('EMAIL GENERATION: Auto-save failed:', err);
-          // Error notification handled in saveToProject
         }
       }
     };
     
-    if (open) {
+    if (open && !existingProject) {
       console.log('EMAIL GENERATION: Checking conditions for auto-save:', {
         isLoading,
         hasError: !!error,
         hasSubject: !!generatedSubject,
         hasEmail: !!generatedEmail,
         hasUserId: !!userId,
-        hasTargetAudience: !!targetAudienceId,
         projectSaved,
         autoSaveAttempted,
         isSaving
@@ -290,12 +317,12 @@ export const useEmailGeneration = ({
     generatedSubject, 
     generatedEmail, 
     userId, 
-    targetAudienceId, 
     projectSaved, 
     autoSaveAttempted, 
     isSaving, 
     open, 
-    saveToProject
+    saveToProject,
+    existingProject
   ]);
 
   return {

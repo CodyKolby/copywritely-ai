@@ -18,6 +18,11 @@ interface GeneratedSocialDialogProps {
   templateId: string;
   advertisingGoal: string;
   platform?: SocialMediaPlatform;
+  existingProject?: {
+    id: string;
+    title: string;
+    content: string;
+  };
 }
 
 const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
@@ -27,6 +32,7 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
   templateId,
   advertisingGoal,
   platform,
+  existingProject
 }) => {
   const { user } = useAuth();
   const [copied, setCopied] = useState(false);
@@ -47,31 +53,41 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
     handleRetry,
     handleGenerateWithNextHook,
     handleViewProject,
-  } = useScriptGeneration(open, targetAudienceId, templateId, advertisingGoal, user?.id, platform);
+  } = useScriptGeneration(
+    open, 
+    targetAudienceId, 
+    templateId, 
+    advertisingGoal, 
+    user?.id, 
+    platform,
+    existingProject
+  );
   
   const showLoading = isLoading || isGeneratingNewScript;
   const dialogId = 'social-dialog';
   const contentId = 'social-content';
   
+  // For existing projects, use the content directly
+  const displayContent = existingProject ? existingProject.content : (postContent || generatedScript);
+  
   // Debug save state changes
   useEffect(() => {
-    console.log('SOCIAL DIALOG: Save state change:', {
+    console.log('SOCIAL DIALOG: State change:', {
       isLoading, 
       hasError: !!error, 
       projectSaved, 
       isSaving,
       hasUser: !!user?.id,
-      hasScript: !!generatedScript,
-      hasPostContent: !!postContent,
-      postContentLength: postContent?.length || 0,
-      scriptLength: generatedScript?.length || 0
+      hasContent: !!displayContent,
+      contentLength: displayContent?.length || 0,
+      isExistingProject: !!existingProject
     });
-  }, [isLoading, error, projectSaved, isSaving, user?.id, generatedScript, postContent]);
+  }, [isLoading, error, projectSaved, isSaving, user?.id, displayContent, existingProject]);
 
   const handleCopyToClipboard = async () => {
-    if (postContent) {
+    if (displayContent) {
       try {
-        await navigator.clipboard.writeText(postContent);
+        await navigator.clipboard.writeText(displayContent);
         setCopied(true);
         toast.success('Skopiowano do schowka');
         
@@ -86,7 +102,7 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
   };
   
   // Generate a stable key for the dialog
-  const dialogKey = `${templateId}-${targetAudienceId}-${platform?.key || 'unknown'}-${open ? 'open' : 'closed'}`;
+  const dialogKey = `${templateId}-${targetAudienceId}-${platform?.key || 'unknown'}-${open ? 'open' : 'closed'}-${existingProject?.id || 'new'}`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange} key={dialogKey}>
@@ -98,7 +114,8 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
         {!showLoading && (
           <div className="p-8 pb-4 relative">
             <h2 className="text-2xl font-bold text-gray-900 pr-8">
-              Wygenerowany post dla {platform?.label || 'mediów społecznościowych'}
+              {existingProject ? 'Post w mediach społecznościowych' : 
+                `Wygenerowany post dla ${platform?.label || 'mediów społecznościowych'}`}
             </h2>
             
             <DialogClose className="absolute right-8 top-8 rounded-full p-1 hover:bg-gray-100 transition-colors">
@@ -119,7 +136,7 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
               className="px-8 flex-grow"
             >
               <div className="bg-gray-50 rounded-2xl border border-gray-200 p-8 overflow-y-auto mb-4">
-                <ScriptDisplay script={postContent || ''} />
+                <ScriptDisplay script={displayContent || ''} />
               </div>
             </div>
             

@@ -13,6 +13,7 @@ interface Project {
   type: 'brief' | 'script' | 'email' | 'social'; // Updated type options
   title_auto_generated?: boolean;
   subtype?: string; // Added for additional categorization
+  subject?: string; // Added for email projects
 }
 
 interface RawProject {
@@ -27,6 +28,7 @@ interface RawProject {
   title_auto_generated?: boolean;
   subtype?: string;
   platform?: string;
+  subject?: string;
 }
 
 export const useProjects = (userId: string | undefined) => {
@@ -35,6 +37,12 @@ export const useProjects = (userId: string | undefined) => {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  
+  // New state variables for dialog control
+  const [emailDialogOpen, setEmailDialogOpen] = useState<boolean>(false);
+  const [scriptDialogOpen, setScriptDialogOpen] = useState<boolean>(false);
+  const [socialDialogOpen, setSocialDialogOpen] = useState<boolean>(false);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
   const fetchProjects = async () => {
     // If no userId, exit and reset loading state
@@ -107,13 +115,25 @@ export const useProjects = (userId: string | undefined) => {
     
     const project = projects.find(p => p.id === projectId);
     
+    if (!project) {
+      toast.error('Nie znaleziono projektu');
+      return;
+    }
+    
+    setSelectedProject(project);
+    setSelectedProjectId(projectId);
+    
     if (project?.type === 'brief') {
       toast.info('Funkcja edycji briefu będzie dostępna wkrótce', {
         dismissible: true
       });
+    } else if (project?.type === 'email') {
+      setEmailDialogOpen(true);
+    } else if (project?.type === 'social') {
+      setSocialDialogOpen(true);
     } else {
-      // For scripts, emails, and social posts we redirect to the copy editor
-      window.location.href = `/copy-editor/${projectId}`;
+      // For regular scripts
+      setScriptDialogOpen(true);
     }
   };
 
@@ -164,6 +184,14 @@ export const useProjects = (userId: string | undefined) => {
     handleOpenProject,
     handleDeleteDialog,
     handleDeleteProject,
-    setDeleteDialogOpen
+    setDeleteDialogOpen,
+    // New dialog-related values
+    emailDialogOpen,
+    setEmailDialogOpen,
+    scriptDialogOpen, 
+    setScriptDialogOpen,
+    socialDialogOpen,
+    setSocialDialogOpen,
+    selectedProject
   };
 };

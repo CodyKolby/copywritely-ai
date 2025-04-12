@@ -10,6 +10,14 @@ import ErrorState from './generated-script-dialog/ErrorState';
 import ActionButtons from './generated-script-dialog/ActionButtons';
 import { useScriptGeneration } from './generated-script-dialog/useScriptGeneration';
 
+interface ExtendedScriptDialogProps extends GeneratedScriptDialogProps {
+  existingProject?: {
+    id: string;
+    title: string;
+    content: string;
+  };
+}
+
 const GeneratedScriptDialog = ({
   open,
   onOpenChange,
@@ -17,11 +25,12 @@ const GeneratedScriptDialog = ({
   templateId,
   advertisingGoal = '',
   socialMediaPlatform,
-}: GeneratedScriptDialogProps) => {
+  existingProject
+}: ExtendedScriptDialogProps) => {
   const { user } = useAuth();
   
   // Prevent duplicate renders by using a stable key
-  const dialogKey = `${templateId}-${targetAudienceId}-${open ? 'open' : 'closed'}`;
+  const dialogKey = `${templateId}-${targetAudienceId}-${open ? 'open' : 'closed'}-${existingProject?.id || 'new'}`;
   
   const {
     isLoading,
@@ -37,7 +46,15 @@ const GeneratedScriptDialog = ({
     handleRetry,
     handleGenerateWithNextHook,
     handleViewProject,
-  } = useScriptGeneration(open, targetAudienceId, templateId, advertisingGoal, user?.id, socialMediaPlatform);
+  } = useScriptGeneration(
+    open, 
+    targetAudienceId, 
+    templateId, 
+    advertisingGoal, 
+    user?.id, 
+    socialMediaPlatform,
+    existingProject
+  );
   
   const showLoading = isLoading || isGeneratingNewScript;
   const dialogId = 'script-dialog';
@@ -48,26 +65,6 @@ const GeneratedScriptDialog = ({
   
   // Determine if this is an ad (PAS framework)
   const isAdTemplate = templateId === 'ad';
-  
-  // Determine the loading stage
-  const loadingStage = isGeneratingNewScript ? 'script' : undefined;
-  
-  // Log the script generation state
-  React.useEffect(() => {
-    if (open) {
-      console.log("Script generation dialog state:", {
-        isLoading,
-        templateId,
-        isSocialMediaPost,
-        isAdTemplate,
-        currentHookIndex,
-        totalHooks,
-        error: error ? true : false,
-        isGeneratingNewScript,
-        projectSaved
-      });
-    }
-  }, [open, isLoading, templateId, isSocialMediaPost, isAdTemplate, currentHookIndex, totalHooks, error, isGeneratingNewScript, projectSaved]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange} key={dialogKey}>
@@ -89,7 +86,7 @@ const GeneratedScriptDialog = ({
         )}
 
         {showLoading ? (
-          <LoadingState stage={loadingStage} />
+          <LoadingState />
         ) : error ? (
           <ErrorState error={error} onRetry={handleRetry} />
         ) : (
@@ -110,7 +107,7 @@ const GeneratedScriptDialog = ({
               projectId={projectId}
               currentHookIndex={currentHookIndex}
               totalHooks={totalHooks}
-              onGenerateNew={handleGenerateWithNextHook}
+              onGenerateNew={!existingProject ? handleGenerateWithNextHook : undefined}
               onViewProject={handleViewProject}
               isGeneratingNewScript={isGeneratingNewScript}
             />

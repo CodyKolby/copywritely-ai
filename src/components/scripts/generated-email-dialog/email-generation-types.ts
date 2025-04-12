@@ -10,6 +10,12 @@ export interface UseEmailGenerationProps {
   advertisingGoal: string;
   emailStyle: EmailStyle;
   userId?: string;
+  existingProject?: {
+    id: string;
+    title: string;
+    content: string;
+    subject?: string;
+  };
 }
 
 export interface EmailGenerationState {
@@ -29,7 +35,7 @@ export interface EmailGenerationState {
 export interface EmailGenerationActions {
   toggleSubjectLine: () => void;
   handleRetry: () => void;
-  saveToProject: () => void;
+  saveToProject: () => Promise<void>;
   handleViewProject: () => void;
   setGeneratedSubject: (subject: string) => void;
   setGeneratedEmail: (email: string) => void;

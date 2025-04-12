@@ -55,20 +55,6 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onDelete, onOpen }) 
     }
   };
 
-  // Funkcja getStatusBadge jest nadal potrzebna dla innych części kodu, ale nie będziemy jej używać w UI
-  const getStatusBadge = (status: 'Draft' | 'Completed' | 'Reviewed') => {
-    switch(status) {
-      case 'Draft':
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Wersja robocza</Badge>;
-      case 'Completed':
-        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Ukończony</Badge>;
-      case 'Reviewed':
-        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Zweryfikowany</Badge>;
-      default:
-        return <Badge variant="outline">Nieznany</Badge>;
-    }
-  };
-
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('pl-PL', { 
@@ -105,7 +91,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onDelete, onOpen }) 
         <CardFooter className="border-t pt-4">
           <div className="flex justify-between items-center w-full">
             <div>
-              {/* Usunięto wyświetlanie statusu projektu */}
+              {/* Status badge has been removed as requested */}
             </div>
             <div className="flex gap-2">
               <button 

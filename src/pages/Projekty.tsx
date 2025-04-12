@@ -9,6 +9,16 @@ import ProjectFilters from '@/components/projects/ProjectFilters';
 import EmptyProjectsState from '@/components/projects/EmptyProjectsState';
 import DeleteProjectDialog from '@/components/projects/DeleteProjectDialog';
 import { useProjects } from '@/hooks/projects/useProjects';
+import GeneratedEmailDialog from '@/components/scripts/GeneratedEmailDialog';
+import GeneratedScriptDialog from '@/components/scripts/GeneratedScriptDialog';
+import GeneratedSocialDialog from '@/components/scripts/GeneratedSocialDialog';
+import { EmailStyle } from '@/components/scripts/EmailStyleDialog';
+
+// Dummy values for dialogs when opening existing projects
+const DEFAULT_EMAIL_STYLE: EmailStyle = {
+  tone: "professional",
+  style: "conversational"
+};
 
 const Projekty = () => {
   const { user } = useAuth();
@@ -24,7 +34,15 @@ const Projekty = () => {
     handleOpenProject,
     handleDeleteDialog,
     handleDeleteProject,
-    setDeleteDialogOpen
+    setDeleteDialogOpen,
+    // Dialog state
+    emailDialogOpen,
+    setEmailDialogOpen,
+    scriptDialogOpen,
+    setScriptDialogOpen,
+    socialDialogOpen,
+    setSocialDialogOpen,
+    selectedProject
   } = useProjects(user?.id);
 
   const filteredProjects = activeTab === 'all' 
@@ -41,6 +59,18 @@ const Projekty = () => {
             return false;
         }
       });
+
+  // Get platform from selectedProject for social posts
+  const getPlatform = () => {
+    if (selectedProject?.type === 'social') {
+      const platform = selectedProject.subtype || 'facebook';
+      return {
+        key: platform,
+        label: platform.charAt(0).toUpperCase() + platform.slice(1)
+      };
+    }
+    return undefined;
+  };
 
   return (
     <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
@@ -96,6 +126,44 @@ const Projekty = () => {
         onDelete={handleDeleteProject}
         isDeleting={isDeleting}
       />
+
+      {/* Email Dialog */}
+      {selectedProject && (
+        <GeneratedEmailDialog
+          open={emailDialogOpen}
+          onOpenChange={setEmailDialogOpen}
+          targetAudienceId=""
+          templateId="email"
+          advertisingGoal=""
+          emailStyle={DEFAULT_EMAIL_STYLE}
+          existingProject={selectedProject}
+        />
+      )}
+
+      {/* Script Dialog */}
+      {selectedProject && (
+        <GeneratedScriptDialog
+          open={scriptDialogOpen}
+          onOpenChange={setScriptDialogOpen}
+          targetAudienceId=""
+          templateId="ad"
+          advertisingGoal=""
+          existingProject={selectedProject}
+        />
+      )}
+
+      {/* Social Dialog */}
+      {selectedProject && (
+        <GeneratedSocialDialog
+          open={socialDialogOpen}
+          onOpenChange={setSocialDialogOpen}
+          targetAudienceId=""
+          templateId="social"
+          advertisingGoal=""
+          platform={getPlatform()}
+          existingProject={selectedProject}
+        />
+      )}
     </div>
   );
 };
