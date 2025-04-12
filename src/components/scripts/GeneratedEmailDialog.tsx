@@ -67,43 +67,8 @@ const GeneratedEmailDialog = ({
     });
   }, [isLoading, error, projectSaved, isSaving, user?.id]);
   
-  // Fix: Auto-save effect was causing an infinite loop
-  // Only try to save once when content is ready and dialog is open
-  useEffect(() => {
-    // Only attempt to save if we haven't saved yet and we have content
-    const shouldAttemptSave = (
-      !isLoading && 
-      !error && 
-      generatedSubject && 
-      generatedEmail && 
-      !projectSaved && 
-      user?.id && 
-      !isSaving &&
-      open // Only save when dialog is open
-    );
-    
-    console.log('EMAIL DIALOG: Checking auto-save conditions:', {
-      shouldAttemptSave,
-      isLoading,
-      hasError: !!error,
-      hasSubject: !!generatedSubject,
-      hasEmail: !!generatedEmail,
-      projectSaved,
-      hasUser: !!user?.id,
-      isSaving,
-      open
-    });
-    
-    if (shouldAttemptSave) {
-      console.log('EMAIL DIALOG: Triggering saveToProject() from useEffect');
-      try {
-        saveToProject();
-      } catch (err) {
-        console.error('EMAIL DIALOG: Error in auto-save effect:', err);
-        toast.error('Nie udało się zapisać emaila');
-      }
-    }
-  }, [isLoading, error, generatedSubject, generatedEmail, projectSaved, user?.id, isSaving, open]);
+  // Usunięcie automatycznego zapisu, który powodował podwójne zapisywanie
+  // Umieszczamy próbę zapisu tylko w kodzie useEmailGeneration.tsx
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

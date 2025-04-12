@@ -198,6 +198,12 @@ export const useEmailGeneration = ({
       console.log('EMAIL GENERATION: Missing data for saving email project');
       return Promise.resolve(); // Return resolved promise when no action is taken
     }
+    
+    // Sprawdźmy czy projekt już został zapisany - unikamy podwójnego zapisu
+    if (projectSaved) {
+      console.log('EMAIL GENERATION: Project already saved, skipping save operation');
+      return Promise.resolve();
+    }
 
     setIsSaving(true);
 
@@ -228,7 +234,7 @@ export const useEmailGeneration = ({
     } finally {
       setIsSaving(false);
     }
-  }, [userId, generatedSubject, generatedEmail, targetAudienceId, projectId, narrativeBlueprint, alternativeSubject]);
+  }, [userId, generatedSubject, generatedEmail, targetAudienceId, projectId, narrativeBlueprint, alternativeSubject, projectSaved]);
 
   const handleViewProject = useCallback(() => {
     if (projectId) {
@@ -238,7 +244,7 @@ export const useEmailGeneration = ({
     }
   }, [projectId, navigate]);
 
-  // Auto-save Effect
+  // Auto-save Effect - zostaje, ale zapobiega podwójnemu zapisowi
   useEffect(() => {
     const performAutoSave = async () => {
       if (
@@ -250,7 +256,8 @@ export const useEmailGeneration = ({
         targetAudienceId && 
         !projectSaved && 
         !autoSaveAttempted && 
-        !isSaving
+        !isSaving &&
+        open
       ) {
         console.log('EMAIL GENERATION: Auto-save triggered');
         setAutoSaveAttempted(true);

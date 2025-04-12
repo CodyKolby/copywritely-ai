@@ -55,6 +55,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onDelete, onOpen }) 
     }
   };
 
+  // Funkcja getStatusBadge jest nadal potrzebna dla innych części kodu, ale nie będziemy jej używać w UI
   const getStatusBadge = (status: 'Draft' | 'Completed' | 'Reviewed') => {
     switch(status) {
       case 'Draft':
@@ -103,7 +104,9 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, onDelete, onOpen }) 
         </CardContent>
         <CardFooter className="border-t pt-4">
           <div className="flex justify-between items-center w-full">
-            <div>{getStatusBadge(project.status)}</div>
+            <div>
+              {/* Usunięto wyświetlanie statusu projektu */}
+            </div>
             <div className="flex gap-2">
               <button 
                 className="text-sm text-copywrite-teal hover:text-copywrite-teal-dark transition-colors"
