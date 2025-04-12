@@ -1,13 +1,13 @@
 
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogTitle, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogClose } from '@/components/ui/dialog';
 import { useScriptGeneration } from './generated-script-dialog/useScriptGeneration';
 import { useAuth } from '@/contexts/auth/AuthContext';
 import LoadingState from './generated-script-dialog/LoadingState';
 import ScriptDisplay from './generated-script-dialog/ScriptDisplay';
 import ErrorState from './generated-script-dialog/ErrorState';
 import { SocialMediaPlatform } from './SocialMediaPlatformDialog';
-import { X, Copy, Check } from 'lucide-react';
+import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
@@ -90,20 +90,19 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange} key={dialogKey}>
       <DialogContent 
-        className="max-w-[700px] max-h-[80vh] overflow-hidden bg-white rounded-lg border-0 flex flex-col"
+        className="max-w-[700px] max-h-[80vh] overflow-hidden bg-white rounded-3xl border-0 flex flex-col shadow-none p-0"
         aria-describedby={contentId}
         id={dialogId}
       >
-        <div className="border-b border-gray-200 p-4">
-          <div className="flex justify-between items-center">
-            <DialogTitle className="text-xl font-semibold text-gray-800">
-              Wygenerowany post dla {platform?.label || 'mediów społecznościowych'}
-            </DialogTitle>
-            <DialogClose className="rounded-full p-1 hover:bg-gray-100 transition-colors">
-              <X className="h-5 w-5 text-gray-500" />
-              <span className="sr-only">Zamknij</span>
-            </DialogClose>
-          </div>
+        <div className="p-6 pb-4 relative">
+          <h2 className="text-2xl font-bold text-gray-900 pr-8">
+            Wygenerowany post dla {platform?.label || 'mediów społecznościowych'}
+          </h2>
+          
+          <DialogClose className="absolute right-6 top-6 rounded-full p-1 hover:bg-gray-100 transition-colors">
+            <X className="h-6 w-6 text-gray-500" />
+            <span className="sr-only">Zamknij</span>
+          </DialogClose>
         </div>
         
         {showLoading ? (
@@ -112,49 +111,22 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
           <ErrorState error={error} onRetry={handleRetry} />
         ) : (
           <>
-            <div id={contentId} className="p-6 overflow-y-auto flex-grow">
-              <ScriptDisplay 
-                script={postContent || ''}
-              />
+            <div 
+              id={contentId} 
+              className="px-6 flex-grow"
+            >
+              <div className="bg-gray-50 rounded-2xl border border-gray-200 p-6 overflow-y-auto">
+                <ScriptDisplay script={postContent || ''} />
+              </div>
             </div>
             
-            <div className="border-t border-gray-200 p-4 flex justify-between items-center mt-auto">
+            <div className="p-6 pt-4 flex justify-end">
               <Button
                 onClick={handleCopyToClipboard}
-                variant="outline"
-                className="border-gray-300 hover:bg-gray-100 text-gray-700 transition-colors flex items-center gap-2"
+                className="bg-[#0D3F40] hover:bg-[#062727] text-white text-base font-medium py-3 px-8 rounded-xl"
               >
-                {copied ? (
-                  <>
-                    <Check className="h-4 w-4" />
-                    <span>Skopiowano</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="h-4 w-4" />
-                    <span>Kopiuj do schowka</span>
-                  </>
-                )}
+                {copied ? 'Skopiowano' : 'Zamknij'}
               </Button>
-              
-              <div className="flex gap-2">
-                {currentHookIndex + 1 < totalHooks && (
-                  <Button
-                    onClick={handleGenerateWithNextHook}
-                    variant="outline"
-                    disabled={isGeneratingNewScript}
-                    className="border-copywrite-teal text-copywrite-teal"
-                  >
-                    Generuj inny
-                  </Button>
-                )}
-                
-                {projectSaved && projectId && (
-                  <Button onClick={handleViewProject} className="bg-copywrite-teal text-white hover:bg-copywrite-teal-dark">
-                    Edytuj w projektach
-                  </Button>
-                )}
-              </div>
             </div>
           </>
         )}

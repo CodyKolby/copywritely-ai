@@ -92,17 +92,17 @@ const ScriptDisplay = ({
       
       {/* Display the content only if there's something to display */}
       {displayScript && (
-        <ScrollArea className="h-auto max-h-[50vh] overflow-auto pr-4">
-          <div className="prose max-w-none text-gray-800">
+        <div className="max-h-[400px] overflow-y-auto pr-2">
+          <div className="text-black text-base leading-relaxed">
             {displayScript.split('\n').map((line, i) => (
               line ? (
-                <p key={i} className="mb-3 last:mb-0">
+                <p key={i} className="mb-4 last:mb-0">
                   {line}
                 </p>
               ) : <br key={i} />
             ))}
           </div>
-        </ScrollArea>
+        </div>
       )}
 
       {/* Display empty state message if no content after cleanup */}
