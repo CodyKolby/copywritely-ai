@@ -2,7 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { SocialMediaPlatform } from '../../SocialMediaPlatformDialog';
-import { SavedProject } from './types';
+import { SavedProject } from '../types';
 
 export const saveProjectWithContent = async (
   content: string,

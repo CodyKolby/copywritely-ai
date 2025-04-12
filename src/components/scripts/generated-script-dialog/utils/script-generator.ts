@@ -1,6 +1,6 @@
 
 import type { SocialMediaPlatform } from '../../SocialMediaPlatformDialog';
-import { ScriptGenerationResult, PosthookResponse, PostscriptResponse } from './types';
+import { ScriptGenerationResult, PosthookResponse, PostscriptResponse } from '../types';
 import { supabase } from "@/integrations/supabase/client";
 
 // Main function to generate script

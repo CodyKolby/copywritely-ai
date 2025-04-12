@@ -2,7 +2,7 @@
 import { supabase } from '@/lib/supabase';
 import { generateScript as generateScriptUtil } from './utils/script-generator';
 import { saveProjectWithContent } from './utils/project-utils';
-import type { ScriptGenerationResult, PosthookResponse, PostscriptResponse, SavedProject } from './utils/types';
+import type { ScriptGenerationResult, PosthookResponse, PostscriptResponse, SavedProject } from './types';
 import type { SocialMediaPlatform } from '../SocialMediaPlatformDialog';
 
 // Re-export the types correctly using 'export type'
