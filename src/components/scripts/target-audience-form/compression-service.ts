@@ -1,5 +1,5 @@
 
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 
 // Using environment variable from Vite instead of Deno
@@ -45,8 +45,10 @@ export const compressField = async (field: CompressibleField, content: string): 
     // Pobierz odpowiedni prompt dla pola
     const prompt = compressionPrompts[field];
     
-    // Wywołaj funkcję edge OpenAI używając supabase
+    // Próba wywołania edge function z obsługą błędów CORS
     try {
+      // W przypadku błędu CORS lub innych problemów z edge function, zwracamy oryginalny tekst
+      // bez przerywania procesu zapisywania
       const { data, error } = await supabase.functions.invoke('compress-text', {
         body: {
           text: textContent,
@@ -56,7 +58,8 @@ export const compressField = async (field: CompressibleField, content: string): 
       });
       
       if (error) {
-        throw new Error(`Błąd kompresji: ${error.message}`);
+        console.warn(`Ostrzeżenie kompresji: ${error.message}`);
+        return content; // W razie błędu zwracamy oryginalną treść
       }
       
       const compressedContent = data.compressedText;
@@ -73,11 +76,11 @@ export const compressField = async (field: CompressibleField, content: string): 
       
       return compressedContent;
     } catch (error) {
-      console.error(`Błąd podczas wywołania funkcji kompresji: ${error}`);
+      console.warn(`Błąd funkcji kompresji: ${error}. Używam oryginalnej zawartości.`);
       return content; // W razie błędu zwracamy oryginalną treść
     }
   } catch (error) {
-    console.error(`Błąd kompresji pola ${field}:`, error);
+    console.warn(`Błąd kompresji pola ${field}:`, error);
     // W razie błędu zwracamy oryginalną treść
     return content;
   }
@@ -100,10 +103,15 @@ export const compressFormData = async (formData: any): Promise<any> => {
       'experience'
     ];
     
-    // Kompresuj każde pole
+    // Kompresuj każde pole, ale nie przerywaj procesu w razie błędów
     for (const field of fieldsToCompress) {
       if (compressedData[field] !== undefined && compressedData[field] !== null) {
-        compressedData[field] = await compressField(field, compressedData[field]);
+        try {
+          compressedData[field] = await compressField(field, compressedData[field]);
+        } catch (fieldError) {
+          console.warn(`Błąd kompresji pola ${field}:`, fieldError);
+          // Zachowujemy oryginalne dane, nie przerywając procesu
+        }
       }
     }
     
@@ -111,7 +119,7 @@ export const compressFormData = async (formData: any): Promise<any> => {
     return compressedData;
   } catch (error) {
     console.error('Błąd podczas kompresji danych formularza:', error);
-    toast.error('Wystąpił błąd podczas przetwarzania danych');
+    toast.error('Wystąpił błąd podczas przetwarzania danych, ale dane zostaną zapisane');
     // W razie błędu zwracamy oryginalne dane
     return formData;
   }

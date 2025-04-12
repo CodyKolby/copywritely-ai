@@ -21,9 +21,14 @@ export const submitTargetAudienceForm = async (
       throw new Error(errorMessage);
     }
 
-    // Kompresja danych formularza przez AI przed zapisem
-    const compressedData = await compressFormData(data);
-    console.log("Dane po kompresji przez AI:", compressedData);
+    // Try to compress data, but don't fail if compression fails
+    let compressedData = { ...data };
+    try {
+      compressedData = await compressFormData(data);
+      console.log("Dane po kompresji przez AI:", compressedData);
+    } catch (compressError) {
+      console.warn("Błąd kompresji, używam oryginalnych danych:", compressError);
+    }
 
     // Tworzymy nazwę grupy docelowej, jeśli nie została podana
     const audienceName = data.name || `Grupa ${Math.floor(Math.random() * 1000) + 1}`;

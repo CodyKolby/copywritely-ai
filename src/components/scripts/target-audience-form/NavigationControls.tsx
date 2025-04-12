@@ -29,7 +29,21 @@ const NavigationControls = ({
         const form = document.querySelector('form');
         if (form) {
           console.log("Submitting form on last step");
-          form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+          // Use both methods for better browser compatibility
+          try {
+            form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+            // As a fallback, try requestSubmit which is more reliable in modern browsers
+            if (typeof form.requestSubmit === 'function') {
+              form.requestSubmit();
+            }
+          } catch (e) {
+            console.error("Error submitting form:", e);
+            // Final fallback - simulate a click on any submit button
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) {
+              (submitBtn as HTMLButtonElement).click();
+            }
+          }
         }
       } else {
         goToNextStep();
