@@ -25,6 +25,25 @@ Te zasady muszą być spełnione w 100%, nie są opcjonalne.
 Treść, którą otrzymasz, będzie gotowym mailem marketingowym.`;
 
 /**
+ * Cleans and formats text for display purposes
+ * 
+ * @param text The text to be cleaned and formatted
+ * @returns Cleaned and formatted text
+ */
+export function cleanTextForDisplay(text: string): string {
+  if (!text) return '';
+  
+  // Remove any excessive whitespace
+  return text.trim()
+    // Replace multiple spaces with a single space
+    .replace(/\s+/g, ' ')
+    // Ensure proper punctuation spacing
+    .replace(/\s+([.,;:!?])/g, '$1')
+    // Capitalize the first letter of sentences
+    .replace(/(^\w|\.\s+\w)/g, match => match.toUpperCase());
+}
+
+/**
  * Sends the generated email content through the UI Cleaner AI
  * to improve formatting and readability for the UI display
  * 

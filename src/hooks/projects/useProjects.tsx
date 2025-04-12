@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -30,6 +29,7 @@ interface RawProject {
   subtype?: string;
   platform?: string;
   subject?: string;
+  alternativeSubject?: string; // Added missing property for alternativeSubject
   metadata?: {
     alternativeSubject?: string;
     [key: string]: any;
@@ -86,7 +86,7 @@ export const useProjects = (userId: string | undefined) => {
         }
         
         // Extract alternativeSubject from metadata if it exists
-        const alternativeSubject = project.metadata?.alternativeSubject;
+        const alternativeSubject = project.metadata?.alternativeSubject || project.alternativeSubject;
         
         return {
           ...project,
@@ -94,8 +94,8 @@ export const useProjects = (userId: string | undefined) => {
           subtype,
           // Ensure title_auto_generated is defined
           title_auto_generated: project.title_auto_generated || false,
-          // Extract alternativeSubject from metadata
-          alternativeSubject: alternativeSubject || project.alternativeSubject
+          // Set alternativeSubject from metadata or direct property
+          alternativeSubject: alternativeSubject
         };
       });
       
