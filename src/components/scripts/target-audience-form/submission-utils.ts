@@ -13,6 +13,13 @@ export const submitTargetAudienceForm = async (
     console.log("Dane przed kompresją:", data);
     console.log("User ID:", userId);
 
+    // Final validation to ensure all required fields are filled
+    const validationErrors = validateFormCompleteness(data);
+    if (validationErrors.length > 0) {
+      toast.error(`Błąd walidacji: ${validationErrors.join(', ')}`);
+      throw new Error(`Błąd walidacji: ${validationErrors.join(', ')}`);
+    }
+
     // Kompresja danych formularza przez AI przed zapisem
     const compressedData = await compressFormData(data);
     console.log("Dane po kompresji przez AI:", compressedData);
@@ -20,16 +27,11 @@ export const submitTargetAudienceForm = async (
     // Tworzymy nazwę grupy docelowej, jeśli nie została podana
     const audienceName = data.name || `Grupa ${Math.floor(Math.random() * 1000) + 1}`;
     
-    // Filter out empty strings from array fields
-    const competitors = compressedData.competitors.filter(item => item.trim().length > 0);
-    const pains = data.pains.filter(item => item.trim().length > 0);
-    const desires = data.desires.filter(item => item.trim().length > 0);
-    const benefits = data.benefits.filter(item => item.trim().length > 0);
-    
-    // Ensure we have at least one item in each required array
-    if (competitors.length === 0 || pains.length === 0 || desires.length === 0 || benefits.length === 0) {
-      throw new Error("Wymagane pola tablicowe nie mogą być puste");
-    }
+    // Filter arrays but ensure they still contain all required elements
+    const competitors = validateArrayField(data.competitors, 3);
+    const pains = validateArrayField(data.pains, 5);
+    const desires = validateArrayField(data.desires, 5);
+    const benefits = validateArrayField(data.benefits, 5);
     
     // Przygotowanie danych do zapisu
     const targetAudienceData = {
@@ -38,16 +40,16 @@ export const submitTargetAudienceForm = async (
       age_range: data.ageRange,
       gender: data.gender,
       competitors: competitors,
-      language: compressedData.language,
-      biography: compressedData.biography,
-      beliefs: compressedData.beliefs,
+      language: compressedData.language || data.language,
+      biography: compressedData.biography || data.biography,
+      beliefs: compressedData.beliefs || data.beliefs,
       pains: pains,
       desires: desires,
       main_offer: data.mainOffer,
-      offer_details: compressedData.offerDetails,
+      offer_details: compressedData.offerDetails || data.offerDetails,
       benefits: benefits,
-      why_it_works: compressedData.whyItWorks,
-      experience: compressedData.experience,
+      why_it_works: compressedData.whyItWorks || data.whyItWorks,
+      experience: compressedData.experience || data.experience,
     };
     
     console.log("Dane przygotowane do zapisu w bazie:", targetAudienceData);
@@ -72,3 +74,68 @@ export const submitTargetAudienceForm = async (
     throw error;
   }
 };
+
+// Helper functions for validation
+function validateFormCompleteness(data: FormValues): string[] {
+  const errors: string[] = [];
+  
+  if (!data.ageRange) errors.push("Brak przedziału wiekowego");
+  if (!data.gender) errors.push("Brak płci");
+  
+  // Validate that all array fields have every required entry filled
+  if (!validateArrayCompleteness(data.competitors, 3)) {
+    errors.push("Wszystkie pola konkurentów muszą być wypełnione");
+  }
+  
+  if (!data.language) errors.push("Brak języka klienta");
+  if (!data.biography) errors.push("Brak biografii klienta");
+  if (!data.beliefs) errors.push("Brak przekonań klienta");
+  
+  if (!validateArrayCompleteness(data.pains, 5)) {
+    errors.push("Wszystkie pola problemów muszą być wypełnione");
+  }
+  
+  if (!validateArrayCompleteness(data.desires, 5)) {
+    errors.push("Wszystkie pola pragnień muszą być wypełnione");
+  }
+  
+  if (!data.mainOffer) errors.push("Brak głównej oferty");
+  if (!data.offerDetails) errors.push("Brak szczegółów oferty");
+  
+  if (!validateArrayCompleteness(data.benefits, 5)) {
+    errors.push("Wszystkie pola korzyści muszą być wypełnione");
+  }
+  
+  if (!data.whyItWorks) errors.push("Brak wyjaśnienia dlaczego produkt działa");
+  if (!data.experience) errors.push("Brak opisu doświadczenia");
+  
+  return errors;
+}
+
+function validateArrayCompleteness(array: string[], requiredLength: number): boolean {
+  if (!array) return false;
+  
+  // Check if the first n elements (required length) are all filled
+  for (let i = 0; i < requiredLength; i++) {
+    if (!array[i] || array[i].trim().length === 0) {
+      return false;
+    }
+  }
+  
+  return true;
+}
+
+function validateArrayField(array: string[], requiredLength: number): string[] {
+  if (!array || !validateArrayCompleteness(array, requiredLength)) {
+    throw new Error(`Pole tablicowe nie zawiera wszystkich ${requiredLength} wymaganych elementów`);
+  }
+  
+  // Return only non-empty entries, but ensure we have at least the required number
+  const nonEmptyEntries = array.filter(item => item.trim().length > 0);
+  
+  if (nonEmptyEntries.length < requiredLength) {
+    throw new Error(`Pole tablicowe musi mieć co najmniej ${requiredLength} niepustych elementów`);
+  }
+  
+  return nonEmptyEntries;
+}

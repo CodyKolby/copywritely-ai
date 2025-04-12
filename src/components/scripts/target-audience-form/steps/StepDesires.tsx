@@ -16,8 +16,9 @@ const StepDesires = ({ form }: StepDesiresProps) => {
     <div>
       <div className="flex items-center mb-4">
         <Label className="flex-1 text-lg font-medium">O czym marzy, co pragnie zmienić tu i teraz?</Label>
-        <InfoTooltip text="Jakie są główne ich pragnienia, których szybkie osiągnięcie znacznie poprawi ich sytuacje, są to elementy które chcieliby by wydarzyły się już jak najszybciej, co da im największa różnicę, wzrost, zysk. Wymień 5 i uporządkuj od najważniejszego do najmniej ważnego." />
+        <InfoTooltip text="Jakie są główne ich pragnienia, których szybkie osiągnięcie znacznie poprawi ich sytuacje, są to elementy które chcieliby by wydarzyły się już jak najszybciej, co da im największa różnicę, wzrost, zysk. Wymień 5 i uporządkuj od najważniejszego do najmniej ważnego. Wszystkie pola są wymagane." />
       </div>
+      <p className="text-amber-600 mb-4 font-medium">Wszystkie pola są obowiązkowe. Wypełnij każde pole, aby przejść dalej.</p>
       <div className="space-y-3">
         {[0, 1, 2, 3, 4].map((index) => (
           <FormField
@@ -26,7 +27,10 @@ const StepDesires = ({ form }: StepDesiresProps) => {
             name={`desires.${index}`}
             render={({ field, fieldState }) => (
               <FormItem>
-                <FormLabel className="text-sm">Pragnienie {index + 1}</FormLabel>
+                <FormLabel className="text-sm flex items-center">
+                  Pragnienie {index + 1}
+                  <span className="text-red-500 ml-1">*</span>
+                </FormLabel>
                 <FormControl>
                   <Input 
                     placeholder={
@@ -38,6 +42,7 @@ const StepDesires = ({ form }: StepDesiresProps) => {
                     } 
                     {...field} 
                     className={fieldState.error ? "border-red-500" : ""}
+                    required
                   />
                 </FormControl>
                 <FormMessage className="text-red-500" />

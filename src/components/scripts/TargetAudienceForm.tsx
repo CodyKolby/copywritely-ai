@@ -114,7 +114,8 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
         console.log("Form submitted, target audience ID:", targetAudienceId);
         
         if (targetAudienceId) {
-          // Wywołaj funkcję onSubmit z ID grupy docelowej
+          toast.success("Grupa docelowa została utworzona pomyślnie!");
+          // Call the onSubmit function with the target audience ID
           onSubmit(formDataWithName, targetAudienceId);
         } else {
           toast.warning('Brak ID grupy docelowej, używam tymczasowego ID');

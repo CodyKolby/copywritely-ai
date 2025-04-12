@@ -16,8 +16,9 @@ const StepPains = ({ form }: StepPainsProps) => {
     <div>
       <div className="flex items-center mb-4">
         <Label className="flex-1 text-lg font-medium">Jakie bóle/problemy odczuwa Twój klient na co dzień?</Label>
-        <InfoTooltip text="Jakie są główne bóle, problemy w jego biznesie/życiu, które chciałby rozwiązać a związane są z Twoją usługa czy produktem. Wymień 5 i uporządkuj od najważniejszego do najmniej ważnego. Co muszą naprawić, rozwiązać tu i teraz, żeby poprawić swoją sytuację." />
+        <InfoTooltip text="Jakie są główne bóle, problemy w jego biznesie/życiu, które chciałby rozwiązać a związane są z Twoją usługa czy produktem. Wymień 5 i uporządkuj od najważniejszego do najmniej ważnego. Co muszą naprawić, rozwiązać tu i teraz, żeby poprawić swoją sytuację. Wszystkie pola są wymagane." />
       </div>
+      <p className="text-amber-600 mb-4 font-medium">Wszystkie pola są obowiązkowe. Wypełnij każde pole, aby przejść dalej.</p>
       <div className="space-y-3">
         {[0, 1, 2, 3, 4].map((index) => (
           <FormField
@@ -26,7 +27,10 @@ const StepPains = ({ form }: StepPainsProps) => {
             name={`pains.${index}`}
             render={({ field, fieldState }) => (
               <FormItem>
-                <FormLabel className="text-sm">Problem {index + 1}</FormLabel>
+                <FormLabel className="text-sm flex items-center">
+                  Problem {index + 1}
+                  <span className="text-red-500 ml-1">*</span>
+                </FormLabel>
                 <FormControl>
                   <Input 
                     placeholder={
@@ -38,6 +42,7 @@ const StepPains = ({ form }: StepPainsProps) => {
                     } 
                     {...field} 
                     className={fieldState.error ? "border-red-500" : ""}
+                    required
                   />
                 </FormControl>
                 <FormMessage className="text-red-500" />

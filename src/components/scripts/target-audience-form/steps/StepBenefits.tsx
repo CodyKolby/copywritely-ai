@@ -16,8 +16,9 @@ const StepBenefits = ({ form }: StepBenefitsProps) => {
     <div>
       <div className="flex items-center mb-4">
         <Label className="flex-1 text-lg font-medium">Jakie korzyści klient otrzyma w ramach twojego programu/współpracy?</Label>
-        <InfoTooltip text="Opisz, co realnie zyska dzięki współpracy z Tobą. Jakie efekty, jakie ułatwienia, czego uniknie, co zrobi lepiej, szybciej, mądrzej. Skup się na konkretach, które mają dla niego znaczenie." />
+        <InfoTooltip text="Opisz, co realnie zyska dzięki współpracy z Tobą. Jakie efekty, jakie ułatwienia, czego uniknie, co zrobi lepiej, szybciej, mądrzej. Skup się na konkretach, które mają dla niego znaczenie. Wszystkie pola są wymagane." />
       </div>
+      <p className="text-amber-600 mb-4 font-medium">Wszystkie pola są obowiązkowe. Wypełnij każde pole, aby przejść dalej.</p>
       <div className="space-y-3">
         {[0, 1, 2, 3, 4].map((index) => (
           <FormField
@@ -26,7 +27,10 @@ const StepBenefits = ({ form }: StepBenefitsProps) => {
             name={`benefits.${index}`}
             render={({ field, fieldState }) => (
               <FormItem>
-                <FormLabel className="text-sm">Korzyść {index + 1}</FormLabel>
+                <FormLabel className="text-sm flex items-center">
+                  Korzyść {index + 1}
+                  <span className="text-red-500 ml-1">*</span>
+                </FormLabel>
                 <FormControl>
                   <Input 
                     placeholder={
@@ -38,6 +42,7 @@ const StepBenefits = ({ form }: StepBenefitsProps) => {
                     } 
                     {...field} 
                     className={fieldState.error ? "border-red-500" : ""}
+                    required
                   />
                 </FormControl>
                 <FormMessage className="text-red-500" />

@@ -16,8 +16,9 @@ const StepCompetitors = ({ form }: StepCompetitorsProps) => {
     <div>
       <div className="flex items-center mb-4">
         <Label className="flex-1 text-lg font-medium">Wymień 3 Twoich głównych konkurentów.</Label>
-        <InfoTooltip text="Wymień 3 swoich konkurentów, opisz jaki problem rozwiązują, w jaki sposób pracują i dlaczego to co robią jest niewystarczające lub jakie są problemy z ich usługami/produktami." />
+        <InfoTooltip text="Wymień 3 swoich konkurentów, opisz jaki problem rozwiązują, w jaki sposób pracują i dlaczego to co robią jest niewystarczające lub jakie są problemy z ich usługami/produktami. Wszystkie pola są wymagane." />
       </div>
+      <p className="text-amber-600 mb-4 font-medium">Wszystkie pola są obowiązkowe. Wypełnij każde pole, aby przejść dalej.</p>
       <div className="space-y-4">
         {[0, 1, 2].map((index) => (
           <FormField
@@ -26,12 +27,16 @@ const StepCompetitors = ({ form }: StepCompetitorsProps) => {
             name={`competitors.${index}`}
             render={({ field, fieldState }) => (
               <FormItem>
-                <FormLabel className="text-sm">Konkurent {index + 1}</FormLabel>
+                <FormLabel className="text-sm flex items-center">
+                  Konkurent {index + 1}
+                  <span className="text-red-500 ml-1">*</span>
+                </FormLabel>
                 <FormControl>
                   <Textarea 
                     placeholder={`Nazwa konkurenta, co oferuje, problemy z jego produktami/usługami`} 
                     {...field} 
                     className={fieldState.error ? "border-red-500" : ""}
+                    required
                   />
                 </FormControl>
                 <FormMessage className="text-red-500" />

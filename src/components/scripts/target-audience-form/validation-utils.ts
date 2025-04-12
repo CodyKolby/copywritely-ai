@@ -6,47 +6,51 @@ export async function validateStep(step: number, form: UseFormReturn<FormValues>
   try {
     const fields = getFieldsForStep(step);
     
-    // For array fields, validate at least one item is not empty
+    // For array fields, validate all items are filled
     if (step === 3 || step === 7 || step === 8 || step === 11) {
       const values = form.getValues();
       
       // Check which step we're on and validate the corresponding array
       if (step === 3) { // Competitors
         const competitors = values.competitors;
-        if (!competitors.some(item => item.trim().length > 0)) {
+        // Check if all competitors fields are filled (all 3 required)
+        if (!competitors.every((item, index) => index >= 3 || item.trim().length > 0)) {
           form.setError('competitors.0', { 
             type: 'manual', 
-            message: 'Proszę podać przynajmniej jednego konkurenta' 
+            message: 'Proszę wypełnić wszystkie pola konkurentów' 
           });
           return false;
         }
       } 
       else if (step === 7) { // Pains
         const pains = values.pains;
-        if (!pains.some(item => item.trim().length > 0)) {
+        // Check if all pains fields are filled (all 5 required)
+        if (!pains.every((item, index) => index >= 5 || item.trim().length > 0)) {
           form.setError('pains.0', { 
             type: 'manual', 
-            message: 'Proszę podać przynajmniej jeden problem' 
+            message: 'Proszę wypełnić wszystkie pola problemów' 
           });
           return false;
         }
       }
       else if (step === 8) { // Desires
         const desires = values.desires;
-        if (!desires.some(item => item.trim().length > 0)) {
+        // Check if all desires fields are filled (all 5 required)
+        if (!desires.every((item, index) => index >= 5 || item.trim().length > 0)) {
           form.setError('desires.0', { 
             type: 'manual', 
-            message: 'Proszę podać przynajmniej jedno pragnienie' 
+            message: 'Proszę wypełnić wszystkie pola pragnień' 
           });
           return false;
         }
       }
       else if (step === 11) { // Benefits
         const benefits = values.benefits;
-        if (!benefits.some(item => item.trim().length > 0)) {
+        // Check if all benefits fields are filled (all 5 required)
+        if (!benefits.every((item, index) => index >= 5 || item.trim().length > 0)) {
           form.setError('benefits.0', { 
             type: 'manual', 
-            message: 'Proszę podać przynajmniej jedną korzyść' 
+            message: 'Proszę wypełnić wszystkie pola korzyści' 
           });
           return false;
         }
