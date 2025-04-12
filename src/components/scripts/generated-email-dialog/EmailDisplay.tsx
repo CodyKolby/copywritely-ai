@@ -2,16 +2,12 @@
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import EmailEditorView from './EmailEditorView';
-import EmailToolbar from './EmailToolbar';
 
 interface EmailDisplayProps {
   subject: string;
   emailContent: string;
   onSubjectChange: (subject: string) => void;
   onEmailContentChange: (content: string) => void;
-  onSaveToProject: () => void;
-  isSaving: boolean;
-  projectSaved: boolean;
   onViewProject?: () => void;
 }
 
@@ -20,23 +16,27 @@ const EmailDisplay = ({
   emailContent,
   onSubjectChange,
   onEmailContentChange,
-  onSaveToProject,
-  isSaving,
-  projectSaved,
   onViewProject
 }: EmailDisplayProps) => {
   return (
     <div className="space-y-4">
       <Tabs defaultValue="editor">
         <div className="flex justify-between items-center mb-4">
-        <div />
+          <TabsList>
+            <TabsTrigger value="editor">Edytor</TabsTrigger>
+            <TabsTrigger value="preview">Podgląd</TabsTrigger>
+          </TabsList>
           
-          <EmailToolbar 
-            onSaveToProject={onSaveToProject}
-            isSaving={isSaving}
-            projectSaved={projectSaved}
-            onViewProject={onViewProject}
-          />
+          {onViewProject && (
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={onViewProject}
+                className="text-sm text-copywrite-teal hover:underline flex items-center gap-1"
+              >
+                Otwórz projekt
+              </button>
+            </div>
+          )}
         </div>
 
         <TabsContent value="editor" className="mt-0">

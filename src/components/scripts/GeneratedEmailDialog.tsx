@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import LoadingState from './generated-email-dialog/LoadingState';
 import EmailDisplay from './generated-email-dialog/EmailDisplay';
@@ -9,7 +9,6 @@ import ErrorState from './generated-email-dialog/ErrorState';
 import { useEmailGeneration } from './generated-email-dialog/useEmailGeneration';
 import { EmailStyle } from './EmailStyleDialog';
 import SubjectLineToggle from './generated-email-dialog/SubjectLineToggle';
-import { Badge } from '@/components/ui/badge';
 
 interface GeneratedEmailDialogProps {
   open: boolean;
@@ -38,15 +37,14 @@ const GeneratedEmailDialog = ({
     toggleSubjectLine,
     generatedEmail,
     error,
-    isSaving,
     projectSaved,
     handleRetry,
-    saveToProject,
     handleViewProject,
     setGeneratedSubject,
     setGeneratedEmail,
     narrativeBlueprint,
-    emailStructure
+    emailStructure,
+    saveToProject
   } = useEmailGeneration({
     open,
     targetAudienceId,
@@ -55,6 +53,13 @@ const GeneratedEmailDialog = ({
     emailStyle,
     userId: user?.id
   });
+  
+  // Automatically save email when generated
+  useEffect(() => {
+    if (!isLoading && !error && generatedSubject && generatedEmail && !projectSaved && user?.id) {
+      saveToProject();
+    }
+  }, [isLoading, error, generatedSubject, generatedEmail, projectSaved]);
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -81,10 +86,7 @@ const GeneratedEmailDialog = ({
               emailContent={generatedEmail} 
               onSubjectChange={setGeneratedSubject}
               onEmailContentChange={setGeneratedEmail}
-              onSaveToProject={saveToProject}
-              isSaving={isSaving}
-              projectSaved={projectSaved}
-              onViewProject={handleViewProject}
+              onViewProject={projectSaved ? handleViewProject : undefined}
             />
           </div>
         )}

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { generateScript } from './utils/script-generator';
 import { saveProjectWithContent } from './utils/project-utils';
@@ -24,8 +23,8 @@ export const useScriptGeneration = (
   const [isSaving, setIsSaving] = useState(false);
   const [projectSaved, setProjectSaved] = useState(false);
   const [projectId, setProjectId] = useState<string | null>(null);
-  
   const [debugInfo, setDebugInfo] = useState<any | null>(null);
+  const [autoSaveAttempted, setAutoSaveAttempted] = useState(false);
   
   const generationInProgress = useRef(false);
   const requestId = useRef(`${Date.now()}-${Math.random().toString(36).substring(2, 15)}`);
@@ -108,22 +107,15 @@ export const useScriptGeneration = (
       setGeneratedScript(result.script || '');
       setCurrentHook(result.bestHook || '');
       
-      // For social media posts, extract only the post content without the intro
       if (templateId === 'social' && result.script) {
-        // The post content should be what comes after the intro (the bestHook)
         const introLength = result.bestHook ? result.bestHook.length : 0;
         
-        // If we have both script and bestHook, extract just the post content
         if (result.script && introLength > 0) {
-          // Find where the post content actually begins after the intro
-          // We're looking for the post content after a double line break
           const contentStartIndex = result.script.indexOf('\n\n', result.script.indexOf(result.bestHook) + introLength);
           
           if (contentStartIndex !== -1) {
-            // Extract only the post content
             setPostContent(result.script.substring(contentStartIndex).trim());
           } else {
-            // If we can't find a clean separation, use the whole script
             setPostContent(result.script);
           }
         } else {
@@ -203,34 +195,74 @@ export const useScriptGeneration = (
   };
 
   const handleViewProject = async () => {
-    if (!generatedScript || !userId || !targetAudienceId) {
-      toast.error("Nie można zapisać projektu");
-      return;
-    }
-
-    try {
-      setIsSaving(true);
-      
-      const savedProject = await saveProjectWithContent(
-        generatedScript,
-        currentHook || "Nowy skrypt",
-        templateId || 'unknown',
-        userId,
-        socialMediaPlatform
-      );
-      
-      if (savedProject && savedProject.id) {
-        setProjectId(savedProject.id);
-        setProjectSaved(true);
-        toast.success("Projekt zapisany pomyślnie");
+    if (!projectId && !projectSaved && generatedScript && userId) {
+      try {
+        setIsSaving(true);
+        
+        const savedProject = await saveProjectWithContent(
+          generatedScript,
+          currentHook || "Nowy skrypt",
+          templateId || 'unknown',
+          userId,
+          socialMediaPlatform
+        );
+        
+        if (savedProject && savedProject.id) {
+          setProjectId(savedProject.id);
+          setProjectSaved(true);
+          window.location.href = `/copy-editor/${savedProject.id}`;
+        }
+      } catch (err) {
+        console.error("Error saving project:", err);
+        toast.error("Nie udało się zapisać projektu");
+      } finally {
+        setIsSaving(false);
       }
-    } catch (err) {
-      console.error("Error saving project:", err);
-      toast.error("Nie udało się zapisać projektu");
-    } finally {
-      setIsSaving(false);
+    } else if (projectId) {
+      window.location.href = `/copy-editor/${projectId}`;
     }
   };
+
+  useEffect(() => {
+    const performAutoSave = async () => {
+      if (!isLoading && !error && generatedScript && userId && !projectSaved && !autoSaveAttempted && !isSaving) {
+        try {
+          setIsSaving(true);
+          setAutoSaveAttempted(true);
+          
+          const title = currentHook || "Nowy skrypt";
+          
+          const savedProject = await saveProjectWithContent(
+            generatedScript,
+            title,
+            templateId || 'unknown',
+            userId,
+            socialMediaPlatform
+          );
+          
+          if (savedProject && savedProject.id) {
+            setProjectId(savedProject.id);
+            setProjectSaved(true);
+            console.log('Script automatically saved to projects');
+          }
+        } catch (err) {
+          console.error("Error auto-saving project:", err);
+        } finally {
+          setIsSaving(false);
+        }
+      }
+    };
+    
+    if (open) {
+      performAutoSave();
+    }
+  }, [isLoading, error, generatedScript, userId, projectSaved, autoSaveAttempted, isSaving, open]);
+  
+  useEffect(() => {
+    if (!open) {
+      setAutoSaveAttempted(false);
+    }
+  }, [open]);
 
   return {
     isLoading,

@@ -44,6 +44,7 @@ export const useEmailGeneration = ({
   const [requestTimestamp, setRequestTimestamp] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<any>(null);
   const [emailStructure, setEmailStructure] = useState<EmailStructure>('PAS');
+  const [autoSaveAttempted, setAutoSaveAttempted] = useState(false);
   
   const navigate = useNavigate();
 
@@ -192,13 +193,40 @@ export const useEmailGeneration = ({
     generateEmail();
   };
 
+  useEffect(() => {
+    const autoSaveEmail = async () => {
+      if (!isLoading && !error && generatedSubject && generatedEmail && userId && !projectSaved && !autoSaveAttempted && !isSaving) {
+        try {
+          setIsSaving(true);
+          setAutoSaveAttempted(true);
+          await saveToProject();
+          console.log('Email automatically saved to projects');
+        } catch (err) {
+          console.error('Error auto-saving email:', err);
+        } finally {
+          setIsSaving(false);
+        }
+      }
+    };
+    
+    if (open) {
+      autoSaveEmail();
+    }
+  }, [isLoading, error, generatedSubject, generatedEmail, userId, projectSaved, autoSaveAttempted]);
+  
+  useEffect(() => {
+    if (!open) {
+      setAutoSaveAttempted(false);
+    }
+  }, [open]);
+
   const saveToProject = async () => {
     if (!userId || !generatedSubject || !generatedEmail || !targetAudienceId) return;
 
     setIsSaving(true);
 
     try {
-      const newProjectId = uuidv4();
+      const newProjectId = projectId || uuidv4();
       
       await saveEmailToProject(
         newProjectId,
@@ -212,11 +240,12 @@ export const useEmailGeneration = ({
       
       setProjectId(newProjectId);
       setProjectSaved(true);
-      toast.success('Email zapisany w projektach');
+      
+      // We're auto-saving, so don't show a toast notification
+      console.log('Email saved to projects');
 
     } catch (err: any) {
       console.error('Error saving email to projects:', err);
-      toast.error('Nie udało się zapisać emaila');
     } finally {
       setIsSaving(false);
     }

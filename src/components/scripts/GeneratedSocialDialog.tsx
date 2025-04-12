@@ -54,32 +54,8 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
   const dialogId = 'social-dialog';
   const contentId = 'social-content';
 
-  // Auto-save the post when generated
-  useEffect(() => {
-    const autoSavePost = async () => {
-      if (!isLoading && !error && postContent && user?.id && !projectSaved && !isSaving) {
-        try {
-          const title = `Post na ${platform?.label || 'social media'}: ${postContent.substring(0, 30)}...`;
-          await saveScriptAsProject(
-            postContent,
-            title,
-            'social',
-            user.id,
-            platform
-          );
-          setProjectSaved(true);
-          console.log('Post automatycznie zapisany w projektach');
-        } catch (err) {
-          console.error('Błąd przy automatycznym zapisywaniu postu:', err);
-        }
-      }
-    };
-
-    if (open) {
-      autoSavePost();
-    }
-  }, [isLoading, error, postContent, user?.id, projectSaved, open]);
-
+  // Auto-save the post when generated - this is already handled in useScriptGeneration
+  
   // Reset saved state when dialog closes
   useEffect(() => {
     if (!open) {
@@ -158,11 +134,14 @@ const GeneratedSocialDialog: React.FC<GeneratedSocialDialogProps> = ({
             </div>
             
             <div className="p-8 pt-4 flex justify-between">
-              {projectSaved && (
-                <div className="text-sm text-green-600 flex items-center gap-1">
-                  <span>✓</span> Zapisano w projektach
-                </div>
-              )}
+              <div>
+                <button 
+                  onClick={handleViewProject}
+                  className="text-sm text-copywrite-teal hover:underline flex items-center gap-1"
+                >
+                  Otwórz projekt
+                </button>
+              </div>
               <div className="ml-auto">
                 <Button
                   onClick={handleCopyToClipboard}
