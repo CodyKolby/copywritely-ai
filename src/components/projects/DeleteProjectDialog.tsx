@@ -27,19 +27,24 @@ const DeleteProjectDialog: React.FC<DeleteProjectDialogProps> = ({
 }) => {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
+      <AlertDialogContent className="bg-white rounded-lg border border-gray-200 shadow-xl">
         <AlertDialogHeader>
-          <AlertDialogTitle>Czy na pewno chcesz usunąć ten projekt?</AlertDialogTitle>
-          <AlertDialogDescription>
+          <AlertDialogTitle className="text-xl font-bold text-gray-900">Czy na pewno chcesz usunąć ten projekt?</AlertDialogTitle>
+          <AlertDialogDescription className="text-gray-600">
             Ta akcja jest nieodwracalna. Po usunięciu projektu nie będzie można go przywrócić.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={isDeleting}>Anuluj</AlertDialogCancel>
+        <AlertDialogFooter className="pt-3">
+          <AlertDialogCancel 
+            disabled={isDeleting}
+            className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
+          >
+            Anuluj
+          </AlertDialogCancel>
           <AlertDialogAction
             onClick={onDelete}
             disabled={isDeleting}
-            className="bg-red-500 hover:bg-red-600 focus:ring-red-500"
+            className="bg-red-500 hover:bg-red-600 focus:ring-red-500 text-white"
           >
             {isDeleting ? (
               <>
