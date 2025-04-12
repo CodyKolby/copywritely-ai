@@ -16,8 +16,9 @@ export const submitTargetAudienceForm = async (
     // Final validation to ensure all required fields are filled
     const validationErrors = validateFormCompleteness(data);
     if (validationErrors.length > 0) {
-      toast.error(`Błąd walidacji: ${validationErrors.join(', ')}`);
-      throw new Error(`Błąd walidacji: ${validationErrors.join(', ')}`);
+      const errorMessage = `Błąd walidacji: ${validationErrors.join(', ')}`;
+      toast.error(errorMessage);
+      throw new Error(errorMessage);
     }
 
     // Kompresja danych formularza przez AI przed zapisem
@@ -69,7 +70,7 @@ export const submitTargetAudienceForm = async (
     console.log("Dane zostały zapisane pomyślnie. ID grupy docelowej:", insertedData.id);
     
     return insertedData.id;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Nieoczekiwany błąd podczas zapisywania danych:", error);
     throw error;
   }

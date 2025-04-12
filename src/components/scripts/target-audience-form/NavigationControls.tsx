@@ -22,6 +22,21 @@ const NavigationControls = ({
   isLastStep = false,
   isSubmitting = false,
 }: NavigationControlsProps) => {
+  const handleSubmitOrNext = () => {
+    if (!isSubmitting) {
+      // Jeśli to ostatni krok, wywołaj onSubmit, w przeciwnym razie przejdź do następnego kroku
+      if (isLastStep) {
+        // Przycisk submit wywoła onSubmit dzięki formie
+        const form = document.querySelector('form');
+        if (form) {
+          form.requestSubmit();
+        }
+      } else {
+        goToNextStep();
+      }
+    }
+  };
+
   return (
     <div className="space-y-4 p-2 md:p-4">
       <div className="flex justify-between items-center">
@@ -40,8 +55,8 @@ const NavigationControls = ({
         </div>
 
         <Button 
-          type={isLastStep ? "submit" : "button"} 
-          onClick={isLastStep ? undefined : goToNextStep}
+          type="button" // Zmiana na button type
+          onClick={handleSubmitOrNext}
           className="bg-copywrite-teal hover:bg-copywrite-teal-dark text-white"
           disabled={isSubmitting}
         >

@@ -85,7 +85,6 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
     } catch (error) {
       console.error("Form submission error:", error);
       toast.error('Wystąpił błąd podczas wysyłania formularza');
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -95,6 +94,7 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
       if (!user) {
         console.error("No user found in auth context");
         toast.error('Nie jesteś zalogowany lub sesja wygasła');
+        setIsSubmitting(false);
         return;
       }
       
@@ -122,18 +122,15 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
           const tempId = crypto.randomUUID();
           onSubmit(formDataWithName, tempId);
         }
-      } catch (submitError) {
+      } catch (submitError: any) {
         console.error("Error in submitTargetAudienceForm:", submitError);
-        toast.error('Błąd podczas zapisywania danych');
-        const tempId = crypto.randomUUID();
-        onSubmit(formDataWithName, tempId);
+        toast.error(`Błąd podczas zapisywania danych: ${submitError.message || 'Nieznany błąd'}`);
+        setIsSubmitting(false);
       }
     } catch (error) {
       console.error("Form submission error:", error);
       toast.error('Wystąpił błąd podczas wysyłania formularza');
-      
-      const tempId = crypto.randomUUID();
-      onSubmit(form.getValues(), tempId);
+      setIsSubmitting(false);
     }
   };
 
