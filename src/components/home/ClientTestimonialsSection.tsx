@@ -14,16 +14,16 @@ interface Testimonial {
 const testimonials: Testimonial[] = [
   {
     id: 1,
-    quote: "Copility zrewolucjonizował sposób, w jaki tworzymy treści marketingowe. Dzięki temu narzędziu nasza konwersja wzrosła o 47% w zaledwie dwa miesiące.",
-    author: "Piotr Nowak",
-    role: "CEO, Marketing Masters",
+    quote: "Copility całkowicie zmienił sposób, w jaki podchodzimy do tworzenia treści marketingowych. Uprościł nasz proces, przyspieszył działania i przede wszystkim przyniósł realne efekty. Konwersja wzrosła o 37 procent, a na TikToku generujemy średnio 80 tysięcy wyświetleń dziennie.",
+    author: "Szymon Colby",
+    role: "CEO, TapNote",
     image: "/lovable-uploads/fce3ac6c-a9e7-43a4-98c1-5e9f01f4fb79.png"
   },
   {
     id: 2,
-    quote: "Odkąd zaczęliśmy korzystać z Copility, nasze kampanie w social mediach osiągają o 65% lepsze wyniki. To narzędzie dokładnie trafia w naszą grupę docelową.",
-    author: "Michał Kowalski",
-    role: "Digital Marketing Director, GrowthGenius",
+    quote: "Od kiedy zaczęliśmy korzystać z Copility, zarówno kampanie w social mediach, jak i mailingi działają o niebo lepiej. Wyniki wzrosły o kilkadziesiąt procent, a wszystko dlatego, że skrypty trafiają dokładnie tam, gdzie powinny do naszej grupy docelowej. Jeśli chcesz naprawdę przyspieszyć rozwój swojego biznesu, Copility to narzędzie numer jeden.",
+    author: "Piotr Gaida",
+    role: "CEO, BeautyFruity",
     image: "/lovable-uploads/91b6bc7e-9450-4eb0-9ba8-63c1b5165afc.png"
   }
 ];
