@@ -31,25 +31,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
   return (
     <div className="flex flex-wrap items-center justify-between gap-4 bg-white rounded-b-lg p-4 border-t border-gray-100">
       <div>
-        {onCopyToClipboard && (
-          <Button
-            onClick={onCopyToClipboard}
-            variant="outline"
-            className="border-gray-300 hover:bg-gray-100 text-gray-700"
-          >
-            {copied ? (
-              <>
-                <Check className="mr-2 h-4 w-4" />
-                <span>Skopiowano</span>
-              </>
-            ) : (
-              <>
-                <Copy className="mr-2 h-4 w-4" />
-                <span>Kopiuj do schowka</span>
-              </>
-            )}
-          </Button>
-        )}
+        {/* Ten div pozostawiamy pusty, ale zachowany dla układu flexbox */}
       </div>
       
       <div className="flex gap-2 ml-auto">

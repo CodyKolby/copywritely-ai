@@ -130,7 +130,6 @@ const GeneratedScriptDialog = ({
               onGenerateNew={!existingProject ? handleGenerateWithNextHook : undefined}
               onViewProject={handleCopyToClipboard}
               isGeneratingNewScript={isGeneratingNewScript}
-              onCopyToClipboard={handleCopyToClipboard}
               copied={copied}
             />
           </>
