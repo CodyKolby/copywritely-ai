@@ -44,3 +44,15 @@ export interface SavedProject {
   subject?: string;
   alternativeSubject?: string;
 }
+
+export interface GeneratedScriptDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  targetAudienceId: string;
+  templateId: string;
+  advertisingGoal?: string;
+  socialMediaPlatform?: {
+    key: string;
+    label: string;
+  };
+}
