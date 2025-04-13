@@ -27,6 +27,7 @@ export const useTargetAudienceDialog = ({
   const { 
     existingAudiences, 
     isLoading, 
+    isCompressing,
     handleFormSubmit: submitAudienceForm,
     fetchExistingAudiences
   } = useAudienceData(userId, open);
@@ -34,8 +35,8 @@ export const useTargetAudienceDialog = ({
   // Set state from audience data
   useEffect(() => {
     dialogState.setExistingAudiences(existingAudiences);
-    dialogState.setIsLoading(isLoading);
-  }, [existingAudiences, isLoading]);
+    dialogState.setIsLoading(isLoading || isCompressing);
+  }, [existingAudiences, isLoading, isCompressing]);
   
   // Use the hook for audience management
   const audienceManagement = useAudienceManagement(userId, {
@@ -111,18 +112,12 @@ export const useTargetAudienceDialog = ({
       console.log("Audience created with ID:", audienceId);
       
       if (audienceId) {
-        // Set the selectedAudienceId before changing dialog states
+        // Set the selectedAudienceId
         dialogState.setSelectedAudienceId(audienceId);
-        toast.success('Grupa docelowa została utworzona pomyślnie!');
         
-        // First hide the form
+        // ZMIANA: Bezpośrednio ukrywamy formularz i nie pokazujemy dialogu z celem
+        // a wracamy do ekranu wyboru grupy docelowej
         dialogState.setShowForm(false);
-        
-        // Use setTimeout to ensure proper state transition
-        setTimeout(() => {
-          // Then show goal dialog
-          dialogState.setShowGoalDialog(true);
-        }, 10);
         
         // Refresh audience list
         await fetchExistingAudiences();

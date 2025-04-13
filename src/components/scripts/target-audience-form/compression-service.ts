@@ -1,13 +1,17 @@
 
 import { FormValues } from './types';
 
-// Simulated compression - normally this would call a function or API
+// Kompresja danych formularza - symulacja procesu kompresji
 export const compressFormData = async (data: any): Promise<any> => {
   try {
     console.log("Rozpoczynam kompresję danych formularza");
     
     // Ensure we strip out any advertisingGoal field
     const { advertisingGoal, ...dataWithoutAdvertisingGoal } = data;
+    
+    // Symulacja opóźnienia procesu kompresji - w rzeczywistych warunkach
+    // tutaj byłoby wywołanie API AI lub innej usługi kompresującej dane
+    await new Promise(resolve => setTimeout(resolve, 1500));
     
     // Process each field
     const result = { ...dataWithoutAdvertisingGoal };

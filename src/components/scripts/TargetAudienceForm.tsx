@@ -86,6 +86,7 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
     } catch (error) {
       console.error("Form submission error:", error);
       toast.error('Wystąpił błąd podczas wysyłania formularza');
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -95,7 +96,6 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
       if (!user) {
         console.error("No user found in auth context");
         toast.error('Nie jesteś zalogowany lub sesja wygasła');
-        setIsSubmitting(false);
         return;
       }
       
@@ -111,11 +111,9 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
       console.log("Dane do zapisania w bazie:", formDataWithName);
       
       try {
-        // Call the onSubmit function with the full form data and wait for it to complete
-        // We ignore the return value now since we've updated the type to be Promise<any>
+        // Call the onSubmit function with the full form data
         await onSubmit(formDataWithName, null);
         console.log("Form successfully submitted");
-        return;
       } catch (error) {
         console.error("Error in onSubmit callback:", error);
         throw error;
@@ -124,9 +122,6 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
       console.error("Form submission error:", error);
       toast.error('Wystąpił błąd podczas wysyłania formularza');
       throw error; // Rethrow to allow the parent component to handle it
-    } finally {
-      // Always set isSubmitting to false after completion
-      setIsSubmitting(false);
     }
   };
 
