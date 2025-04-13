@@ -1,8 +1,5 @@
-
 import { useEffect } from 'react';
 import { toast } from 'sonner';
-import { checkAllPremiumStorages, updateAllPremiumStorages } from '@/contexts/auth/local-storage-utils';
-import { forcePremiumStatusUpdate, checkPremiumStatus } from '@/contexts/auth/premium-utils';
 import { EmailStyle } from '../EmailStyleDialog';
 import { SocialMediaPlatform } from '../SocialMediaPlatformDialog';
 import { useDialogState } from './hooks/useDialogState';
@@ -65,7 +62,7 @@ export const useTargetAudienceDialog = ({
     transitionToDialog: dialogState.transitionToDialog
   }, templateId);
 
-  // Dodatkowy efekt do logowania stanu dialogu
+  // Debug logging for dialog state
   useEffect(() => {
     if (open) {
       console.log("Dialog state:", {
@@ -120,8 +117,8 @@ export const useTargetAudienceDialog = ({
       dialogState.setAdvertisingGoal('');
       dialogState.setEmailStyle(null);
       dialogState.setSocialMediaPlatform(null);
-      dialogState.setIsProcessing(false); // Make sure processing state is reset
-      dialogState.setIsTransitioning(false); // Reset transition state
+      dialogState.setIsProcessing(false);
+      dialogState.setIsTransitioning(false);
     }
   }, [templateId]);
 
@@ -134,7 +131,7 @@ export const useTargetAudienceDialog = ({
       if (audienceId) {
         dialogState.setSelectedAudienceId(audienceId);
         
-        // Użyj mechanizmu sekwencyjnych przejść
+        // Use sequential transition mechanism
         dialogState.transitionToDialog(
           () => dialogState.setShowForm(false),
           () => dialogState.setShowGoalDialog(true)
@@ -215,3 +212,5 @@ export const useTargetAudienceDialog = ({
     resetState: dialogState.resetState,
   };
 };
+
+import { checkAllPremiumStorages } from '@/contexts/auth/local-storage-utils';

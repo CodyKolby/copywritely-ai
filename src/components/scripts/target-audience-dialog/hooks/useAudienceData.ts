@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { compressFormData } from '../../target-audience-form/compression-service';
 
@@ -41,10 +41,16 @@ export const useAudienceData = (userId: string | undefined, open: boolean) => {
     try {
       setIsLoading(true);
       
-      // Kompresujemy dane formularza przed zapisem do bazy
-      console.log("Dane przed kompresją:", values);
-      const compressedData = await compressFormData(values);
-      console.log("Dane po kompresji przez AI:", compressedData);
+      // Compress form data before saving to database
+      console.log("Data before compression:", values);
+      let compressedData;
+      try {
+        compressedData = await compressFormData(values);
+        console.log("Data after AI compression:", compressedData);
+      } catch (compressError) {
+        console.warn("Compression error, using original data:", compressError);
+        compressedData = values;
+      }
       
       // Store the target audience in the database
       const { data, error } = await supabase
@@ -60,7 +66,7 @@ export const useAudienceData = (userId: string | undefined, open: boolean) => {
         throw error;
       }
 
-      // Odśwież listę grup docelowych
+      // Refresh the list of target audiences
       await fetchExistingAudiences();
       
       return data.id;

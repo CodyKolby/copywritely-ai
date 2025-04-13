@@ -20,6 +20,8 @@ export interface TargetAudience {
   name: string;
   created_at?: string;
   user_id?: string;
+  age_range?: string;
+  gender?: string;
 }
 
 export interface UseTargetAudienceDialogReturn {
@@ -35,15 +37,15 @@ export interface UseTargetAudienceDialogReturn {
   showEmailStyleDialog: boolean;
   showSocialMediaPlatformDialog: boolean;
   advertisingGoal: string;
-  emailStyle: string;
-  socialMediaPlatform: SocialMediaPlatform | undefined;
+  emailStyle: EmailStyle | null;
+  socialMediaPlatform: SocialMediaPlatform | null;
   isProcessing: boolean;
   isTransitioning: boolean;
   handleChoiceSelection: (choice: AudienceChoice) => void;
   handleExistingAudienceSelect: (id: string) => void;
   handleContinue: () => void;
   handleCreateNewAudience: () => void;
-  handleFormSubmit: (audienceId: string) => void;
+  handleFormSubmit: (values: any) => Promise<void>;
   handleBack: () => void;
   handleGoalSubmit: (goal: string) => void;
   handleGoalBack: () => void;
@@ -54,5 +56,6 @@ export interface UseTargetAudienceDialogReturn {
   handleScriptDialogClose: () => void;
   handleEmailDialogClose: () => void;
   handleSocialDialogClose: () => void;
+  validatePremiumStatus: () => Promise<boolean>;
   resetState: () => void;
 }

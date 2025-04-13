@@ -1,43 +1,68 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { checkPremiumStatus } from '@/contexts/auth/premium-utils';
+import { checkAllPremiumStorages, updateAllPremiumStorages } from '@/contexts/auth/local-storage-utils';
+import { forcePremiumStatusUpdate, checkPremiumStatus } from '@/contexts/auth/premium-utils';
 
-export const usePremiumVerification = (userId: string | undefined, isPremium: boolean) => {
+export const usePremiumVerification = (userId: string | undefined, initialPremium: boolean) => {
   const [verifiedPremium, setVerifiedPremium] = useState<boolean | null>(null);
+  const [isCheckingPremium, setIsCheckingPremium] = useState(false);
 
-  // Verify premium status when dialog opens
+  // Verify premium status on mount and when userId changes
   useEffect(() => {
     if (userId) {
-      // Verify premium status again to be sure
-      const verifyPremium = async () => {
-        try {
-          // First check database directly for fastest response
-          const { data: profile, error } = await supabase
-            .from('profiles')
-            .select('is_premium')
-            .eq('id', userId)
-            .single();
-            
-          if (!error && profile?.is_premium) {
-            console.log('[TARGET-AUDIENCE] Premium confirmed from database');
-            setVerifiedPremium(true);
-            return;
-          }
-          
-          // If not confirmed from database, use the full check
-          const result = await checkPremiumStatus(userId, false);
-          setVerifiedPremium(result);
-        } catch (e) {
-          console.error('[TARGET-AUDIENCE] Error verifying premium:', e);
-          // Fallback to prop
-          setVerifiedPremium(isPremium);
-        }
-      };
-      
-      verifyPremium();
+      verifyPremiumStatus(userId);
     }
-  }, [userId, isPremium]);
+  }, [userId]);
 
-  return { verifiedPremium };
+  const verifyPremiumStatus = async (userId: string) => {
+    try {
+      setIsCheckingPremium(true);
+      
+      // Check local storage first
+      const storagePremium = checkAllPremiumStorages();
+      
+      if (storagePremium !== null) {
+        setVerifiedPremium(storagePremium);
+        return storagePremium;
+      }
+      
+      // Then check remote status
+      const premiumStatus = await checkPremiumStatus(userId);
+      setVerifiedPremium(premiumStatus);
+      
+      // Update local storage
+      updateAllPremiumStorages(premiumStatus);
+      
+      return premiumStatus;
+    } catch (error) {
+      console.error('Error verifying premium status:', error);
+      return initialPremium;
+    } finally {
+      setIsCheckingPremium(false);
+    }
+  };
+
+  // Force premium status update
+  const refreshPremiumStatus = async () => {
+    if (!userId) return false;
+    
+    try {
+      setIsCheckingPremium(true);
+      const updatedStatus = await forcePremiumStatusUpdate(userId);
+      setVerifiedPremium(updatedStatus);
+      return updatedStatus;
+    } catch (error) {
+      console.error('Error forcing premium status update:', error);
+      return initialPremium;
+    } finally {
+      setIsCheckingPremium(false);
+    }
+  };
+
+  return {
+    verifiedPremium,
+    isCheckingPremium,
+    validatePremiumStatus: () => verifyPremiumStatus(userId || ''),
+    refreshPremiumStatus
+  };
 };
