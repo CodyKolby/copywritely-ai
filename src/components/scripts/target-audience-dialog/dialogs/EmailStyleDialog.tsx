@@ -19,6 +19,11 @@ const EmailStyleDialog = ({
   onBack,
   isProcessing,
 }: EmailStyleDialogProps) => {
+  // Create a wrapper function to adapt the signature
+  const handleCancel = () => {
+    onOpenChange(false);
+  };
+
   return (
     <Dialog 
       open={open} 
@@ -28,7 +33,7 @@ const EmailStyleDialog = ({
         <EmailStyleDialogComponent
           onSubmit={onSubmit}
           onBack={onBack}
-          onCancel={onOpenChange}
+          onCancel={handleCancel}
           isProcessing={isProcessing}
         />
       </DialogContent>

@@ -16,6 +16,11 @@ const FormDialog = ({
   onSubmit,
   onBack,
 }: FormDialogProps) => {
+  // Create a wrapper function to adapt the signature
+  const handleCancel = () => {
+    onOpenChange(false);
+  };
+
   return (
     <Dialog 
       open={open} 
@@ -24,7 +29,7 @@ const FormDialog = ({
       <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
         <TargetAudienceForm 
           onSubmit={onSubmit}
-          onCancel={onOpenChange}
+          onCancel={handleCancel}
           onBack={onBack}
         />
       </DialogContent>

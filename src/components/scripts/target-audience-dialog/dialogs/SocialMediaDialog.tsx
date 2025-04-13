@@ -19,6 +19,11 @@ const SocialMediaDialog = ({
   onBack,
   isProcessing,
 }: SocialMediaDialogProps) => {
+  // Create a wrapper function to adapt the signature
+  const handleCancel = () => {
+    onOpenChange(false);
+  };
+
   return (
     <Dialog 
       open={open} 
@@ -30,7 +35,7 @@ const SocialMediaDialog = ({
           onOpenChange={() => {}}
           onSelect={onSubmit}
           onBack={onBack}
-          onCancel={onOpenChange}
+          onCancel={handleCancel}
           isProcessing={isProcessing}
         />
       </DialogContent>

@@ -18,6 +18,11 @@ const GoalDialog = ({
   onBack,
   isProcessing,
 }: GoalDialogProps) => {
+  // Create a wrapper function to adapt the signature
+  const handleCancel = () => {
+    onOpenChange(false);
+  };
+
   return (
     <Dialog 
       open={open} 
@@ -27,7 +32,7 @@ const GoalDialog = ({
         <AdvertisingGoalDialog 
           onSubmit={onSubmit}
           onBack={onBack}
-          onCancel={onOpenChange}
+          onCancel={handleCancel}
           isProcessing={isProcessing}
         />
       </DialogContent>
