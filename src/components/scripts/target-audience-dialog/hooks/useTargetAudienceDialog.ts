@@ -1,10 +1,14 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth/AuthContext';
-import { fetchExistingAudiences } from '../api';
 import { toast } from 'sonner';
 import { SocialMediaPlatform } from '../../SocialMediaPlatformDialog';
 import { EmailStyle } from '../../EmailStyleDialog';
+import { useDialogState } from './useDialogState';
+import { useAudienceData } from './useAudienceData';
+import { useDialogNavigation } from './useDialogNavigation';
+import { useAudienceManagement } from './useAudienceManagement';
+import { usePremiumVerification } from './usePremiumVerification';
 
 export const useTargetAudienceDialog = ({ 
   open, 
@@ -19,255 +23,133 @@ export const useTargetAudienceDialog = ({
   userId: string;
   isPremium: boolean;
 }) => {
-  // Dialog state
-  const [showForm, setShowForm] = useState(false);
-  const [audienceChoice, setAudienceChoice] = useState<'existing' | 'new' | null>(null);
-  const [selectedAudienceId, setSelectedAudienceId] = useState<string | null>(null);
-  const [existingAudiences, setExistingAudiences] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isProcessing, setIsProcessing] = useState(false);
+  // Use all the extracted hooks
+  const dialogState = useDialogState();
+  const { verifiedPremium } = usePremiumVerification(userId, isPremium);
   
-  // Dialog flow state
-  const [showScriptDialog, setShowScriptDialog] = useState(false);
-  const [showEmailDialog, setShowEmailDialog] = useState(false);
-  const [showGoalDialog, setShowGoalDialog] = useState(false);
-  const [showEmailStyleDialog, setShowEmailStyleDialog] = useState(false);
-  const [showSocialMediaPlatformDialog, setShowSocialMediaPlatformDialog] = useState(false);
+  // Use the hook for fetching audience data
+  const { 
+    existingAudiences, 
+    isLoading, 
+    handleFormSubmit: submitAudienceForm 
+  } = useAudienceData(userId, open);
+
+  // Set state from audience data
+  useEffect(() => {
+    dialogState.setExistingAudiences(existingAudiences);
+    dialogState.setIsLoading(isLoading);
+  }, [existingAudiences, isLoading]);
   
-  // Answer state
-  const [advertisingGoal, setAdvertisingGoal] = useState('');
-  const [emailStyle, setEmailStyle] = useState<EmailStyle | null>(null);
-  const [socialMediaPlatform, setSocialMediaPlatform] = useState<SocialMediaPlatform | null>(null);
+  // Use the hook for audience management
+  const audienceManagement = useAudienceManagement(userId, {
+    setIsLoading: dialogState.setIsLoading,
+    setExistingAudiences: dialogState.setExistingAudiences,
+    setSelectedAudienceId: dialogState.setSelectedAudienceId,
+    setAudienceChoice: dialogState.setAudienceChoice,
+    setShowForm: dialogState.setShowForm,
+    setShowGoalDialog: dialogState.setShowGoalDialog,
+    setIsProcessing: dialogState.setIsProcessing,
+    audienceChoice: dialogState.audienceChoice,
+    selectedAudienceId: dialogState.selectedAudienceId
+  });
   
-  const { session } = useAuth();
+  // Use the hook for dialog navigation
+  const dialogNavigation = useDialogNavigation({
+    setShowForm: dialogState.setShowForm,
+    setShowGoalDialog: dialogState.setShowGoalDialog,
+    setShowEmailStyleDialog: dialogState.setShowEmailStyleDialog,
+    setShowSocialMediaPlatformDialog: dialogState.setShowSocialMediaPlatformDialog,
+    setShowScriptDialog: dialogState.setShowScriptDialog,
+    setShowEmailDialog: dialogState.setShowEmailDialog,
+    setAdvertisingGoal: dialogState.setAdvertisingGoal,
+    setEmailStyle: dialogState.setEmailStyle,
+    setSocialMediaPlatform: dialogState.setSocialMediaPlatform,
+    setIsProcessing: dialogState.setIsProcessing,
+  }, templateId);
+
+  // Reset state when dialog opens/closes or template changes
+  useEffect(() => {
+    if (!open) {
+      dialogState.resetState();
+    }
+  }, [open, dialogState.resetState]);
 
   useEffect(() => {
-    if (open && userId) {
-      fetchAudiences();
+    if (templateId) {
+      // Reset dialog flow states to prevent incorrect dialog sequences
+      dialogState.setShowGoalDialog(false);
+      dialogState.setShowEmailStyleDialog(false);
+      dialogState.setShowSocialMediaPlatformDialog(false);
+      dialogState.setShowScriptDialog(false);
+      dialogState.setShowEmailDialog(false);
+      dialogState.setAdvertisingGoal('');
+      dialogState.setEmailStyle(null);
+      dialogState.setSocialMediaPlatform(null);
+      dialogState.setIsProcessing(false);
     }
-    
-    // Reset state when dialog opens or closes
-    if (!open) {
-      resetState();
-    }
+  }, [templateId]);
 
-    // When template changes, reset all dialog states
-    resetDialogStates();
-  }, [open, userId, templateId]);
-
-  const fetchAudiences = async () => {
-    setIsLoading(true);
+  // Enhanced form submission handler
+  const handleFormSubmit = async (values: any) => {
     try {
-      const audiences = await fetchExistingAudiences(userId);
-      setExistingAudiences(audiences);
+      dialogState.setIsProcessing(true);
+      const audienceId = await submitAudienceForm(values);
+      
+      if (audienceId) {
+        dialogState.setSelectedAudienceId(audienceId);
+        
+        // Hide the form and show the goal dialog
+        dialogState.setShowForm(false);
+        dialogState.setShowGoalDialog(true);
+        
+        toast.success('Grupa docelowa została utworzona');
+      }
     } catch (error) {
-      console.error('Błąd pobierania grup docelowych:', error);
-      toast.error('Błąd podczas pobierania zapisanych grup docelowych');
+      console.error("Error submitting form:", error);
+      toast.error('Wystąpił błąd podczas tworzenia grupy docelowej');
+      dialogState.setIsProcessing(false);
     } finally {
-      setIsLoading(false);
+      dialogState.setIsProcessing(false);
     }
   };
 
-  const resetState = () => {
-    setShowForm(false);
-    setAudienceChoice(null);
-    setSelectedAudienceId(null);
-    setShowScriptDialog(false);
-    setShowEmailDialog(false);
-    setShowGoalDialog(false);
-    setShowEmailStyleDialog(false);
-    setShowSocialMediaPlatformDialog(false);
-    setAdvertisingGoal('');
-    setEmailStyle(null);
-    setSocialMediaPlatform(null);
-    setIsProcessing(false);
-  };
-
-  const resetDialogStates = () => {
-    setShowScriptDialog(false);
-    setShowEmailDialog(false);
-    setShowGoalDialog(false);
-    setShowEmailStyleDialog(false);
-    setShowSocialMediaPlatformDialog(false);
-    setAdvertisingGoal('');
-    setEmailStyle(null);
-    setSocialMediaPlatform(null);
-  };
-
-  // Choice selection handler
-  const handleChoiceSelection = (choice: 'existing' | 'new') => {
-    setAudienceChoice(choice);
-  };
-
-  // Handlers for existing audience selection
-  const handleExistingAudienceSelect = (audienceId: string) => {
-    setSelectedAudienceId(audienceId);
-  };
-
-  // Continue button handler
-  const handleContinue = () => {
-    if (!isPremium) {
-      toast.warning('Ta funkcja jest dostępna tylko dla użytkowników Premium.');
-      return;
-    }
-    
-    // Set processing state for UI feedback
-    setIsProcessing(true);
-    
-    // Always show goal dialog first
-    setShowGoalDialog(true);
-  };
-
-  // Handler for creating a new audience
-  const handleCreateNewAudience = () => {
-    if (!isPremium) {
-      toast.warning('Ta funkcja jest dostępna tylko dla użytkowników Premium.');
-      return;
-    }
-    
-    setShowForm(true);
-  };
-
-  // Form submission handler
-  const handleFormSubmit = async (formData: any) => {
-    setIsProcessing(true);
-    try {
-      // Save the audience
-      const response = await fetch('https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/create-target-audience', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token || ''}`
-        },
-        body: JSON.stringify({
-          userId: userId,
-          audience: formData
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Wystąpił błąd podczas zapisywania grupy docelowej');
-      }
-
-      const data = await response.json();
-      
-      if (!data || !data.audience || !data.audience.id) {
-        throw new Error('Nieprawidłowa odpowiedź z serwera');
-      }
-      
-      setSelectedAudienceId(data.audience.id);
-      
-      // Always show goal dialog after form submission
-      setShowForm(false);
-      setShowGoalDialog(true);
-      
-    } catch (error) {
-      console.error('Błąd zapisywania grupy docelowej:', error);
-      toast.error('Błąd podczas zapisywania grupy docelowej');
-      setIsProcessing(false);
-    }
-  };
-
-  // Back button handler
-  const handleBack = () => {
-    setShowForm(false);
-    setAudienceChoice(null);
-    setIsProcessing(false);
-  };
-
-  // Goal submission handler
-  const handleGoalSubmit = (goal: string) => {
-    setAdvertisingGoal(goal);
-    setShowGoalDialog(false);
-    
-    // Based on template type, show different dialogs
-    if (templateId === 'social') {
-      setShowSocialMediaPlatformDialog(true);
-    } else if (templateId === 'email') {
-      setShowEmailStyleDialog(true);
-    } else {
-      setShowScriptDialog(true);
-    }
-    
-    setIsProcessing(false);
-  };
-
-  // Goal back button handler
-  const handleGoalBack = () => {
-    setShowGoalDialog(false);
-    setIsProcessing(false);
-  };
-
-  // Email style submission handler
-  const handleEmailStyleSubmit = (style: EmailStyle) => {
-    setEmailStyle(style);
-    setShowEmailStyleDialog(false);
-    setShowEmailDialog(true);
-    setIsProcessing(false);
-  };
-
-  // Email style back button handler
-  const handleEmailStyleBack = () => {
-    setShowEmailStyleDialog(false);
-    setShowGoalDialog(true);
-    setIsProcessing(false);
-  };
-
-  // Social media platform submission handler
-  const handleSocialMediaPlatformSubmit = (platform: SocialMediaPlatform) => {
-    setSocialMediaPlatform(platform);
-    setShowSocialMediaPlatformDialog(false);
-    setShowScriptDialog(true);
-    setIsProcessing(false);
-  };
-
-  // Social media platform back button handler
-  const handleSocialMediaPlatformBack = () => {
-    setShowSocialMediaPlatformDialog(false);
-    setShowGoalDialog(true);
-    setIsProcessing(false);
-  };
-
-  // Script dialog close handler
-  const handleScriptDialogClose = () => {
-    setShowScriptDialog(false);
-    resetState();
-  };
-
-  // Email dialog close handler
-  const handleEmailDialogClose = () => {
-    setShowEmailDialog(false);
-    resetState();
-  };
-
+  // Return all the hooks' state and methods
   return {
-    isLoading,
-    showForm,
-    audienceChoice,
-    selectedAudienceId,
-    existingAudiences,
-    showScriptDialog,
-    showEmailDialog,
-    showGoalDialog,
-    showEmailStyleDialog,
-    showSocialMediaPlatformDialog,
-    advertisingGoal,
-    emailStyle,
-    socialMediaPlatform,
-    isProcessing,
-    handleChoiceSelection,
-    handleExistingAudienceSelect,
-    handleContinue,
-    handleCreateNewAudience,
+    // State from dialogState
+    isLoading: dialogState.isLoading,
+    showForm: dialogState.showForm,
+    audienceChoice: dialogState.audienceChoice,
+    selectedAudienceId: dialogState.selectedAudienceId,
+    existingAudiences: dialogState.existingAudiences,
+    showScriptDialog: dialogState.showScriptDialog,
+    showEmailDialog: dialogState.showEmailDialog,
+    showGoalDialog: dialogState.showGoalDialog,
+    showEmailStyleDialog: dialogState.showEmailStyleDialog,
+    showSocialMediaPlatformDialog: dialogState.showSocialMediaPlatformDialog,
+    advertisingGoal: dialogState.advertisingGoal,
+    emailStyle: dialogState.emailStyle,
+    socialMediaPlatform: dialogState.socialMediaPlatform,
+    isProcessing: dialogState.isProcessing,
+    
+    // Methods from audienceManagement
+    handleChoiceSelection: audienceManagement.handleChoiceSelection,
+    handleExistingAudienceSelect: audienceManagement.handleExistingAudienceSelect,
+    handleContinue: audienceManagement.handleContinue,
+    handleCreateNewAudience: audienceManagement.handleCreateNewAudience,
     handleFormSubmit,
-    handleBack,
-    handleGoalSubmit,
-    handleGoalBack,
-    handleEmailStyleSubmit,
-    handleEmailStyleBack,
-    handleSocialMediaPlatformSubmit,
-    handleSocialMediaPlatformBack,
-    handleScriptDialogClose,
-    handleEmailDialogClose,
+    
+    // Methods from dialogNavigation
+    handleBack: dialogNavigation.handleBack,
+    handleGoalSubmit: dialogNavigation.handleGoalSubmit,
+    handleGoalBack: dialogNavigation.handleGoalBack,
+    handleEmailStyleSubmit: dialogNavigation.handleEmailStyleSubmit,
+    handleEmailStyleBack: dialogNavigation.handleEmailStyleBack,
+    handleSocialMediaPlatformSubmit: dialogNavigation.handleSocialMediaPlatformSubmit,
+    handleSocialMediaPlatformBack: dialogNavigation.handleSocialMediaPlatformBack,
+    handleScriptDialogClose: dialogNavigation.handleScriptDialogClose,
+    handleEmailDialogClose: dialogNavigation.handleEmailDialogClose,
+    
+    // Added resetState, to be available in the component
+    resetState: dialogState.resetState,
   };
 };

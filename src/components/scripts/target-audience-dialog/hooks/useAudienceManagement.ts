@@ -11,7 +11,6 @@ interface AudienceManagementProps {
   setShowForm: (show: boolean) => void;
   setShowGoalDialog: (show: boolean) => void;
   setIsProcessing: (isProcessing: boolean) => void;
-  transitionToDialog: (closeDialog: () => void, openDialog: () => void) => void;
   audienceChoice: AudienceChoice;
   selectedAudienceId: string | null;
 }
@@ -23,14 +22,12 @@ export const useAudienceManagement = (userId: string, props: AudienceManagementP
     setShowForm,
     setShowGoalDialog,
     setIsProcessing,
-    transitionToDialog,
     audienceChoice,
     selectedAudienceId
   } = props;
 
   // Handle audience choice selection
   const handleChoiceSelection = useCallback((choice: AudienceChoice) => {
-    console.log(`Selected audience choice: ${choice}`);
     setAudienceChoice(choice);
     
     if (choice === 'new') {
@@ -40,13 +37,15 @@ export const useAudienceManagement = (userId: string, props: AudienceManagementP
 
   // Handle existing audience selection
   const handleExistingAudienceSelect = useCallback((id: string) => {
-    console.log(`Selected audience ID: ${id}`);
     setSelectedAudienceId(id);
   }, [setSelectedAudienceId]);
 
   // Handle continue button click
   const handleContinue = useCallback(() => {
-    console.log('Continue button clicked');
+    if (!userId) {
+      toast.error('User ID is required');
+      return;
+    }
     
     if (!audienceChoice) {
       toast.error('Proszę wybrać opcję');
@@ -60,30 +59,19 @@ export const useAudienceManagement = (userId: string, props: AudienceManagementP
     }
     
     setIsProcessing(true);
-    
-    // Move to goal dialog
-    transitionToDialog(
-      () => {}, // No dialog to close
-      () => setShowGoalDialog(true)
-    );
-  }, [
-    audienceChoice, 
-    selectedAudienceId, 
-    setIsProcessing, 
-    transitionToDialog, 
-    setShowGoalDialog
-  ]);
+    setShowGoalDialog(true);
+  }, [audienceChoice, selectedAudienceId, userId, setIsProcessing, setShowGoalDialog]);
 
   // Handle create new audience button
   const handleCreateNewAudience = useCallback(() => {
-    console.log('Create new audience button clicked');
-    setIsProcessing(true);
+    if (!userId) {
+      toast.error('User ID is required');
+      return;
+    }
     
-    transitionToDialog(
-      () => {}, // No dialog to close
-      () => setShowForm(true)
-    );
-  }, [setIsProcessing, transitionToDialog, setShowForm]);
+    setIsProcessing(true);
+    setShowForm(true);
+  }, [userId, setIsProcessing, setShowForm]);
 
   return {
     handleChoiceSelection,

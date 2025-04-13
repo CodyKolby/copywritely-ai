@@ -10,9 +10,6 @@ export interface TargetAudienceDialogProps {
   isPremium: boolean;
 }
 
-// Alias for TargetAudienceDialogProps for backward compatibility
-export type TargetAudienceDialogOptions = TargetAudienceDialogProps;
-
 export type AudienceChoice = 'existing' | 'new' | null;
 
 export interface TargetAudience {
@@ -22,40 +19,4 @@ export interface TargetAudience {
   user_id?: string;
   age_range?: string;
   gender?: string;
-}
-
-export interface UseTargetAudienceDialogReturn {
-  isLoading: boolean;
-  showForm: boolean;
-  audienceChoice: AudienceChoice;
-  selectedAudienceId: string | null;
-  existingAudiences: TargetAudience[];
-  showScriptDialog: boolean;
-  showEmailDialog: boolean;
-  showSocialDialog: boolean;
-  showGoalDialog: boolean;
-  showEmailStyleDialog: boolean;
-  showSocialMediaPlatformDialog: boolean;
-  advertisingGoal: string;
-  emailStyle: EmailStyle | null;
-  socialMediaPlatform: SocialMediaPlatform | null;
-  isProcessing: boolean;
-  isTransitioning: boolean;
-  handleChoiceSelection: (choice: AudienceChoice) => void;
-  handleExistingAudienceSelect: (id: string) => void;
-  handleContinue: () => void;
-  handleCreateNewAudience: () => void;
-  handleFormSubmit: (values: any) => Promise<void>;
-  handleBack: () => void;
-  handleGoalSubmit: (goal: string) => void;
-  handleGoalBack: () => void;
-  handleEmailStyleSubmit: (style: EmailStyle) => void;
-  handleEmailStyleBack: () => void;
-  handleSocialMediaPlatformSubmit: (platform: SocialMediaPlatform) => void;
-  handleSocialMediaPlatformBack: () => void;
-  handleScriptDialogClose: () => void;
-  handleEmailDialogClose: () => void;
-  handleSocialDialogClose: () => void;
-  validatePremiumStatus: () => Promise<boolean>;
-  resetState: () => void;
 }

@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import { compressFormData } from '../../target-audience-form/compression-service';
 
 export const useAudienceData = (userId: string | undefined, open: boolean) => {
   const [existingAudiences, setExistingAudiences] = useState<any[]>([]);
@@ -20,9 +19,8 @@ export const useAudienceData = (userId: string | undefined, open: boolean) => {
     try {
       const { data, error } = await supabase
         .from('target_audiences')
-        .select('id, name, age_range, gender')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+        .select('id, name')
+        .eq('user_id', userId);
 
       if (error) {
         throw error;
@@ -41,22 +39,11 @@ export const useAudienceData = (userId: string | undefined, open: boolean) => {
     try {
       setIsLoading(true);
       
-      // Compress form data before saving to database
-      console.log("Data before compression:", values);
-      let compressedData;
-      try {
-        compressedData = await compressFormData(values);
-        console.log("Data after AI compression:", compressedData);
-      } catch (compressError) {
-        console.warn("Compression error, using original data:", compressError);
-        compressedData = values;
-      }
-      
       // Store the target audience in the database
       const { data, error } = await supabase
         .from('target_audiences')
         .insert({
-          ...compressedData,
+          ...values,
           user_id: userId
         })
         .select('id')
