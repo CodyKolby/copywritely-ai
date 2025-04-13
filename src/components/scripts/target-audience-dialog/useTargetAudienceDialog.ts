@@ -40,7 +40,6 @@ export const useTargetAudienceDialog = ({
     setShowForm: dialogState.setShowForm,
     setShowGoalDialog: dialogState.setShowGoalDialog,
     setIsProcessing: dialogState.setIsProcessing,
-    transitionToDialog: dialogState.transitionToDialog,
     audienceChoice: dialogState.audienceChoice,
     selectedAudienceId: dialogState.selectedAudienceId
   });
@@ -53,13 +52,10 @@ export const useTargetAudienceDialog = ({
     setShowSocialMediaPlatformDialog: dialogState.setShowSocialMediaPlatformDialog,
     setShowScriptDialog: dialogState.setShowScriptDialog,
     setShowEmailDialog: dialogState.setShowEmailDialog,
-    setShowSocialDialog: dialogState.setShowSocialDialog,
     setAdvertisingGoal: dialogState.setAdvertisingGoal,
     setEmailStyle: dialogState.setEmailStyle,
     setSocialMediaPlatform: dialogState.setSocialMediaPlatform,
     setIsProcessing: dialogState.setIsProcessing,
-    isTransitioning: dialogState.isTransitioning,
-    transitionToDialog: dialogState.transitionToDialog
   }, templateId);
 
   // Debug logging for dialog state
@@ -75,8 +71,7 @@ export const useTargetAudienceDialog = ({
         showSocialMediaPlatformDialog: dialogState.showSocialMediaPlatformDialog,
         showScriptDialog: dialogState.showScriptDialog,
         showEmailDialog: dialogState.showEmailDialog,
-        isProcessing: dialogState.isProcessing,
-        isTransitioning: dialogState.isTransitioning
+        isProcessing: dialogState.isProcessing
       });
     }
   }, [
@@ -90,8 +85,7 @@ export const useTargetAudienceDialog = ({
     dialogState.showSocialMediaPlatformDialog,
     dialogState.showScriptDialog,
     dialogState.showEmailDialog,
-    dialogState.isProcessing,
-    dialogState.isTransitioning
+    dialogState.isProcessing
   ]);
 
   // Reset state when dialog opens/closes or template changes
@@ -118,7 +112,6 @@ export const useTargetAudienceDialog = ({
       dialogState.setEmailStyle(null);
       dialogState.setSocialMediaPlatform(null);
       dialogState.setIsProcessing(false);
-      dialogState.setIsTransitioning(false);
     }
   }, [templateId]);
 
@@ -126,16 +119,20 @@ export const useTargetAudienceDialog = ({
   const handleFormSubmit = async (values: any) => {
     try {
       dialogState.setIsProcessing(true);
-      const audienceId = await submitAudienceForm(values);
+      
+      // Remove advertisingGoal field which doesn't exist in the database
+      const { advertisingGoal, ...dataToSubmit } = values;
+      
+      const audienceId = await submitAudienceForm(dataToSubmit);
       
       if (audienceId) {
         dialogState.setSelectedAudienceId(audienceId);
         
-        // Use sequential transition mechanism
-        dialogState.transitionToDialog(
-          () => dialogState.setShowForm(false),
-          () => dialogState.setShowGoalDialog(true)
-        );
+        // Sequential transition
+        dialogState.setShowForm(false);
+        setTimeout(() => {
+          dialogState.setShowGoalDialog(true);
+        }, 100);
         
         toast.success('Grupa docelowa została utworzona');
       }
@@ -143,7 +140,8 @@ export const useTargetAudienceDialog = ({
       console.error("Error submitting form:", error);
       toast.error('Wystąpił błąd podczas tworzenia grupy docelowej');
       dialogState.setIsProcessing(false);
-      dialogState.setIsTransitioning(false);
+    } finally {
+      dialogState.setIsProcessing(false);
     }
   };
 
@@ -176,7 +174,6 @@ export const useTargetAudienceDialog = ({
     existingAudiences: dialogState.existingAudiences,
     showScriptDialog: dialogState.showScriptDialog,
     showEmailDialog: dialogState.showEmailDialog,
-    showSocialDialog: dialogState.showSocialDialog,
     showGoalDialog: dialogState.showGoalDialog,
     showEmailStyleDialog: dialogState.showEmailStyleDialog,
     showSocialMediaPlatformDialog: dialogState.showSocialMediaPlatformDialog,
@@ -184,7 +181,6 @@ export const useTargetAudienceDialog = ({
     emailStyle: dialogState.emailStyle,
     socialMediaPlatform: dialogState.socialMediaPlatform,
     isProcessing: dialogState.isProcessing,
-    isTransitioning: dialogState.isTransitioning,
     
     // Methods from audienceManagement
     handleChoiceSelection: audienceManagement.handleChoiceSelection,
@@ -203,7 +199,6 @@ export const useTargetAudienceDialog = ({
     handleSocialMediaPlatformBack: dialogNavigation.handleSocialMediaPlatformBack,
     handleScriptDialogClose: dialogNavigation.handleScriptDialogClose,
     handleEmailDialogClose: dialogNavigation.handleEmailDialogClose,
-    handleSocialDialogClose: dialogNavigation.handleSocialDialogClose,
     
     // Premium validation
     validatePremiumStatus,

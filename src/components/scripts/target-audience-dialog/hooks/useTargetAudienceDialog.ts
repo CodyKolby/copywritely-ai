@@ -1,7 +1,8 @@
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/auth/AuthContext';
 import { toast } from 'sonner';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/auth/AuthContext';
 import { SocialMediaPlatform } from '../../SocialMediaPlatformDialog';
 import { EmailStyle } from '../../EmailStyleDialog';
 import { useDialogState } from './useDialogState';

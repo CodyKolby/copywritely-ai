@@ -39,7 +39,7 @@ export const submitTargetAudienceForm = async (
     const desires = validateArrayField(data.desires, 5);
     const benefits = validateArrayField(data.benefits, 5);
     
-    // Przygotowanie danych do zapisu
+    // Przygotowanie danych do zapisu - REMOVE advertisingGoal field which doesn't exist in the database
     const targetAudienceData = {
       user_id: userId,
       name: audienceName,

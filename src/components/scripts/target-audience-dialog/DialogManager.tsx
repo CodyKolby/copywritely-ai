@@ -1,7 +1,7 @@
 
 import React, { useEffect } from 'react';
 import { TargetAudienceDialogProps } from './types';
-import { useTargetAudienceDialog } from './useTargetAudienceDialog';
+import { useTargetAudienceDialog } from './hooks/useTargetAudienceDialog';
 import MainSelectionDialog from './dialogs/MainSelectionDialog';
 import FormDialog from './dialogs/FormDialog';
 import GoalDialog from './dialogs/GoalDialog';
@@ -30,7 +30,6 @@ const DialogManager = ({
     existingAudiences,
     showScriptDialog,
     showEmailDialog,
-    showSocialDialog,
     showGoalDialog,
     showEmailStyleDialog,
     showSocialMediaPlatformDialog,
@@ -38,7 +37,6 @@ const DialogManager = ({
     emailStyle,
     socialMediaPlatform,
     isProcessing,
-    isTransitioning,
     handleChoiceSelection,
     handleExistingAudienceSelect,
     handleContinue,
@@ -53,7 +51,6 @@ const DialogManager = ({
     handleSocialMediaPlatformBack,
     handleScriptDialogClose,
     handleEmailDialogClose,
-    handleSocialDialogClose,
     resetState,
   } = useTargetAudienceDialog({
     open,
@@ -89,12 +86,10 @@ const DialogManager = ({
       showSocialMediaPlatformDialog,
       showScriptDialog,
       showEmailDialog,
-      showSocialDialog,
-      isProcessing,
-      isTransitioning
+      isProcessing
     });
   }, [open, showForm, showGoalDialog, showEmailStyleDialog, showSocialMediaPlatformDialog, 
-      showScriptDialog, showEmailDialog, showSocialDialog, isProcessing, isTransitioning]);
+      showScriptDialog, showEmailDialog, isProcessing]);
 
   const handleDialogClose = () => {
     console.log("handleDialogClose called - closing dialog");
@@ -102,15 +97,15 @@ const DialogManager = ({
     onOpenChange(false);
   };
 
-  // Hide the audience dialog when script/email/social dialog is shown or transitioning
-  const shouldShowAudienceDialog = open && !showScriptDialog && !showEmailDialog && !showSocialDialog && !isTransitioning;
+  // Hide the audience dialog when script/email dialog is shown
+  const shouldShowAudienceDialog = open && !showScriptDialog && !showEmailDialog;
   
   // Prevent display of multiple dialogs simultaneously
   const showMainDialog = shouldShowAudienceDialog && !showForm && !showGoalDialog && !showEmailStyleDialog && !showSocialMediaPlatformDialog;
-  const showFormDialog = shouldShowAudienceDialog && showForm && !isTransitioning;
-  const showGoalDialogUi = shouldShowAudienceDialog && showGoalDialog && !isTransitioning;
-  const showEmailStyleDialogUi = shouldShowAudienceDialog && showEmailStyleDialog && !isTransitioning;
-  const showSocialMediaDialogUi = shouldShowAudienceDialog && showSocialMediaPlatformDialog && !isTransitioning;
+  const showFormDialog = shouldShowAudienceDialog && showForm;
+  const showGoalDialogUi = shouldShowAudienceDialog && showGoalDialog;
+  const showEmailStyleDialogUi = shouldShowAudienceDialog && showEmailStyleDialog;
+  const showSocialMediaDialogUi = shouldShowAudienceDialog && showSocialMediaPlatformDialog;
 
   return (
     <>
@@ -166,19 +161,17 @@ const DialogManager = ({
         isProcessing={isProcessing}
       />
       
-      {/* Result dialogs (script, email, social) based on template type */}
+      {/* Result dialogs (script, email) based on template type */}
       <ResultDialogs
         templateId={templateId}
         showScriptDialog={showScriptDialog}
         showEmailDialog={showEmailDialog}
-        showSocialDialog={showSocialDialog}
         selectedAudienceId={selectedAudienceId}
         advertisingGoal={advertisingGoal}
         emailStyle={emailStyle}
         socialMediaPlatform={socialMediaPlatform}
         handleScriptDialogClose={handleScriptDialogClose}
         handleEmailDialogClose={handleEmailDialogClose}
-        handleSocialDialogClose={handleSocialDialogClose}
       />
     </>
   );

@@ -110,8 +110,11 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
       console.log("Dane do zapisania w bazie:", formDataWithName);
       
       try {
+        // Remove advertisingGoal which doesn't exist in the database
+        const { advertisingGoal, ...dataToSubmit } = formDataWithName;
+        
         // Directly use submitTargetAudienceForm function for submission
-        const targetAudienceId = await submitTargetAudienceForm(formDataWithName, userId);
+        const targetAudienceId = await submitTargetAudienceForm(dataToSubmit, userId);
         console.log("Form submitted, target audience ID:", targetAudienceId);
         
         if (targetAudienceId) {
