@@ -1,16 +1,15 @@
-import { useState, useEffect } from 'react';
+
 import { toast } from 'sonner';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/contexts/auth/AuthContext';
-import { SocialMediaPlatform } from '../../SocialMediaPlatformDialog';
-import { EmailStyle } from '../../EmailStyleDialog';
+import { TargetAudienceDialogProps } from '../types';
 import { useDialogState } from './useDialogState';
 import { useAudienceData } from './useAudienceData';
 import { useDialogNavigation } from './useDialogNavigation';
 import { useAudienceManagement } from './useAudienceManagement';
 import { usePremiumVerification } from './usePremiumVerification';
-import { TargetAudienceDialogProps } from '../types';
-import { checkAllPremiumStorages } from '@/contexts/auth/local-storage-utils';
+import { useFormSubmission } from './useFormSubmission';
+import { usePremiumValidator } from './usePremiumValidator';
+import { useDialogReset } from './useDialogReset';
+import { useAudienceStateUpdater } from './useAudienceStateUpdater';
 
 export const useTargetAudienceDialog = ({ 
   open, 
@@ -19,8 +18,10 @@ export const useTargetAudienceDialog = ({
   userId,
   isPremium
 }: TargetAudienceDialogProps) => {
-  // Use all the extracted hooks
+  // Use the hook for managing dialog state
   const dialogState = useDialogState();
+
+  // Use the premium verification hook
   const { verifiedPremium } = usePremiumVerification(userId, isPremium);
   
   // Use the hook for fetching audience data
@@ -31,12 +32,15 @@ export const useTargetAudienceDialog = ({
     handleFormSubmit: submitAudienceForm,
     fetchExistingAudiences
   } = useAudienceData(userId, open);
-
-  // Set state from audience data
-  useEffect(() => {
-    dialogState.setExistingAudiences(existingAudiences);
-    dialogState.setIsLoading(isLoading || isCompressing);
-  }, [existingAudiences, isLoading, isCompressing]);
+  
+  // Use the hook for audience state updates
+  useAudienceStateUpdater(
+    existingAudiences, 
+    isLoading,
+    isCompressing,
+    dialogState.setExistingAudiences, 
+    dialogState.setIsLoading
+  );
   
   // Use the hook for audience management
   const audienceManagement = useAudienceManagement(userId, {
@@ -65,51 +69,44 @@ export const useTargetAudienceDialog = ({
     setSocialMediaPlatform: dialogState.setSocialMediaPlatform,
     setIsProcessing: dialogState.setIsProcessing,
   }, templateId);
-
-  // Reset state when dialog opens/closes or template changes
-  useEffect(() => {
-    if (!open) {
-      console.log("Dialog is closed, resetting state");
-      dialogState.resetState();
-    }
-  }, [open, dialogState.resetState]);
-
-  useEffect(() => {
-    if (templateId) {
-      // Reset dialog flow states to prevent incorrect dialog sequences
-      dialogState.setShowGoalDialog(false);
-      dialogState.setShowEmailStyleDialog(false);
-      dialogState.setShowSocialMediaPlatformDialog(false);
-      dialogState.setShowScriptDialog(false);
-      dialogState.setShowEmailDialog(false);
-      dialogState.setShowSocialDialog(false);
-      dialogState.setAdvertisingGoal('');
-      dialogState.setEmailStyle(null);
-      dialogState.setSocialMediaPlatform(null);
-      dialogState.setIsProcessing(false);
-    }
-  }, [templateId]);
+  
+  // Use the hook for form submission
+  const formSubmission = useFormSubmission(
+    userId, 
+    submitAudienceForm,
+    fetchExistingAudiences
+  );
+  
+  // Use the hook for premium validation
+  const premiumValidator = usePremiumValidator(
+    userId, 
+    isPremium,
+    verifiedPremium
+  );
+  
+  // Use the hook for dialog reset
+  useDialogReset(
+    open,
+    templateId,
+    dialogState.resetState,
+    dialogState.setShowGoalDialog,
+    dialogState.setShowEmailStyleDialog,
+    dialogState.setShowSocialMediaPlatformDialog,
+    dialogState.setShowScriptDialog,
+    dialogState.setShowEmailDialog,
+    dialogState.setShowSocialDialog,
+    dialogState.setAdvertisingGoal,
+    dialogState.setEmailStyle,
+    dialogState.setSocialMediaPlatform,
+    dialogState.setIsProcessing
+  );
 
   // Enhanced form submission handler with improved error handling
   const handleFormSubmit = async (values: any) => {
     try {
-      console.log("Form submission started");
       dialogState.setIsProcessing(true);
       
-      if (!userId) {
-        console.error("No user ID provided");
-        toast.error('Nie jesteś zalogowany');
-        dialogState.setIsProcessing(false);
-        return;
-      }
-      
-      // Create a clean copy of values without advertisingGoal
-      const { advertisingGoal, ...dataToSubmit } = values;
-      console.log("Values for submission (without advertisingGoal):", dataToSubmit);
-      
-      // Pass the cleaned data to submitAudienceForm
-      const audienceId = await submitAudienceForm(dataToSubmit);
-      console.log("Audience created with ID:", audienceId);
+      const audienceId = await formSubmission.handleFormSubmit(values);
       
       if (audienceId) {
         // Set the selectedAudienceId
@@ -118,10 +115,6 @@ export const useTargetAudienceDialog = ({
         // ZMIANA: Bezpośrednio ukrywamy formularz i nie pokazujemy dialogu z celem
         // a wracamy do ekranu wyboru grupy docelowej
         dialogState.setShowForm(false);
-        
-        // Refresh audience list
-        await fetchExistingAudiences();
-        return audienceId;
       } else {
         throw new Error("No audience ID returned");
       }
@@ -132,25 +125,6 @@ export const useTargetAudienceDialog = ({
     } finally {
       dialogState.setIsProcessing(false);
     }
-  };
-
-  // Function to validate premium status
-  const validatePremiumStatus = async () => {
-    if (!userId) return false;
-    
-    // First check storage immediately
-    const storagePremium = checkAllPremiumStorages();
-    if (storagePremium) {
-      return true;
-    }
-    
-    // Otherwise use the verified status if available
-    if (verifiedPremium !== null) {
-      return verifiedPremium;
-    }
-    
-    // Otherwise return the original premium status
-    return isPremium;
   };
 
   // Return all the hooks' state and methods
@@ -192,7 +166,7 @@ export const useTargetAudienceDialog = ({
     handleSocialDialogClose: dialogNavigation.handleSocialDialogClose,
     
     // Premium validation
-    validatePremiumStatus,
+    validatePremiumStatus: premiumValidator.validatePremiumStatus,
     
     // Added resetState, to be available in the component
     resetState: dialogState.resetState,
