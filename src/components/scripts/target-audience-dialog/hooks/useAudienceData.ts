@@ -17,15 +17,18 @@ export const useAudienceData = (userId: string | undefined, open: boolean) => {
   const fetchExistingAudiences = async () => {
     setIsLoading(true);
     try {
+      console.log("Fetching target audiences for user:", userId);
       const { data, error } = await supabase
         .from('target_audiences')
         .select('id, name')
         .eq('user_id', userId);
 
       if (error) {
+        console.error("Error fetching target audiences:", error);
         throw error;
       }
 
+      console.log("Fetched target audiences:", data);
       setExistingAudiences(data || []);
     } catch (error) {
       console.error('Error fetching target audiences:', error);
@@ -44,13 +47,31 @@ export const useAudienceData = (userId: string | undefined, open: boolean) => {
       
       console.log("Prepared data for Supabase:", dataToSubmit);
       
+      // Mapowanie nazw pól z camelCase na snake_case używane w bazie danych
+      const targetAudienceData = {
+        user_id: userId,
+        name: dataToSubmit.name || `Grupa ${Math.floor(Math.random() * 1000) + 1}`,
+        age_range: dataToSubmit.ageRange,
+        gender: dataToSubmit.gender,
+        competitors: dataToSubmit.competitors,
+        language: dataToSubmit.language,
+        biography: dataToSubmit.biography,
+        beliefs: dataToSubmit.beliefs,
+        pains: dataToSubmit.pains,
+        desires: dataToSubmit.desires,
+        main_offer: dataToSubmit.mainOffer,
+        offer_details: dataToSubmit.offerDetails,
+        benefits: dataToSubmit.benefits,
+        why_it_works: dataToSubmit.whyItWorks,
+        experience: dataToSubmit.experience,
+      };
+      
+      console.log("Data to submit with snake_case field names:", targetAudienceData);
+      
       // Store the target audience in the database
       const { data, error } = await supabase
         .from('target_audiences')
-        .insert({
-          ...dataToSubmit,
-          user_id: userId
-        })
+        .insert(targetAudienceData)
         .select('id')
         .single();
 

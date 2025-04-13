@@ -110,11 +110,15 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
       
       console.log("Dane do zapisania w bazie:", formDataWithName);
       
-      // Call the onSubmit function with the full form data and wait for it to complete
-      await onSubmit(formDataWithName, null);
-      
-      // If no errors were thrown above, it means submission was successful
-      console.log("Form successfully submitted");
+      try {
+        // Call the onSubmit function with the full form data and wait for it to complete
+        const audienceId = await onSubmit(formDataWithName, null);
+        console.log("Form successfully submitted, audience ID:", audienceId);
+        return audienceId;
+      } catch (error) {
+        console.error("Error in onSubmit callback:", error);
+        throw error;
+      }
     } catch (error) {
       console.error("Form submission error:", error);
       toast.error('Wystąpił błąd podczas wysyłania formularza');

@@ -43,7 +43,8 @@ export const submitTargetAudienceForm = async (
     const desires = validateArrayField(compressedData.desires || cleanDataBeforeCompression.desires, 5);
     const benefits = validateArrayField(compressedData.benefits || cleanDataBeforeCompression.benefits, 5);
     
-    // Przygotowanie danych do zapisu - remove any potential advertisingGoal field
+    // WAŻNE: Mapowanie nazw pól z camelCase na snake_case używane w bazie danych
+    // Przygotowanie danych do zapisu z odpowiednimi nazwami kolumn
     const targetAudienceData = {
       user_id: userId,
       name: audienceName,
@@ -62,7 +63,7 @@ export const submitTargetAudienceForm = async (
       experience: compressedData.experience || cleanDataBeforeCompression.experience,
     };
     
-    console.log("Dane przygotowane do zapisu w bazie:", targetAudienceData);
+    console.log("Dane przygotowane do zapisu w bazie (z poprawnymi nazwami kolumn):", targetAudienceData);
     
     // Zapisanie danych do bazy - use direct Supabase client
     const { data: insertedData, error } = await supabase

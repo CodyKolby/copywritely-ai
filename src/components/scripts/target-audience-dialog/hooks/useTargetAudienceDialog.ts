@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
@@ -10,6 +9,8 @@ import { useAudienceData } from './useAudienceData';
 import { useDialogNavigation } from './useDialogNavigation';
 import { useAudienceManagement } from './useAudienceManagement';
 import { usePremiumVerification } from './usePremiumVerification';
+import { TargetAudienceDialogProps } from '../types';
+import { checkAllPremiumStorages } from '@/contexts/auth/local-storage-utils';
 
 export const useTargetAudienceDialog = ({ 
   open, 
@@ -17,13 +18,7 @@ export const useTargetAudienceDialog = ({
   templateId, 
   userId,
   isPremium
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  templateId: string;
-  userId: string;
-  isPremium: boolean;
-}) => {
+}: TargetAudienceDialogProps) => {
   // Use all the extracted hooks
   const dialogState = useDialogState();
   const { verifiedPremium } = usePremiumVerification(userId, isPremium);
@@ -32,7 +27,8 @@ export const useTargetAudienceDialog = ({
   const { 
     existingAudiences, 
     isLoading, 
-    handleFormSubmit: submitAudienceForm 
+    handleFormSubmit: submitAudienceForm,
+    fetchExistingAudiences
   } = useAudienceData(userId, open);
 
   // Set state from audience data
@@ -72,6 +68,7 @@ export const useTargetAudienceDialog = ({
   // Reset state when dialog opens/closes or template changes
   useEffect(() => {
     if (!open) {
+      console.log("Dialog is closed, resetting state");
       dialogState.resetState();
     }
   }, [open, dialogState.resetState]);
@@ -92,28 +89,73 @@ export const useTargetAudienceDialog = ({
     }
   }, [templateId]);
 
-  // Enhanced form submission handler
+  // Enhanced form submission handler with improved error handling
   const handleFormSubmit = async (values: any) => {
     try {
+      console.log("Form submission started");
       dialogState.setIsProcessing(true);
-      const audienceId = await submitAudienceForm(values);
+      
+      if (!userId) {
+        console.error("No user ID provided");
+        toast.error('Nie jesteś zalogowany');
+        dialogState.setIsProcessing(false);
+        return;
+      }
+      
+      // Create a clean copy of values without advertisingGoal
+      const { advertisingGoal, ...dataToSubmit } = values;
+      console.log("Values for submission (without advertisingGoal):", dataToSubmit);
+      
+      // Pass the cleaned data to submitAudienceForm
+      const audienceId = await submitAudienceForm(dataToSubmit);
+      console.log("Audience created with ID:", audienceId);
       
       if (audienceId) {
+        // Set the selectedAudienceId before changing dialog states
         dialogState.setSelectedAudienceId(audienceId);
+        toast.success('Grupa docelowa została utworzona pomyślnie!');
         
-        // Hide the form and show the goal dialog
+        // First hide the form
         dialogState.setShowForm(false);
-        dialogState.setShowGoalDialog(true);
         
-        toast.success('Grupa docelowa została utworzona');
+        // Use setTimeout to ensure proper state transition
+        setTimeout(() => {
+          // Then show goal dialog
+          dialogState.setShowGoalDialog(true);
+        }, 10);
+        
+        // Refresh audience list
+        await fetchExistingAudiences();
+        return audienceId;
+      } else {
+        throw new Error("No audience ID returned");
       }
     } catch (error) {
       console.error("Error submitting form:", error);
-      toast.error('Wystąpił błąd podczas tworzenia grupy docelowej');
-      dialogState.setIsProcessing(false);
+      toast.error('Nie udało się utworzyć grupy docelowej');
+      throw error;
     } finally {
       dialogState.setIsProcessing(false);
     }
+  };
+
+  // Function to validate premium status
+  const validatePremiumStatus = async () => {
+    if (!userId) return false;
+    
+    // First check storage immediately
+    const storagePremium = checkAllPremiumStorages();
+    if (storagePremium) {
+      return true;
+    }
+    
+    // Otherwise use the verified status if available
+    if (verifiedPremium !== null) {
+      return verifiedPremium;
+    }
+    
+    // Otherwise return the original premium status
+    return isPremium;
   };
 
   // Return all the hooks' state and methods
@@ -153,6 +195,9 @@ export const useTargetAudienceDialog = ({
     handleScriptDialogClose: dialogNavigation.handleScriptDialogClose,
     handleEmailDialogClose: dialogNavigation.handleEmailDialogClose,
     handleSocialDialogClose: dialogNavigation.handleSocialDialogClose,
+    
+    // Premium validation
+    validatePremiumStatus,
     
     // Added resetState, to be available in the component
     resetState: dialogState.resetState,
