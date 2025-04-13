@@ -92,31 +92,70 @@ export const compressFormData = async (formData: any): Promise<any> => {
     console.log('Rozpoczynam kompresję danych formularza');
     const compressedData = { ...formData };
     
-    // Lista pól do kompresji
-    const fieldsToCompress: CompressibleField[] = [
-      'offerDetails',
-      'language',
-      'beliefs',
-      'biography',
-      'competitors',
-      'whyItWorks',
-      'experience'
-    ];
-    
-    // Kompresuj każde pole, ale nie przerywaj procesu w razie błędów
-    for (const field of fieldsToCompress) {
-      if (compressedData[field] !== undefined && compressedData[field] !== null) {
-        try {
-          compressedData[field] = await compressField(field, compressedData[field]);
-        } catch (fieldError) {
-          console.warn(`Błąd kompresji pola ${field}:`, fieldError);
-          // Zachowujemy oryginalne dane, nie przerywając procesu
+    // If advertisingGoal exists, remove it before compression
+    if ('advertisingGoal' in compressedData) {
+      // Save it to restore after compression
+      const advertisingGoal = compressedData.advertisingGoal;
+      delete compressedData.advertisingGoal;
+      
+      // Lista pól do kompresji
+      const fieldsToCompress: CompressibleField[] = [
+        'offerDetails',
+        'language',
+        'beliefs',
+        'biography',
+        'competitors',
+        'whyItWorks',
+        'experience'
+      ];
+      
+      // Kompresuj każde pole, ale nie przerywaj procesu w razie błędów
+      for (const field of fieldsToCompress) {
+        if (compressedData[field] !== undefined && compressedData[field] !== null) {
+          try {
+            compressedData[field] = await compressField(field, compressedData[field]);
+          } catch (fieldError) {
+            console.warn(`Błąd kompresji pola ${field}:`, fieldError);
+            // Zachowujemy oryginalne dane, nie przerywając procesu
+          }
         }
       }
+      
+      // For UI purposes only, we can restore the advertisingGoal field
+      // It won't be sent to the database anyway
+      if (advertisingGoal) {
+        compressedData.advertisingGoal = advertisingGoal;
+      }
+      
+      console.log('Kompresja danych formularza zakończona');
+      return compressedData;
+    } else {
+      // Lista pól do kompresji
+      const fieldsToCompress: CompressibleField[] = [
+        'offerDetails',
+        'language',
+        'beliefs',
+        'biography',
+        'competitors',
+        'whyItWorks',
+        'experience'
+      ];
+      
+      // Kompresuj każde pole, ale nie przerywaj procesu w razie błędów
+      for (const field of fieldsToCompress) {
+        if (compressedData[field] !== undefined && compressedData[field] !== null) {
+          try {
+            compressedData[field] = await compressField(field, compressedData[field]);
+          } catch (fieldError) {
+            console.warn(`Błąd kompresji pola ${field}:`, fieldError);
+            // Zachowujemy oryginalne dane, nie przerywając procesu
+          }
+        }
+      }
+      
+      console.log('Kompresja danych formularza zakończona');
+      return compressedData;
     }
-    
-    console.log('Kompresja danych formularza zakończona');
-    return compressedData;
   } catch (error) {
     console.error('Błąd podczas kompresji danych formularza:', error);
     toast.error('Wystąpił błąd podczas przetwarzania danych, ale dane zostaną zapisane');

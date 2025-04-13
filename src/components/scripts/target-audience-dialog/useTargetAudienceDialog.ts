@@ -9,6 +9,7 @@ import { useDialogNavigation } from './hooks/useDialogNavigation';
 import { usePremiumVerification } from './hooks/usePremiumVerification';
 import { useAudienceData } from './hooks/useAudienceData';
 import { TargetAudienceDialogProps } from './types';
+import { checkAllPremiumStorages } from '@/contexts/auth/local-storage-utils';
 
 export const useTargetAudienceDialog = ({ 
   open, 
@@ -125,9 +126,11 @@ export const useTargetAudienceDialog = ({
     try {
       dialogState.setIsProcessing(true);
       
-      // Remove advertisingGoal field which doesn't exist in the database
+      // CRITICAL FIX: Create a clean copy of values without advertisingGoal
       const { advertisingGoal, ...dataToSubmit } = values;
+      console.log("Data being submitted to Supabase:", dataToSubmit);
       
+      // Pass the cleaned data to submitAudienceForm
       const audienceId = await submitAudienceForm(dataToSubmit);
       
       if (audienceId) {
@@ -214,5 +217,3 @@ export const useTargetAudienceDialog = ({
     resetState: dialogState.resetState,
   };
 };
-
-import { checkAllPremiumStorages } from '@/contexts/auth/local-storage-utils';

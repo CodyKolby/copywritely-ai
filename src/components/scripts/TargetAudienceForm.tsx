@@ -5,7 +5,6 @@ import { useForm } from 'react-hook-form';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/auth/AuthContext';
-import { supabase } from '@/lib/supabase';
 
 // Import refactored components
 import StepContainer from './target-audience-form/StepContainer';
@@ -80,7 +79,7 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
     try {
       setIsSubmitting(true);
       const data = form.getValues();
-      console.log("Dane formularza przed wysłaniem:", data);
+      console.log("Submitting form on last step");
       await handleSubmit(data);
     } catch (error) {
       console.error("Form submission error:", error);
@@ -110,8 +109,9 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
       console.log("Dane do zapisania w bazie:", formDataWithName);
       
       try {
-        // Remove advertisingGoal which doesn't exist in the database
+        // CRITICAL FIX: Remove advertisingGoal which doesn't exist in the database
         const { advertisingGoal, ...dataToSubmit } = formDataWithName;
+        console.log("Data being submitted (without advertisingGoal):", dataToSubmit);
         
         // Directly use submitTargetAudienceForm function for submission
         const targetAudienceId = await submitTargetAudienceForm(dataToSubmit, userId);
@@ -119,7 +119,8 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
         
         if (targetAudienceId) {
           toast.success("Grupa docelowa została utworzona pomyślnie!");
-          // Call the onSubmit function with the target audience ID
+          // Call the onSubmit function with the target audience ID and full form data (including advertisingGoal)
+          // This is OK because advertisingGoal is only removed for database storage
           onSubmit(formDataWithName, targetAudienceId);
         } else {
           toast.error('Wystąpił błąd podczas zapisywania grupy docelowej');

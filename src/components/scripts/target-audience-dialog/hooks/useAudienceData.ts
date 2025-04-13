@@ -39,28 +39,35 @@ export const useAudienceData = (userId: string | undefined, open: boolean) => {
     try {
       setIsLoading(true);
       
+      // Ensure we don't have advertisingGoal in the values
+      const { advertisingGoal, ...dataToSubmit } = values;
+      
+      console.log("Prepared data for Supabase:", dataToSubmit);
+      
       // Store the target audience in the database
       const { data, error } = await supabase
         .from('target_audiences')
         .insert({
-          ...values,
+          ...dataToSubmit,
           user_id: userId
         })
         .select('id')
         .single();
 
       if (error) {
+        console.error('Supabase error:', error);
         throw error;
       }
 
       // Refresh the list of target audiences
       await fetchExistingAudiences();
       
+      console.log("Successfully created target audience with ID:", data.id);
       return data.id;
     } catch (error) {
       console.error('Error creating target audience:', error);
       toast.error('Nie udało się utworzyć grupy docelowej');
-      return null;
+      throw error; // Rethrow to allow the calling code to handle it
     } finally {
       setIsLoading(false);
     }

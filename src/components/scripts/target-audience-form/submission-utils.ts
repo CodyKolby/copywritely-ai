@@ -24,7 +24,9 @@ export const submitTargetAudienceForm = async (
     // Try to compress data, but don't fail if compression fails
     let compressedData = { ...data };
     try {
-      compressedData = await compressFormData(data);
+      // Create a clean version without advertisingGoal before compression
+      const { advertisingGoal, ...cleanData } = data;
+      compressedData = await compressFormData(cleanData);
       console.log("Dane po kompresji przez AI:", compressedData);
     } catch (compressError) {
       console.warn("Błąd kompresji, używam oryginalnych danych:", compressError);
@@ -39,23 +41,26 @@ export const submitTargetAudienceForm = async (
     const desires = validateArrayField(data.desires, 5);
     const benefits = validateArrayField(data.benefits, 5);
     
-    // Przygotowanie danych do zapisu - REMOVE advertisingGoal field which doesn't exist in the database
+    // IMPORTANT: Make sure we don't include advertisingGoal in the targetAudienceData
+    const { advertisingGoal, ...dataWithoutAdvertisingGoal } = compressedData;
+    
+    // Przygotowanie danych do zapisu - Remove advertisingGoal field
     const targetAudienceData = {
       user_id: userId,
       name: audienceName,
-      age_range: data.ageRange,
-      gender: data.gender,
+      age_range: dataWithoutAdvertisingGoal.ageRange,
+      gender: dataWithoutAdvertisingGoal.gender,
       competitors: competitors,
-      language: compressedData.language || data.language,
-      biography: compressedData.biography || data.biography,
-      beliefs: compressedData.beliefs || data.beliefs,
+      language: dataWithoutAdvertisingGoal.language || data.language,
+      biography: dataWithoutAdvertisingGoal.biography || data.biography,
+      beliefs: dataWithoutAdvertisingGoal.beliefs || data.beliefs,
       pains: pains,
       desires: desires,
-      main_offer: data.mainOffer,
-      offer_details: compressedData.offerDetails || data.offerDetails,
+      main_offer: dataWithoutAdvertisingGoal.mainOffer || data.mainOffer,
+      offer_details: dataWithoutAdvertisingGoal.offerDetails || data.offerDetails,
       benefits: benefits,
-      why_it_works: compressedData.whyItWorks || data.whyItWorks,
-      experience: compressedData.experience || data.experience,
+      why_it_works: dataWithoutAdvertisingGoal.whyItWorks || data.whyItWorks,
+      experience: dataWithoutAdvertisingGoal.experience || data.experience,
     };
     
     console.log("Dane przygotowane do zapisu w bazie:", targetAudienceData);
