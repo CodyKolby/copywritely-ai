@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { compressFormData } from '../../target-audience-form/compression-service';
+import { deleteTargetAudience, generateAudienceName } from '../api';
 
 export const useAudienceData = (userId: string | undefined, open: boolean) => {
   const [existingAudiences, setExistingAudiences] = useState<any[]>([]);
@@ -40,6 +41,23 @@ export const useAudienceData = (userId: string | undefined, open: boolean) => {
     }
   };
 
+  const handleDeleteAudience = async (audienceId: string) => {
+    try {
+      setIsLoading(true);
+      const success = await deleteTargetAudience(audienceId);
+      
+      if (success) {
+        // Update the audience list after successful deletion
+        await fetchExistingAudiences();
+      }
+    } catch (error) {
+      console.error('Error deleting audience:', error);
+      toast.error('Nie udało się usunąć grupy docelowej');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleFormSubmit = async (values: any): Promise<string | undefined> => {
     try {
       setIsLoading(true);
@@ -61,10 +79,16 @@ export const useAudienceData = (userId: string | undefined, open: boolean) => {
         compressedData = dataToSubmit;
       }
       
+      // Generate a better name based on main offer and age range
+      const audienceName = generateAudienceName(
+        dataToSubmit.ageRange,
+        dataToSubmit.mainOffer
+      );
+      
       // Mapowanie nazw pól z camelCase na snake_case używane w bazie danych
       const targetAudienceData = {
         user_id: userId,
-        name: compressedData.name || dataToSubmit.name || `Grupa ${Math.floor(Math.random() * 1000) + 1}`,
+        name: audienceName,
         age_range: compressedData.ageRange || dataToSubmit.ageRange,
         gender: compressedData.gender || dataToSubmit.gender,
         competitors: compressedData.competitors || dataToSubmit.competitors,
@@ -120,6 +144,7 @@ export const useAudienceData = (userId: string | undefined, open: boolean) => {
     isLoading,
     isCompressing,
     handleFormSubmit,
-    fetchExistingAudiences
+    fetchExistingAudiences,
+    handleDeleteAudience
   };
 };

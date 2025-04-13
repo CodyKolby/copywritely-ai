@@ -53,6 +53,7 @@ const DialogManager = ({
     handleScriptDialogClose,
     handleEmailDialogClose,
     handleSocialDialogClose,
+    handleDeleteAudience,
     resetState,
   } = useTargetAudienceDialog({
     open,
@@ -127,6 +128,7 @@ const DialogManager = ({
         handleContinue={handleContinue}
         handleCancel={handleDialogClose}
         isProcessing={isProcessing}
+        handleDeleteAudience={handleDeleteAudience}
       />
       
       {/* Form dialog */}

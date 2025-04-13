@@ -18,6 +18,7 @@ interface MainSelectionDialogProps {
   handleCreateNewAudience: () => void;
   handleContinue: () => void;
   handleCancel: () => void;
+  handleDeleteAudience?: (audienceId: string) => void;
 }
 
 const MainSelectionDialog = ({
@@ -34,6 +35,7 @@ const MainSelectionDialog = ({
   handleCreateNewAudience,
   handleContinue,
   handleCancel,
+  handleDeleteAudience,
 }: MainSelectionDialogProps) => {
   return (
     <Dialog 
@@ -53,6 +55,7 @@ const MainSelectionDialog = ({
           handleContinue={handleContinue}
           handleCancel={handleCancel}
           isProcessing={isProcessing}
+          handleDeleteAudience={handleDeleteAudience}
         />
       </DialogContent>
     </Dialog>

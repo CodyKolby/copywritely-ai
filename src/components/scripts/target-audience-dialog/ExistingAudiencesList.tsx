@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { HelpCircle } from 'lucide-react';
+import { HelpCircle, Trash2 } from 'lucide-react';
 import { TargetAudience } from './types';
 
 interface ExistingAudiencesListProps {
@@ -11,6 +11,7 @@ interface ExistingAudiencesListProps {
   handleExistingAudienceSelect: (audienceId: string) => void;
   handleChoiceSelection: (choice: string) => void;
   handleCreateNewAudience: () => void;
+  handleDeleteAudience?: (audienceId: string) => void;
 }
 
 const ExistingAudiencesList = ({
@@ -20,6 +21,7 @@ const ExistingAudiencesList = ({
   handleExistingAudienceSelect,
   handleChoiceSelection,
   handleCreateNewAudience,
+  handleDeleteAudience,
 }: ExistingAudiencesListProps) => {
   if (isLoading) {
     return (
@@ -44,24 +46,53 @@ const ExistingAudiencesList = ({
               {existingAudiences.map((audience) => (
                 <div 
                   key={audience.id}
-                  className={`flex items-center justify-between rounded-md p-4 cursor-pointer transition-colors ${
+                  className={`flex items-center justify-between rounded-md p-4 transition-colors ${
                     selectedAudienceId === audience.id 
                       ? 'bg-copywrite-teal text-white' 
                       : 'bg-copywrite-teal-light text-copywrite-teal hover:bg-copywrite-teal hover:text-white'
                   }`}
-                  onClick={() => {
-                    handleExistingAudienceSelect(audience.id);
-                    handleChoiceSelection('existing');
-                  }}
                 >
-                  <span className="font-medium">{audience.name}</span>
-                  <div className={`h-5 w-5 rounded-full border flex items-center justify-center ${
-                    selectedAudienceId === audience.id 
-                      ? 'border-white bg-white/20' 
-                      : 'border-copywrite-teal'
-                  }`}>
-                    {selectedAudienceId === audience.id && (
-                      <div className="h-3 w-3 rounded-full bg-white" />
+                  <div 
+                    className="flex-1 cursor-pointer"
+                    onClick={() => {
+                      handleExistingAudienceSelect(audience.id);
+                      handleChoiceSelection('existing');
+                    }}
+                  >
+                    <span className="font-medium">{audience.name}</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <div 
+                      className={`h-5 w-5 rounded-full border flex items-center justify-center cursor-pointer ${
+                        selectedAudienceId === audience.id 
+                          ? 'border-white bg-white/20' 
+                          : 'border-copywrite-teal'
+                      }`}
+                      onClick={() => {
+                        handleExistingAudienceSelect(audience.id);
+                        handleChoiceSelection('existing');
+                      }}
+                    >
+                      {selectedAudienceId === audience.id && (
+                        <div className="h-3 w-3 rounded-full bg-white" />
+                      )}
+                    </div>
+                    
+                    {handleDeleteAudience && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteAudience(audience.id);
+                        }}
+                        className={`p-1 rounded hover:bg-black/10 ${
+                          selectedAudienceId === audience.id 
+                            ? 'text-white' 
+                            : 'text-copywrite-teal'
+                        }`}
+                      >
+                        <Trash2 size={18} />
+                      </button>
                     )}
                   </div>
                 </div>

@@ -19,6 +19,7 @@ interface DialogSelectionContentProps {
   handleCreateNewAudience: () => void;
   handleContinue: () => void;
   handleCancel: () => void;
+  handleDeleteAudience?: (audienceId: string) => void;
 }
 
 const DialogSelectionContent = ({
@@ -33,6 +34,7 @@ const DialogSelectionContent = ({
   handleCreateNewAudience,
   handleContinue,
   handleCancel,
+  handleDeleteAudience,
 }: DialogSelectionContentProps) => {
   return (
     <>
@@ -56,6 +58,7 @@ const DialogSelectionContent = ({
             handleExistingAudienceSelect={handleExistingAudienceSelect}
             handleChoiceSelection={handleChoiceSelection}
             handleCreateNewAudience={handleCreateNewAudience}
+            handleDeleteAudience={handleDeleteAudience}
           />
           
           <DialogFooter className="mt-6">

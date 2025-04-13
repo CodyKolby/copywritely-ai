@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { TargetAudience } from './types';
@@ -53,4 +52,64 @@ export const fetchTargetAudienceDetails = async (audienceId: string) => {
     toast.error('Nieoczekiwany błąd podczas przetwarzania danych');
     return null;
   }
+};
+
+export const deleteTargetAudience = async (audienceId: string): Promise<boolean> => {
+  if (!audienceId) {
+    toast.error('Nie można usunąć grupy docelowej - brak identyfikatora');
+    return false;
+  }
+  
+  try {
+    const { error } = await supabase
+      .from('target_audiences')
+      .delete()
+      .eq('id', audienceId);
+      
+    if (error) {
+      console.error('Error deleting target audience:', error);
+      toast.error('Błąd podczas usuwania grupy docelowej');
+      return false;
+    }
+    
+    toast.success('Grupa docelowa została usunięta');
+    return true;
+  } catch (error) {
+    console.error('Error in deleteTargetAudience:', error);
+    toast.error('Nieoczekiwany błąd podczas usuwania grupy');
+    return false;
+  }
+};
+
+export const generateAudienceName = (ageRange?: string, mainOffer?: string): string => {
+  const defaultName = `Grupa ${Math.floor(Math.random() * 1000) + 1}`;
+  
+  if (!ageRange && !mainOffer) {
+    return defaultName;
+  }
+  
+  // Extract key information from the main offer if available
+  if (mainOffer) {
+    // Try to extract a short summary from the main offer (first part of the sentence)
+    const mainOfferText = mainOffer.trim();
+    
+    // Get the first part of the sentence (max 40 chars)
+    const shortOffer = mainOfferText.length > 40 
+      ? mainOfferText.substring(0, 40) + '...' 
+      : mainOfferText;
+      
+    // Combine with age range if available
+    if (ageRange) {
+      return `${shortOffer} (${ageRange})`;
+    }
+    
+    return shortOffer;
+  }
+  
+  // If only age range is available
+  if (ageRange) {
+    return `Grupa wiekowa ${ageRange}`;
+  }
+  
+  return defaultName;
 };
