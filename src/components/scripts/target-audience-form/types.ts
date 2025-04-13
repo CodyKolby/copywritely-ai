@@ -34,7 +34,7 @@ export const formSchema = z.object({
 export type FormValues = z.infer<typeof formSchema>;
 
 export interface TargetAudienceFormProps {
-  onSubmit: (data: FormValues, targetAudienceId?: string) => void;
+  onSubmit: (data: FormValues, targetAudienceId?: string) => Promise<any>; // Updated return type to Promise<any>
   onCancel: () => void;
   onBack: () => void;
 }

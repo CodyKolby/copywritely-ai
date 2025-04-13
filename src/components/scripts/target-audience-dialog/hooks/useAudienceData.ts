@@ -38,7 +38,7 @@ export const useAudienceData = (userId: string | undefined, open: boolean) => {
     }
   };
 
-  const handleFormSubmit = async (values: any) => {
+  const handleFormSubmit = async (values: any): Promise<string | undefined> => {
     try {
       setIsLoading(true);
       

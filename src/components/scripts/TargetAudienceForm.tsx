@@ -112,9 +112,10 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
       
       try {
         // Call the onSubmit function with the full form data and wait for it to complete
-        const audienceId = await onSubmit(formDataWithName, null);
-        console.log("Form successfully submitted, audience ID:", audienceId);
-        return audienceId;
+        // We ignore the return value now since we've updated the type to be Promise<any>
+        await onSubmit(formDataWithName, null);
+        console.log("Form successfully submitted");
+        return;
       } catch (error) {
         console.error("Error in onSubmit callback:", error);
         throw error;
