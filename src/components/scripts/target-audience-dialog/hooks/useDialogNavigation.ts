@@ -10,13 +10,17 @@ interface DialogNavigationProps {
   setShowSocialMediaPlatformDialog: (show: boolean) => void;
   setShowScriptDialog: (show: boolean) => void;
   setShowEmailDialog: (show: boolean) => void;
+  setShowSocialDialog: (show: boolean) => void;
   setAdvertisingGoal: (goal: string) => void;
   setEmailStyle: (style: EmailStyle | null) => void;
   setSocialMediaPlatform: (platform: SocialMediaPlatform | null) => void;
-  setIsProcessing: (processing: boolean) => void;
+  setIsProcessing: (isProcessing: boolean) => void;
 }
 
-export const useDialogNavigation = (params: DialogNavigationProps, templateId: string | undefined) => {
+export const useDialogNavigation = (
+  props: DialogNavigationProps,
+  templateId: string
+) => {
   const {
     setShowForm,
     setShowGoalDialog,
@@ -24,97 +28,87 @@ export const useDialogNavigation = (params: DialogNavigationProps, templateId: s
     setShowSocialMediaPlatformDialog,
     setShowScriptDialog,
     setShowEmailDialog,
+    setShowSocialDialog,
     setAdvertisingGoal,
     setEmailStyle,
     setSocialMediaPlatform,
     setIsProcessing,
-  } = params;
+  } = props;
 
-  // Step back from form to audience selection
+  // Handle going back from the goal dialog to the audience selection/form
   const handleBack = useCallback(() => {
     setShowForm(false);
   }, [setShowForm]);
 
-  // Step back from goal to audience
+  // Handle going back from the goal dialog
   const handleGoalBack = useCallback(() => {
     setShowGoalDialog(false);
     setShowForm(true);
   }, [setShowGoalDialog, setShowForm]);
-  
-  // Submit goal and move to appropriate next dialog
+
+  // Handle goal submission
   const handleGoalSubmit = useCallback((goal: string) => {
     setIsProcessing(true);
-    
     setAdvertisingGoal(goal);
+    setShowGoalDialog(false);
     
-    // Determine next dialog based on template
+    // Route to the appropriate next dialog based on template type
     if (templateId === 'email') {
-      setShowGoalDialog(false);
       setShowEmailStyleDialog(true);
     } else if (templateId === 'social') {
-      setShowGoalDialog(false);
       setShowSocialMediaPlatformDialog(true);
     } else {
-      setShowGoalDialog(false);
+      // For ad templates, show the script dialog directly
       setShowScriptDialog(true);
     }
-    
     setIsProcessing(false);
-  }, [
-    setIsProcessing,
-    setAdvertisingGoal,
-    templateId,
-    setShowGoalDialog,
-    setShowEmailStyleDialog,
-    setShowSocialMediaPlatformDialog,
-    setShowScriptDialog
-  ]);
-  
-  // Step back from email style to goal
+  }, [templateId, setAdvertisingGoal, setShowGoalDialog, setShowEmailStyleDialog, 
+      setShowSocialMediaPlatformDialog, setShowScriptDialog, setIsProcessing]);
+
+  // Handle going back from the email style dialog
   const handleEmailStyleBack = useCallback(() => {
     setShowEmailStyleDialog(false);
     setShowGoalDialog(true);
   }, [setShowEmailStyleDialog, setShowGoalDialog]);
-  
-  // Submit email style and go to email dialog
+
+  // Handle email style submission
   const handleEmailStyleSubmit = useCallback((style: EmailStyle) => {
     setIsProcessing(true);
-    
     setEmailStyle(style);
-    
     setShowEmailStyleDialog(false);
     setShowEmailDialog(true);
-    
     setIsProcessing(false);
-  }, [setIsProcessing, setEmailStyle, setShowEmailStyleDialog, setShowEmailDialog]);
-  
-  // Step back from social media platform to goal
+  }, [setEmailStyle, setShowEmailStyleDialog, setShowEmailDialog, setIsProcessing]);
+
+  // Handle going back from the social media platform dialog
   const handleSocialMediaPlatformBack = useCallback(() => {
     setShowSocialMediaPlatformDialog(false);
     setShowGoalDialog(true);
   }, [setShowSocialMediaPlatformDialog, setShowGoalDialog]);
-  
-  // Submit social media platform and go to script dialog
+
+  // Handle social media platform submission
   const handleSocialMediaPlatformSubmit = useCallback((platform: SocialMediaPlatform) => {
     setIsProcessing(true);
-    
     setSocialMediaPlatform(platform);
-    
     setShowSocialMediaPlatformDialog(false);
-    setShowScriptDialog(true);
-    
+    setShowSocialDialog(true);
     setIsProcessing(false);
-  }, [setIsProcessing, setSocialMediaPlatform, setShowSocialMediaPlatformDialog, setShowScriptDialog]);
+  }, [setSocialMediaPlatform, setShowSocialMediaPlatformDialog, setShowSocialDialog, setIsProcessing]);
 
-  // Close script dialog
+  // Handle closing the script dialog
   const handleScriptDialogClose = useCallback(() => {
     setShowScriptDialog(false);
   }, [setShowScriptDialog]);
-  
-  // Close email dialog
+
+  // Handle closing the email dialog
   const handleEmailDialogClose = useCallback(() => {
     setShowEmailDialog(false);
   }, [setShowEmailDialog]);
+  
+  // Handle closing the social dialog
+  const handleSocialDialogClose = useCallback(() => {
+    setShowSocialDialog(false);
+  }, [setShowSocialDialog]);
 
   return {
     handleBack,
@@ -125,6 +119,7 @@ export const useDialogNavigation = (params: DialogNavigationProps, templateId: s
     handleSocialMediaPlatformSubmit,
     handleSocialMediaPlatformBack,
     handleScriptDialogClose,
-    handleEmailDialogClose
+    handleEmailDialogClose,
+    handleSocialDialogClose,
   };
 };

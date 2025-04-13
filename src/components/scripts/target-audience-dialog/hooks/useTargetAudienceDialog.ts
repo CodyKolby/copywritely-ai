@@ -62,6 +62,7 @@ export const useTargetAudienceDialog = ({
     setShowSocialMediaPlatformDialog: dialogState.setShowSocialMediaPlatformDialog,
     setShowScriptDialog: dialogState.setShowScriptDialog,
     setShowEmailDialog: dialogState.setShowEmailDialog,
+    setShowSocialDialog: dialogState.setShowSocialDialog,
     setAdvertisingGoal: dialogState.setAdvertisingGoal,
     setEmailStyle: dialogState.setEmailStyle,
     setSocialMediaPlatform: dialogState.setSocialMediaPlatform,
@@ -83,6 +84,7 @@ export const useTargetAudienceDialog = ({
       dialogState.setShowSocialMediaPlatformDialog(false);
       dialogState.setShowScriptDialog(false);
       dialogState.setShowEmailDialog(false);
+      dialogState.setShowSocialDialog(false);
       dialogState.setAdvertisingGoal('');
       dialogState.setEmailStyle(null);
       dialogState.setSocialMediaPlatform(null);
@@ -124,6 +126,7 @@ export const useTargetAudienceDialog = ({
     existingAudiences: dialogState.existingAudiences,
     showScriptDialog: dialogState.showScriptDialog,
     showEmailDialog: dialogState.showEmailDialog,
+    showSocialDialog: dialogState.showSocialDialog,
     showGoalDialog: dialogState.showGoalDialog,
     showEmailStyleDialog: dialogState.showEmailStyleDialog,
     showSocialMediaPlatformDialog: dialogState.showSocialMediaPlatformDialog,
@@ -149,6 +152,7 @@ export const useTargetAudienceDialog = ({
     handleSocialMediaPlatformBack: dialogNavigation.handleSocialMediaPlatformBack,
     handleScriptDialogClose: dialogNavigation.handleScriptDialogClose,
     handleEmailDialogClose: dialogNavigation.handleEmailDialogClose,
+    handleSocialDialogClose: dialogNavigation.handleSocialDialogClose,
     
     // Added resetState, to be available in the component
     resetState: dialogState.resetState,

@@ -30,6 +30,7 @@ const DialogManager = ({
     existingAudiences,
     showScriptDialog,
     showEmailDialog,
+    showSocialDialog,
     showGoalDialog,
     showEmailStyleDialog,
     showSocialMediaPlatformDialog,
@@ -51,6 +52,7 @@ const DialogManager = ({
     handleSocialMediaPlatformBack,
     handleScriptDialogClose,
     handleEmailDialogClose,
+    handleSocialDialogClose,
     resetState,
   } = useTargetAudienceDialog({
     open,
@@ -86,10 +88,11 @@ const DialogManager = ({
       showSocialMediaPlatformDialog,
       showScriptDialog,
       showEmailDialog,
+      showSocialDialog,
       isProcessing
     });
   }, [open, showForm, showGoalDialog, showEmailStyleDialog, showSocialMediaPlatformDialog, 
-      showScriptDialog, showEmailDialog, isProcessing]);
+      showScriptDialog, showEmailDialog, showSocialDialog, isProcessing]);
 
   const handleDialogClose = () => {
     console.log("handleDialogClose called - closing dialog");
@@ -98,7 +101,7 @@ const DialogManager = ({
   };
 
   // Hide the audience dialog when script/email dialog is shown
-  const shouldShowAudienceDialog = open && !showScriptDialog && !showEmailDialog;
+  const shouldShowAudienceDialog = open && !showScriptDialog && !showEmailDialog && !showSocialDialog;
   
   // Prevent display of multiple dialogs simultaneously
   const showMainDialog = shouldShowAudienceDialog && !showForm && !showGoalDialog && !showEmailStyleDialog && !showSocialMediaPlatformDialog;
@@ -161,17 +164,19 @@ const DialogManager = ({
         isProcessing={isProcessing}
       />
       
-      {/* Result dialogs (script, email) based on template type */}
+      {/* Result dialogs (script, email, social) based on template type */}
       <ResultDialogs
         templateId={templateId}
         showScriptDialog={showScriptDialog}
         showEmailDialog={showEmailDialog}
+        showSocialDialog={showSocialDialog}
         selectedAudienceId={selectedAudienceId}
         advertisingGoal={advertisingGoal}
         emailStyle={emailStyle}
         socialMediaPlatform={socialMediaPlatform}
         handleScriptDialogClose={handleScriptDialogClose}
         handleEmailDialogClose={handleEmailDialogClose}
+        handleSocialDialogClose={handleSocialDialogClose}
       />
     </>
   );
