@@ -30,7 +30,8 @@ export const useTargetAudienceDialog = ({
     isLoading, 
     isCompressing,
     handleFormSubmit: submitAudienceForm,
-    fetchExistingAudiences
+    fetchExistingAudiences,
+    handleDeleteAudience
   } = useAudienceData(userId, open);
   
   // Use the hook for audience state updates
@@ -167,6 +168,9 @@ export const useTargetAudienceDialog = ({
     
     // Premium validation
     validatePremiumStatus: premiumValidator.validatePremiumStatus,
+    
+    // Added handleDeleteAudience from useAudienceData
+    handleDeleteAudience,
     
     // Added resetState, to be available in the component
     resetState: dialogState.resetState,
