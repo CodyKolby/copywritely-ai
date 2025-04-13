@@ -21,12 +21,14 @@ export const submitTargetAudienceForm = async (
       throw new Error(errorMessage);
     }
 
+    // Remove advertisingGoal from the data before further processing
+    const { advertisingGoal, ...cleanDataBeforeCompression } = data;
+    console.log("Dane bez advertisingGoal przed kompresją:", cleanDataBeforeCompression);
+
     // Try to compress data, but don't fail if compression fails
-    let compressedData = { ...data };
+    let compressedData = { ...cleanDataBeforeCompression };
     try {
-      // Create a clean version without advertisingGoal before compression
-      const { advertisingGoal, ...cleanData } = data;
-      compressedData = await compressFormData(cleanData);
+      compressedData = await compressFormData(cleanDataBeforeCompression);
       console.log("Dane po kompresji przez AI:", compressedData);
     } catch (compressError) {
       console.warn("Błąd kompresji, używam oryginalnych danych:", compressError);
@@ -36,31 +38,28 @@ export const submitTargetAudienceForm = async (
     const audienceName = data.name || `Grupa ${Math.floor(Math.random() * 1000) + 1}`;
     
     // Filter arrays but ensure they still contain all required elements
-    const competitors = validateArrayField(data.competitors, 3);
-    const pains = validateArrayField(data.pains, 5);
-    const desires = validateArrayField(data.desires, 5);
-    const benefits = validateArrayField(data.benefits, 5);
+    const competitors = validateArrayField(compressedData.competitors || cleanDataBeforeCompression.competitors, 3);
+    const pains = validateArrayField(compressedData.pains || cleanDataBeforeCompression.pains, 5);
+    const desires = validateArrayField(compressedData.desires || cleanDataBeforeCompression.desires, 5);
+    const benefits = validateArrayField(compressedData.benefits || cleanDataBeforeCompression.benefits, 5);
     
-    // IMPORTANT: Make sure we don't include advertisingGoal in the targetAudienceData
-    const { advertisingGoal, ...dataWithoutAdvertisingGoal } = compressedData;
-    
-    // Przygotowanie danych do zapisu - Remove advertisingGoal field
+    // Przygotowanie danych do zapisu - remove any potential advertisingGoal field
     const targetAudienceData = {
       user_id: userId,
       name: audienceName,
-      age_range: dataWithoutAdvertisingGoal.ageRange,
-      gender: dataWithoutAdvertisingGoal.gender,
+      age_range: compressedData.ageRange || cleanDataBeforeCompression.ageRange,
+      gender: compressedData.gender || cleanDataBeforeCompression.gender,
       competitors: competitors,
-      language: dataWithoutAdvertisingGoal.language || data.language,
-      biography: dataWithoutAdvertisingGoal.biography || data.biography,
-      beliefs: dataWithoutAdvertisingGoal.beliefs || data.beliefs,
+      language: compressedData.language || cleanDataBeforeCompression.language,
+      biography: compressedData.biography || cleanDataBeforeCompression.biography,
+      beliefs: compressedData.beliefs || cleanDataBeforeCompression.beliefs,
       pains: pains,
       desires: desires,
-      main_offer: dataWithoutAdvertisingGoal.mainOffer || data.mainOffer,
-      offer_details: dataWithoutAdvertisingGoal.offerDetails || data.offerDetails,
+      main_offer: compressedData.mainOffer || cleanDataBeforeCompression.mainOffer,
+      offer_details: compressedData.offerDetails || cleanDataBeforeCompression.offerDetails,
       benefits: benefits,
-      why_it_works: dataWithoutAdvertisingGoal.whyItWorks || data.whyItWorks,
-      experience: dataWithoutAdvertisingGoal.experience || data.experience,
+      why_it_works: compressedData.whyItWorks || cleanDataBeforeCompression.whyItWorks,
+      experience: compressedData.experience || cleanDataBeforeCompression.experience,
     };
     
     console.log("Dane przygotowane do zapisu w bazie:", targetAudienceData);

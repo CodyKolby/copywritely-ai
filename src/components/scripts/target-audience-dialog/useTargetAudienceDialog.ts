@@ -25,7 +25,12 @@ export const useTargetAudienceDialog = ({
   const { verifiedPremium } = usePremiumVerification(userId, isPremium);
   
   // Use the hook for fetching audience data
-  const { existingAudiences, isLoading, handleFormSubmit: submitAudienceForm } = useAudienceData(userId, open);
+  const { 
+    existingAudiences, 
+    isLoading, 
+    handleFormSubmit: submitAudienceForm,
+    fetchExistingAudiences
+  } = useAudienceData(userId, open);
   
   // Set existing audiences and loading state
   useEffect(() => {
@@ -121,12 +126,12 @@ export const useTargetAudienceDialog = ({
     }
   }, [templateId]);
 
-  // Enhanced form submission handler
+  // Enhanced form submission handler with improved error handling
   const handleFormSubmit = async (values: any) => {
     try {
       dialogState.setIsProcessing(true);
       
-      // CRITICAL FIX: Create a clean copy of values without advertisingGoal
+      // Create a clean copy of values without advertisingGoal
       const { advertisingGoal, ...dataToSubmit } = values;
       console.log("Data being submitted to Supabase:", dataToSubmit);
       
@@ -134,20 +139,26 @@ export const useTargetAudienceDialog = ({
       const audienceId = await submitAudienceForm(dataToSubmit);
       
       if (audienceId) {
+        // Set the selectedAudienceId before changing dialog states
         dialogState.setSelectedAudienceId(audienceId);
         
-        // Sequential transition
+        // First hide the form
         dialogState.setShowForm(false);
-        setTimeout(() => {
-          dialogState.setShowGoalDialog(true);
-        }, 100);
         
-        toast.success('Grupa docelowa została utworzona');
+        // Use setTimeout to ensure proper state transition
+        setTimeout(() => {
+          // Then show goal dialog
+          dialogState.setShowGoalDialog(true);
+        }, 50);
+        
+        // Refresh audience list
+        await fetchExistingAudiences();
+      } else {
+        throw new Error("No audience ID returned");
       }
     } catch (error) {
       console.error("Error submitting form:", error);
-      toast.error('Wystąpił błąd podczas tworzenia grupy docelowej');
-      dialogState.setIsProcessing(false);
+      toast.error('Nie udało się utworzyć grupy docelowej');
     } finally {
       dialogState.setIsProcessing(false);
     }

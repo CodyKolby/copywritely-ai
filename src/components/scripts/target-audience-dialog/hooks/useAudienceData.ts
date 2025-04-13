@@ -59,6 +59,9 @@ export const useAudienceData = (userId: string | undefined, open: boolean) => {
         throw error;
       }
 
+      // Success - show a success toast and refresh audiences
+      toast.success('Grupa docelowa została utworzona pomyślnie!');
+      
       // Refresh the list of target audiences
       await fetchExistingAudiences();
       
@@ -66,7 +69,7 @@ export const useAudienceData = (userId: string | undefined, open: boolean) => {
       return data.id;
     } catch (error) {
       console.error('Error creating target audience:', error);
-      toast.error('Nie udało się utworzyć grupy docelowej');
+      // Don't show the error toast here since it will be handled by the calling component
       throw error; // Rethrow to allow the calling code to handle it
     } finally {
       setIsLoading(false);
@@ -76,6 +79,7 @@ export const useAudienceData = (userId: string | undefined, open: boolean) => {
   return {
     existingAudiences,
     isLoading,
-    handleFormSubmit
+    handleFormSubmit,
+    fetchExistingAudiences
   };
 };

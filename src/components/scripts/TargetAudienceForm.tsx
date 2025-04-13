@@ -12,7 +12,6 @@ import NavigationControls from './target-audience-form/NavigationControls';
 import StepRenderer from './target-audience-form/StepRenderer';
 import { formSchema, FormValues, TargetAudienceFormProps } from './target-audience-form/types';
 import { validateStep } from './target-audience-form/validation-utils';
-import { submitTargetAudienceForm } from './target-audience-form/submission-utils';
 
 const TOTAL_STEPS = 13;
 
@@ -74,7 +73,10 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
   };
 
   const handleFormSubmission = async () => {
-    if (isSubmitting) return;
+    if (isSubmitting) {
+      console.log("Already submitting, skipping duplicate submission");
+      return;
+    }
     
     try {
       setIsSubmitting(true);
@@ -108,32 +110,17 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
       
       console.log("Dane do zapisania w bazie:", formDataWithName);
       
-      try {
-        // CRITICAL FIX: Remove advertisingGoal which doesn't exist in the database
-        const { advertisingGoal, ...dataToSubmit } = formDataWithName;
-        console.log("Data being submitted (without advertisingGoal):", dataToSubmit);
-        
-        // Directly use submitTargetAudienceForm function for submission
-        const targetAudienceId = await submitTargetAudienceForm(dataToSubmit, userId);
-        console.log("Form submitted, target audience ID:", targetAudienceId);
-        
-        if (targetAudienceId) {
-          toast.success("Grupa docelowa została utworzona pomyślnie!");
-          // Call the onSubmit function with the target audience ID and full form data (including advertisingGoal)
-          // This is OK because advertisingGoal is only removed for database storage
-          onSubmit(formDataWithName, targetAudienceId);
-        } else {
-          toast.error('Wystąpił błąd podczas zapisywania grupy docelowej');
-          setIsSubmitting(false);
-        }
-      } catch (submitError: any) {
-        console.error("Error in submitTargetAudienceForm:", submitError);
-        toast.error(`Błąd podczas zapisywania danych: ${submitError.message || 'Nieznany błąd'}`);
-        setIsSubmitting(false);
-      }
+      // Call the onSubmit function with the full form data and wait for it to complete
+      await onSubmit(formDataWithName, null);
+      
+      // If no errors were thrown above, it means submission was successful
+      console.log("Form successfully submitted");
     } catch (error) {
       console.error("Form submission error:", error);
       toast.error('Wystąpił błąd podczas wysyłania formularza');
+      throw error; // Rethrow to allow the parent component to handle it
+    } finally {
+      // Always set isSubmitting to false after completion
       setIsSubmitting(false);
     }
   };

@@ -23,38 +23,44 @@ const NavigationControls = ({
   isSubmitting = false,
 }: NavigationControlsProps) => {
   const handleSubmitOrNext = () => {
-    if (!isSubmitting) {
-      if (isLastStep) {
-        // On last step, trigger the form submission
+    if (isSubmitting) {
+      console.log("Already submitting, ignoring click");
+      return;
+    }
+    
+    if (isLastStep) {
+      // On last step, trigger the form submission
+      console.log("Submitting form on last step");
+      
+      try {
         const form = document.querySelector('form');
-        if (form) {
-          console.log("Submitting form on last step");
+        if (!form) {
+          console.error("No form found to submit");
+          return;
+        }
+        
+        // Use form.requestSubmit() which properly triggers submit events and validation
+        if (typeof form.requestSubmit === 'function') {
+          form.requestSubmit();
+        } else {
+          // Fallback for older browsers
+          const submitEvent = new Event('submit', { cancelable: true, bubbles: true });
+          const wasSubmitted = form.dispatchEvent(submitEvent);
           
-          try {
-            // Use the requestSubmit method which is more reliable
-            if (typeof form.requestSubmit === 'function') {
-              form.requestSubmit();
-            } else {
-              // Fallback for older browsers
-              const submitEvent = new Event('submit', { cancelable: true, bubbles: true });
-              const wasSubmitted = form.dispatchEvent(submitEvent);
-              
-              if (!wasSubmitted) {
-                console.log("Form submission was cancelled");
-              }
-            }
-          } catch (e) {
-            console.error("Error submitting form:", e);
-            // Final fallback - look for submit button
-            const submitBtn = form.querySelector('button[type="submit"]');
-            if (submitBtn) {
-              (submitBtn as HTMLButtonElement).click();
-            }
+          if (!wasSubmitted) {
+            console.log("Form submission was cancelled");
           }
         }
-      } else {
-        goToNextStep();
+      } catch (e) {
+        console.error("Error submitting form:", e);
+        // Final fallback - look for submit button
+        const submitBtn = document.querySelector('button[type="submit"]');
+        if (submitBtn) {
+          (submitBtn as HTMLButtonElement).click();
+        }
       }
+    } else {
+      goToNextStep();
     }
   };
 
