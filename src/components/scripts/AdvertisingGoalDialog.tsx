@@ -31,8 +31,19 @@ const AdvertisingGoalDialog = ({ onSubmit, onBack, onCancel, isProcessing }: Adv
   });
 
   const handleSubmit = (values: z.infer<typeof formSchema>) => {
+    onSubmit(values.advertisingGoal);
+  };
+
+  // Handle button clicks directly to prevent issues when isProcessing is true
+  const handleBackClick = () => {
     if (!isProcessing) {
-      onSubmit(values.advertisingGoal);
+      onBack();
+    }
+  };
+
+  const handleCancelClick = () => {
+    if (!isProcessing) {
+      onCancel();
     }
   };
 
@@ -76,7 +87,7 @@ const AdvertisingGoalDialog = ({ onSubmit, onBack, onCancel, isProcessing }: Adv
               <Button 
                 type="button" 
                 variant="outline" 
-                onClick={onCancel} 
+                onClick={handleCancelClick} 
                 disabled={isProcessing}
               >
                 Anuluj
@@ -84,7 +95,7 @@ const AdvertisingGoalDialog = ({ onSubmit, onBack, onCancel, isProcessing }: Adv
               <Button 
                 type="button" 
                 variant="outline" 
-                onClick={onBack} 
+                onClick={handleBackClick} 
                 disabled={isProcessing}
               >
                 Wstecz

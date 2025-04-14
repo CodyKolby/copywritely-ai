@@ -69,6 +69,10 @@ export const useAudienceManagement = (userId: string, props: AudienceManagementP
     // Use setTimeout to ensure UI updates before showing goal dialog
     setTimeout(() => {
       setShowGoalDialog(true);
+      // Reset processing state AFTER dialog is shown
+      setTimeout(() => {
+        setIsProcessing(false);
+      }, 100);
     }, 50);
   }, [audienceChoice, selectedAudienceId, userId, setIsProcessing, setShowGoalDialog]);
 

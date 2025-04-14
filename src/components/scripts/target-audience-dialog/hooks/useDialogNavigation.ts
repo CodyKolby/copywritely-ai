@@ -43,18 +43,24 @@ export const useDialogNavigation = (
 
   // Handle going back from the goal dialog
   const handleGoalBack = useCallback(() => {
-    setIsProcessing(false);  // Reset processing state
+    // Immediately reset processing state before any UI changes
+    setIsProcessing(false);
+    
+    // Then change dialogs
     setShowGoalDialog(false);
     setShowForm(true);
   }, [setShowGoalDialog, setShowForm, setIsProcessing]);
 
   // Handle goal submission
   const handleGoalSubmit = useCallback((goal: string) => {
+    // Set active state first
     setIsProcessing(true);
     setAdvertisingGoal(goal);
+    
+    // First hide current dialog
     setShowGoalDialog(false);
     
-    // Route to the appropriate next dialog based on template type
+    // Route to the appropriate next dialog based on template type after a brief delay
     setTimeout(() => {
       if (templateId === 'email') {
         setShowEmailStyleDialog(true);
@@ -64,46 +70,72 @@ export const useDialogNavigation = (
         // For ad templates, show the script dialog directly
         setShowScriptDialog(true);
       }
-      setIsProcessing(false);
+      
+      // Reset processing state AFTER dialog is shown
+      setTimeout(() => {
+        setIsProcessing(false);
+      }, 100);
     }, 50);
   }, [templateId, setAdvertisingGoal, setShowGoalDialog, setShowEmailStyleDialog, 
       setShowSocialMediaPlatformDialog, setShowScriptDialog, setIsProcessing]);
 
   // Handle going back from the email style dialog
   const handleEmailStyleBack = useCallback(() => {
-    setIsProcessing(false);  // Reset processing state
+    // Immediately reset processing state before any UI changes
+    setIsProcessing(false);
+    
+    // Then change dialogs
     setShowEmailStyleDialog(false);
     setShowGoalDialog(true);
   }, [setShowEmailStyleDialog, setShowGoalDialog, setIsProcessing]);
 
   // Handle email style submission
   const handleEmailStyleSubmit = useCallback((style: EmailStyle) => {
+    // Set active state first
     setIsProcessing(true);
     setEmailStyle(style);
+    
+    // First hide current dialog
     setShowEmailStyleDialog(false);
     
+    // Show next dialog after a brief delay
     setTimeout(() => {
       setShowEmailDialog(true);
-      setIsProcessing(false);
+      
+      // Reset processing state AFTER dialog is shown
+      setTimeout(() => {
+        setIsProcessing(false);
+      }, 100);
     }, 50);
   }, [setEmailStyle, setShowEmailStyleDialog, setShowEmailDialog, setIsProcessing]);
 
   // Handle going back from the social media platform dialog
   const handleSocialMediaPlatformBack = useCallback(() => {
-    setIsProcessing(false);  // Reset processing state
+    // Immediately reset processing state before any UI changes
+    setIsProcessing(false);
+    
+    // Then change dialogs
     setShowSocialMediaPlatformDialog(false);
     setShowGoalDialog(true);
   }, [setShowSocialMediaPlatformDialog, setShowGoalDialog, setIsProcessing]);
 
   // Handle social media platform submission
   const handleSocialMediaPlatformSubmit = useCallback((platform: SocialMediaPlatform) => {
+    // Set active state first
     setIsProcessing(true);
     setSocialMediaPlatform(platform);
+    
+    // First hide current dialog
     setShowSocialMediaPlatformDialog(false);
     
+    // Show next dialog after a brief delay
     setTimeout(() => {
       setShowSocialDialog(true);
-      setIsProcessing(false);
+      
+      // Reset processing state AFTER dialog is shown
+      setTimeout(() => {
+        setIsProcessing(false);
+      }, 100);
     }, 50);
   }, [setSocialMediaPlatform, setShowSocialMediaPlatformDialog, setShowSocialDialog, setIsProcessing]);
 
