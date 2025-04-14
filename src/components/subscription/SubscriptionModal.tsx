@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,10 @@ interface SubscriptionDetails {
   hasSubscription: boolean;
   plan: string;
   trialEnd: string | null;
+  paymentMethod?: {
+    brand: string;
+    last4: string;
+  };
 }
 
 interface SubscriptionModalProps {
@@ -92,7 +96,6 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
 
   // Odnowienie subskrypcji
   const renewSubscription = () => {
-    // Używamy tej samej funkcji co przy zakupie nowej subskrypcji
     try {
       // Używamy bieżącego planu (miesięczny lub roczny)
       const priceId = data?.plan?.includes('roczn') ? PRICE_IDS.PRO_ANNUAL : PRICE_IDS.PRO_MONTHLY;
@@ -111,7 +114,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
       month: 'long', 
       day: 'numeric' 
     };
-    return new Date(dateString).toLocaleDateString(undefined, options);
+    return new Date(dateString).toLocaleDateString('pl-PL', options);
   };
 
   // Funkcja renderująca status
@@ -132,6 +135,23 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
            isActive && isCanceled ? 'Anulowana' : 
            'Nieaktywna'}
         </Badge>
+      </div>
+    );
+  };
+
+  // Funkcja formatująca metodę płatności
+  const formatPaymentMethod = () => {
+    if (!data?.paymentMethod) return null;
+    
+    const { brand, last4 } = data.paymentMethod;
+    const capitalizedBrand = brand.charAt(0).toUpperCase() + brand.slice(1);
+    
+    return (
+      <div className="flex items-center text-sm text-gray-600 gap-2">
+        <CreditCard className="h-4 w-4" />
+        <span>
+          {capitalizedBrand} **** {last4}
+        </span>
       </div>
     );
   };
@@ -212,6 +232,8 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
                   </span>
                 </div>
               )}
+              
+              {formatPaymentMethod()}
             </div>
             
             <Separator />

@@ -73,6 +73,46 @@ serve(async (req) => {
       throw new Error(subscriptionData.error.message);
     }
 
+    // Pobieramy informacje o metodzie płatności
+    let paymentMethod = null;
+    if (subscriptionData.default_payment_method) {
+      const paymentMethodResponse = await fetch(`https://api.stripe.com/v1/payment_methods/${subscriptionData.default_payment_method}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${stripeSecretKey}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      const paymentMethodData = await paymentMethodResponse.json();
+      
+      if (!paymentMethodData.error && paymentMethodData.card) {
+        paymentMethod = {
+          brand: paymentMethodData.card.brand,
+          last4: paymentMethodData.card.last4,
+        };
+      }
+    } else if (subscriptionData.customer) {
+      // Jeśli nie ma default_payment_method na subskrypcji, sprawdzamy metody płatności klienta
+      const paymentMethodsResponse = await fetch(`https://api.stripe.com/v1/payment_methods?customer=${subscriptionData.customer}&type=card&limit=1`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${stripeSecretKey}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      const paymentMethodsData = await paymentMethodsResponse.json();
+      
+      if (!paymentMethodsData.error && paymentMethodsData.data && paymentMethodsData.data.length > 0) {
+        const card = paymentMethodsData.data[0].card;
+        paymentMethod = {
+          brand: card.brand,
+          last4: card.last4,
+        };
+      }
+    }
+
     // Pobieramy adres URL do Customer Portal
     const portalResponse = await fetch('https://api.stripe.com/v1/billing_portal/sessions', {
       method: 'POST',
@@ -108,6 +148,7 @@ serve(async (req) => {
       hasSubscription: true,
       plan: subscriptionData.items?.data[0]?.plan?.nickname || 'Pro',
       trialEnd: subscriptionData.trial_end ? new Date(subscriptionData.trial_end * 1000).toISOString() : null,
+      paymentMethod: paymentMethod,
     };
 
     return new Response(
