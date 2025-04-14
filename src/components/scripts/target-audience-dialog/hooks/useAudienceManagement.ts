@@ -64,16 +64,19 @@ export const useAudienceManagement = (userId: string, props: AudienceManagementP
       return;
     }
     
+    // First update processing state
     setIsProcessing(true);
     
     // Use setTimeout to ensure UI updates before showing goal dialog
     setTimeout(() => {
       setShowGoalDialog(true);
-      // Reset processing state AFTER dialog is shown
+      
+      // Add another timeout to ensure the dialog is fully rendered
+      // before resetting the processing state
       setTimeout(() => {
         setIsProcessing(false);
-      }, 100);
-    }, 50);
+      }, 300);
+    }, 100);
   }, [audienceChoice, selectedAudienceId, userId, setIsProcessing, setShowGoalDialog]);
 
   // Handle create new audience button
@@ -83,13 +86,19 @@ export const useAudienceManagement = (userId: string, props: AudienceManagementP
       return;
     }
     
+    // First update processing state
     setIsProcessing(true);
     
     // Use setTimeout to ensure UI updates before showing form
     setTimeout(() => {
       setShowForm(true);
-      setIsProcessing(false); // Reset after showing form
-    }, 50);
+      
+      // Add another timeout to ensure the form is fully rendered
+      // before resetting the processing state
+      setTimeout(() => {
+        setIsProcessing(false);
+      }, 300);
+    }, 100);
   }, [userId, setIsProcessing, setShowForm]);
 
   return {

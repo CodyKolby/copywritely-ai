@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
@@ -30,8 +30,17 @@ const AdvertisingGoalDialog = ({ onSubmit, onBack, onCancel, isProcessing }: Adv
     },
   });
 
+  // Reset form state when dialog's processing state changes from true to false
+  useEffect(() => {
+    if (!isProcessing) {
+      form.reset(form.getValues());
+    }
+  }, [isProcessing, form]);
+
   const handleSubmit = (values: z.infer<typeof formSchema>) => {
-    onSubmit(values.advertisingGoal);
+    if (!isProcessing) {
+      onSubmit(values.advertisingGoal);
+    }
   };
 
   // Handle button clicks directly to prevent issues when isProcessing is true
