@@ -408,25 +408,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
               </Button>
             </div>
             
-            <Separator />
             
-            <div className="pt-2">
-              <h4 className="font-medium mb-2">Dostępne funkcje</h4>
-              <ul className="space-y-2">
-                <li className="flex items-start gap-2 text-sm">
-                  <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
-                  <span>Nieograniczona liczba generowanych briefów</span>
-                </li>
-                <li className="flex items-start gap-2 text-sm">
-                  <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
-                  <span>Rozszerzone funkcje edytora tekstu</span>
-                </li>
-                <li className="flex items-start gap-2 text-sm">
-                  <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
-                  <span>Priorytetowe wsparcie techniczne</span>
-                </li>
-              </ul>
-            </div>
           </CardContent>
         </Card>
         
