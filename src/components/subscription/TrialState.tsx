@@ -1,6 +1,7 @@
 
 import React from 'react';
-import { Dialog, DialogContent, DialogFooter, CardContent, Card } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CalendarClock, Clock } from 'lucide-react';

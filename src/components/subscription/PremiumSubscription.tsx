@@ -1,6 +1,7 @@
 
 import React from 'react';
-import { Dialog, DialogContent, DialogFooter, Card, CardContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import SubscriptionModalHeader from './SubscriptionModalHeader';
 import SubscriptionDetails from './SubscriptionDetails';
