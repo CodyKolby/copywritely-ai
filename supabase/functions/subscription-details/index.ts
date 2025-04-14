@@ -209,28 +209,33 @@ serve(async (req) => {
         };
       }
 
-      // Próba utworzenia sesji Customer Portal, ale z obsługą błędu
+      // Tworzymy sesję Customer Portal
       let portalUrl = '#'; // Domyślna wartość
       
       try {
-        const portalResponse = await fetch('https://api.stripe.com/v1/billing_portal/sessions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${stripeSecretKey}`,
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: new URLSearchParams({
-            'customer': subscriptionData.customer,
-            'return_url': `${req.headers.get('origin') || ''}/account`,
-          }),
-        });
+        if (subscriptionData.customer) {
+          const portalResponse = await fetch('https://api.stripe.com/v1/billing_portal/sessions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${stripeSecretKey}`,
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+              'customer': subscriptionData.customer,
+              'return_url': `${req.headers.get('origin') || ''}/account`,
+            }),
+          });
 
-        const portalData = await portalResponse.json();
-        
-        if (!portalData.error) {
-          portalUrl = portalData.url;
+          const portalData = await portalResponse.json();
+          
+          if (!portalData.error) {
+            portalUrl = portalData.url;
+            console.log('Successfully created customer portal session:', portalUrl);
+          } else {
+            console.error('Ostrzeżenie: Nie można utworzyć sesji Customer Portal:', portalData.error);
+          }
         } else {
-          console.error('Ostrzeżenie: Nie można utworzyć sesji Customer Portal:', portalData.error);
+          console.error('Nie znaleziono ID klienta w danych subskrypcji');
         }
       } catch (portalError) {
         console.error('Błąd podczas tworzenia sesji Customer Portal:', portalError);

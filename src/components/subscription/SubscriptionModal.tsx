@@ -20,22 +20,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { createCheckoutSession, PRICE_IDS } from '@/lib/stripe';
-
-interface SubscriptionDetails {
-  subscriptionId: string;
-  status: string;
-  currentPeriodEnd: string;
-  daysUntilRenewal: number;
-  cancelAtPeriodEnd: boolean;
-  portalUrl: string;
-  hasSubscription: boolean;
-  plan: string;
-  trialEnd: string | null;
-  paymentMethod?: {
-    brand: string;
-    last4: string;
-  };
-}
+import { SubscriptionDetails } from '@/lib/stripe/subscription';
 
 interface SubscriptionModalProps {
   open: boolean;
@@ -552,14 +537,13 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
                 )
               ) : null}
               
-              {/* Zawsze pokazuj przycisk "Zarządzaj subskrypcją" niezależnie od wartości portalUrl */}
+              {/* Use the Stripe Customer Portal URL if available */}
               <Button 
                 onClick={() => {
                   if (data.portalUrl && data.portalUrl !== '#') {
                     window.open(data.portalUrl, '_blank');
                   } else {
-                    // Jeśli nie ma portalUrl, można otworzyć stronę Stripe lub inną stronę zarządzania
-                    window.open('https://stripe.com', '_blank'); 
+                    toast.error('Nie udało się utworzyć sesji portalu klienta');
                   }
                 }} 
                 className="w-full flex items-center gap-2" 
