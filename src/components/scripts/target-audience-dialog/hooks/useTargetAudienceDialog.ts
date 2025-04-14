@@ -107,23 +107,36 @@ export const useTargetAudienceDialog = ({
     try {
       dialogState.setIsProcessing(true);
       
-      const audienceId = await formSubmission.handleFormSubmit(values);
+      // Create a clean copy of values without advertisingGoal
+      const { advertisingGoal, ...dataToSubmit } = values;
+      console.log("Data being submitted to Supabase:", dataToSubmit);
+      
+      // Pass the cleaned data to submitAudienceForm
+      const audienceId = await submitAudienceForm(dataToSubmit);
       
       if (audienceId) {
-        // Set the selectedAudienceId
+        // Set the selectedAudienceId before changing dialog states
         dialogState.setSelectedAudienceId(audienceId);
         
-        // ZMIANA: Bezpośrednio ukrywamy formularz i nie pokazujemy dialogu z celem
-        // a wracamy do ekranu wyboru grupy docelowej
+        // First hide the form
         dialogState.setShowForm(false);
+        
+        // Reset isProcessing to false immediately
+        dialogState.setIsProcessing(false);
+        
+        // Switch to the goal dialog after a very brief delay
+        setTimeout(() => {
+          dialogState.setShowGoalDialog(true);
+        }, 50);
+        
+        // Refresh audience list
+        await fetchExistingAudiences();
       } else {
         throw new Error("No audience ID returned");
       }
     } catch (error) {
       console.error("Error submitting form:", error);
       toast.error('Nie udało się utworzyć grupy docelowej');
-      throw error;
-    } finally {
       dialogState.setIsProcessing(false);
     }
   };

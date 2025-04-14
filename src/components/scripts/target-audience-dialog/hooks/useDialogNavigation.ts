@@ -38,13 +38,15 @@ export const useDialogNavigation = (
   // Handle going back from the goal dialog to the audience selection/form
   const handleBack = useCallback(() => {
     setShowForm(false);
-  }, [setShowForm]);
+    setIsProcessing(false);  // Reset processing state
+  }, [setShowForm, setIsProcessing]);
 
   // Handle going back from the goal dialog
   const handleGoalBack = useCallback(() => {
+    setIsProcessing(false);  // Reset processing state
     setShowGoalDialog(false);
     setShowForm(true);
-  }, [setShowGoalDialog, setShowForm]);
+  }, [setShowGoalDialog, setShowForm, setIsProcessing]);
 
   // Handle goal submission
   const handleGoalSubmit = useCallback((goal: string) => {
@@ -53,62 +55,75 @@ export const useDialogNavigation = (
     setShowGoalDialog(false);
     
     // Route to the appropriate next dialog based on template type
-    if (templateId === 'email') {
-      setShowEmailStyleDialog(true);
-    } else if (templateId === 'social') {
-      setShowSocialMediaPlatformDialog(true);
-    } else {
-      // For ad templates, show the script dialog directly
-      setShowScriptDialog(true);
-    }
-    setIsProcessing(false);
+    setTimeout(() => {
+      if (templateId === 'email') {
+        setShowEmailStyleDialog(true);
+      } else if (templateId === 'social') {
+        setShowSocialMediaPlatformDialog(true);
+      } else {
+        // For ad templates, show the script dialog directly
+        setShowScriptDialog(true);
+      }
+      setIsProcessing(false);
+    }, 50);
   }, [templateId, setAdvertisingGoal, setShowGoalDialog, setShowEmailStyleDialog, 
       setShowSocialMediaPlatformDialog, setShowScriptDialog, setIsProcessing]);
 
   // Handle going back from the email style dialog
   const handleEmailStyleBack = useCallback(() => {
+    setIsProcessing(false);  // Reset processing state
     setShowEmailStyleDialog(false);
     setShowGoalDialog(true);
-  }, [setShowEmailStyleDialog, setShowGoalDialog]);
+  }, [setShowEmailStyleDialog, setShowGoalDialog, setIsProcessing]);
 
   // Handle email style submission
   const handleEmailStyleSubmit = useCallback((style: EmailStyle) => {
     setIsProcessing(true);
     setEmailStyle(style);
     setShowEmailStyleDialog(false);
-    setShowEmailDialog(true);
-    setIsProcessing(false);
+    
+    setTimeout(() => {
+      setShowEmailDialog(true);
+      setIsProcessing(false);
+    }, 50);
   }, [setEmailStyle, setShowEmailStyleDialog, setShowEmailDialog, setIsProcessing]);
 
   // Handle going back from the social media platform dialog
   const handleSocialMediaPlatformBack = useCallback(() => {
+    setIsProcessing(false);  // Reset processing state
     setShowSocialMediaPlatformDialog(false);
     setShowGoalDialog(true);
-  }, [setShowSocialMediaPlatformDialog, setShowGoalDialog]);
+  }, [setShowSocialMediaPlatformDialog, setShowGoalDialog, setIsProcessing]);
 
   // Handle social media platform submission
   const handleSocialMediaPlatformSubmit = useCallback((platform: SocialMediaPlatform) => {
     setIsProcessing(true);
     setSocialMediaPlatform(platform);
     setShowSocialMediaPlatformDialog(false);
-    setShowSocialDialog(true);
-    setIsProcessing(false);
+    
+    setTimeout(() => {
+      setShowSocialDialog(true);
+      setIsProcessing(false);
+    }, 50);
   }, [setSocialMediaPlatform, setShowSocialMediaPlatformDialog, setShowSocialDialog, setIsProcessing]);
 
   // Handle closing the script dialog
   const handleScriptDialogClose = useCallback(() => {
+    setIsProcessing(false);  // Reset processing state
     setShowScriptDialog(false);
-  }, [setShowScriptDialog]);
+  }, [setShowScriptDialog, setIsProcessing]);
 
   // Handle closing the email dialog
   const handleEmailDialogClose = useCallback(() => {
+    setIsProcessing(false);  // Reset processing state
     setShowEmailDialog(false);
-  }, [setShowEmailDialog]);
+  }, [setShowEmailDialog, setIsProcessing]);
   
   // Handle closing the social dialog
   const handleSocialDialogClose = useCallback(() => {
+    setIsProcessing(false);  // Reset processing state
     setShowSocialDialog(false);
-  }, [setShowSocialDialog]);
+  }, [setShowSocialDialog, setIsProcessing]);
 
   return {
     handleBack,

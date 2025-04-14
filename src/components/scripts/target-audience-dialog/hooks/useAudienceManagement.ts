@@ -33,12 +33,18 @@ export const useAudienceManagement = (userId: string, props: AudienceManagementP
     if (choice === 'new') {
       setSelectedAudienceId(null);
     }
-  }, [setAudienceChoice, setSelectedAudienceId]);
+    
+    // Reset processing state when choice changes
+    setIsProcessing(false);
+  }, [setAudienceChoice, setSelectedAudienceId, setIsProcessing]);
 
   // Handle existing audience selection
   const handleExistingAudienceSelect = useCallback((id: string) => {
     setSelectedAudienceId(id);
-  }, [setSelectedAudienceId]);
+    
+    // Reset processing state when selection changes
+    setIsProcessing(false);
+  }, [setSelectedAudienceId, setIsProcessing]);
 
   // Handle continue button click
   const handleContinue = useCallback(() => {
@@ -59,7 +65,11 @@ export const useAudienceManagement = (userId: string, props: AudienceManagementP
     }
     
     setIsProcessing(true);
-    setShowGoalDialog(true);
+    
+    // Use setTimeout to ensure UI updates before showing goal dialog
+    setTimeout(() => {
+      setShowGoalDialog(true);
+    }, 50);
   }, [audienceChoice, selectedAudienceId, userId, setIsProcessing, setShowGoalDialog]);
 
   // Handle create new audience button
@@ -70,7 +80,12 @@ export const useAudienceManagement = (userId: string, props: AudienceManagementP
     }
     
     setIsProcessing(true);
-    setShowForm(true);
+    
+    // Use setTimeout to ensure UI updates before showing form
+    setTimeout(() => {
+      setShowForm(true);
+      setIsProcessing(false); // Reset after showing form
+    }, 50);
   }, [userId, setIsProcessing, setShowForm]);
 
   return {

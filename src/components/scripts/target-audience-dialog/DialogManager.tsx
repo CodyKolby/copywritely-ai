@@ -90,10 +90,11 @@ const DialogManager = ({
       showScriptDialog,
       showEmailDialog,
       showSocialDialog,
-      isProcessing
+      isProcessing,
+      selectedAudienceId
     });
   }, [open, showForm, showGoalDialog, showEmailStyleDialog, showSocialMediaPlatformDialog, 
-      showScriptDialog, showEmailDialog, showSocialDialog, isProcessing]);
+      showScriptDialog, showEmailDialog, showSocialDialog, isProcessing, selectedAudienceId]);
 
   const handleDialogClose = () => {
     console.log("handleDialogClose called - closing dialog");

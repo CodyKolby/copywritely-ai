@@ -13,7 +13,7 @@ interface AdvertisingGoalDialogProps {
   onSubmit: (goal: string) => void;
   onBack: () => void;
   onCancel: () => void;
-  isProcessing: boolean; // Added isProcessing prop
+  isProcessing: boolean; 
 }
 
 const formSchema = z.object({
@@ -31,7 +31,9 @@ const AdvertisingGoalDialog = ({ onSubmit, onBack, onCancel, isProcessing }: Adv
   });
 
   const handleSubmit = (values: z.infer<typeof formSchema>) => {
-    onSubmit(values.advertisingGoal);
+    if (!isProcessing) {
+      onSubmit(values.advertisingGoal);
+    }
   };
 
   return (
@@ -60,6 +62,7 @@ const AdvertisingGoalDialog = ({ onSubmit, onBack, onCancel, isProcessing }: Adv
                   <Textarea
                     placeholder="Klient ma wejść na stronę przypiętą do reklamy a następnie umówić się na rozmowę"
                     className="min-h-[150px] resize-none"
+                    disabled={isProcessing}
                     {...field}
                   />
                 </FormControl>
@@ -70,10 +73,20 @@ const AdvertisingGoalDialog = ({ onSubmit, onBack, onCancel, isProcessing }: Adv
 
           <DialogFooter className="flex justify-between">
             <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={onCancel} disabled={isProcessing}>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={onCancel} 
+                disabled={isProcessing}
+              >
                 Anuluj
               </Button>
-              <Button type="button" variant="outline" onClick={onBack} disabled={isProcessing}>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={onBack} 
+                disabled={isProcessing}
+              >
                 Wstecz
               </Button>
             </div>
