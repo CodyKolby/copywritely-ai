@@ -1,5 +1,6 @@
 
-import { SupabaseClient } from '@supabase/supabase-js';
+// Remove the supabase client import as it's not needed in this types file
+// import { SupabaseClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 
 export interface WebhookHandlerResponse {
@@ -35,4 +36,3 @@ export interface DatabaseOperations {
   findUserByEmail: (email: string) => Promise<{ id: string } | null>;
   storeUnprocessedPayment: (sessionId: string, sessionData: any) => Promise<void>;
 }
-

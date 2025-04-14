@@ -1,5 +1,6 @@
 
-import { createClient } from '@supabase/supabase-js';
+// Replace the regular import with a URL import for Supabase client
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7';
 import { DatabaseOperations } from './types.ts';
 
 export function createDatabaseOperations(): DatabaseOperations {
@@ -90,4 +91,3 @@ export function createDatabaseOperations(): DatabaseOperations {
     storeUnprocessedPayment
   };
 }
-
