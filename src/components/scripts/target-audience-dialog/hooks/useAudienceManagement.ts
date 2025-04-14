@@ -29,6 +29,7 @@ export const useAudienceManagement = (userId: string, props: AudienceManagementP
   // Use refs to track and clear timeouts
   const processingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const dialogTransitionRef = useRef<NodeJS.Timeout | null>(null);
+  const failsafeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Clear timeouts when component unmounts or when needed
   const clearAllTimeouts = useCallback(() => {
@@ -40,6 +41,11 @@ export const useAudienceManagement = (userId: string, props: AudienceManagementP
     if (dialogTransitionRef.current) {
       clearTimeout(dialogTransitionRef.current);
       dialogTransitionRef.current = null;
+    }
+    
+    if (failsafeTimeoutRef.current) {
+      clearTimeout(failsafeTimeoutRef.current);
+      failsafeTimeoutRef.current = null;
     }
   }, []);
 
@@ -94,6 +100,7 @@ export const useAudienceManagement = (userId: string, props: AudienceManagementP
     setIsProcessing(true);
     
     // Set up timeout to show goal dialog with proper state management
+    // Zwiększamy opóźnienia dla lepszego efektu wizualnego
     dialogTransitionRef.current = setTimeout(() => {
       setShowGoalDialog(true);
       
@@ -102,11 +109,11 @@ export const useAudienceManagement = (userId: string, props: AudienceManagementP
       processingTimeoutRef.current = setTimeout(() => {
         setIsProcessing(false);
       }, 500); // Slightly longer timeout to ensure dialog is rendered
-    }, 200);
+    }, 250); // Longer delay to prevent flickering
 
     // Safety timeout to ensure processing state is eventually reset
     // even if something goes wrong with the dialog transitions
-    setTimeout(() => {
+    failsafeTimeoutRef.current = setTimeout(() => {
       setIsProcessing(false);
     }, 3000); // Failsafe timeout
   }, [audienceChoice, selectedAudienceId, userId, setIsProcessing, setShowGoalDialog, clearAllTimeouts]);
@@ -125,6 +132,7 @@ export const useAudienceManagement = (userId: string, props: AudienceManagementP
     setIsProcessing(true);
     
     // Set up timeout to show form with proper state management
+    // Zwiększamy opóźnienia dla lepszego efektu wizualnego
     dialogTransitionRef.current = setTimeout(() => {
       setShowForm(true);
       
@@ -133,11 +141,11 @@ export const useAudienceManagement = (userId: string, props: AudienceManagementP
       processingTimeoutRef.current = setTimeout(() => {
         setIsProcessing(false);
       }, 500); // Slightly longer timeout to ensure form is rendered
-    }, 200);
+    }, 250); // Longer delay to prevent flickering
 
     // Safety timeout to ensure processing state is eventually reset
     // even if something goes wrong with the dialog transitions
-    setTimeout(() => {
+    failsafeTimeoutRef.current = setTimeout(() => {
       setIsProcessing(false);
     }, 3000); // Failsafe timeout
   }, [userId, setIsProcessing, setShowForm, clearAllTimeouts]);

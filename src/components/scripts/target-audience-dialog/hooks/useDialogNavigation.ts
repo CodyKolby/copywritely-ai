@@ -35,7 +35,7 @@ export const useDialogNavigation = (
     setIsProcessing,
   } = props;
 
-  // Handle going back from the goal dialog to the audience selection/form
+  // Handle going back from the form to the audience selection
   const handleBack = useCallback(() => {
     // First reset processing state
     setIsProcessing(false);
@@ -44,17 +44,20 @@ export const useDialogNavigation = (
     setShowForm(false);
   }, [setShowForm, setIsProcessing]);
 
-  // Handle going back from the goal dialog
+  // Handle going back from the goal dialog to the audience selection dialog directly
+  // This was the issue - it was going back to the form instead of main audience dialog
   const handleGoalBack = useCallback(() => {
     // First reset processing state
     setIsProcessing(false);
     
-    // Then change dialogs with a slight delay
+    // Then change dialogs with a longer delay to prevent flickering
     setTimeout(() => {
       setShowGoalDialog(false);
-      setShowForm(true);
-    }, 50);
-  }, [setShowGoalDialog, setShowForm, setIsProcessing]);
+      
+      // Instead of showing the form again, we just hide the goal dialog
+      // This will reveal the main audience selection dialog that's underneath
+    }, 150);
+  }, [setShowGoalDialog, setIsProcessing]);
 
   // Handle goal submission
   const handleGoalSubmit = useCallback((goal: string) => {
@@ -62,24 +65,27 @@ export const useDialogNavigation = (
     setIsProcessing(true);
     setAdvertisingGoal(goal);
     
-    // First hide current dialog
-    setShowGoalDialog(false);
-    
-    // Route to the appropriate next dialog based on template type after a brief delay
+    // First hide current dialog with a longer delay
     setTimeout(() => {
-      if (templateId === 'email') {
-        setShowEmailStyleDialog(true);
-      } else if (templateId === 'social') {
-        setShowSocialMediaPlatformDialog(true);
-      } else {
-        // For ad templates, show the script dialog directly
-        setShowScriptDialog(true);
-      }
+      setShowGoalDialog(false);
       
-      // Reset processing state AFTER dialog is shown
+      // Route to the appropriate next dialog based on template type after a brief delay
+      // Added a slightly longer delay here to prevent flickering
       setTimeout(() => {
-        setIsProcessing(false);
-      }, 300);
+        if (templateId === 'email') {
+          setShowEmailStyleDialog(true);
+        } else if (templateId === 'social') {
+          setShowSocialMediaPlatformDialog(true);
+        } else {
+          // For ad templates, show the script dialog directly
+          setShowScriptDialog(true);
+        }
+        
+        // Reset processing state AFTER dialog is shown with increased delay
+        setTimeout(() => {
+          setIsProcessing(false);
+        }, 300);
+      }, 150);
     }, 100);
   }, [templateId, setAdvertisingGoal, setShowGoalDialog, setShowEmailStyleDialog, 
       setShowSocialMediaPlatformDialog, setShowScriptDialog, setIsProcessing]);
@@ -89,11 +95,11 @@ export const useDialogNavigation = (
     // First reset processing state
     setIsProcessing(false);
     
-    // Then change dialogs with a slight delay
+    // Then change dialogs with a longer delay
     setTimeout(() => {
       setShowEmailStyleDialog(false);
       setShowGoalDialog(true);
-    }, 50);
+    }, 150);
   }, [setShowEmailStyleDialog, setShowGoalDialog, setIsProcessing]);
 
   // Handle email style submission
@@ -102,17 +108,19 @@ export const useDialogNavigation = (
     setIsProcessing(true);
     setEmailStyle(style);
     
-    // First hide current dialog
-    setShowEmailStyleDialog(false);
-    
-    // Show next dialog after a brief delay
+    // First hide current dialog with a delay
     setTimeout(() => {
-      setShowEmailDialog(true);
+      setShowEmailStyleDialog(false);
       
-      // Reset processing state AFTER dialog is shown
+      // Show next dialog after a slightly longer delay
       setTimeout(() => {
-        setIsProcessing(false);
-      }, 300);
+        setShowEmailDialog(true);
+        
+        // Reset processing state AFTER dialog is shown
+        setTimeout(() => {
+          setIsProcessing(false);
+        }, 300);
+      }, 150);
     }, 100);
   }, [setEmailStyle, setShowEmailStyleDialog, setShowEmailDialog, setIsProcessing]);
 
@@ -121,11 +129,11 @@ export const useDialogNavigation = (
     // First reset processing state
     setIsProcessing(false);
     
-    // Then change dialogs with a slight delay
+    // Then change dialogs with a longer delay
     setTimeout(() => {
       setShowSocialMediaPlatformDialog(false);
       setShowGoalDialog(true);
-    }, 50);
+    }, 150);
   }, [setShowSocialMediaPlatformDialog, setShowGoalDialog, setIsProcessing]);
 
   // Handle social media platform submission
@@ -134,17 +142,19 @@ export const useDialogNavigation = (
     setIsProcessing(true);
     setSocialMediaPlatform(platform);
     
-    // First hide current dialog
-    setShowSocialMediaPlatformDialog(false);
-    
-    // Show next dialog after a brief delay
+    // First hide current dialog with a delay
     setTimeout(() => {
-      setShowSocialDialog(true);
+      setShowSocialMediaPlatformDialog(false);
       
-      // Reset processing state AFTER dialog is shown
+      // Show next dialog after a slightly longer delay
       setTimeout(() => {
-        setIsProcessing(false);
-      }, 300);
+        setShowSocialDialog(true);
+        
+        // Reset processing state AFTER dialog is shown
+        setTimeout(() => {
+          setIsProcessing(false);
+        }, 300);
+      }, 150);
     }, 100);
   }, [setSocialMediaPlatform, setShowSocialMediaPlatformDialog, setShowSocialDialog, setIsProcessing]);
 

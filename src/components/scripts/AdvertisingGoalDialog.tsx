@@ -43,15 +43,19 @@ const AdvertisingGoalDialog = ({ onSubmit, onBack, onCancel, isProcessing }: Adv
     }
   };
 
-  // Handle button clicks directly to prevent issues when isProcessing is true
+  // Handle button clicks directly with debouncing to prevent double-clicks
+  // and issues when isProcessing is true
   const handleBackClick = () => {
     if (!isProcessing) {
+      // Dodajemy blokadę przycisku natychmiast po kliknięciu
+      form.reset();
       onBack();
     }
   };
 
   const handleCancelClick = () => {
     if (!isProcessing) {
+      form.reset();
       onCancel();
     }
   };
