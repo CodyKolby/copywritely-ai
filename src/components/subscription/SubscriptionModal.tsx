@@ -15,7 +15,6 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { createCheckoutSession, PRICE_IDS } from '@/lib/stripe';
@@ -407,7 +406,6 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
                 Odśwież dane subskrypcji
               </Button>
             </div>
-            
             
           </CardContent>
         </Card>

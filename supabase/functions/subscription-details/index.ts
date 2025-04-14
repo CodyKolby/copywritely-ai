@@ -1,6 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.5.0";
+import Stripe from "https://esm.sh/stripe@12.1.1";
 
 // Pobieramy klucze ze zmiennych środowiskowych
 const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
@@ -12,6 +13,11 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Inicjalizacja klienta Stripe
+const stripe = stripeSecretKey ? new Stripe(stripeSecretKey, {
+  apiVersion: '2022-11-15'
+}) : null;
 
 serve(async (req) => {
   // Obsługa zapytań CORS preflight
@@ -54,8 +60,8 @@ serve(async (req) => {
       // Dla użytkowników premium bez ID subskrypcji, próbujemy sprawdzić czy istnieje klient w Stripe
       let portalUrl = null;
       try {
-        if (!stripeSecretKey) {
-          throw new Error('Brak klucza Stripe API');
+        if (!stripe) {
+          throw new Error('Brak klucza Stripe API lub nie udało się zainicjalizować klienta');
         }
         
         // Pobieramy email użytkownika z profilu
@@ -67,48 +73,24 @@ serve(async (req) => {
         
         console.log('Checking for Stripe customer with email:', userEmail);
         
-        // Sprawdzamy czy użytkownik istnieje w Stripe
-        const response = await fetch(`https://api.stripe.com/v1/customers?email=${encodeURIComponent(userEmail)}&limit=1`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${stripeSecretKey}`,
-            'Content-Type': 'application/json',
-          },
+        // Sprawdzamy czy użytkownik istnieje w Stripe używając SDK
+        const customers = await stripe.customers.list({ 
+          email: userEmail,
+          limit: 1 
         });
         
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Stripe API error: ${response.status} ${errorText}`);
-        }
-        
-        const customersData = await response.json();
-        
-        if (customersData.data && customersData.data.length > 0) {
-          const customerId = customersData.data[0].id;
+        if (customers.data && customers.data.length > 0) {
+          const customerId = customers.data[0].id;
           console.log('Found Stripe customer ID for premium user:', customerId);
           
-          // Tworzymy sesję portalu klienta
+          // Tworzymy sesję portalu klienta używając SDK
           console.log('Creating customer portal session for customer:', customerId);
-          const portalSessionResponse = await fetch(`https://api.stripe.com/v1/billing_portal/sessions`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${stripeSecretKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              customer: customerId,
-              return_url: `${req.headers.get('origin') || 'https://copywrite-assist.com'}/`,
-            }),
+          const session = await stripe.billingPortal.sessions.create({
+            customer: customerId,
+            return_url: `${req.headers.get('origin') || 'https://copywrite-assist.com'}/`,
           });
           
-          if (!portalSessionResponse.ok) {
-            const errorText = await portalSessionResponse.text();
-            console.error('Error creating portal session:', errorText);
-            throw new Error(`Portal creation error: ${portalSessionResponse.status} ${errorText}`);
-          }
-          
-          const portalSessionData = await portalSessionResponse.json();
-          portalUrl = portalSessionData.url;
+          portalUrl = session.url;
           console.log('Created customer portal session URL:', portalUrl);
         } else {
           console.log('No Stripe customer found for email:', userEmail);
@@ -120,8 +102,8 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           hasSubscription: true,
-          subscriptionId: 'manual_premium',
-          status: 'active',
+          subscriptionId: profile.subscription_id || 'manual_premium',
+          status: profile.subscription_status || 'active',
           currentPeriodEnd: profile.subscription_expiry || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
           daysUntilRenewal: profile.subscription_expiry ? 
             Math.ceil((new Date(profile.subscription_expiry).getTime() - Date.now()) / (1000 * 3600 * 24)) : 
@@ -155,85 +137,31 @@ serve(async (req) => {
     }
 
     try {
-      if (!stripeSecretKey) {
-        throw new Error('Brak klucza Stripe API');
+      if (!stripe) {
+        throw new Error('Brak klucza Stripe API lub nie udało się zainicjalizować klienta');
       }
       
-      // Pobieramy szczegóły subskrypcji ze Stripe
-      const response = await fetch(`https://api.stripe.com/v1/subscriptions/${profile.subscription_id}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${stripeSecretKey}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Stripe API error: ${response.status} ${errorText}`);
-      }
+      // Pobieramy szczegóły subskrypcji ze Stripe używając SDK
+      const subscription = await stripe.subscriptions.retrieve(profile.subscription_id);
       
-      const subscriptionData = await response.json();
-
-      if (subscriptionData.error) {
-        console.error('Błąd podczas pobierania danych subskrypcji:', subscriptionData.error);
-        
-        // Jeśli wystąpił błąd ze Stripe, ale użytkownik ma status premium,
-        // zwracamy podstawowe informacje z profilu
-        if (profile.is_premium) {
-          return new Response(
-            JSON.stringify({ 
-              hasSubscription: true,
-              subscriptionId: profile.subscription_id,
-              status: profile.subscription_status || 'active',
-              currentPeriodEnd: profile.subscription_expiry || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-              daysUntilRenewal: profile.subscription_expiry ? 
-                Math.ceil((new Date(profile.subscription_expiry).getTime() - Date.now()) / (1000 * 3600 * 24)) : 
-                30,
-              cancelAtPeriodEnd: false,
-              portalUrl: null,
-              plan: 'Pro',
-            }),
-            { 
-              headers: { 
-                ...corsHeaders,
-                'Content-Type': 'application/json' 
-              } 
-            }
-          );
-        }
-        
-        throw new Error(subscriptionData.error.message);
+      if (!subscription) {
+        throw new Error('Nie udało się pobrać danych subskrypcji');
       }
 
-      // Próba utworzenia sesji Customer Portal
+      // Próba utworzenia sesji Customer Portal używając SDK Stripe
       let portalUrl = null;
       
-      if (subscriptionData.customer) {
+      if (subscription.customer) {
         try {
-          console.log('Creating customer portal session for customer:', subscriptionData.customer);
+          console.log('Creating customer portal session for customer:', subscription.customer);
           
-          // Tworzymy sesję portalu klienta
-          const portalSessionResponse = await fetch(`https://api.stripe.com/v1/billing_portal/sessions`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${stripeSecretKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              customer: subscriptionData.customer,
-              return_url: `${req.headers.get('origin') || 'https://copywrite-assist.com'}/`,
-            }),
+          // Tworzymy sesję portalu klienta używając SDK
+          const portalSession = await stripe.billingPortal.sessions.create({
+            customer: subscription.customer,
+            return_url: `${req.headers.get('origin') || 'https://copywrite-assist.com'}/`,
           });
           
-          if (!portalSessionResponse.ok) {
-            const errorText = await portalSessionResponse.text();
-            console.error('Error creating portal session:', errorText);
-            throw new Error(`Portal creation error: ${portalSessionResponse.status} ${errorText}`);
-          }
-          
-          const portalSessionData = await portalSessionResponse.json();
-          portalUrl = portalSessionData.url;
+          portalUrl = portalSession.url;
           console.log('Created customer portal session URL:', portalUrl);
         } catch (portalError) {
           console.error('Error creating customer portal session:', portalError);
@@ -244,19 +172,19 @@ serve(async (req) => {
 
       // Formatujemy i zwracamy dane
       const currentDate = new Date();
-      const currentPeriodEnd = new Date(subscriptionData.current_period_end * 1000);
+      const currentPeriodEnd = new Date(subscription.current_period_end * 1000);
       const daysUntilRenewal = Math.ceil((currentPeriodEnd.getTime() - currentDate.getTime()) / (1000 * 3600 * 24));
       
       const formattedData = {
-        subscriptionId: subscriptionData.id,
-        status: subscriptionData.status,
+        subscriptionId: subscription.id,
+        status: subscription.status,
         currentPeriodEnd: currentPeriodEnd.toISOString(),
         daysUntilRenewal: daysUntilRenewal,
-        cancelAtPeriodEnd: subscriptionData.cancel_at_period_end,
+        cancelAtPeriodEnd: subscription.cancel_at_period_end,
         portalUrl: portalUrl,
         hasSubscription: true,
-        plan: subscriptionData.items?.data[0]?.plan?.nickname || 'Pro',
-        trialEnd: subscriptionData.trial_end ? new Date(subscriptionData.trial_end * 1000).toISOString() : null,
+        plan: subscription.items?.data[0]?.plan?.nickname || 'Pro',
+        trialEnd: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
       };
 
       return new Response(
