@@ -358,19 +358,22 @@ serve(async (req) => {
           } else if (profile) {
             console.log(`Found user ${profile.id} for deleted subscription`);
             
+            const cancellationTime = new Date().toISOString();
+            
             const { error: updateError } = await supabase
               .from('profiles')
               .update({
                 is_premium: false,
                 subscription_status: 'canceled',
-                updated_at: new Date().toISOString()
+                subscription_expiry: cancellationTime,
+                updated_at: cancellationTime
               })
               .eq('id', profile.id);
               
             if (updateError) {
               console.error('Error updating profile after subscription deletion:', updateError);
             } else {
-              console.log('Profile updated after subscription deletion');
+              console.log('Profile updated after subscription deletion - premium access revoked immediately');
             }
           } else {
             console.log('No user found with this subscription ID');

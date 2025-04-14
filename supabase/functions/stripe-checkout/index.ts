@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.5.0";
 import Stripe from "https://esm.sh/stripe@13.10.0";
@@ -70,6 +69,7 @@ serve(async (req) => {
       metadata: {
         userId: userId
       },
+      locale: 'pl', // Set Polish language
       success_url: successUrl,
       cancel_url: cancelUrl,
       subscription_data: {
