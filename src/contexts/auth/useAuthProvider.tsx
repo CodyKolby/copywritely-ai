@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -74,11 +75,15 @@ export const useAuthProvider = () => {
         } else {
           console.log('[AUTH] Attempting profile creation via edge function');
           try {
+            // Fix: Get the current session token correctly
+            const { data: sessionData } = await supabase.auth.getSession();
+            const accessToken = sessionData?.session?.access_token;
+            
             const response = await fetch(`https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/create-profile`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${supabase.auth.session()?.access_token}`
+                'Authorization': `Bearer ${accessToken}`
               },
               body: JSON.stringify({ userId })
             });
