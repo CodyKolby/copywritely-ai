@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -150,8 +149,8 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Ładowanie danych subskrypcji...</DialogTitle>
+          <DialogHeader className="text-center">
+            <DialogTitle className="text-xl font-semibold">Ładowanie danych subskrypcji...</DialogTitle>
           </DialogHeader>
           <div className="flex justify-center py-6">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
@@ -164,16 +163,16 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
   if (isPremiumButNoData || error) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Sprawdzanie informacji o subskrypcji</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="sm:max-w-md p-6 rounded-xl">
+          <DialogHeader className="text-center">
+            <DialogTitle className="text-xl font-semibold">Sprawdzanie informacji o subskrypcji</DialogTitle>
+            <DialogDescription className="mt-2">
               {isPremium 
                 ? "Twoje konto ma status Premium, ale nie możemy pobrać szczegółowych informacji o subskrypcji."
                 : "Nie znaleźliśmy aktywnej subskrypcji dla Twojego konta."}
             </DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col items-center py-4 space-y-4">
+          <div className="flex flex-col items-center py-6 space-y-4">
             {isPremium 
               ? <AlertTriangle className="h-16 w-16 text-yellow-500" />
               : <XCircle className="h-16 w-16 text-red-500" />
@@ -193,22 +192,22 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
               </p>
             )}
           </div>
-          <DialogFooter className="flex justify-center sm:justify-center space-x-2">
+          <DialogFooter className="flex justify-center gap-3 pt-4">
             {isPremium && (
               <Button 
                 onClick={handleManualRefresh} 
                 variant="outline"
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 rounded-lg"
               >
                 <RefreshCcw className="h-4 w-4" />
                 Odśwież dane
               </Button>
             )}
             
-            <Button onClick={() => onOpenChange(false)}>Zamknij</Button>
+            <Button onClick={() => onOpenChange(false)} className="rounded-lg">Zamknij</Button>
             
             {!isPremium && (
-              <Button onClick={() => window.location.href = '/pricing'} variant="default">
+              <Button onClick={() => window.location.href = '/pricing'} variant="default" className="rounded-lg">
                 Zobacz plany
               </Button>
             )}
@@ -230,15 +229,15 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
     
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="mx-auto max-w-md rounded-lg">
-          <DialogHeader>
-            <DialogTitle>Twoja subskrypcja Premium</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="mx-auto max-w-md rounded-xl p-6">
+          <DialogHeader className="text-center pb-4">
+            <DialogTitle className="text-xl font-semibold">Twoja subskrypcja Premium</DialogTitle>
+            <DialogDescription className="mt-2">
               Posiadasz aktywną subskrypcję Premium
             </DialogDescription>
           </DialogHeader>
           <Card className="border-none shadow-none">
-            <CardContent className="p-0 space-y-4">
+            <CardContent className="p-4 space-y-4">
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-semibold">Plan {fallbackData.plan}</h3>
@@ -246,7 +245,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
                     onClick={handleManualRefresh} 
                     variant="ghost" 
                     size="sm" 
-                    className="h-8 w-8 p-0"
+                    className="h-8 w-8 p-0 rounded-full"
                   >
                     <RefreshCcw className="h-4 w-4" />
                     <span className="sr-only">Odśwież</span>
@@ -273,27 +272,11 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
                   </span>
                 </div>
               </div>
-              
-              <Separator />
-              
-              <div className="flex flex-col space-y-3">
-                <h4 className="font-medium">Dostępne akcje</h4>
-                <Button 
-                  onClick={handleManualRefresh} 
-                  className="w-full flex items-center gap-2" 
-                  variant="outline"
-                >
-                  <RefreshCcw className="h-4 w-4" />
-                  Odśwież dane subskrypcji
-                </Button>
-              </div>
-              
-              
             </CardContent>
           </Card>
           
-          <DialogFooter className="sm:justify-center">
-            <Button onClick={() => onOpenChange(false)}>Zamknij</Button>
+          <DialogFooter className="flex justify-center pt-4">
+            <Button onClick={() => onOpenChange(false)} className="rounded-lg">Zamknij</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -303,22 +286,22 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
   if (!data?.hasSubscription) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="mx-auto max-w-md rounded-lg">
-          <DialogHeader>
-            <DialogTitle>Brak aktywnej subskrypcji</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="mx-auto max-w-md rounded-xl p-6">
+          <DialogHeader className="text-center pb-4">
+            <DialogTitle className="text-xl font-semibold">Brak aktywnej subskrypcji</DialogTitle>
+            <DialogDescription className="mt-2">
               Nie znaleźliśmy aktywnej subskrypcji dla Twojego konta.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col items-center py-4 space-y-4">
+          <div className="flex flex-col items-center py-6 space-y-4">
             <AlertTriangle className="h-16 w-16 text-yellow-500" />
             <p className="text-center text-gray-700">
               Uzyskaj dostęp do wszystkich funkcji poprzez zakup subskrypcji.
             </p>
           </div>
-          <DialogFooter className="flex justify-center sm:justify-center">
-            <Button onClick={() => onOpenChange(false)}>Zamknij</Button>
-            <Button onClick={() => window.location.href = '/pricing'} variant="default">
+          <DialogFooter className="flex justify-center gap-3 pt-4">
+            <Button onClick={() => onOpenChange(false)} className="rounded-lg">Zamknij</Button>
+            <Button onClick={() => window.location.href = '/pricing'} variant="default" className="rounded-lg">
               Zobacz plany
             </Button>
           </DialogFooter>
@@ -329,21 +312,21 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="mx-auto max-w-md rounded-lg">
-        <DialogHeader>
-          <DialogTitle>Twoja subskrypcja</DialogTitle>
+      <DialogContent className="mx-auto max-w-md rounded-xl p-6">
+        <DialogHeader className="text-center pb-4">
+          <DialogTitle className="text-xl font-semibold">Twoja subskrypcja</DialogTitle>
         </DialogHeader>
         
         <Card className="border-none shadow-none">
-          <CardContent className="p-0 space-y-4">
-            <div className="space-y-2">
+          <CardContent className="p-4 space-y-4">
+            <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-semibold">Plan {data.plan}</h3>
                 <Button 
                   onClick={handleManualRefresh} 
                   variant="ghost" 
                   size="sm" 
-                  className="h-8 w-8 p-0"
+                  className="h-8 w-8 p-0 rounded-full"
                 >
                   <RefreshCcw className="h-4 w-4" />
                   <span className="sr-only">Odśwież</span>
@@ -371,47 +354,42 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
               )}
             </div>
             
-            <Separator />
+            <Separator className="my-2" />
             
-            <div className="flex flex-col space-y-3">
-              <h4 className="font-medium">Dostępne akcje</h4>
+            <div className="flex flex-col space-y-4 pt-2">
+              <h4 className="font-medium text-center">Dostępne akcje</h4>
               
-              {data.cancelAtPeriodEnd ? (
+              <div className="flex justify-center">
+                {data.cancelAtPeriodEnd ? (
+                  <Button 
+                    onClick={renewSubscription} 
+                    className="flex items-center gap-2 rounded-lg px-6" 
+                    variant="default"
+                  >
+                    <RefreshCcw className="h-4 w-4" />
+                    Odnów subskrypcję
+                  </Button>
+                ) : null }
+              </div>
+              
+              <div className="flex justify-center">
                 <Button 
-                  onClick={renewSubscription} 
-                  className="w-full flex items-center gap-2" 
-                  variant="default"
+                  onClick={handleOpenPortal} 
+                  className="flex items-center gap-2 rounded-lg px-6" 
+                  variant="outline"
+                  disabled={!data.portalUrl}
                 >
-                  <RefreshCcw className="h-4 w-4" />
-                  Odnów subskrypcję
+                  <ExternalLink className="h-4 w-4" />
+                  Zarządzaj subskrypcją w Stripe
                 </Button>
-              ) : null }
-              
-              <Button 
-                onClick={handleOpenPortal} 
-                className="w-full flex items-center gap-2" 
-                variant="outline"
-                disabled={!data.portalUrl}
-              >
-                <ExternalLink className="h-4 w-4" />
-                Zarządzaj subskrypcją w Stripe
-              </Button>
-              
-              <Button 
-                onClick={handleManualRefresh}
-                className="w-full flex items-center gap-2" 
-                variant="outline"
-              >
-                <RefreshCcw className="h-4 w-4" />
-                Odśwież dane subskrypcji
-              </Button>
+              </div>
             </div>
             
           </CardContent>
         </Card>
         
-        <DialogFooter className="sm:justify-center">
-          <Button onClick={() => onOpenChange(false)}>Zamknij</Button>
+        <DialogFooter className="flex justify-center pt-4">
+          <Button onClick={() => onOpenChange(false)} className="rounded-lg">Zamknij</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
