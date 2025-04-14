@@ -38,10 +38,11 @@ serve(async (req) => {
     // Create Supabase client with Service Role Key
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get user profile with subscription information
+    // Get user profile with subscription information - avoid selecting the trial_started_at column
+    // since it might not exist yet in some environments
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('subscription_id, subscription_status, subscription_expiry, trial_started_at, is_premium, email')
+      .select('subscription_id, subscription_status, subscription_expiry, is_premium, email')
       .eq('id', userId)
       .single();
 
@@ -52,16 +53,21 @@ serve(async (req) => {
 
     console.log('Profile data:', profile);
 
-    // Check if user is in trial period
+    // Check if user is in trial period (based on subscription data without trial_started_at)
     let isTrial = false;
-    if (profile?.is_premium && profile?.trial_started_at && (!profile?.subscription_id || profile.subscription_id === '')) {
-      const trialStartDate = new Date(profile.trial_started_at);
-      const now = new Date();
-      const trialDays = Math.floor((now.getTime() - trialStartDate.getTime()) / (1000 * 60 * 60 * 24));
-      
-      if (trialDays <= 3) {
-        console.log('User is in trial period:', trialDays, 'days');
-        isTrial = true;
+    if (profile?.is_premium && (!profile?.subscription_id || profile.subscription_id === '')) {
+      // If the user has premium status but no subscription ID, they might be in a trial
+      // Check if their subscription is set to expire within 3 days of now
+      if (profile.subscription_expiry) {
+        const expiryDate = new Date(profile.subscription_expiry);
+        const now = new Date();
+        const diffTime = expiryDate.getTime() - now.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays <= 3) {
+          console.log('User is in trial period with', diffDays, 'days remaining');
+          isTrial = true;
+        }
       }
     }
     
@@ -129,6 +135,7 @@ serve(async (req) => {
           portalUrl: portalUrl,
           plan: isTrial ? 'Trial' : 'Pro',
           isTrial: isTrial,
+          trialEnd: isTrial ? expiryDate : null,
         }),
         { 
           headers: { 
@@ -203,7 +210,7 @@ serve(async (req) => {
         hasSubscription: true,
         plan: subscription.items?.data[0]?.plan?.nickname || 'Pro',
         trialEnd: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
-        isTrial: false,
+        isTrial: subscription.status === 'trialing',
       };
 
       return new Response(
@@ -232,6 +239,8 @@ serve(async (req) => {
             cancelAtPeriodEnd: false,
             portalUrl: null,
             plan: 'Pro',
+            trialEnd: null,
+            isTrial: false,
           }),
           { 
             headers: { 
@@ -250,7 +259,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         error: error.message || 'Error fetching subscription data',
-        hasSubscription: false
+        hasSubscription: false,
+        trialEnd: null
       }),
       { 
         status: 400, 

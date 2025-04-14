@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -49,25 +50,36 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
           
           // Check if we can get profile details with trial information
           try {
-            const { data: profile } = await supabase
+            const { data: profile, error } = await supabase
               .from('profiles')
               .select('trial_started_at, subscription_expiry')
               .eq('id', user.id)
               .single();
               
+            if (error) {
+              console.error('Error fetching profile details:', error);
+              throw error;
+            }
+              
             if (profile?.subscription_expiry) {
               // Use the actual expiry date from the profile
-              return {
+              const subscriptionExpiry = profile.subscription_expiry;
+              const daysUntil = Math.ceil((new Date(subscriptionExpiry).getTime() - Date.now()) / (1000 * 3600 * 24));
+              
+              const result: SubscriptionDetails = {
                 hasSubscription: true,
                 subscriptionId: 'trial',
                 status: 'active',
-                currentPeriodEnd: profile.subscription_expiry,
-                daysUntilRenewal: Math.ceil((new Date(profile.subscription_expiry).getTime() - Date.now()) / (1000 * 3600 * 24)),
+                currentPeriodEnd: subscriptionExpiry,
+                daysUntilRenewal: daysUntil,
                 cancelAtPeriodEnd: false,
                 portalUrl: null,
                 plan: 'Trial',
+                trialEnd: null,
                 isTrial: true
-              } as SubscriptionDetails;
+              };
+              
+              return result;
             }
           } catch (profileErr) {
             console.error('Error fetching profile details:', profileErr);
@@ -76,7 +88,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
           // Default fallback to 3-day trial
           expiryDate.setDate(expiryDate.getDate() + 3);
           
-          return {
+          const result: SubscriptionDetails = {
             hasSubscription: true,
             subscriptionId: 'trial',
             status: 'active',
@@ -85,8 +97,11 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
             cancelAtPeriodEnd: false,
             portalUrl: null,
             plan: 'Trial',
+            trialEnd: null,
             isTrial: true
-          } as SubscriptionDetails;
+          };
+          
+          return result;
         }
         throw err;
       }

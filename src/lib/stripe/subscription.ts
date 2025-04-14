@@ -12,6 +12,7 @@ export interface SubscriptionDetails {
   hasSubscription: boolean;
   plan: string;
   trialEnd: string | null;
+  isTrial?: boolean; // Add isTrial property
 }
 
 // Function to fetch subscription details
@@ -70,3 +71,4 @@ export const checkSubscriptionStatus = async (userId: string): Promise<boolean> 
     return false;
   }
 };
+
