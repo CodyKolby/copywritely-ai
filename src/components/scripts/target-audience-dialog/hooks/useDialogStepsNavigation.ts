@@ -3,12 +3,12 @@ import { useCallback } from 'react';
 import { EmailStyle } from '../../EmailStyleDialog';
 import { SocialMediaPlatform } from '../../SocialMediaPlatformDialog';
 
-interface DialogStepsNavigationProps {
+interface UseDialogStepsNavigationProps {
   templateId: string;
-  setIsProcessing: (isProcessing: boolean) => void;
-  setIsTransitioning: (isTransitioning: boolean) => void;
+  setIsProcessing: (processing: boolean) => void;
+  setIsTransitioning?: (transitioning: boolean) => void;
   setAdvertisingGoal: (goal: string) => void;
-  setEmailStyle: (style: string) => void;
+  setEmailStyle: (style: EmailStyle) => void;
   setSocialMediaPlatform: (platform: SocialMediaPlatform | undefined) => void;
   setShowGoalDialog: (show: boolean) => void;
   setShowEmailStyleDialog: (show: boolean) => void;
@@ -20,7 +20,7 @@ interface DialogStepsNavigationProps {
 }
 
 /**
- * Hook for handling navigation between dialog steps
+ * Hook for handling navigation within the dialog steps
  */
 export const useDialogStepsNavigation = ({
   templateId,
@@ -36,111 +36,104 @@ export const useDialogStepsNavigation = ({
   setShowEmailDialog,
   setShowSocialDialog,
   onOpenChange
-}: DialogStepsNavigationProps) => {
-  // Handle goal submission
+}: UseDialogStepsNavigationProps) => {
+
+  // Goal dialog handlers
   const handleGoalSubmit = useCallback((goal: string) => {
     setAdvertisingGoal(goal);
     setIsProcessing(true);
-    setIsTransitioning(true);
     
-    // Different next steps based on template
-    if (templateId === 'email') {
-      // For email, go to email style selection
-      setTimeout(() => {
-        setShowGoalDialog(false);
-        setShowEmailStyleDialog(true);
-        setIsTransitioning(false);
-        setIsProcessing(false);
-      }, 300);
-    } else if (templateId === 'social') {
-      // For social, go to platform selection
-      setTimeout(() => {
-        setShowGoalDialog(false);
-        setShowSocialMediaPlatformDialog(true);
-        setIsTransitioning(false);
-        setIsProcessing(false);
-      }, 300);
-    } else {
-      // For other templates, go straight to script generation
-      setTimeout(() => {
-        setShowGoalDialog(false);
-        setShowScriptDialog(true);
-        setIsTransitioning(false);
-        setIsProcessing(false);
-      }, 300);
-    }
-  }, [templateId]);
-
-  // Handle back button in goal dialog
-  const handleGoalBack = useCallback(() => {
-    setIsTransitioning(true);
     setTimeout(() => {
       setShowGoalDialog(false);
-      setIsTransitioning(false);
+      
+      // After hiding goal dialog, determine next step based on template
+      if (templateId === 'email') {
+        setTimeout(() => setShowEmailStyleDialog(true), 100);
+      } else if (templateId === 'social') {
+        setTimeout(() => setShowSocialMediaPlatformDialog(true), 100);
+      } else {
+        // For ad templates or fallback
+        setTimeout(() => {
+          if (templateId === 'ad') {
+            setShowScriptDialog(true);
+          }
+        }, 100);
+      }
     }, 300);
-  }, []);
+  }, [setAdvertisingGoal, setIsProcessing, setShowGoalDialog, templateId, 
+      setShowEmailStyleDialog, setShowSocialMediaPlatformDialog, setShowScriptDialog]);
 
-  // Handle email style submission
+  const handleGoalBack = useCallback(() => {
+    if (setIsTransitioning) setIsTransitioning(true);
+    
+    setTimeout(() => {
+      setShowGoalDialog(false);
+      if (setIsTransitioning) setIsTransitioning(false);
+      onOpenChange(false);
+    }, 300);
+  }, [setIsTransitioning, setShowGoalDialog, onOpenChange]);
+
+  // Email style dialog handlers
   const handleEmailStyleSubmit = useCallback((style: EmailStyle) => {
     setEmailStyle(style);
     setIsProcessing(true);
-    setIsTransitioning(true);
+    
     setTimeout(() => {
       setShowEmailStyleDialog(false);
-      setShowEmailDialog(true);
-      setIsTransitioning(false);
-      setIsProcessing(false);
+      setTimeout(() => {
+        setShowEmailDialog(true);
+      }, 100);
     }, 300);
-  }, []);
+  }, [setEmailStyle, setIsProcessing, setShowEmailStyleDialog, setShowEmailDialog]);
 
-  // Handle back button in email style dialog
   const handleEmailStyleBack = useCallback(() => {
-    setIsTransitioning(true);
+    if (setIsTransitioning) setIsTransitioning(true);
+    
     setTimeout(() => {
       setShowEmailStyleDialog(false);
       setShowGoalDialog(true);
-      setIsTransitioning(false);
+      if (setIsTransitioning) setIsTransitioning(false);
     }, 300);
-  }, []);
+  }, [setIsTransitioning, setShowEmailStyleDialog, setShowGoalDialog]);
 
-  // Handle social media platform submission
+  // Social media platform dialog handlers
   const handleSocialMediaPlatformSubmit = useCallback((platform: SocialMediaPlatform) => {
     setSocialMediaPlatform(platform);
     setIsProcessing(true);
-    setIsTransitioning(true);
+    
     setTimeout(() => {
       setShowSocialMediaPlatformDialog(false);
-      setShowSocialDialog(true);
-      setIsTransitioning(false);
-      setIsProcessing(false);
+      setTimeout(() => {
+        setShowSocialDialog(true);
+      }, 100);
     }, 300);
-  }, []);
+  }, [setSocialMediaPlatform, setIsProcessing, setShowSocialMediaPlatformDialog, setShowSocialDialog]);
 
-  // Handle back button in social media platform dialog
   const handleSocialMediaPlatformBack = useCallback(() => {
-    setIsTransitioning(true);
+    if (setIsTransitioning) setIsTransitioning(true);
+    
     setTimeout(() => {
       setShowSocialMediaPlatformDialog(false);
       setShowGoalDialog(true);
-      setIsTransitioning(false);
+      if (setIsTransitioning) setIsTransitioning(false);
     }, 300);
-  }, []);
+  }, [setIsTransitioning, setShowSocialMediaPlatformDialog, setShowGoalDialog]);
 
-  // Handle dialog closures
+  // Result dialog close handlers
   const handleScriptDialogClose = useCallback(() => {
     setShowScriptDialog(false);
     onOpenChange(false);
-  }, []);
+  }, [setShowScriptDialog, onOpenChange]);
 
   const handleEmailDialogClose = useCallback(() => {
     setShowEmailDialog(false);
     onOpenChange(false);
-  }, []);
-  
+  }, [setShowEmailDialog, onOpenChange]);
+
   const handleSocialDialogClose = useCallback(() => {
     setShowSocialDialog(false);
     onOpenChange(false);
-  }, []);
+  }, [setShowSocialDialog, onOpenChange]);
 
   return {
     handleGoalSubmit,

@@ -13,8 +13,8 @@ interface ResultDialogsProps {
   showSocialDialog: boolean;
   selectedAudienceId: string | null;
   advertisingGoal: string;
-  emailStyle: EmailStyle | null;
-  socialMediaPlatform: SocialMediaPlatform | null;
+  emailStyle: EmailStyle;
+  socialMediaPlatform: SocialMediaPlatform | undefined;
   handleScriptDialogClose: () => void;
   handleEmailDialogClose: () => void;
   handleSocialDialogClose: () => void;
@@ -54,7 +54,7 @@ const ResultDialogs = ({
           targetAudienceId={selectedAudienceId || ''}
           templateId={templateId}
           advertisingGoal={advertisingGoal}
-          emailStyle={emailStyle as EmailStyle}
+          emailStyle={emailStyle}
         />
       )}
       

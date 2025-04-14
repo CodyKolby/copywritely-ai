@@ -35,7 +35,7 @@ export interface UseTargetAudienceDialogReturn {
   showEmailStyleDialog: boolean;
   showSocialMediaPlatformDialog: boolean;
   advertisingGoal: string;
-  emailStyle: string;
+  emailStyle: EmailStyle;
   socialMediaPlatform: SocialMediaPlatform | undefined;
   isProcessing: boolean;
   isTransitioning?: boolean;
