@@ -412,7 +412,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
               <Button 
                 onClick={handleOpenPortal} 
                 className="w-full flex items-center gap-2" 
-                variant={data.portalUrl ? "outline" : "outline disabled"}
+                variant="outline"
                 disabled={!data.portalUrl}
               >
                 <ExternalLink className="h-4 w-4" />
