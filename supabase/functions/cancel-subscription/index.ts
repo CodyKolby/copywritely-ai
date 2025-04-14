@@ -20,66 +20,62 @@ serve(async (req) => {
   }
 
   try {
-    // Pobieramy ID użytkownika i subskrypcji z żądania
+    // Pobieramy dane z żądania
     const { userId, subscriptionId } = await req.json();
 
     if (!userId || !subscriptionId) {
-      throw new Error('Brak wymaganych danych');
+      throw new Error('Brak wymaganych danych: userId lub subscriptionId');
     }
 
-    // Tworzymy klienta Supabase z Service Role Key
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Sprawdzamy, czy użytkownik ma uprawnienia do anulowania tej subskrypcji
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('subscription_id')
-      .eq('id', userId)
-      .single();
-
-    if (profileError) {
-      console.error('Błąd podczas pobierania profilu:', profileError);
-      throw new Error('Nie udało się pobrać profilu użytkownika');
+    if (!stripeSecretKey) {
+      throw new Error('Brak klucza Stripe API');
     }
 
-    if (profile.subscription_id !== subscriptionId) {
-      throw new Error('Brak uprawnień do anulowania tej subskrypcji');
-    }
+    console.log(`Anulowanie subskrypcji ${subscriptionId} dla użytkownika ${userId}`);
 
-    // Anulujemy subskrypcję w Stripe (na koniec bieżącego okresu rozliczeniowego)
+    // Wysyłamy żądanie do API Stripe
     const response = await fetch(`https://api.stripe.com/v1/subscriptions/${subscriptionId}`, {
-      method: 'DELETE',
+      method: 'POST',
       headers: {
         'Authorization': `Bearer ${stripeSecretKey}`,
         'Content-Type': 'application/x-www-form-urlencoded',
       },
+      body: new URLSearchParams({
+        'cancel_at_period_end': 'true',
+      }),
     });
 
-    const cancellationData = await response.json();
+    // Przetwarzamy odpowiedź
+    const subscriptionData = await response.json();
 
-    if (cancellationData.error) {
-      console.error('Błąd podczas anulowania subskrypcji:', cancellationData.error);
-      throw new Error(cancellationData.error.message);
+    // Jeśli wystąpił błąd, zwracamy go
+    if (subscriptionData.error) {
+      console.error('Błąd podczas anulowania subskrypcji:', subscriptionData.error);
+      throw new Error(subscriptionData.error.message);
     }
 
-    // Aktualizujemy profil użytkownika
-    if (cancellationData.cancel_at_period_end) {
-      // Nie aktualizujemy subscription_id ani is_premium teraz,
-      // zostanie to zaktualizowane przez webhook gdy subskrypcja faktycznie wygaśnie
-      await supabase
-        .from('profiles')
-        .update({
-          subscription_status: 'canceled'
-        })
-        .eq('id', userId);
+    // Aktualizujemy profil użytkownika w bazie danych
+    // Użytkownik zachowuje status premium do końca okresu rozliczeniowego
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', userId);
+
+    if (updateError) {
+      console.error('Błąd podczas aktualizacji profilu:', updateError);
     }
 
+    // Formatujemy i zwracamy dane
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         success: true,
-        message: 'Subskrypcja zostanie anulowana na koniec bieżącego okresu rozliczeniowego',
-        cancelAtPeriodEnd: cancellationData.cancel_at_period_end,
-        currentPeriodEnd: new Date(cancellationData.current_period_end * 1000).toISOString()
+        message: 'Subskrypcja została anulowana',
+        cancelAtPeriodEnd: subscriptionData.cancel_at_period_end,
+        currentPeriodEnd: new Date(subscriptionData.current_period_end * 1000).toISOString(),
       }),
       { 
         headers: { 
@@ -93,8 +89,7 @@ serve(async (req) => {
     
     return new Response(
       JSON.stringify({ 
-        error: error.message || 'Wystąpił błąd podczas anulowania subskrypcji',
-        success: false
+        error: error.message || 'Wystąpił błąd podczas anulowania subskrypcji' 
       }),
       { 
         status: 400, 

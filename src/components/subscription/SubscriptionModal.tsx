@@ -43,24 +43,42 @@ interface SubscriptionModalProps {
 }
 
 const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChange }) => {
-  const { user } = useAuth();
+  const { user, isPremium } = useAuth();
   const [cancelConfirm, setCancelConfirm] = useState(false);
+  const [manualRefetch, setManualRefetch] = useState(false);
 
   // Pobieramy dane subskrypcji
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['subscriptionDetails', user?.id],
+    queryKey: ['subscriptionDetails', user?.id, manualRefetch],
     queryFn: async () => {
       if (!user?.id) return null;
+      
+      console.log('Fetching subscription details for user:', user.id);
       
       const { data, error } = await supabase.functions.invoke('subscription-details', {
         body: { userId: user.id }
       });
       
-      if (error) throw new Error(error.message);
+      if (error) {
+        console.error('Error fetching subscription details:', error);
+        throw new Error(error.message);
+      }
+      
+      console.log('Received subscription data:', data);
       return data as SubscriptionDetails;
     },
     enabled: !!user?.id && open,
+    retry: 1,
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
+
+  // Trigger manual refresh if isPremium changes
+  useEffect(() => {
+    if (open && isPremium) {
+      console.log('isPremium changed, refreshing subscription details');
+      setManualRefetch(prev => !prev);
+    }
+  }, [open, isPremium]);
 
   // Anulowanie subskrypcji
   const cancelSubscription = useMutation({
@@ -93,6 +111,12 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
       setCancelConfirm(false);
     }
   });
+
+  // Manual refresh function
+  const handleManualRefresh = () => {
+    setManualRefetch(prev => !prev);
+    toast.info('Odświeżanie informacji o subskrypcji...');
+  };
 
   // Odnowienie subskrypcji
   const renewSubscription = () => {
@@ -156,6 +180,15 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
     );
   };
 
+  // Debug log
+  console.log('Subscription data:', {
+    data,
+    isLoading,
+    error,
+    isPremium,
+    hasSubscription: data?.hasSubscription
+  });
+
   if (isLoading) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -171,7 +204,59 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
     );
   }
 
-  if (error || !data?.hasSubscription) {
+  // If isPremium is true but data doesn't show hasSubscription, give option to refresh
+  if ((isPremium && (!data || !data.hasSubscription)) || error) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Sprawdzanie informacji o subskrypcji</DialogTitle>
+            <DialogDescription>
+              {isPremium 
+                ? "Twoje konto ma status Premium, ale nie możemy pobrać szczegółowych informacji o subskrypcji."
+                : "Nie znaleźliśmy aktywnej subskrypcji dla Twojego konta."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center py-4 space-y-4">
+            {isPremium 
+              ? <AlertTriangle className="h-16 w-16 text-yellow-500" />
+              : <XCircle className="h-16 w-16 text-red-500" />
+            }
+            <p className="text-center text-gray-700">
+              {error
+                ? "Wystąpił błąd podczas pobierania danych subskrypcji."
+                : isPremium
+                  ? "Spróbuj odświeżyć dane subskrypcji."
+                  : "Uzyskaj dostęp do wszystkich funkcji poprzez zakup subskrypcji."
+              }
+            </p>
+          </div>
+          <DialogFooter className="flex justify-center sm:justify-center space-x-2">
+            {isPremium && (
+              <Button 
+                onClick={handleManualRefresh} 
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <RefreshCcw className="h-4 w-4" />
+                Odśwież dane
+              </Button>
+            )}
+            
+            <Button onClick={() => onOpenChange(false)}>Zamknij</Button>
+            
+            {!isPremium && (
+              <Button onClick={() => window.location.href = '/pricing'} variant="default">
+                Zobacz plany
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  if (!data?.hasSubscription) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-md">
@@ -211,7 +296,18 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
         <Card className="border-none shadow-none">
           <CardContent className="p-0 space-y-4">
             <div className="space-y-2">
-              <h3 className="text-lg font-semibold">Plan {data.plan}</h3>
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold">Plan {data.plan}</h3>
+                <Button 
+                  onClick={handleManualRefresh} 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-8 w-8 p-0"
+                >
+                  <RefreshCcw className="h-4 w-4" />
+                  <span className="sr-only">Odśwież</span>
+                </Button>
+              </div>
               {renderStatus()}
               
               <div className="flex items-center text-sm text-gray-600 gap-2">
