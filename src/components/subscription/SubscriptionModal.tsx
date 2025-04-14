@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +8,6 @@ import { Separator } from "@/components/ui/separator";
 import { 
   CalendarClock, 
   CheckCircle, 
-  CreditCard, 
   Clock, 
   XCircle, 
   AlertTriangle, 
@@ -54,10 +54,6 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
             cancelAtPeriodEnd: false,
             portalUrl: null,
             plan: 'Pro',
-            paymentMethod: {
-              brand: 'card',
-              last4: '0000'
-            }
           } as SubscriptionDetails;
         }
         throw err;
@@ -104,7 +100,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
         
         window.open(data.portalUrl, '_blank');
       } else {
-        console.error('No portal URL available:', data?.portalUrl);
+        console.error('No portal URL available');
         toast.error('Nie udało się utworzyć sesji portalu klienta', {
           description: 'Spróbuj odświeżyć informacje o subskrypcji lub skontaktuj się z obsługą klienta.'
         });
@@ -145,22 +141,6 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
            isActive && isCanceled ? 'Anulowana' : 
            'Nieaktywna'}
         </Badge>
-      </div>
-    );
-  };
-
-  const formatPaymentMethod = () => {
-    if (!data?.paymentMethod) return null;
-    
-    const { brand, last4 } = data.paymentMethod;
-    const capitalizedBrand = brand.charAt(0).toUpperCase() + brand.slice(1);
-    
-    return (
-      <div className="flex items-center text-sm text-gray-600 gap-2">
-        <CreditCard className="h-4 w-4" />
-        <span>
-          {capitalizedBrand} **** {last4}
-        </span>
       </div>
     );
   };
@@ -246,10 +226,6 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
       plan: 'Pro',
       daysUntilRenewal: 30,
       currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      paymentMethod: {
-        brand: 'card',
-        last4: '0000'
-      },
       portalUrl: null
     };
     
@@ -295,13 +271,6 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
                   <span>
                     {fallbackData.daysUntilRenewal} {fallbackData.daysUntilRenewal === 1 ? 'dzień' : 
                      fallbackData.daysUntilRenewal < 5 ? 'dni' : 'dni'} do odnowienia
-                  </span>
-                </div>
-                
-                <div className="flex items-center text-sm text-gray-600 gap-2">
-                  <CreditCard className="h-4 w-4" />
-                  <span>
-                    Card **** 0000
                   </span>
                 </div>
               </div>
@@ -422,8 +391,6 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
                   </span>
                 </div>
               )}
-              
-              {formatPaymentMethod()}
             </div>
             
             <Separator />
@@ -445,12 +412,20 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
               <Button 
                 onClick={handleOpenPortal} 
                 className="w-full flex items-center gap-2" 
-                variant="outline"
+                variant={data.portalUrl ? "outline" : "outline disabled"}
                 disabled={!data.portalUrl}
               >
-                <CreditCard className="h-4 w-4" />
+                <ExternalLink className="h-4 w-4" />
                 Zarządzaj subskrypcją w Stripe
-                <ExternalLink className="h-3 w-3 ml-1" />
+              </Button>
+              
+              <Button 
+                onClick={handleManualRefresh}
+                className="w-full flex items-center gap-2" 
+                variant="outline"
+              >
+                <RefreshCcw className="h-4 w-4" />
+                Odśwież dane subskrypcji
               </Button>
             </div>
             

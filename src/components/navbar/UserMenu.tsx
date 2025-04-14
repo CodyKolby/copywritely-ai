@@ -2,7 +2,7 @@
 import { User } from '@supabase/supabase-js';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { LogOut, User as UserIcon, FolderOpen, CreditCard, Shield } from 'lucide-react';
+import { LogOut, FolderOpen, CreditCard, Shield } from 'lucide-react';
 import { Profile } from '@/contexts/auth/types';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";

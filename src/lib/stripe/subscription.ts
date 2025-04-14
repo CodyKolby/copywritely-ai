@@ -12,10 +12,6 @@ export interface SubscriptionDetails {
   hasSubscription: boolean;
   plan: string;
   trialEnd: string | null;
-  paymentMethod?: {
-    brand: string;
-    last4: string;
-  };
 }
 
 // Function to fetch subscription details

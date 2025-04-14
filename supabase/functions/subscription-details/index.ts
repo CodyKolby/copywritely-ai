@@ -129,10 +129,6 @@ serve(async (req) => {
           cancelAtPeriodEnd: false,
           portalUrl: portalUrl,
           plan: 'Pro',
-          paymentMethod: {
-            brand: 'card',
-            last4: '0000'
-          }
         }),
         { 
           headers: { 
@@ -195,11 +191,8 @@ serve(async (req) => {
                 Math.ceil((new Date(profile.subscription_expiry).getTime() - Date.now()) / (1000 * 3600 * 24)) : 
                 30,
               cancelAtPeriodEnd: false,
+              portalUrl: null,
               plan: 'Pro',
-              paymentMethod: {
-                brand: 'card',
-                last4: '0000'
-              }
             }),
             { 
               headers: { 
@@ -211,84 +204,6 @@ serve(async (req) => {
         }
         
         throw new Error(subscriptionData.error.message);
-      }
-
-      // Pobieramy metodę płatności
-      let paymentMethod = null;
-      
-      // Jeśli subskrypcja ma domyślną metodę płatności, spróbujmy ją pobrać
-      if (subscriptionData.default_payment_method) {
-        try {
-          const paymentMethodResponse = await fetch(`https://api.stripe.com/v1/payment_methods/${subscriptionData.default_payment_method}`, {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${stripeSecretKey}`,
-              'Content-Type': 'application/json',
-            },
-          });
-          
-          if (!paymentMethodResponse.ok) {
-            const errorText = await paymentMethodResponse.text();
-            throw new Error(`Payment method error: ${paymentMethodResponse.status} ${errorText}`);
-          }
-          
-          const paymentMethodData = await paymentMethodResponse.json();
-          
-          if (!paymentMethodData.error && paymentMethodData.card) {
-            paymentMethod = {
-              brand: paymentMethodData.card.brand,
-              last4: paymentMethodData.card.last4
-            };
-          }
-        } catch (pmError) {
-          console.error('Błąd podczas pobierania metody płatności:', pmError);
-          // Kontynuujemy bez rzucania wyjątku
-        }
-      }
-      
-      // Jeśli nie znaleźliśmy metody płatności przez default_payment_method, 
-      // spróbujmy pobrać listę metod płatności klienta
-      if (!paymentMethod && subscriptionData.customer) {
-        try {
-          const customerPaymentMethodsResponse = await fetch(
-            `https://api.stripe.com/v1/payment_methods?customer=${subscriptionData.customer}&type=card&limit=1`, 
-            {
-              method: 'GET',
-              headers: {
-                'Authorization': `Bearer ${stripeSecretKey}`,
-                'Content-Type': 'application/json',
-              },
-            }
-          );
-          
-          if (!customerPaymentMethodsResponse.ok) {
-            const errorText = await customerPaymentMethodsResponse.text();
-            throw new Error(`Customer payment methods error: ${customerPaymentMethodsResponse.status} ${errorText}`);
-          }
-          
-          const customerPaymentMethodsData = await customerPaymentMethodsResponse.json();
-          
-          if (!customerPaymentMethodsData.error && 
-              customerPaymentMethodsData.data && 
-              customerPaymentMethodsData.data.length > 0 &&
-              customerPaymentMethodsData.data[0].card) {
-            paymentMethod = {
-              brand: customerPaymentMethodsData.data[0].card.brand,
-              last4: customerPaymentMethodsData.data[0].card.last4
-            };
-          }
-        } catch (customerPmError) {
-          console.error('Błąd podczas pobierania metod płatności klienta:', customerPmError);
-          // Kontynuujemy bez rzucania wyjątku
-        }
-      }
-      
-      // Jeśli nadal nie mamy metody płatności, użyjmy wartości domyślnej
-      if (!paymentMethod) {
-        paymentMethod = {
-          brand: 'card',
-          last4: '0000'
-        };
       }
 
       // Próba utworzenia sesji Customer Portal
@@ -342,7 +257,6 @@ serve(async (req) => {
         hasSubscription: true,
         plan: subscriptionData.items?.data[0]?.plan?.nickname || 'Pro',
         trialEnd: subscriptionData.trial_end ? new Date(subscriptionData.trial_end * 1000).toISOString() : null,
-        paymentMethod: paymentMethod
       };
 
       return new Response(
@@ -371,10 +285,6 @@ serve(async (req) => {
             cancelAtPeriodEnd: false,
             portalUrl: null,
             plan: 'Pro',
-            paymentMethod: {
-              brand: 'card',
-              last4: '0000'
-            }
           }),
           { 
             headers: { 
