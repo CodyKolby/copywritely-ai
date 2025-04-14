@@ -44,17 +44,14 @@ export const createCheckoutSession = async (priceId: string) => {
     
     console.log('Stripe initialized successfully, redirecting to checkout...');
     
-    // Create a checkout session with user ID in metadata and client_reference_id
+    // redirectToCheckout nie wspiera pola metadata w wersji klienckiej
     const { error } = await stripe.redirectToCheckout({
       lineItems: [{ price: priceId, quantity: 1 }],
       mode: 'subscription',
       successUrl,
       cancelUrl,
       customerEmail: userEmail || undefined,
-      clientReferenceId: user.id, // Add user ID as client_reference_id
-      metadata: {
-        userId: user.id // Also add user ID to metadata for redundancy
-      }
+      clientReferenceId: user.id // Dodajemy tylko to pole, bez metadata
     });
     
     if (error) {
