@@ -143,6 +143,8 @@ serve(async (req) => {
                   subscription_id: subscriptionId,
                   subscription_status: 'active',
                   subscription_expiry: expiryDate,
+                  subscription_created_at: new Date().toISOString(),
+                  trial_started_at: null,
                   updated_at: new Date().toISOString()
                 })
                 .eq('id', userId);

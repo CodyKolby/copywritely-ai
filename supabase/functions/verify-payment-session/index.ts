@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.5.0";
 import Stripe from "https://esm.sh/stripe@12.1.1";
@@ -14,24 +13,50 @@ const updateProfileWithPremium = async (supabase, userId, subscriptionId = null,
   try {
     console.log(`Updating profile for user ${userId} with premium status`);
     
-    // Calculate expiry date if not provided (30 days from now)
+    // Calculate expiry date if not provided 
+    // For paid subscriptions, this will come from Stripe
+    // For trial users without payment, we'll set it to 3 days from now
     if (!subscriptionExpiry) {
+      // If this is a real subscription, set proper expiry (30 days)
+      // Otherwise keep 3-day trial for non-subscription users
       const expiryDate = new Date();
-      expiryDate.setDate(expiryDate.getDate() + 30);
+      if (subscriptionId) {
+        expiryDate.setDate(expiryDate.getDate() + 30); // Full subscription
+      } else {
+        expiryDate.setDate(expiryDate.getDate() + 3);  // Trial only
+      }
       subscriptionExpiry = expiryDate.toISOString();
       console.log(`Using default expiry date: ${subscriptionExpiry}`);
     }
     
+    const updateData = {
+      id: userId,
+      is_premium: true,
+      subscription_status: subscriptionStatus,
+      subscription_expiry: subscriptionExpiry,
+      updated_at: new Date().toISOString()
+    };
+    
+    if (subscriptionId) {
+      updateData.subscription_id = subscriptionId;
+      updateData.subscription_created_at = new Date().toISOString();
+    } else if (!subscriptionId) {
+      // If no subscription ID but this is a new premium grant,
+      // make sure we record trial start time if it's not already set
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('trial_started_at')
+        .eq('id', userId)
+        .single();
+        
+      if (!profile?.trial_started_at) {
+        updateData.trial_started_at = new Date().toISOString();
+      }
+    }
+    
     const { data, error } = await supabase
       .from('profiles')
-      .upsert({
-        id: userId,
-        is_premium: true,
-        subscription_id: subscriptionId,
-        subscription_status: subscriptionStatus,
-        subscription_expiry: subscriptionExpiry,
-        updated_at: new Date().toISOString()
-      })
+      .upsert(updateData)
       .select()
       .single();
       

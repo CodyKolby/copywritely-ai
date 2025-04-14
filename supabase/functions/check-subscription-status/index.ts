@@ -81,9 +81,23 @@ serve(async (req) => {
 
     console.log('Profile data:', profile);
 
+    // Check if this is a trial period
+    let isTrial = false;
+    if (profile.trial_started_at && profile.subscription_expiry) {
+      const trialStartDate = new Date(profile.trial_started_at);
+      const now = new Date();
+      const trialDays = Math.floor((now.getTime() - trialStartDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      // Consider it a trial if within 3 days of start and no subscription_id
+      if (trialDays <= 3 && (!profile.subscription_id || profile.subscription_id === '')) {
+        console.log('User is in trial period:', trialDays, 'days');
+        isTrial = true;
+      }
+    }
+
     // Check expiry date first - this is critical
     if (profile.subscription_expiry) {
-      if (isSubscriptionExpired(profile.subscription_expiry)) {
+      if (isSubscriptionExpired(profile.subscription_expiry) && !isTrial) {
         console.log('Subscription has expired on:', profile.subscription_expiry);
         
         // Update database to reflect expired status
@@ -91,6 +105,12 @@ serve(async (req) => {
         
         return new Response(
           JSON.stringify({ isPremium: false }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      } else if (isTrial) {
+        console.log('User has active trial until:', profile.subscription_expiry);
+        return new Response(
+          JSON.stringify({ isPremium: true, isTrial: true }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
