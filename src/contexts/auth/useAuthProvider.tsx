@@ -282,7 +282,7 @@ export const useAuthProvider = () => {
       console.error('[AUTH] Exception refreshing session:', error);
       return false;
     }
-  }, [user, handleUserAuthenticated]);
+  }, [user, handleUserAuthenticated, checkPremiumStatus]);
 
   useEffect(() => {
     console.log("[AUTH] Setting up auth state listener");

@@ -27,19 +27,50 @@ serve(async (req) => {
       throw new Error('Brak userId');
     }
 
+    console.log(`Fetching subscription details for user: ${userId}`);
+
     // Tworzymy klienta Supabase z Service Role Key
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Pobieramy profil użytkownika z informacją o subskrypcji
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('subscription_id, subscription_status, subscription_expiry')
+      .select('subscription_id, subscription_status, subscription_expiry, is_premium')
       .eq('id', userId)
       .single();
 
     if (profileError) {
       console.error('Błąd podczas pobierania profilu:', profileError);
       throw new Error('Nie udało się pobrać profilu użytkownika');
+    }
+
+    console.log('Profile data:', profile);
+
+    // Nawet jeśli nie ma subscription_id, ale użytkownik ma status premium,
+    // zwracamy podstawowe informacje
+    if (profile?.is_premium && (!profile?.subscription_id || profile.subscription_id === '')) {
+      console.log('User has premium status without subscription ID');
+      
+      return new Response(
+        JSON.stringify({ 
+          hasSubscription: true,
+          subscriptionId: 'manual_premium',
+          status: 'active',
+          currentPeriodEnd: profile.subscription_expiry || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          daysUntilRenewal: profile.subscription_expiry ? 
+            Math.ceil((new Date(profile.subscription_expiry).getTime() - Date.now()) / (1000 * 3600 * 24)) : 
+            30,
+          cancelAtPeriodEnd: false,
+          portalUrl: '#',
+          plan: 'Pro'
+        }),
+        { 
+          headers: { 
+            ...corsHeaders,
+            'Content-Type': 'application/json' 
+          } 
+        }
+      );
     }
 
     if (!profile?.subscription_id) {
@@ -57,109 +88,132 @@ serve(async (req) => {
       );
     }
 
-    // Pobieramy szczegóły subskrypcji ze Stripe
-    const response = await fetch(`https://api.stripe.com/v1/subscriptions/${profile.subscription_id}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${stripeSecretKey}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    const subscriptionData = await response.json();
-
-    if (subscriptionData.error) {
-      console.error('Błąd podczas pobierania danych subskrypcji:', subscriptionData.error);
-      throw new Error(subscriptionData.error.message);
-    }
-
-    // Pobieramy informacje o metodzie płatności
-    let paymentMethod = null;
-    if (subscriptionData.default_payment_method) {
-      const paymentMethodResponse = await fetch(`https://api.stripe.com/v1/payment_methods/${subscriptionData.default_payment_method}`, {
+    try {
+      // Pobieramy szczegóły subskrypcji ze Stripe
+      const response = await fetch(`https://api.stripe.com/v1/subscriptions/${profile.subscription_id}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${stripeSecretKey}`,
           'Content-Type': 'application/json',
         },
       });
-      
-      const paymentMethodData = await paymentMethodResponse.json();
-      
-      if (!paymentMethodData.error && paymentMethodData.card) {
-        paymentMethod = {
-          brand: paymentMethodData.card.brand,
-          last4: paymentMethodData.card.last4,
-        };
+
+      const subscriptionData = await response.json();
+
+      if (subscriptionData.error) {
+        console.error('Błąd podczas pobierania danych subskrypcji:', subscriptionData.error);
+        
+        // Jeśli wystąpił błąd ze Stripe, ale użytkownik ma status premium,
+        // zwracamy podstawowe informacje z profilu
+        if (profile.is_premium) {
+          return new Response(
+            JSON.stringify({ 
+              hasSubscription: true,
+              subscriptionId: profile.subscription_id,
+              status: profile.subscription_status || 'active',
+              currentPeriodEnd: profile.subscription_expiry || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+              daysUntilRenewal: profile.subscription_expiry ? 
+                Math.ceil((new Date(profile.subscription_expiry).getTime() - Date.now()) / (1000 * 3600 * 24)) : 
+                30,
+              cancelAtPeriodEnd: false,
+              portalUrl: '#',
+              plan: 'Pro'
+            }),
+            { 
+              headers: { 
+                ...corsHeaders,
+                'Content-Type': 'application/json' 
+              } 
+            }
+          );
+        }
+        
+        throw new Error(subscriptionData.error.message);
       }
-    } else if (subscriptionData.customer) {
-      // Jeśli nie ma default_payment_method na subskrypcji, sprawdzamy metody płatności klienta
-      const paymentMethodsResponse = await fetch(`https://api.stripe.com/v1/payment_methods?customer=${subscriptionData.customer}&type=card&limit=1`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${stripeSecretKey}`,
-          'Content-Type': 'application/json',
-        },
-      });
+
+      // Próba utworzenia sesji Customer Portal, ale z obsługą błędu
+      let portalUrl = '#'; // Domyślna wartość
       
-      const paymentMethodsData = await paymentMethodsResponse.json();
-      
-      if (!paymentMethodsData.error && paymentMethodsData.data && paymentMethodsData.data.length > 0) {
-        const card = paymentMethodsData.data[0].card;
-        paymentMethod = {
-          brand: card.brand,
-          last4: card.last4,
-        };
+      try {
+        const portalResponse = await fetch('https://api.stripe.com/v1/billing_portal/sessions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${stripeSecretKey}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            'customer': subscriptionData.customer,
+            'return_url': `${req.headers.get('origin') || ''}/account`,
+          }),
+        });
+
+        const portalData = await portalResponse.json();
+        
+        if (!portalData.error) {
+          portalUrl = portalData.url;
+        } else {
+          console.error('Ostrzeżenie: Nie można utworzyć sesji Customer Portal:', portalData.error);
+        }
+      } catch (portalError) {
+        console.error('Błąd podczas tworzenia sesji Customer Portal:', portalError);
+        // Kontynuujemy bez rzucania wyjątku
       }
+
+      // Formatujemy i zwracamy dane
+      const currentDate = new Date();
+      const currentPeriodEnd = new Date(subscriptionData.current_period_end * 1000);
+      const daysUntilRenewal = Math.ceil((currentPeriodEnd.getTime() - currentDate.getTime()) / (1000 * 3600 * 24));
+      
+      const formattedData = {
+        subscriptionId: subscriptionData.id,
+        status: subscriptionData.status,
+        currentPeriodEnd: currentPeriodEnd.toISOString(),
+        daysUntilRenewal: daysUntilRenewal,
+        cancelAtPeriodEnd: subscriptionData.cancel_at_period_end,
+        portalUrl: portalUrl,
+        hasSubscription: true,
+        plan: subscriptionData.items?.data[0]?.plan?.nickname || 'Pro',
+        trialEnd: subscriptionData.trial_end ? new Date(subscriptionData.trial_end * 1000).toISOString() : null,
+      };
+
+      return new Response(
+        JSON.stringify(formattedData),
+        { 
+          headers: { 
+            ...corsHeaders,
+            'Content-Type': 'application/json' 
+          } 
+        }
+      );
+    } catch (stripeError) {
+      console.error('Błąd podczas komunikacji ze Stripe:', stripeError);
+      
+      // Jeśli użytkownik ma status premium w profilu, zwracamy podstawowe informacje
+      if (profile.is_premium) {
+        return new Response(
+          JSON.stringify({ 
+            hasSubscription: true,
+            subscriptionId: profile.subscription_id || 'manual_premium',
+            status: profile.subscription_status || 'active',
+            currentPeriodEnd: profile.subscription_expiry || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+            daysUntilRenewal: profile.subscription_expiry ? 
+              Math.ceil((new Date(profile.subscription_expiry).getTime() - Date.now()) / (1000 * 3600 * 24)) : 
+              30,
+            cancelAtPeriodEnd: false,
+            portalUrl: '#',
+            plan: 'Pro'
+          }),
+          { 
+            headers: { 
+              ...corsHeaders,
+              'Content-Type': 'application/json' 
+            } 
+          }
+        );
+      }
+      
+      throw new Error('Wystąpił błąd podczas komunikacji ze Stripe');
     }
-
-    // Pobieramy adres URL do Customer Portal
-    const portalResponse = await fetch('https://api.stripe.com/v1/billing_portal/sessions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${stripeSecretKey}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        'customer': subscriptionData.customer,
-        'return_url': `${req.headers.get('origin') || ''}/account`,
-      }),
-    });
-
-    const portalData = await portalResponse.json();
-
-    if (portalData.error) {
-      console.error('Błąd podczas tworzenia sesji Customer Portal:', portalData.error);
-      throw new Error(portalData.error.message);
-    }
-
-    // Formatujemy i zwracamy dane
-    const currentDate = new Date();
-    const currentPeriodEnd = new Date(subscriptionData.current_period_end * 1000);
-    const daysUntilRenewal = Math.ceil((currentPeriodEnd.getTime() - currentDate.getTime()) / (1000 * 3600 * 24));
-    
-    const formattedData = {
-      subscriptionId: subscriptionData.id,
-      status: subscriptionData.status,
-      currentPeriodEnd: currentPeriodEnd.toISOString(),
-      daysUntilRenewal: daysUntilRenewal,
-      cancelAtPeriodEnd: subscriptionData.cancel_at_period_end,
-      portalUrl: portalData.url,
-      hasSubscription: true,
-      plan: subscriptionData.items?.data[0]?.plan?.nickname || 'Pro',
-      trialEnd: subscriptionData.trial_end ? new Date(subscriptionData.trial_end * 1000).toISOString() : null,
-      paymentMethod: paymentMethod,
-    };
-
-    return new Response(
-      JSON.stringify(formattedData),
-      { 
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json' 
-        } 
-      }
-    );
   } catch (error) {
     console.error('Błąd podczas pobierania danych subskrypcji:', error);
     

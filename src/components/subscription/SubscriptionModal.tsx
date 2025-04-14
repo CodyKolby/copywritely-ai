@@ -43,7 +43,7 @@ interface SubscriptionModalProps {
 }
 
 const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChange }) => {
-  const { user, isPremium } = useAuth();
+  const { user, isPremium, refreshSession } = useAuth();
   const [cancelConfirm, setCancelConfirm] = useState(false);
   const [manualRefetch, setManualRefetch] = useState(false);
 
@@ -63,17 +63,37 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
       
       console.log('Fetching subscription details for user:', user.id);
       
-      const { data, error } = await supabase.functions.invoke('subscription-details', {
-        body: { userId: user.id }
-      });
-      
-      if (error) {
-        console.error('Error fetching subscription details:', error);
-        throw new Error(error.message);
+      try {
+        const { data, error } = await supabase.functions.invoke('subscription-details', {
+          body: { userId: user.id }
+        });
+        
+        if (error) {
+          console.error('Error fetching subscription details:', error);
+          throw new Error(error.message);
+        }
+        
+        console.log('Received subscription data:', data);
+        return data as SubscriptionDetails;
+      } catch (err) {
+        console.error('Exception fetching subscription details:', err);
+        
+        // Jeśli mamy błąd, ale użytkownik ma status premium, zwracamy podstawowe informacje
+        if (isPremium) {
+          return {
+            hasSubscription: true,
+            subscriptionId: 'manual_premium',
+            status: 'active',
+            currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+            daysUntilRenewal: 30,
+            cancelAtPeriodEnd: false,
+            portalUrl: '#',
+            plan: 'Pro'
+          } as SubscriptionDetails;
+        }
+        
+        throw err;
       }
-      
-      console.log('Received subscription data:', data);
-      return data as SubscriptionDetails;
     },
     enabled: !!user?.id && open,
     retry: 2,
@@ -123,9 +143,14 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
     }
   });
 
-  // Manual refresh function
-  const handleManualRefresh = () => {
+  // Manual refresh function with session refresh
+  const handleManualRefresh = async () => {
     console.log('Manual refresh triggered');
+    
+    // First refresh the auth session which updates premium status
+    await refreshSession();
+    
+    // Then refetch subscription details
     setManualRefetch(prev => !prev);
     toast.info('Odświeżanie informacji o subskrypcji...');
   };
@@ -145,12 +170,16 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
 
   // Funkcja formatująca datę
   const formatDate = (dateString: string) => {
-    const options: Intl.DateTimeFormatOptions = { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    };
-    return new Date(dateString).toLocaleDateString('pl-PL', options);
+    try {
+      const options: Intl.DateTimeFormatOptions = { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      };
+      return new Date(dateString).toLocaleDateString('pl-PL', options);
+    } catch {
+      return 'Data niedostępna';
+    }
   };
 
   // Funkcja renderująca status
@@ -279,6 +308,77 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
     );
   }
 
+  // Fallback for premium users without subscription details
+  if (isPremium && (!data?.hasSubscription)) {
+    const fallbackData = {
+      hasSubscription: true,
+      status: 'active',
+      plan: 'Pro',
+      daysUntilRenewal: 30,
+      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+    };
+    
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Twoja subskrypcja Premium</DialogTitle>
+            <DialogDescription>
+              Posiadasz aktywną subskrypcję Premium
+            </DialogDescription>
+          </DialogHeader>
+          <Card className="border-none shadow-none">
+            <CardContent className="p-0 space-y-4">
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-semibold">Plan {fallbackData.plan}</h3>
+                  <Button 
+                    onClick={handleManualRefresh} 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-8 w-8 p-0"
+                  >
+                    <RefreshCcw className="h-4 w-4" />
+                    <span className="sr-only">Odśwież</span>
+                  </Button>
+                </div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge className="px-2 py-1 bg-green-500">
+                    Aktywna
+                  </Badge>
+                </div>
+              </div>
+              
+              <Separator />
+              
+              <div className="pt-2">
+                <h4 className="font-medium mb-2">Dostępne funkcje</h4>
+                <ul className="space-y-2">
+                  <li className="flex items-start gap-2 text-sm">
+                    <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
+                    <span>Nieograniczona liczba generowanych briefów</span>
+                  </li>
+                  <li className="flex items-start gap-2 text-sm">
+                    <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
+                    <span>Rozszerzone funkcje edytora tekstu</span>
+                  </li>
+                  <li className="flex items-start gap-2 text-sm">
+                    <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
+                    <span>Priorytetowe wsparcie techniczne</span>
+                  </li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <DialogFooter className="sm:justify-center">
+            <Button onClick={() => onOpenChange(false)}>Zamknij</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   if (!data?.hasSubscription) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -370,50 +470,54 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
                   <RefreshCcw className="h-4 w-4" />
                   Odnów subskrypcję
                 </Button>
-              ) : cancelConfirm ? (
-                <div className="space-y-2">
-                  <p className="text-sm text-red-600">
-                    <AlertTriangle className="h-4 w-4 inline mr-1" />
-                    Czy na pewno chcesz anulować subskrypcję? Będziesz mieć dostęp do końca opłaconego okresu.
-                  </p>
-                  <div className="flex gap-2">
-                    <Button 
-                      onClick={() => setCancelConfirm(false)} 
-                      variant="outline" 
-                      className="flex-1"
-                    >
-                      Anuluj
-                    </Button>
-                    <Button 
-                      onClick={() => cancelSubscription.mutate()} 
-                      variant="destructive" 
-                      className="flex-1"
-                      disabled={cancelSubscription.isPending}
-                    >
-                      {cancelSubscription.isPending ? 'Anulowanie...' : 'Potwierdzam'}
-                    </Button>
+              ) : data.subscriptionId !== 'manual_premium' && data.portalUrl !== '#' ? (
+                cancelConfirm ? (
+                  <div className="space-y-2">
+                    <p className="text-sm text-red-600">
+                      <AlertTriangle className="h-4 w-4 inline mr-1" />
+                      Czy na pewno chcesz anulować subskrypcję? Będziesz mieć dostęp do końca opłaconego okresu.
+                    </p>
+                    <div className="flex gap-2">
+                      <Button 
+                        onClick={() => setCancelConfirm(false)} 
+                        variant="outline" 
+                        className="flex-1"
+                      >
+                        Anuluj
+                      </Button>
+                      <Button 
+                        onClick={() => cancelSubscription.mutate()} 
+                        variant="destructive" 
+                        className="flex-1"
+                        disabled={cancelSubscription.isPending}
+                      >
+                        {cancelSubscription.isPending ? 'Anulowanie...' : 'Potwierdzam'}
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              ) : (
+                ) : (
+                  <Button 
+                    onClick={() => setCancelConfirm(true)} 
+                    className="w-full flex items-center gap-2" 
+                    variant="outline"
+                  >
+                    <XCircle className="h-4 w-4" />
+                    Anuluj subskrypcję
+                  </Button>
+                )
+              ) : null}
+              
+              {data.portalUrl && data.portalUrl !== '#' && (
                 <Button 
-                  onClick={() => setCancelConfirm(true)} 
+                  onClick={() => window.open(data.portalUrl, '_blank')} 
                   className="w-full flex items-center gap-2" 
                   variant="outline"
                 >
-                  <XCircle className="h-4 w-4" />
-                  Anuluj subskrypcję
+                  <CreditCard className="h-4 w-4" />
+                  Zarządzaj płatnościami
+                  <ExternalLink className="h-3 w-3 ml-1" />
                 </Button>
               )}
-              
-              <Button 
-                onClick={() => window.open(data.portalUrl, '_blank')} 
-                className="w-full flex items-center gap-2" 
-                variant="outline"
-              >
-                <CreditCard className="h-4 w-4" />
-                Zarządzaj płatnościami
-                <ExternalLink className="h-3 w-3 ml-1" />
-              </Button>
             </div>
             
             <Separator />
