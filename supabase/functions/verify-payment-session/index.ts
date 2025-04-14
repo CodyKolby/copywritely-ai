@@ -1,7 +1,85 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { corsHeaders, getSupabaseClient, getStripeClient, updateProfileWithPremium } from "./utils.ts";
-import { getStripeSession } from "./stripe.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.5.0";
+import Stripe from "https://esm.sh/stripe@12.1.1";
+
+// CORS headers
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+// Helper function to update profile with premium status
+const updateProfileWithPremium = async (supabase, userId, subscriptionId = null, subscriptionStatus = 'active', subscriptionExpiry = null) => {
+  try {
+    console.log(`Updating profile for user ${userId} with premium status`);
+    
+    // Calculate expiry date if not provided (30 days from now)
+    if (!subscriptionExpiry) {
+      const expiryDate = new Date();
+      expiryDate.setDate(expiryDate.getDate() + 30);
+      subscriptionExpiry = expiryDate.toISOString();
+      console.log(`Using default expiry date: ${subscriptionExpiry}`);
+    }
+    
+    const { data, error } = await supabase
+      .from('profiles')
+      .upsert({
+        id: userId,
+        is_premium: true,
+        subscription_id: subscriptionId,
+        subscription_status: subscriptionStatus,
+        subscription_expiry: subscriptionExpiry,
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+      
+    if (error) {
+      console.error(`Error updating profile: ${error.message}`);
+      return false;
+    }
+    
+    console.log(`Profile updated successfully: ${JSON.stringify(data)}`);
+    return true;
+  } catch (error) {
+    console.error(`Exception updating profile: ${error.message}`);
+    return false;
+  }
+};
+
+// Get Stripe session details
+const getStripeSession = async (sessionId, stripeSecretKey) => {
+  try {
+    console.log(`Getting session details for ${sessionId}`);
+    
+    const stripe = new Stripe(stripeSecretKey, {
+      apiVersion: "2023-10-16",
+      httpClient: Stripe.createFetchHttpClient()
+    });
+    
+    const session = await stripe.checkout.sessions.retrieve(sessionId, {
+      expand: ['subscription', 'customer', 'payment_intent']
+    });
+    
+    return session;
+  } catch (error) {
+    console.error(`Error retrieving session: ${error.message}`);
+    throw error;
+  }
+};
+
+// Get Supabase client
+const getSupabaseClient = () => {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Missing Supabase credentials');
+  }
+  
+  return createClient(supabaseUrl, supabaseServiceKey);
+};
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -30,13 +108,9 @@ serve(async (req) => {
     
     // IMMEDIATE PREMIUM ACCESS: Grant premium access right away
     // This ensures the user gets access even before verification completes
-    try {
-      console.log("IMMEDIATE ACTION: Setting premium status while verification proceeds");
-      await updateProfileWithPremium(supabase, userId);
-      console.log("Premium status granted immediately");
-    } catch (immErr) {
-      console.error("Error in immediate premium update:", immErr);
-    }
+    console.log("IMMEDIATE ACTION: Setting premium status while verification proceeds");
+    await updateProfileWithPremium(supabase, userId);
+    console.log("Premium status granted immediately");
     
     // First check if payment was already logged in our database
     console.log("Checking payment logs...");
@@ -71,12 +145,16 @@ serve(async (req) => {
         throw new Error("STRIPE_SECRET_KEY not set");
       }
       
-      // Fetch the session with retry logic built into getStripeSession
+      // Fetch the session with retry logic
       const session = await getStripeSession(sessionId, stripeSecretKey);
       
       // Update session metadata with userId for future webhook processing
       try {
-        const stripe = getStripeClient();
+        const stripe = new Stripe(stripeSecretKey, {
+          apiVersion: "2023-10-16",
+          httpClient: Stripe.createFetchHttpClient()
+        });
+        
         await stripe.checkout.sessions.update(sessionId, {
           metadata: { userId }
         });
@@ -93,8 +171,41 @@ serve(async (req) => {
         status: session.status,
         customer: session.customer,
         subscription: session.subscription,
-        metadata: session.metadata
+        metadata: session.metadata,
+        customer_email: session.customer_email
       }));
+      
+      // Get subscription expiry date if available
+      let subscriptionExpiry = null;
+      let subscriptionId = null;
+      
+      if (session.subscription) {
+        try {
+          const stripe = new Stripe(stripeSecretKey, {
+            apiVersion: "2023-10-16",
+            httpClient: Stripe.createFetchHttpClient()
+          });
+          
+          const subscription = await stripe.subscriptions.retrieve(session.subscription);
+          subscriptionId = subscription.id;
+          
+          if (subscription.current_period_end) {
+            subscriptionExpiry = new Date(subscription.current_period_end * 1000).toISOString();
+            console.log(`Subscription expiry date: ${subscriptionExpiry}`);
+          }
+        } catch (subError) {
+          console.error("Error getting subscription details:", subError);
+        }
+      }
+      
+      // Update profile with subscription details
+      await updateProfileWithPremium(
+        supabase,
+        userId,
+        subscriptionId || session.subscription,
+        'active',
+        subscriptionExpiry
+      );
       
       // Log the payment regardless of session details - be optimistic
       try {

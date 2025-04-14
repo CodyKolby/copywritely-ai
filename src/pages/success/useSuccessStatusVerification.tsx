@@ -15,14 +15,22 @@ export const useSuccessStatusVerification = () => {
    */
   const updateProfileDirectly = useCallback(async (userId: string): Promise<boolean> => {
     try {
+      console.log("[SUCCESS-VERIFY] Attempting direct profile update for user:", userId);
+      
+      // Set expiry date to 30 days from now
+      const expiryDate = new Date();
+      expiryDate.setDate(expiryDate.getDate() + 30);
+      
       const { error } = await supabase
         .from('profiles')
-        .update({ 
+        .upsert({ 
+          id: userId,
           is_premium: true,
           subscription_status: 'active',
+          subscription_expiry: expiryDate.toISOString(),
           updated_at: new Date().toISOString()
         })
-        .eq('id', userId);
+        .select();
         
       if (error) {
         console.error("[SUCCESS-VERIFY] Direct update error:", error);
@@ -87,21 +95,41 @@ export const useSuccessStatusVerification = () => {
     }
     
     try {
-      console.log("[SUCCESS-VERIFY] Payment verification initiated");
+      console.log("[SUCCESS-VERIFY] Payment verification initiated for user:", user.id);
       
-      // STEP 1: Direct update with hardcoded values
+      // STEP 1: Verify through edge function
+      try {
+        console.log("[SUCCESS-VERIFY] Calling verify-payment-session edge function");
+        
+        const { data, error } = await supabase.functions.invoke('verify-payment-session', {
+          body: { 
+            userId: user.id,
+            sessionId
+          }
+        });
+        
+        if (error) {
+          console.error("[SUCCESS-VERIFY] Edge function error:", error);
+        } else {
+          console.log("[SUCCESS-VERIFY] Edge function success:", data);
+        }
+      } catch (edgeFnError) {
+        console.error("[SUCCESS-VERIFY] Edge function exception:", edgeFnError);
+      }
+      
+      // STEP 2: Direct update as backup
       await updateProfileDirectly(user.id);
       
-      // STEP 2: Force update premium status with session ID
+      // STEP 3: Force update premium status with session ID
       await forceUpdatePremiumStatus(user.id, sessionId);
       
-      // STEP 3: Add to payment logs
+      // STEP 4: Add to payment logs
       await addPaymentLog(user.id, sessionId);
       
-      // STEP 4: Refresh session to update auth context
+      // STEP 5: Refresh session to update auth context
       await refreshSession();
       
-      // STEP 5: Check result after all updates
+      // STEP 6: Check result after all updates
       const { data: profile } = await supabase
         .from('profiles')
         .select('is_premium, subscription_status, subscription_id, subscription_expiry')
@@ -110,7 +138,7 @@ export const useSuccessStatusVerification = () => {
       
       console.log("[SUCCESS-VERIFY] Profile after updates:", profile);
       
-      // STEP 6: Mark as processed in session storage
+      // STEP 7: Mark as processed in session storage
       sessionStorage.setItem('paymentProcessed', 'true');
       
       // Also store in localStorage as backup

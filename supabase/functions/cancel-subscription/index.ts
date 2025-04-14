@@ -1,6 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.5.0";
+import Stripe from "https://esm.sh/stripe@12.1.1";
 
 // Pobieramy klucze ze zmiennych środowiskowych
 const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
@@ -33,25 +34,20 @@ serve(async (req) => {
 
     console.log(`Anulowanie subskrypcji ${subscriptionId} dla użytkownika ${userId}`);
 
+    // Inicjalizuj klienta Stripe
+    const stripe = new Stripe(stripeSecretKey, {
+      apiVersion: "2023-10-16",
+      httpClient: Stripe.createFetchHttpClient()
+    });
+
     // Wysyłamy żądanie do API Stripe
-    const response = await fetch(`https://api.stripe.com/v1/subscriptions/${subscriptionId}`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${stripeSecretKey}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        'cancel_at_period_end': 'true',
-      }),
+    const subscription = await stripe.subscriptions.update(subscriptionId, {
+      cancel_at_period_end: true
     });
 
     // Przetwarzamy odpowiedź
-    const subscriptionData = await response.json();
-
-    // Jeśli wystąpił błąd, zwracamy go
-    if (subscriptionData.error) {
-      console.error('Błąd podczas anulowania subskrypcji:', subscriptionData.error);
-      throw new Error(subscriptionData.error.message);
+    if (!subscription) {
+      throw new Error('Nie udało się anulować subskrypcji');
     }
 
     // Aktualizujemy profil użytkownika w bazie danych
@@ -62,6 +58,7 @@ serve(async (req) => {
       .from('profiles')
       .update({
         updated_at: new Date().toISOString(),
+        subscription_status: 'canceling'
       })
       .eq('id', userId);
 
@@ -74,8 +71,8 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         message: 'Subskrypcja została anulowana',
-        cancelAtPeriodEnd: subscriptionData.cancel_at_period_end,
-        currentPeriodEnd: new Date(subscriptionData.current_period_end * 1000).toISOString(),
+        cancelAtPeriodEnd: subscription.cancel_at_period_end,
+        currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
       }),
       { 
         headers: { 

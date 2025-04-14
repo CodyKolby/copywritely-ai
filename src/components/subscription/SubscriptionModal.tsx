@@ -47,9 +47,17 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
   const [cancelConfirm, setCancelConfirm] = useState(false);
   const [manualRefetch, setManualRefetch] = useState(false);
 
+  // Debug log for initial state
+  console.log('SubscriptionModal initial state:', {
+    open,
+    userId: user?.id,
+    isPremium,
+    manualRefetch
+  });
+
   // Pobieramy dane subskrypcji
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['subscriptionDetails', user?.id, manualRefetch],
+    queryKey: ['subscriptionDetails', user?.id, manualRefetch, open],
     queryFn: async () => {
       if (!user?.id) return null;
       
@@ -68,15 +76,18 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
       return data as SubscriptionDetails;
     },
     enabled: !!user?.id && open,
-    retry: 1,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    retry: 2,
+    retryDelay: 1000,
+    staleTime: 1000 * 60 * 2, // 2 minutes
   });
 
-  // Trigger manual refresh if isPremium changes
+  // Trigger manual refresh when modal opens or isPremium changes
   useEffect(() => {
-    if (open && isPremium) {
-      console.log('isPremium changed, refreshing subscription details');
-      setManualRefetch(prev => !prev);
+    if (open) {
+      console.log('Modal opened or isPremium changed, refreshing subscription details');
+      setTimeout(() => {
+        setManualRefetch(prev => !prev);
+      }, 300); // Slight delay to ensure modal is fully opened
     }
   }, [open, isPremium]);
 
@@ -114,6 +125,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
 
   // Manual refresh function
   const handleManualRefresh = () => {
+    console.log('Manual refresh triggered');
     setManualRefetch(prev => !prev);
     toast.info('Odświeżanie informacji o subskrypcji...');
   };
@@ -180,14 +192,18 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
     );
   };
 
-  // Debug log
-  console.log('Subscription data:', {
+  // Debug log for decision making
+  console.log('Subscription decision data:', {
     data,
     isLoading,
     error,
     isPremium,
-    hasSubscription: data?.hasSubscription
+    hasSubscription: data?.hasSubscription,
+    userExists: !!user?.id
   });
+
+  // Special case for premium users where we fail to fetch data
+  const isPremiumButNoData = isPremium && (!data || !data.hasSubscription);
 
   if (isLoading) {
     return (
@@ -205,7 +221,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
   }
 
   // If isPremium is true but data doesn't show hasSubscription, give option to refresh
-  if ((isPremium && (!data || !data.hasSubscription)) || error) {
+  if (isPremiumButNoData || error) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-md">
@@ -230,6 +246,13 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
                   : "Uzyskaj dostęp do wszystkich funkcji poprzez zakup subskrypcji."
               }
             </p>
+            
+            {/* Display error details for debugging */}
+            {error && (
+              <p className="text-sm text-red-500 text-center max-w-xs">
+                Szczegóły błędu: {error instanceof Error ? error.message : String(error)}
+              </p>
+            )}
           </div>
           <DialogFooter className="flex justify-center sm:justify-center space-x-2">
             {isPremium && (
@@ -283,6 +306,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
     );
   }
 
+  // If we get here, we have subscription data to display
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
