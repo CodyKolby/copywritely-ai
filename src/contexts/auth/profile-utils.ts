@@ -18,13 +18,14 @@ export const fetchProfile = async (userId: string): Promise<Profile | null> => {
     if (error) {
       console.error('[PROFILE-UTILS] Error fetching profile:', error);
       
-      // Get user data from auth to use in profile creation
-      const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
+      // Get user data from current session to use in profile creation
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userData = sessionData?.session?.user;
       
-      if (userError) {
-        console.error('[PROFILE-UTILS] Error fetching user data:', userError);
+      if (userData) {
+        console.log('[PROFILE-UTILS] User data from session for profile creation:', userData);
       } else {
-        console.log('[PROFILE-UTILS] User data for profile creation:', userData);
+        console.error('[PROFILE-UTILS] No user data available in current session');
       }
       
       // Attempt to create profile if none exists
@@ -46,33 +47,25 @@ export const createProfile = async (userId: string): Promise<Profile | null> => 
   try {
     console.log(`[PROFILE-UTILS] Creating profile for user: ${userId}`);
     
-    // Get user data from auth
-    const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
-    
-    if (userError) {
-      console.error('[PROFILE-UTILS] Error fetching user data for profile creation:', userError);
-    } else {
-      console.log('[PROFILE-UTILS] User data retrieved for profile creation:', userData?.user);
-    }
-    
-    // Get user from public auth.users view if available (might not be accessible)
-    try {
-      const { data: authUser, error: authUserError } = await supabase
-        .from('users')
-        .select('email, raw_user_meta_data')
-        .eq('id', userId)
-        .single();
-        
-      if (!authUserError && authUser) {
-        console.log('[PROFILE-UTILS] Auth user data:', authUser);
-      }
-    } catch (e) {
-      console.log('[PROFILE-UTILS] Cannot access auth users view, expected:', e);
-    }
-    
-    // Get current session for additional user data
+    // Get current session for user data
     const { data: sessionData } = await supabase.auth.getSession();
     const user = sessionData?.session?.user;
+    
+    if (!user) {
+      console.error('[PROFILE-UTILS] No user session available for profile creation');
+      return null;
+    }
+    
+    console.log('[PROFILE-UTILS] User data retrieved for profile creation:', user);
+    
+    // Try to access auth user metadata
+    try {
+      // This block is removed as we can't access the auth.users table directly
+      // and it was causing the TypeScript error
+      console.log('[PROFILE-UTILS] Using session data for profile creation');
+    } catch (e) {
+      console.log('[PROFILE-UTILS] Expected error accessing auth data:', e);
+    }
     
     // Prepare profile data with best available information
     const email = user?.email;
