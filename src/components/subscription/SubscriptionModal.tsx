@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -37,7 +36,6 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
       if (!user?.id) return null;
 
       try {
-        // Use the getSubscriptionDetails function from the subscription.ts file
         const subscriptionData = await getSubscriptionDetails(user.id);
         
         if (!subscriptionData) {
@@ -54,7 +52,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
             currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
             daysUntilRenewal: 30,
             cancelAtPeriodEnd: false,
-            portalUrl: 'https://dashboard.stripe.com/test/settings/billing/portal',
+            portalUrl: null,
             plan: 'Pro',
             paymentMethod: {
               brand: 'card',
@@ -102,18 +100,11 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
   const handleOpenPortal = () => {
     try {
       if (data?.portalUrl) {
-        console.log('Opening URL:', data.portalUrl);
-        
-        // Przekierowujemy użytkownika do Stripe Dashboard, aby mógł skonfigurować Customer Portal
-        if (data.portalUrl.includes('dashboard.stripe.com')) {
-          toast.info('Przekierowujemy do ustawień Customer Portal w Stripe Dashboard', {
-            description: 'Skonfiguruj portal klienta w Stripe Dashboard, aby móc zarządzać subskrypcją.'
-          });
-        }
+        console.log('Opening portal URL:', data.portalUrl);
         
         window.open(data.portalUrl, '_blank');
       } else {
-        console.error('No valid portal URL available:', data?.portalUrl);
+        console.error('No portal URL available:', data?.portalUrl);
         toast.error('Nie udało się utworzyć sesji portalu klienta', {
           description: 'Spróbuj odświeżyć informacje o subskrypcji lub skontaktuj się z obsługą klienta.'
         });
@@ -259,7 +250,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
         brand: 'card',
         last4: '0000'
       },
-      portalUrl: 'https://dashboard.stripe.com/test/settings/billing/portal'
+      portalUrl: null
     };
     
     return (
@@ -320,13 +311,12 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
               <div className="flex flex-col space-y-3">
                 <h4 className="font-medium">Dostępne akcje</h4>
                 <Button 
-                  onClick={handleOpenPortal} 
+                  onClick={handleManualRefresh} 
                   className="w-full flex items-center gap-2" 
                   variant="outline"
                 >
-                  <CreditCard className="h-4 w-4" />
-                  Zarządzaj subskrypcją w Stripe
-                  <ExternalLink className="h-3 w-3 ml-1" />
+                  <RefreshCcw className="h-4 w-4" />
+                  Odśwież dane subskrypcji
                 </Button>
               </div>
               
@@ -456,6 +446,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
                 onClick={handleOpenPortal} 
                 className="w-full flex items-center gap-2" 
                 variant="outline"
+                disabled={!data.portalUrl}
               >
                 <CreditCard className="h-4 w-4" />
                 Zarządzaj subskrypcją w Stripe

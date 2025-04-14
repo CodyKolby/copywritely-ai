@@ -8,7 +8,7 @@ export interface SubscriptionDetails {
   currentPeriodEnd: string;
   daysUntilRenewal: number;
   cancelAtPeriodEnd: boolean;
-  portalUrl: string;
+  portalUrl: string | null;
   hasSubscription: boolean;
   plan: string;
   trialEnd: string | null;

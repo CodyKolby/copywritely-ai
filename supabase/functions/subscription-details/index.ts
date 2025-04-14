@@ -13,9 +13,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Definiujemy URL do Stripe Dashboard do ustawień portalu klienta
-const STRIPE_PORTAL_SETTINGS_URL = 'https://dashboard.stripe.com/test/settings/billing/portal';
-
 serve(async (req) => {
   // Obsługa zapytań CORS preflight
   if (req.method === 'OPTIONS') {
@@ -90,14 +87,34 @@ serve(async (req) => {
           const customerId = customersData.data[0].id;
           console.log('Found Stripe customer ID for premium user:', customerId);
           
-          portalUrl = STRIPE_PORTAL_SETTINGS_URL;
-          console.log('Using Stripe Portal settings URL for premium user without active portal configuration');
+          // Tworzymy sesję portalu klienta
+          console.log('Creating customer portal session for customer:', customerId);
+          const portalSessionResponse = await fetch(`https://api.stripe.com/v1/billing_portal/sessions`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${stripeSecretKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              customer: customerId,
+              return_url: `${req.headers.get('origin') || 'https://copywrite-assist.com'}/`,
+            }),
+          });
+          
+          if (!portalSessionResponse.ok) {
+            const errorText = await portalSessionResponse.text();
+            console.error('Error creating portal session:', errorText);
+            throw new Error(`Portal creation error: ${portalSessionResponse.status} ${errorText}`);
+          }
+          
+          const portalSessionData = await portalSessionResponse.json();
+          portalUrl = portalSessionData.url;
+          console.log('Created customer portal session URL:', portalUrl);
         } else {
           console.log('No Stripe customer found for email:', userEmail);
         }
       } catch (portalError) {
         console.error('Error trying to create portal URL for premium user:', portalError);
-        portalUrl = STRIPE_PORTAL_SETTINGS_URL;
       }
       
       return new Response(
@@ -110,7 +127,7 @@ serve(async (req) => {
             Math.ceil((new Date(profile.subscription_expiry).getTime() - Date.now()) / (1000 * 3600 * 24)) : 
             30,
           cancelAtPeriodEnd: false,
-          portalUrl: portalUrl || STRIPE_PORTAL_SETTINGS_URL,
+          portalUrl: portalUrl,
           plan: 'Pro',
           paymentMethod: {
             brand: 'card',
@@ -178,7 +195,6 @@ serve(async (req) => {
                 Math.ceil((new Date(profile.subscription_expiry).getTime() - Date.now()) / (1000 * 3600 * 24)) : 
                 30,
               cancelAtPeriodEnd: false,
-              portalUrl: STRIPE_PORTAL_SETTINGS_URL,
               plan: 'Pro',
               paymentMethod: {
                 brand: 'card',
@@ -275,25 +291,40 @@ serve(async (req) => {
         };
       }
 
-      // Próba utworzenia sesji Customer Portal, ale bezpieczna obsługa błędów
-      // Zwracamy link do ustawień Customer Portal w przypadku błędu
-      let portalUrl = STRIPE_PORTAL_SETTINGS_URL;
+      // Próba utworzenia sesji Customer Portal
+      let portalUrl = null;
       
       if (subscriptionData.customer) {
         try {
-          console.log('Customer portal configuration check: Redirecting to settings page instead of creating session');
-          console.log('Customer should configure portal settings at:', STRIPE_PORTAL_SETTINGS_URL);
+          console.log('Creating customer portal session for customer:', subscriptionData.customer);
           
-          // Zwracamy link do ustawień Customer Portal zamiast próby utworzenia sesji
-          // Użytkownik musi najpierw skonfigurować Customer Portal w Dashboardzie Stripe
-          portalUrl = STRIPE_PORTAL_SETTINGS_URL;
+          // Tworzymy sesję portalu klienta
+          const portalSessionResponse = await fetch(`https://api.stripe.com/v1/billing_portal/sessions`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${stripeSecretKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              customer: subscriptionData.customer,
+              return_url: `${req.headers.get('origin') || 'https://copywrite-assist.com'}/`,
+            }),
+          });
+          
+          if (!portalSessionResponse.ok) {
+            const errorText = await portalSessionResponse.text();
+            console.error('Error creating portal session:', errorText);
+            throw new Error(`Portal creation error: ${portalSessionResponse.status} ${errorText}`);
+          }
+          
+          const portalSessionData = await portalSessionResponse.json();
+          portalUrl = portalSessionData.url;
+          console.log('Created customer portal session URL:', portalUrl);
         } catch (portalError) {
           console.error('Error creating customer portal session:', portalError);
-          portalUrl = STRIPE_PORTAL_SETTINGS_URL;
         }
       } else {
         console.error('No customer ID found in subscription data');
-        portalUrl = STRIPE_PORTAL_SETTINGS_URL;
       }
 
       // Formatujemy i zwracamy dane
@@ -338,7 +369,7 @@ serve(async (req) => {
               Math.ceil((new Date(profile.subscription_expiry).getTime() - Date.now()) / (1000 * 3600 * 24)) : 
               30,
             cancelAtPeriodEnd: false,
-            portalUrl: STRIPE_PORTAL_SETTINGS_URL,
+            portalUrl: null,
             plan: 'Pro',
             paymentMethod: {
               brand: 'card',
