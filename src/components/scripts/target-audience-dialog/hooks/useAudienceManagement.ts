@@ -1,5 +1,5 @@
 
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { AudienceChoice } from '../types';
 
@@ -26,8 +26,28 @@ export const useAudienceManagement = (userId: string, props: AudienceManagementP
     selectedAudienceId
   } = props;
 
+  // Use refs to track and clear timeouts
+  const processingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const dialogTransitionRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Clear timeouts when component unmounts or when needed
+  const clearAllTimeouts = useCallback(() => {
+    if (processingTimeoutRef.current) {
+      clearTimeout(processingTimeoutRef.current);
+      processingTimeoutRef.current = null;
+    }
+    
+    if (dialogTransitionRef.current) {
+      clearTimeout(dialogTransitionRef.current);
+      dialogTransitionRef.current = null;
+    }
+  }, []);
+
   // Handle audience choice selection
   const handleChoiceSelection = useCallback((choice: AudienceChoice) => {
+    // Clear any existing timeouts
+    clearAllTimeouts();
+    
     setAudienceChoice(choice);
     
     if (choice === 'new') {
@@ -36,15 +56,18 @@ export const useAudienceManagement = (userId: string, props: AudienceManagementP
     
     // Reset processing state when choice changes
     setIsProcessing(false);
-  }, [setAudienceChoice, setSelectedAudienceId, setIsProcessing]);
+  }, [setAudienceChoice, setSelectedAudienceId, setIsProcessing, clearAllTimeouts]);
 
   // Handle existing audience selection
   const handleExistingAudienceSelect = useCallback((id: string) => {
+    // Clear any existing timeouts
+    clearAllTimeouts();
+    
     setSelectedAudienceId(id);
     
     // Reset processing state when selection changes
     setIsProcessing(false);
-  }, [setSelectedAudienceId, setIsProcessing]);
+  }, [setSelectedAudienceId, setIsProcessing, clearAllTimeouts]);
 
   // Handle continue button click
   const handleContinue = useCallback(() => {
@@ -64,20 +87,29 @@ export const useAudienceManagement = (userId: string, props: AudienceManagementP
       return;
     }
     
+    // Clear any existing timeouts first
+    clearAllTimeouts();
+    
     // First update processing state
     setIsProcessing(true);
     
-    // Use setTimeout to ensure UI updates before showing goal dialog
-    setTimeout(() => {
+    // Set up timeout to show goal dialog with proper state management
+    dialogTransitionRef.current = setTimeout(() => {
       setShowGoalDialog(true);
       
       // Add another timeout to ensure the dialog is fully rendered
       // before resetting the processing state
-      setTimeout(() => {
+      processingTimeoutRef.current = setTimeout(() => {
         setIsProcessing(false);
-      }, 300);
-    }, 100);
-  }, [audienceChoice, selectedAudienceId, userId, setIsProcessing, setShowGoalDialog]);
+      }, 500); // Slightly longer timeout to ensure dialog is rendered
+    }, 200);
+
+    // Safety timeout to ensure processing state is eventually reset
+    // even if something goes wrong with the dialog transitions
+    setTimeout(() => {
+      setIsProcessing(false);
+    }, 3000); // Failsafe timeout
+  }, [audienceChoice, selectedAudienceId, userId, setIsProcessing, setShowGoalDialog, clearAllTimeouts]);
 
   // Handle create new audience button
   const handleCreateNewAudience = useCallback(() => {
@@ -86,25 +118,35 @@ export const useAudienceManagement = (userId: string, props: AudienceManagementP
       return;
     }
     
+    // Clear any existing timeouts
+    clearAllTimeouts();
+    
     // First update processing state
     setIsProcessing(true);
     
-    // Use setTimeout to ensure UI updates before showing form
-    setTimeout(() => {
+    // Set up timeout to show form with proper state management
+    dialogTransitionRef.current = setTimeout(() => {
       setShowForm(true);
       
       // Add another timeout to ensure the form is fully rendered
       // before resetting the processing state
-      setTimeout(() => {
+      processingTimeoutRef.current = setTimeout(() => {
         setIsProcessing(false);
-      }, 300);
-    }, 100);
-  }, [userId, setIsProcessing, setShowForm]);
+      }, 500); // Slightly longer timeout to ensure form is rendered
+    }, 200);
+
+    // Safety timeout to ensure processing state is eventually reset
+    // even if something goes wrong with the dialog transitions
+    setTimeout(() => {
+      setIsProcessing(false);
+    }, 3000); // Failsafe timeout
+  }, [userId, setIsProcessing, setShowForm, clearAllTimeouts]);
 
   return {
     handleChoiceSelection,
     handleExistingAudienceSelect,
     handleContinue,
     handleCreateNewAudience,
+    clearAllTimeouts,
   };
 };
