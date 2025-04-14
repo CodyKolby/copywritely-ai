@@ -1,7 +1,7 @@
 
 import React, { useEffect } from 'react';
 import { TargetAudienceDialogProps } from './types';
-import { useTargetAudienceDialog } from './hooks/useTargetAudienceDialog';
+import { useTargetAudienceDialog } from './hooks/useRefactoredTargetAudienceDialog';
 import MainSelectionDialog from './dialogs/MainSelectionDialog';
 import FormDialog from './dialogs/FormDialog';
 import GoalDialog from './dialogs/GoalDialog';
