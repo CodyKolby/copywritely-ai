@@ -357,7 +357,6 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
             <Separator className="my-2" />
             
             <div className="flex flex-col space-y-4 pt-2">
-              <h4 className="font-medium text-center">Dostępne akcje</h4>
               
               <div className="flex justify-center">
                 {data.cancelAtPeriodEnd ? (
