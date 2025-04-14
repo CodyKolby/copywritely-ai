@@ -1,109 +1,12 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.5.0";
 import Stripe from "https://esm.sh/stripe@12.1.1";
 
-// CORS headers
+// Define CORS headers
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-// Helper function to update profile with premium status
-const updateProfileWithPremium = async (supabase, userId, subscriptionId = null, subscriptionStatus = 'active', subscriptionExpiry = null) => {
-  try {
-    console.log(`Updating profile for user ${userId} with premium status`);
-    
-    // Calculate expiry date if not provided 
-    // For paid subscriptions, this will come from Stripe
-    // For trial users without payment, we'll set it to 3 days from now
-    if (!subscriptionExpiry) {
-      // If this is a real subscription, set proper expiry (30 days)
-      // Otherwise keep 3-day trial for non-subscription users
-      const expiryDate = new Date();
-      if (subscriptionId) {
-        expiryDate.setDate(expiryDate.getDate() + 30); // Full subscription
-      } else {
-        expiryDate.setDate(expiryDate.getDate() + 3);  // Trial only
-      }
-      subscriptionExpiry = expiryDate.toISOString();
-      console.log(`Using default expiry date: ${subscriptionExpiry}`);
-    }
-    
-    const updateData = {
-      id: userId,
-      is_premium: true,
-      subscription_status: subscriptionStatus,
-      subscription_expiry: subscriptionExpiry,
-      updated_at: new Date().toISOString()
-    };
-    
-    if (subscriptionId) {
-      updateData.subscription_id = subscriptionId;
-      updateData.subscription_created_at = new Date().toISOString();
-    } else if (!subscriptionId) {
-      // If no subscription ID but this is a new premium grant,
-      // make sure we record trial start time if it's not already set
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('trial_started_at')
-        .eq('id', userId)
-        .single();
-        
-      if (!profile?.trial_started_at) {
-        updateData.trial_started_at = new Date().toISOString();
-      }
-    }
-    
-    const { data, error } = await supabase
-      .from('profiles')
-      .upsert(updateData)
-      .select()
-      .single();
-      
-    if (error) {
-      console.error(`Error updating profile: ${error.message}`);
-      return false;
-    }
-    
-    console.log(`Profile updated successfully: ${JSON.stringify(data)}`);
-    return true;
-  } catch (error) {
-    console.error(`Exception updating profile: ${error.message}`);
-    return false;
-  }
-};
-
-// Get Stripe session details
-const getStripeSession = async (sessionId, stripeSecretKey) => {
-  try {
-    console.log(`Getting session details for ${sessionId}`);
-    
-    const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: "2023-10-16",
-      httpClient: Stripe.createFetchHttpClient()
-    });
-    
-    const session = await stripe.checkout.sessions.retrieve(sessionId, {
-      expand: ['subscription', 'customer', 'payment_intent']
-    });
-    
-    return session;
-  } catch (error) {
-    console.error(`Error retrieving session: ${error.message}`);
-    throw error;
-  }
-};
-
-// Get Supabase client
-const getSupabaseClient = () => {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  
-  if (!supabaseUrl || !supabaseServiceKey) {
-    throw new Error('Missing Supabase credentials');
-  }
-  
-  return createClient(supabaseUrl, supabaseServiceKey);
 };
 
 serve(async (req) => {
@@ -113,194 +16,154 @@ serve(async (req) => {
   }
 
   try {
-    console.log("Verify payment session function started");
+    // Get configuration from environment variables
+    const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
-    // Get request data
-    const { sessionId, userId } = await req.json();
-    
-    // Validate request data
-    if (!sessionId) {
-      throw new Error('Missing sessionId parameter');
+    if (!stripeSecretKey || !supabaseUrl || !supabaseServiceKey) {
+      throw new Error('Missing required environment variables');
     }
-    if (!userId) {
-      throw new Error('Missing userId parameter');
+
+    // Get user ID and session ID from request
+    const { userId, sessionId } = await req.json();
+    
+    if (!userId || !sessionId) {
+      throw new Error('Missing userId or sessionId');
+    }
+
+    console.log(`Verifying payment session for user: ${userId}, session: ${sessionId}`);
+
+    // Initialize Stripe
+    const stripe = new Stripe(stripeSecretKey, {
+      apiVersion: '2022-11-15'
+    });
+
+    // Initialize Supabase client with Service Role Key
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Retrieve session from Stripe
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    
+    if (!session) {
+      throw new Error('Failed to retrieve session from Stripe');
+    }
+
+    console.log('Session payment status:', session.payment_status);
+
+    // Check if payment was successful
+    if (session.payment_status !== 'paid') {
+      throw new Error('Session payment status is not paid');
+    }
+
+    // Get subscription ID
+    const subscriptionId = session.subscription;
+    
+    if (!subscriptionId) {
+      throw new Error('No subscription ID found in session');
+    }
+
+    console.log('Subscription ID:', subscriptionId);
+
+    // Retrieve subscription from Stripe
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    
+    if (!subscription) {
+      throw new Error('Failed to retrieve subscription from Stripe');
+    }
+
+    console.log('Subscription status:', subscription.status);
+
+    // Calculate expiry date
+    let expiryDate: string;
+    
+    if (subscription.current_period_end) {
+      expiryDate = new Date(subscription.current_period_end * 1000).toISOString();
+    } else {
+      // Default to 30 days from now
+      const date = new Date();
+      date.setDate(date.getDate() + 30);
+      expiryDate = date.toISOString();
     }
     
-    console.log(`Verifying payment for session: ${sessionId}, user: ${userId}`);
+    // Determine if this is a trial subscription
+    const isTrial = subscription.status === 'trialing';
+    const trialEnd = subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null;
     
-    // Initialize Supabase client
-    const supabase = getSupabaseClient();
-    
-    // IMMEDIATE PREMIUM ACCESS: Grant premium access right away
-    // This ensures the user gets access even before verification completes
-    console.log("IMMEDIATE ACTION: Setting premium status while verification proceeds");
-    await updateProfileWithPremium(supabase, userId);
-    console.log("Premium status granted immediately");
-    
-    // First check if payment was already logged in our database
-    console.log("Checking payment logs...");
-    const { data: paymentLog, error: logError } = await supabase
+    console.log('Expiry date:', expiryDate);
+    console.log('Is trial:', isTrial);
+    console.log('Trial end:', trialEnd);
+
+    // Update user profile
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({
+        is_premium: true,
+        subscription_id: subscriptionId,
+        subscription_status: subscription.status,
+        subscription_expiry: expiryDate,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId)
+      .select();
+      
+    if (error) {
+      console.error('Error updating profile:', error);
+      throw new Error('Failed to update user profile');
+    }
+
+    console.log('Profile updated successfully');
+
+    // Log payment in payment_logs table
+    const { error: logError } = await supabase
       .from('payment_logs')
-      .select('*')
-      .eq('session_id', sessionId)
-      .maybeSingle();
+      .insert({
+        user_id: userId,
+        session_id: sessionId,
+        subscription_id: subscriptionId,
+        customer: session.customer,
+        customer_email: session.customer_details?.email,
+        timestamp: new Date().toISOString()
+      });
       
     if (logError) {
-      console.error("Error checking payment logs:", logError);
-    } else if (paymentLog) {
-      console.log("Payment found in logs, confirming premium status");
-      
-      return new Response(
-        JSON.stringify({ 
-          success: true,
-          message: 'Payment already confirmed',
-          source: 'payment_logs'
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.error('Error logging payment:', logError);
+      // Non-critical error, continue
+    } else {
+      console.log('Payment logged successfully');
     }
-    
-    // If not found in logs, check with Stripe directly
-    try {
-      console.log("Checking Stripe session via direct API call...");
-      
-      // Get the Stripe secret key
-      const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY");
-      if (!stripeSecretKey) {
-        throw new Error("STRIPE_SECRET_KEY not set");
-      }
-      
-      // Fetch the session with retry logic
-      const session = await getStripeSession(sessionId, stripeSecretKey);
-      
-      // Update session metadata with userId for future webhook processing
-      try {
-        const stripe = new Stripe(stripeSecretKey, {
-          apiVersion: "2023-10-16",
-          httpClient: Stripe.createFetchHttpClient()
-        });
-        
-        await stripe.checkout.sessions.update(sessionId, {
-          metadata: { userId }
-        });
-        console.log("Updated session metadata with userId");
-      } catch (metadataError) {
-        console.error("Error updating session metadata:", metadataError);
-        // Continue verification even if metadata update fails
-      }
-      
-      // Log full session details for debugging
-      console.log("Session details:", JSON.stringify({
-        id: session.id,
-        payment_status: session.payment_status,
-        status: session.status,
-        customer: session.customer,
-        subscription: session.subscription,
-        metadata: session.metadata,
-        customer_email: session.customer_email
-      }));
-      
-      // Get subscription expiry date if available
-      let subscriptionExpiry = null;
-      let subscriptionId = null;
-      
-      if (session.subscription) {
-        try {
-          const stripe = new Stripe(stripeSecretKey, {
-            apiVersion: "2023-10-16",
-            httpClient: Stripe.createFetchHttpClient()
-          });
-          
-          const subscription = await stripe.subscriptions.retrieve(session.subscription);
-          subscriptionId = subscription.id;
-          
-          if (subscription.current_period_end) {
-            subscriptionExpiry = new Date(subscription.current_period_end * 1000).toISOString();
-            console.log(`Subscription expiry date: ${subscriptionExpiry}`);
-          }
-        } catch (subError) {
-          console.error("Error getting subscription details:", subError);
+
+    // Return success with subscription details
+    return new Response(
+      JSON.stringify({
+        success: true,
+        subscriptionId,
+        status: subscription.status,
+        expiryDate,
+        isTrial,
+        trialEnd,
+      }),
+      {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
         }
       }
-      
-      // Update profile with subscription details
-      await updateProfileWithPremium(
-        supabase,
-        userId,
-        subscriptionId || session.subscription,
-        'active',
-        subscriptionExpiry
-      );
-      
-      // Log the payment regardless of session details - be optimistic
-      try {
-        await supabase.from('payment_logs').insert({
-          user_id: userId,
-          session_id: sessionId,
-          subscription_id: session.subscription || null,
-          customer: session.customer || null,
-          customer_email: session.customer_email || null,
-          timestamp: new Date().toISOString()
-        });
-        console.log("Payment logged successfully");
-      } catch (insertError) {
-        console.error("Error logging payment:", insertError);
-      }
-        
-      // Return success even if verification is still in progress
-      // We've already granted premium status and the webhook will handle the rest
-      return new Response(
-        JSON.stringify({ 
-          success: true,
-          premium_status: true,
-          message: 'Account updated successfully',
-          source: 'optimistic_update'
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-      
-    } catch (stripeError) {
-      console.error("Error retrieving Stripe session:", stripeError);
-      
-      // Even if we can't verify with Stripe, grant premium status
-      // as a last resort to avoid blocking the user
-      try {
-        console.log("Stripe verification failed, applying fallback premium grant");
-        await updateProfileWithPremium(supabase, userId);
-        
-        // Log the payment attempt
-        await supabase.from('payment_logs').insert({
-          user_id: userId,
-          session_id: sessionId,
-          fallback: true,
-          timestamp: new Date().toISOString()
-        });
-        
-        return new Response(
-          JSON.stringify({ 
-            success: true,
-            message: 'Emergency fallback: account updated',
-            source: 'fallback'
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      } catch (fallbackError) {
-        console.error("Fallback update also failed:", fallbackError);
-        throw new Error(`Verification failed with fallback: ${stripeError.message}`);
-      }
-    }
+    );
   } catch (error) {
-    console.error('Error in verify-payment-session function:', error);
+    console.error('Error verifying payment session:', error);
     
     return new Response(
       JSON.stringify({ 
-        success: false,
-        message: error.message || 'Error verifying payment',
-        timestamp: new Date().toISOString()
+        success: false, 
+        error: error.message || 'Unknown error occurred' 
       }),
-      { 
-        status: 400, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      {
+        status: 400,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
       }
     );
   }

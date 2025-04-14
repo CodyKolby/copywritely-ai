@@ -23,6 +23,16 @@ const TrialState: React.FC<TrialStateProps> = ({
   expiryDate, 
   daysRemaining 
 }) => {
+  // Make sure days remaining is never negative
+  const displayDays = Math.max(0, daysRemaining);
+  
+  // Helper for Polish plurality
+  const getDayText = (days: number) => {
+    if (days === 1) return 'dzień';
+    if (days % 10 >= 2 && days % 10 <= 4 && (days % 100 < 10 || days % 100 >= 20)) return 'dni';
+    return 'dni';
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="mx-auto max-w-md rounded-xl p-6">
@@ -53,8 +63,7 @@ const TrialState: React.FC<TrialStateProps> = ({
               <div className="flex items-center text-sm text-gray-600 gap-2">
                 <Clock className="h-4 w-4" />
                 <span>
-                  {daysRemaining} {daysRemaining === 1 ? 'dzień' : 
-                   daysRemaining < 5 ? 'dni' : 'dni'} do końca
+                  {displayDays} {getDayText(displayDays)} do końca
                 </span>
               </div>
             </div>

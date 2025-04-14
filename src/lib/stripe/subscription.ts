@@ -12,7 +12,7 @@ export interface SubscriptionDetails {
   hasSubscription: boolean;
   plan: string;
   trialEnd: string | null;
-  isTrial: boolean; // Ensure this property is required
+  isTrial: boolean;
 }
 
 // Function to fetch subscription details
@@ -27,7 +27,18 @@ export const getSubscriptionDetails = async (userId: string): Promise<Subscripti
       return null;
     }
     
-    return data as SubscriptionDetails;
+    // Ensure all required fields are present
+    const subscriptionData = data as SubscriptionDetails;
+    
+    if (!subscriptionData.trialEnd && subscriptionData.isTrial) {
+      subscriptionData.trialEnd = subscriptionData.currentPeriodEnd;
+    }
+    
+    if (typeof subscriptionData.isTrial !== 'boolean') {
+      subscriptionData.isTrial = subscriptionData.status === 'trialing';
+    }
+    
+    return subscriptionData;
   } catch (error) {
     console.error('Error fetching subscription details:', error);
     return null;

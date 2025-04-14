@@ -38,57 +38,91 @@ export const useSubscriptionModal = (open: boolean) => {
           throw new Error('Nie udało się pobrać danych subskrypcji');
         }
         
+        // Verify that we have all required fields
+        if (typeof subscriptionData.isTrial !== 'boolean') {
+          subscriptionData.isTrial = subscriptionData.status === 'trialing';
+        }
+        
+        if (!subscriptionData.trialEnd && subscriptionData.isTrial && subscriptionData.currentPeriodEnd) {
+          subscriptionData.trialEnd = subscriptionData.currentPeriodEnd;
+        }
+        
+        // Double-check expiry date logic - if negative days, subscription has expired
+        if (subscriptionData.daysUntilRenewal <= 0 && subscriptionData.status !== 'trialing') {
+          // Force refresh of auth status since subscription has expired
+          await refreshSession();
+          throw new Error('Twoja subskrypcja wygasła');
+        }
+        
         return subscriptionData;
       } catch (err) {
         if (isPremium) {
           // Create a fallback subscription object for users with premium status
           // but no subscription details (e.g. trial users)
-          const expiryDate = new Date();
           
           // Check if we can get profile details
           try {
             const { data: profile } = await supabase
               .from('profiles')
-              .select('subscription_expiry')
+              .select('subscription_expiry, subscription_status, subscription_id')
               .eq('id', user.id)
               .single();
               
-            if (profile && profile.subscription_expiry) {
-              // Use the actual expiry date from the profile
-              const subscriptionExpiry = profile.subscription_expiry;
-              const daysUntil = Math.ceil((new Date(subscriptionExpiry).getTime() - Date.now()) / (1000 * 3600 * 24));
+            if (profile) {
+              // Verify expiry date
+              let currentExpiryDate = profile.subscription_expiry;
+              let isTrial = profile.subscription_status === 'trialing' || 
+                         (!profile.subscription_id && profile.subscription_expiry);
+              
+              // If no expiry date, create one based on subscription type
+              if (!currentExpiryDate) {
+                const expiryDate = new Date();
+                expiryDate.setDate(expiryDate.getDate() + (isTrial ? 3 : 30));
+                currentExpiryDate = expiryDate.toISOString();
+              }
+              
+              // Calculate days until expiry
+              const daysUntil = Math.ceil((new Date(currentExpiryDate).getTime() - Date.now()) / (1000 * 3600 * 24));
+              
+              // If days until is negative or zero, subscription has expired
+              if (daysUntil <= 0 && !isTrial) {
+                console.error('Subscription expired according to profile data');
+                await refreshSession();
+                throw new Error('Twoja subskrypcja wygasła');
+              }
               
               return {
                 hasSubscription: true,
-                subscriptionId: 'trial',
-                status: 'active',
-                currentPeriodEnd: subscriptionExpiry,
-                daysUntilRenewal: daysUntil,
+                subscriptionId: profile.subscription_id || 'trial',
+                status: profile.subscription_status || 'active',
+                currentPeriodEnd: currentExpiryDate,
+                daysUntilRenewal: Math.max(0, daysUntil),
                 cancelAtPeriodEnd: false,
                 portalUrl: null,
-                plan: 'Trial',
-                trialEnd: subscriptionExpiry,
-                isTrial: true
+                plan: isTrial ? 'Trial' : 'Pro',
+                trialEnd: isTrial ? currentExpiryDate : null,
+                isTrial: isTrial
               } as SubscriptionDetails;
             }
           } catch (profileErr) {
             console.error('Error fetching profile details:', profileErr);
           }
           
-          // Default fallback to 3-day trial
-          expiryDate.setDate(expiryDate.getDate() + 3);
+          // Default fallback
+          const expiryDate = new Date();
+          expiryDate.setDate(expiryDate.getDate() + 30);
           
           return {
             hasSubscription: true,
-            subscriptionId: 'trial',
+            subscriptionId: 'manual_premium',
             status: 'active',
             currentPeriodEnd: expiryDate.toISOString(),
-            daysUntilRenewal: 3,
+            daysUntilRenewal: 30,
             cancelAtPeriodEnd: false,
             portalUrl: null,
-            plan: 'Trial',
-            trialEnd: expiryDate.toISOString(),
-            isTrial: true
+            plan: 'Pro',
+            trialEnd: null,
+            isTrial: false
           } as SubscriptionDetails;
         }
         throw err;
@@ -146,16 +180,19 @@ export const useSubscriptionModal = (open: boolean) => {
   // Calculate fallback data for premium users without subscription data
   const getFallbackData = () => {
     const expiryDate = new Date();
-    expiryDate.setDate(expiryDate.getDate() + 3);
+    expiryDate.setDate(expiryDate.getDate() + 30);
     
     return {
       hasSubscription: true,
+      subscriptionId: 'manual_premium',
       status: 'active',
-      plan: 'Trial',
-      daysUntilRenewal: 3,
+      plan: 'Pro',
+      daysUntilRenewal: 30,
       currentPeriodEnd: expiryDate.toISOString(),
       portalUrl: null,
-      trialEnd: expiryDate.toISOString()
+      trialEnd: null,
+      isTrial: false,
+      cancelAtPeriodEnd: false
     };
   };
 
@@ -167,6 +204,7 @@ export const useSubscriptionModal = (open: boolean) => {
     formatDate,
     renewSubscription,
     handleOpenPortal,
-    fallbackData: getFallbackData()
+    fallbackData: getFallbackData(),
+    refetch
   };
 };

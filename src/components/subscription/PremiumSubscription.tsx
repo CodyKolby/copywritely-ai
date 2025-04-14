@@ -25,7 +25,8 @@ const PremiumSubscription: React.FC<PremiumSubscriptionProps> = ({
   onRenew,
   onOpenPortal
 }) => {
-  const isTrial = data.isTrial === true;
+  // Ensure isTrial is properly set
+  const isTrial = data.isTrial === true || data.status === 'trialing';
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
