@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +20,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { createCheckoutSession, PRICE_IDS } from '@/lib/stripe';
-import { SubscriptionDetails } from '@/lib/stripe/subscription';
+import { SubscriptionDetails, getSubscriptionDetails } from '@/lib/stripe/subscription';
 
 interface SubscriptionModalProps {
   open: boolean;
@@ -37,16 +38,14 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
       if (!user?.id) return null;
 
       try {
-        const { data, error } = await supabase.functions.invoke('subscription-details', {
-          body: { userId: user.id }
-        });
-
-        if (error) {
-          console.error('Error fetching subscription details:', error);
-          throw new Error(error.message);
+        // Use the getSubscriptionDetails function from the subscription.ts file
+        const subscriptionData = await getSubscriptionDetails(user.id);
+        
+        if (!subscriptionData) {
+          throw new Error('Nie udało się pobrać danych subskrypcji');
         }
-
-        return data as SubscriptionDetails;
+        
+        return subscriptionData;
       } catch (err) {
         if (isPremium) {
           return {
@@ -56,7 +55,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
             currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
             daysUntilRenewal: 30,
             cancelAtPeriodEnd: false,
-            portalUrl: '#',
+            portalUrl: 'https://billing.stripe.com/p/login/test_cN26rW4Ym21J8Qo144',
             plan: 'Pro',
             paymentMethod: {
               brand: 'card',
@@ -129,6 +128,23 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
       toast.error('Błąd podczas odnowienia subskrypcji', {
         description: error instanceof Error ? error.message : 'Spróbuj ponownie później.'
       });
+    }
+  };
+
+  const handleOpenPortal = () => {
+    try {
+      if (data?.portalUrl && data.portalUrl !== '#') {
+        console.log('Opening customer portal URL:', data.portalUrl);
+        window.open(data.portalUrl, '_blank');
+      } else {
+        console.error('No valid portal URL available:', data?.portalUrl);
+        toast.error('Nie udało się utworzyć sesji portalu klienta', {
+          description: 'Spróbuj odświeżyć informacje o subskrypcji lub skontaktuj się z obsługą klienta.'
+        });
+      }
+    } catch (err) {
+      console.error('Error opening portal URL:', err);
+      toast.error('Wystąpił błąd podczas otwierania portalu klienta');
     }
   };
 
@@ -266,12 +282,13 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
       paymentMethod: {
         brand: 'card',
         last4: '0000'
-      }
+      },
+      portalUrl: 'https://billing.stripe.com/p/login/test_cN26rW4Ym21J8Qo144'
     };
     
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="mx-4 sm:max-w-md rounded-lg">
+        <DialogContent className="mx-auto max-w-md rounded-lg">
           <DialogHeader>
             <DialogTitle>Twoja subskrypcja Premium</DialogTitle>
             <DialogDescription>
@@ -327,7 +344,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
               <div className="flex flex-col space-y-3">
                 <h4 className="font-medium">Dostępne akcje</h4>
                 <Button 
-                  onClick={() => window.open('https://stripe.com', '_blank')} 
+                  onClick={handleOpenPortal} 
                   className="w-full flex items-center gap-2" 
                   variant="outline"
                 >
@@ -370,7 +387,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
   if (!data?.hasSubscription) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="mx-4 sm:max-w-md rounded-lg">
+        <DialogContent className="mx-auto max-w-md rounded-lg">
           <DialogHeader>
             <DialogTitle>Brak aktywnej subskrypcji</DialogTitle>
             <DialogDescription>
@@ -396,7 +413,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="mx-4 sm:max-w-md rounded-lg">
+      <DialogContent className="mx-auto max-w-md rounded-lg">
         <DialogHeader>
           <DialogTitle>Twoja subskrypcja</DialogTitle>
           <DialogDescription>
@@ -457,7 +474,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
                   <RefreshCcw className="h-4 w-4" />
                   Odnów subskrypcję
                 </Button>
-              ) : data.subscriptionId !== 'manual_premium' && data.portalUrl !== '#' ? (
+              ) : data.subscriptionId !== 'manual_premium' && (
                 cancelConfirm ? (
                   <div className="space-y-2">
                     <p className="text-sm text-red-600">
@@ -492,18 +509,10 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
                     Anuluj subskrypcję
                   </Button>
                 )
-              ) : null}
+              )}
               
               <Button 
-                onClick={() => {
-                  if (data.portalUrl && data.portalUrl !== '#') {
-                    console.log('Opening customer portal URL:', data.portalUrl);
-                    window.open(data.portalUrl, '_blank');
-                  } else {
-                    console.error('No portal URL available:', data.portalUrl);
-                    toast.error('Nie udało się utworzyć sesji portalu klienta');
-                  }
-                }} 
+                onClick={handleOpenPortal} 
                 className="w-full flex items-center gap-2" 
                 variant="outline"
               >

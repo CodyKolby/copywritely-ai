@@ -35,7 +35,7 @@ serve(async (req) => {
     // Pobieramy profil użytkownika z informacją o subskrypcji
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('subscription_id, subscription_status, subscription_expiry, is_premium')
+      .select('subscription_id, subscription_status, subscription_expiry, is_premium, email')
       .eq('id', userId)
       .single();
 
@@ -52,58 +52,71 @@ serve(async (req) => {
       console.log('User has premium status without subscription ID');
       
       // Dla użytkowników premium bez ID subskrypcji, próbujemy sprawdzić czy istnieje klient w Stripe
-      let portalUrl = '#';
+      let portalUrl = null;
       try {
-        // Pobieramy email użytkownika z profilu lub bezpośrednio z auth.users
-        const { data: userData, error: userError } = await supabase
-          .from('profiles')
-          .select('email')
-          .eq('id', userId)
-          .single();
+        if (!stripeSecretKey) {
+          throw new Error('Brak klucza Stripe API');
+        }
+        
+        // Pobieramy email użytkownika z profilu
+        const userEmail = profile.email;
+        
+        if (!userEmail) {
+          throw new Error('Brak adresu email użytkownika');
+        }
+        
+        console.log('Checking for Stripe customer with email:', userEmail);
+        
+        // Sprawdzamy czy użytkownik istnieje w Stripe
+        const response = await fetch(`https://api.stripe.com/v1/customers?email=${encodeURIComponent(userEmail)}&limit=1`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${stripeSecretKey}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Stripe API error: ${response.status} ${errorText}`);
+        }
+        
+        const customersData = await response.json();
+        
+        if (customersData.data && customersData.data.length > 0) {
+          const customerId = customersData.data[0].id;
+          console.log('Found Stripe customer ID for premium user:', customerId);
           
-        if (!userError && userData?.email) {
-          console.log('Checking for Stripe customer with email:', userData.email);
-          
-          // Sprawdzamy czy użytkownik istnieje w Stripe
-          const response = await fetch(`https://api.stripe.com/v1/customers?email=${encodeURIComponent(userData.email)}&limit=1`, {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${stripeSecretKey}`,
-              'Content-Type': 'application/json',
-            },
+          // Tworzymy sesję Customer Portal
+          const portalSessionParams = new URLSearchParams({
+            'customer': customerId,
+            'return_url': `${req.headers.get('origin') || 'https://app.copywritely.ai'}/account`,
           });
           
-          const customersData = await response.json();
+          const portalResponse = await fetch('https://api.stripe.com/v1/billing_portal/sessions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${stripeSecretKey}`,
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: portalSessionParams.toString(),
+          });
           
-          if (customersData.data && customersData.data.length > 0) {
-            const customerId = customersData.data[0].id;
-            console.log('Found Stripe customer ID for premium user:', customerId);
-            
-            // Tworzymy sesję Customer Portal
-            const portalResponse = await fetch('https://api.stripe.com/v1/billing_portal/sessions', {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${stripeSecretKey}`,
-                'Content-Type': 'application/x-www-form-urlencoded',
-              },
-              body: new URLSearchParams({
-                'customer': customerId,
-                'return_url': `${req.headers.get('origin') || ''}/account`,
-              }).toString(),
-            });
-            
-            const portalData = await portalResponse.json();
-            if (!portalData.error && portalData.url) {
-              portalUrl = portalData.url;
-              console.log('Created portal URL for premium user:', portalUrl);
-            } else {
-              console.error('Error creating portal URL:', portalData.error);
-            }
+          if (!portalResponse.ok) {
+            const errorText = await portalResponse.text();
+            throw new Error(`Portal creation error: ${portalResponse.status} ${errorText}`);
+          }
+          
+          const portalData = await portalResponse.json();
+          if (portalData.url) {
+            portalUrl = portalData.url;
+            console.log('Created portal URL for premium user:', portalUrl);
           } else {
-            console.log('No Stripe customer found for email:', userData.email);
+            console.error('Portal response missing URL:', portalData);
+            throw new Error('Nieprawidłowa odpowiedź z API Stripe');
           }
         } else {
-          console.error('Could not find user email');
+          console.log('No Stripe customer found for email:', userEmail);
         }
       } catch (portalError) {
         console.error('Error trying to create portal URL for premium user:', portalError);
@@ -119,7 +132,7 @@ serve(async (req) => {
             Math.ceil((new Date(profile.subscription_expiry).getTime() - Date.now()) / (1000 * 3600 * 24)) : 
             30,
           cancelAtPeriodEnd: false,
-          portalUrl: portalUrl,
+          portalUrl: portalUrl || 'https://billing.stripe.com/p/login/test_cN26rW4Ym21J8Qo144',
           plan: 'Pro',
           paymentMethod: {
             brand: 'card',
@@ -151,6 +164,10 @@ serve(async (req) => {
     }
 
     try {
+      if (!stripeSecretKey) {
+        throw new Error('Brak klucza Stripe API');
+      }
+      
       // Pobieramy szczegóły subskrypcji ze Stripe
       const response = await fetch(`https://api.stripe.com/v1/subscriptions/${profile.subscription_id}`, {
         method: 'GET',
@@ -160,6 +177,11 @@ serve(async (req) => {
         },
       });
 
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Stripe API error: ${response.status} ${errorText}`);
+      }
+      
       const subscriptionData = await response.json();
 
       if (subscriptionData.error) {
@@ -178,7 +200,7 @@ serve(async (req) => {
                 Math.ceil((new Date(profile.subscription_expiry).getTime() - Date.now()) / (1000 * 3600 * 24)) : 
                 30,
               cancelAtPeriodEnd: false,
-              portalUrl: '#',
+              portalUrl: 'https://billing.stripe.com/p/login/test_cN26rW4Ym21J8Qo144',
               plan: 'Pro',
               paymentMethod: {
                 brand: 'card',
@@ -211,6 +233,11 @@ serve(async (req) => {
             },
           });
           
+          if (!paymentMethodResponse.ok) {
+            const errorText = await paymentMethodResponse.text();
+            throw new Error(`Payment method error: ${paymentMethodResponse.status} ${errorText}`);
+          }
+          
           const paymentMethodData = await paymentMethodResponse.json();
           
           if (!paymentMethodData.error && paymentMethodData.card) {
@@ -240,6 +267,11 @@ serve(async (req) => {
             }
           );
           
+          if (!customerPaymentMethodsResponse.ok) {
+            const errorText = await customerPaymentMethodsResponse.text();
+            throw new Error(`Customer payment methods error: ${customerPaymentMethodsResponse.status} ${errorText}`);
+          }
+          
           const customerPaymentMethodsData = await customerPaymentMethodsResponse.json();
           
           if (!customerPaymentMethodsData.error && 
@@ -265,12 +297,17 @@ serve(async (req) => {
         };
       }
 
-      // Tworzymy sesję Customer Portal - poprawiony kod zgodnie z dokumentacją Stripe
-      let portalUrl = '#'; // Domyślna wartość
+      // Tworzymy sesję Customer Portal z lepszą obsługą błędów
+      let portalUrl = null;
       
       if (subscriptionData.customer) {
         try {
           console.log('Creating customer portal session for customer:', subscriptionData.customer);
+          
+          const portalSessionParams = new URLSearchParams({
+            'customer': subscriptionData.customer,
+            'return_url': `${req.headers.get('origin') || 'https://app.copywritely.ai'}/account`,
+          });
           
           const portalResponse = await fetch('https://api.stripe.com/v1/billing_portal/sessions', {
             method: 'POST',
@@ -278,17 +315,12 @@ serve(async (req) => {
               'Authorization': `Bearer ${stripeSecretKey}`,
               'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: new URLSearchParams({
-              'customer': subscriptionData.customer,
-              'return_url': `${req.headers.get('origin') || ''}/account`,
-            }).toString(), // Używamy toString(), aby upewnić się, że body zostanie poprawnie zakodowane
+            body: portalSessionParams.toString(),
           });
           
           if (!portalResponse.ok) {
-            console.error('Portal response not OK:', portalResponse.status, portalResponse.statusText);
             const errorText = await portalResponse.text();
-            console.error('Error response body:', errorText);
-            throw new Error(`Portal creation failed with status ${portalResponse.status}: ${errorText}`);
+            throw new Error(`Portal creation error: ${portalResponse.status} ${errorText}`);
           }
           
           const portalData = await portalResponse.json();
@@ -299,13 +331,16 @@ serve(async (req) => {
             console.log('Successfully created customer portal session URL:', portalUrl);
           } else {
             console.error('Portal response missing URL:', portalData);
+            throw new Error('Nieprawidłowa odpowiedź z API Stripe');
           }
         } catch (portalError) {
           console.error('Error creating customer portal session:', portalError);
-          // Kontynuujemy bez rzucania wyjątku
+          // Kontynuujemy bez rzucania wyjątku, ale ustawiamy URL na Stripe billing page
+          portalUrl = 'https://billing.stripe.com/p/login/test_cN26rW4Ym21J8Qo144';
         }
       } else {
         console.error('No customer ID found in subscription data');
+        portalUrl = 'https://billing.stripe.com/p/login/test_cN26rW4Ym21J8Qo144';
       }
 
       // Formatujemy i zwracamy dane
@@ -319,7 +354,7 @@ serve(async (req) => {
         currentPeriodEnd: currentPeriodEnd.toISOString(),
         daysUntilRenewal: daysUntilRenewal,
         cancelAtPeriodEnd: subscriptionData.cancel_at_period_end,
-        portalUrl: portalUrl,
+        portalUrl: portalUrl || 'https://billing.stripe.com/p/login/test_cN26rW4Ym21J8Qo144',
         hasSubscription: true,
         plan: subscriptionData.items?.data[0]?.plan?.nickname || 'Pro',
         trialEnd: subscriptionData.trial_end ? new Date(subscriptionData.trial_end * 1000).toISOString() : null,
@@ -350,7 +385,7 @@ serve(async (req) => {
               Math.ceil((new Date(profile.subscription_expiry).getTime() - Date.now()) / (1000 * 3600 * 24)) : 
               30,
             cancelAtPeriodEnd: false,
-            portalUrl: '#',
+            portalUrl: 'https://billing.stripe.com/p/login/test_cN26rW4Ym21J8Qo144',
             plan: 'Pro',
             paymentMethod: {
               brand: 'card',
