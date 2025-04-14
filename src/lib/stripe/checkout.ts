@@ -1,8 +1,8 @@
 
 import { toast } from 'sonner';
 import { getStripe, PRICE_IDS } from './client';
+import { supabase } from '@/integrations/supabase/client';
 
-// Simplified function to create checkout session
 export const createCheckoutSession = async (priceId: string) => {
   try {
     console.log('Starting checkout process with priceId', priceId);
@@ -10,6 +10,12 @@ export const createCheckoutSession = async (priceId: string) => {
     // Basic validation
     if (!priceId) {
       throw new Error('Nieprawidłowy identyfikator cennika');
+    }
+
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('Musisz być zalogowany aby dokonać zakupu');
     }
 
     // Get stored user email
@@ -23,6 +29,7 @@ export const createCheckoutSession = async (priceId: string) => {
     console.log('Preparing checkout with params:', {
       priceId,
       userEmail: userEmail ? 'Email provided' : 'Not provided',
+      userId: user.id,
       successUrl,
       cancelUrl
     });
@@ -37,14 +44,17 @@ export const createCheckoutSession = async (priceId: string) => {
     
     console.log('Stripe initialized successfully, redirecting to checkout...');
     
-    // Create a checkout session directly in the browser
-    // with the Stripe.js redirectToCheckout method
+    // Create a checkout session with user ID in metadata and client_reference_id
     const { error } = await stripe.redirectToCheckout({
       lineItems: [{ price: priceId, quantity: 1 }],
       mode: 'subscription',
       successUrl,
       cancelUrl,
-      customerEmail: userEmail || undefined
+      customerEmail: userEmail || undefined,
+      clientReferenceId: user.id, // Add user ID as client_reference_id
+      metadata: {
+        userId: user.id // Also add user ID to metadata for redundancy
+      }
     });
     
     if (error) {
