@@ -5,14 +5,22 @@ import { clearPremiumFromLocalStorage } from './local-storage-utils'
 
 export const signInWithGoogle = async () => {
   try {
-    const { error } = await supabase.auth.signInWithOAuth({
+    console.log('[AUTH] Attempting Google sign in');
+    
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/login`
+        redirectTo: `${window.location.origin}/login`,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        }
       }
     })
     
     if (error) throw error
+    
+    console.log('[AUTH] Google sign in response:', data);
   } catch (error) {
     if (error instanceof Error) {
       toast.error('Error signing in with Google', {
@@ -20,18 +28,23 @@ export const signInWithGoogle = async () => {
         dismissible: true
       })
     }
-    console.error('Error signing in with Google:', error)
+    console.error('[AUTH] Error signing in with Google:', error)
   }
 }
 
 export const signInWithEmail = async (email: string, password: string) => {
   try {
-    const { error } = await supabase.auth.signInWithPassword({
+    console.log('[AUTH] Attempting email sign in');
+    
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
     })
     
     if (error) throw error
+    
+    console.log('[AUTH] Email sign in success:', data.user?.id);
+    
     toast.success('Signed in successfully', {
       dismissible: true
     })
@@ -42,21 +55,30 @@ export const signInWithEmail = async (email: string, password: string) => {
         dismissible: true
       })
     }
-    console.error('Error signing in with email:', error)
+    console.error('[AUTH] Error signing in with email:', error)
   }
 }
 
 export const signUpWithEmail = async (email: string, password: string) => {
   try {
-    const { error } = await supabase.auth.signUp({
+    console.log('[AUTH] Attempting email sign up');
+    
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/login`
+        emailRedirectTo: `${window.location.origin}/login`,
+        data: {
+          full_name: email.split('@')[0], // Dodajemy podstawowe dane
+          avatar_url: null
+        }
       }
     })
     
     if (error) throw error
+    
+    console.log('[AUTH] Email sign up success:', data);
+    
     toast.success('Account created! Check your email for verification link.', {
       dismissible: true
     })
@@ -67,7 +89,7 @@ export const signUpWithEmail = async (email: string, password: string) => {
         dismissible: true
       })
     }
-    console.error('Error signing up with email:', error)
+    console.error('[AUTH] Error signing up with email:', error)
   }
 }
 

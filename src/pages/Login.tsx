@@ -31,11 +31,51 @@ const Login = () => {
     };
     
     checkSupabaseConfig();
+    
+    // Check auth callback parameters
+    const handleAuthCallback = async () => {
+      const url = new URL(window.location.href);
+      const hashParams = new URLSearchParams(url.hash.substring(1));
+      const queryParams = new URLSearchParams(url.search);
+      
+      // Check for auth provider callbacks
+      if ((hashParams.has('access_token') || queryParams.has('code')) && !window.authCallbackProcessed) {
+        window.authCallbackProcessed = true;
+        console.log('[LOGIN] Auth callback detected, setting loading state');
+        setLoading(true);
+        
+        try {
+          // Get session to check if user is logged in after redirect
+          const { data, error } = await supabase.auth.getSession();
+          if (error) throw error;
+          
+          if (data?.session?.user) {
+            console.log('[LOGIN] Auth callback successful, user authenticated:', data.session.user.id);
+            
+            // Store user metadata for debugging
+            console.log('[LOGIN] User data:', {
+              id: data.session.user.id,
+              email: data.session.user.email,
+              metadata: data.session.user.user_metadata
+            });
+          } else {
+            console.log('[LOGIN] Auth callback processed but no session found');
+          }
+        } catch (err) {
+          console.error('[LOGIN] Error processing auth callback:', err);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+    
+    handleAuthCallback();
   }, []);
 
   useEffect(() => {
     // If user is already logged in, redirect to home
     if (user) {
+      console.log('[LOGIN] User already logged in, redirecting to home', user.id);
       navigate('/');
     }
   }, [user, navigate]);
@@ -134,5 +174,12 @@ const Login = () => {
     </div>
   );
 };
+
+// Add TypeScript declaration for auth callback tracking
+declare global {
+  interface Window {
+    authCallbackProcessed?: boolean;
+  }
+}
 
 export default Login;

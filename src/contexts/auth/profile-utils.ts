@@ -18,10 +18,20 @@ export const fetchProfile = async (userId: string): Promise<Profile | null> => {
     if (error) {
       console.error('[PROFILE-UTILS] Error fetching profile:', error);
       
+      // Get user data from auth to use in profile creation
+      const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
+      
+      if (userError) {
+        console.error('[PROFILE-UTILS] Error fetching user data:', userError);
+      } else {
+        console.log('[PROFILE-UTILS] User data for profile creation:', userData);
+      }
+      
       // Attempt to create profile if none exists
       return createProfile(userId);
     }
     
+    console.log('[PROFILE-UTILS] Profile fetched successfully:', data);
     return data as Profile;
   } catch (error) {
     console.error('[PROFILE-UTILS] Exception fetching profile:', error);
@@ -36,10 +46,51 @@ export const createProfile = async (userId: string): Promise<Profile | null> => 
   try {
     console.log(`[PROFILE-UTILS] Creating profile for user: ${userId}`);
     
+    // Get user data from auth
+    const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
+    
+    if (userError) {
+      console.error('[PROFILE-UTILS] Error fetching user data for profile creation:', userError);
+    } else {
+      console.log('[PROFILE-UTILS] User data retrieved for profile creation:', userData?.user);
+    }
+    
+    // Get user from public auth.users view if available (might not be accessible)
+    try {
+      const { data: authUser, error: authUserError } = await supabase
+        .from('users')
+        .select('email, raw_user_meta_data')
+        .eq('id', userId)
+        .single();
+        
+      if (!authUserError && authUser) {
+        console.log('[PROFILE-UTILS] Auth user data:', authUser);
+      }
+    } catch (e) {
+      console.log('[PROFILE-UTILS] Cannot access auth users view, expected:', e);
+    }
+    
+    // Get current session for additional user data
+    const { data: sessionData } = await supabase.auth.getSession();
+    const user = sessionData?.session?.user;
+    
+    // Prepare profile data with best available information
+    const email = user?.email;
+    const userMetadata = user?.user_metadata;
+    
+    console.log('[PROFILE-UTILS] Current user session data:', {
+      email,
+      metadata: userMetadata
+    });
+    
+    // Create profile with manual data from session if available
     const { data, error } = await supabase
       .from('profiles')
       .insert({
         id: userId,
+        email: email || null,
+        full_name: userMetadata?.full_name || userMetadata?.name || null,
+        avatar_url: userMetadata?.avatar_url || null,
         is_premium: false,
         updated_at: new Date().toISOString()
       })
@@ -51,6 +102,7 @@ export const createProfile = async (userId: string): Promise<Profile | null> => 
       return null;
     }
     
+    console.log('[PROFILE-UTILS] Profile created successfully:', data);
     return data as Profile;
   } catch (error) {
     console.error('[PROFILE-UTILS] Exception creating profile:', error);
