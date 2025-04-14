@@ -80,10 +80,6 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem className="gap-2">
-            <UserIcon size={16} /> 
-            <span>Profil</span>
-          </DropdownMenuItem>
           <DropdownMenuItem asChild className="gap-2">
             <Link to="/projekty">
               <FolderOpen size={16} /> 
