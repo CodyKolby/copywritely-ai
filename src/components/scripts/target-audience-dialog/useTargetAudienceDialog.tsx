@@ -2,8 +2,8 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { fetchUserTargetAudiences } from './api';
-import { AudienceChoice, UseTargetAudienceDialogReturn } from './types';
+import { fetchExistingAudiences } from './api';
+import { AudienceChoice } from './types';
 import { EmailStyle } from '../EmailStyleDialog';
 import { SocialMediaPlatform } from '../SocialMediaPlatformDialog';
 
@@ -13,6 +13,42 @@ interface Props {
   templateId: string;
   userId: string;
   isPremium: boolean;
+}
+
+// Define the return type inline instead of importing a non-existent type
+interface UseTargetAudienceDialogReturn {
+  isLoading: boolean;
+  showForm: boolean;
+  audienceChoice: AudienceChoice;
+  selectedAudienceId: string | null;
+  existingAudiences: any[];
+  showScriptDialog: boolean;
+  showEmailDialog: boolean;
+  showSocialDialog: boolean;
+  showGoalDialog: boolean;
+  showEmailStyleDialog: boolean;
+  showSocialMediaPlatformDialog: boolean;
+  advertisingGoal: string;
+  emailStyle: string;
+  socialMediaPlatform: SocialMediaPlatform | undefined;
+  isProcessing: boolean;
+  isTransitioning: boolean;
+  handleChoiceSelection: (choice: AudienceChoice) => void;
+  handleExistingAudienceSelect: (id: string) => void;
+  handleContinue: () => void;
+  handleCreateNewAudience: () => void;
+  handleFormSubmit: (audienceId: string) => void;
+  handleBack: () => void;
+  handleGoalSubmit: (goal: string) => void;
+  handleGoalBack: () => void;
+  handleEmailStyleSubmit: (style: EmailStyle) => void;
+  handleEmailStyleBack: () => void;
+  handleSocialMediaPlatformSubmit: (platform: SocialMediaPlatform) => void;
+  handleSocialMediaPlatformBack: () => void;
+  handleScriptDialogClose: () => void;
+  handleEmailDialogClose: () => void;
+  handleSocialDialogClose: () => void;
+  resetState: () => void;
 }
 
 export function useTargetAudienceDialog({
@@ -49,7 +85,7 @@ export function useTargetAudienceDialog({
   // Fetch existing target audiences
   const { data: existingAudiences = [], isLoading } = useQuery({
     queryKey: ['targetAudiences', userId],
-    queryFn: () => fetchUserTargetAudiences(userId),
+    queryFn: () => fetchExistingAudiences(userId),
     enabled: !!userId && open,
     staleTime: 30000, // 30 seconds
   });

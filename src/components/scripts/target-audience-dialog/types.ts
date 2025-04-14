@@ -20,3 +20,40 @@ export interface TargetAudience {
   age_range?: string;
   gender?: string;
 }
+
+// Adding the UseTargetAudienceDialogReturn interface
+export interface UseTargetAudienceDialogReturn {
+  isLoading: boolean;
+  showForm: boolean;
+  audienceChoice: AudienceChoice;
+  selectedAudienceId: string | null;
+  existingAudiences: any[];
+  showScriptDialog: boolean;
+  showEmailDialog: boolean;
+  showSocialDialog: boolean;
+  showGoalDialog: boolean;
+  showEmailStyleDialog: boolean;
+  showSocialMediaPlatformDialog: boolean;
+  advertisingGoal: string;
+  emailStyle: string;
+  socialMediaPlatform: SocialMediaPlatform | undefined;
+  isProcessing: boolean;
+  isTransitioning?: boolean;
+  handleChoiceSelection: (choice: AudienceChoice) => void;
+  handleExistingAudienceSelect: (id: string) => void;
+  handleContinue: () => void;
+  handleCreateNewAudience: () => void;
+  handleFormSubmit: (audienceId: string) => void;
+  handleBack: () => void;
+  handleGoalSubmit: (goal: string) => void;
+  handleGoalBack: () => void;
+  handleEmailStyleSubmit: (style: EmailStyle) => void;
+  handleEmailStyleBack: () => void;
+  handleSocialMediaPlatformSubmit: (platform: SocialMediaPlatform) => void;
+  handleSocialMediaPlatformBack: () => void;
+  handleScriptDialogClose: () => void;
+  handleEmailDialogClose: () => void;
+  handleSocialDialogClose: () => void;
+  resetState: () => void;
+  handleDeleteAudience?: (audienceId: string) => Promise<void>;
+}
