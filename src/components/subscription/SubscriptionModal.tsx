@@ -88,7 +88,11 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
             daysUntilRenewal: 30,
             cancelAtPeriodEnd: false,
             portalUrl: '#',
-            plan: 'Pro'
+            plan: 'Pro',
+            paymentMethod: {
+              brand: 'card',
+              last4: '0000'
+            }
           } as SubscriptionDetails;
         }
         
@@ -315,12 +319,16 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
       status: 'active',
       plan: 'Pro',
       daysUntilRenewal: 30,
-      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      paymentMethod: {
+        brand: 'card',
+        last4: '0000'
+      }
     };
     
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="mx-4 sm:max-w-md rounded-lg">
           <DialogHeader>
             <DialogTitle>Twoja subskrypcja Premium</DialogTitle>
             <DialogDescription>
@@ -347,6 +355,43 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
                     Aktywna
                   </Badge>
                 </div>
+                
+                <div className="flex items-center text-sm text-gray-600 gap-2">
+                  <CalendarClock className="h-4 w-4" />
+                  <span>
+                    Następne odnowienie: {formatDate(fallbackData.currentPeriodEnd)}
+                  </span>
+                </div>
+                
+                <div className="flex items-center text-sm text-gray-600 gap-2">
+                  <Clock className="h-4 w-4" />
+                  <span>
+                    {fallbackData.daysUntilRenewal} {fallbackData.daysUntilRenewal === 1 ? 'dzień' : 
+                     fallbackData.daysUntilRenewal < 5 ? 'dni' : 'dni'} do odnowienia
+                  </span>
+                </div>
+                
+                <div className="flex items-center text-sm text-gray-600 gap-2">
+                  <CreditCard className="h-4 w-4" />
+                  <span>
+                    Card **** 0000
+                  </span>
+                </div>
+              </div>
+              
+              <Separator />
+              
+              <div className="flex flex-col space-y-3">
+                <h4 className="font-medium">Dostępne akcje</h4>
+                <Button 
+                  onClick={() => window.open('https://stripe.com', '_blank')} 
+                  className="w-full flex items-center gap-2" 
+                  variant="outline"
+                >
+                  <CreditCard className="h-4 w-4" />
+                  Zarządzaj subskrypcją
+                  <ExternalLink className="h-3 w-3 ml-1" />
+                </Button>
               </div>
               
               <Separator />
@@ -382,7 +427,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
   if (!data?.hasSubscription) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="mx-4 sm:max-w-md rounded-lg">
           <DialogHeader>
             <DialogTitle>Brak aktywnej subskrypcji</DialogTitle>
             <DialogDescription>
@@ -409,7 +454,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
   // If we get here, we have subscription data to display
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="mx-4 sm:max-w-md rounded-lg">
         <DialogHeader>
           <DialogTitle>Twoja subskrypcja</DialogTitle>
           <DialogDescription>
@@ -507,17 +552,23 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
                 )
               ) : null}
               
-              {data.portalUrl && data.portalUrl !== '#' && (
-                <Button 
-                  onClick={() => window.open(data.portalUrl, '_blank')} 
-                  className="w-full flex items-center gap-2" 
-                  variant="outline"
-                >
-                  <CreditCard className="h-4 w-4" />
-                  Zarządzaj płatnościami
-                  <ExternalLink className="h-3 w-3 ml-1" />
-                </Button>
-              )}
+              {/* Zawsze pokazuj przycisk "Zarządzaj subskrypcją" niezależnie od wartości portalUrl */}
+              <Button 
+                onClick={() => {
+                  if (data.portalUrl && data.portalUrl !== '#') {
+                    window.open(data.portalUrl, '_blank');
+                  } else {
+                    // Jeśli nie ma portalUrl, można otworzyć stronę Stripe lub inną stronę zarządzania
+                    window.open('https://stripe.com', '_blank'); 
+                  }
+                }} 
+                className="w-full flex items-center gap-2" 
+                variant="outline"
+              >
+                <CreditCard className="h-4 w-4" />
+                Zarządzaj subskrypcją
+                <ExternalLink className="h-3 w-3 ml-1" />
+              </Button>
             </div>
             
             <Separator />
