@@ -1,6 +1,6 @@
 
 import { toast } from 'sonner';
-import { getStripe, PRICE_IDS } from './client';
+import { PRICE_IDS } from './client';
 import { supabase } from '@/integrations/supabase/client';
 
 export const createCheckoutSession = async (priceId: string) => {
@@ -26,7 +26,7 @@ export const createCheckoutSession = async (priceId: string) => {
     const successUrl = `${fullOrigin}/success?session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${fullOrigin}/pricing?canceled=true`;
 
-    console.log('Preparing checkout with params:', {
+    console.log('Preparing checkout session with params:', {
       priceId,
       userEmail: userEmail ? 'Email provided' : 'Not provided',
       userId: user.id,
@@ -34,32 +34,34 @@ export const createCheckoutSession = async (priceId: string) => {
       cancelUrl
     });
     
-    // Get Stripe instance
-    const stripe = await getStripe();
-    
-    if (!stripe) {
-      console.error('Failed to initialize Stripe');
-      throw new Error('Nie można zainicjować systemu płatności');
-    }
-    
-    console.log('Stripe initialized successfully, redirecting to checkout...');
-    
-    // redirectToCheckout nie wspiera pola metadata w wersji klienckiej
-    const { error } = await stripe.redirectToCheckout({
-      lineItems: [{ price: priceId, quantity: 1 }],
-      mode: 'subscription',
-      successUrl,
-      cancelUrl,
-      customerEmail: userEmail || undefined,
-      clientReferenceId: user.id // Dodajemy tylko to pole, bez metadata
+    // Zamiast używać stripe.redirectToCheckout, użyjmy funkcji edge do utworzenia sesji
+    const { data, error } = await supabase.functions.invoke('stripe-checkout', {
+      body: {
+        priceId,
+        customerEmail: userEmail || undefined,
+        userId: user.id,
+        successUrl,
+        cancelUrl
+      }
     });
     
     if (error) {
       console.error('Stripe checkout error:', error);
-      throw new Error(error.message || 'Błąd podczas przekierowania do płatności');
+      throw new Error(error.message || 'Błąd podczas tworzenia sesji płatności');
     }
-    
-    return true;
+
+    if (data?.url) {
+      console.log('Redirecting to Stripe checkout URL:', data.url);
+      // Zapisz flagę informującą o trwającym procesie checkout
+      sessionStorage.setItem('stripeCheckoutInProgress', 'true');
+      sessionStorage.setItem('redirectingToStripe', 'true');
+      
+      // Przekieruj do URL sesji Stripe
+      window.location.href = data.url;
+      return true;
+    } else {
+      throw new Error('Nie otrzymano URL sesji checkout');
+    }
     
   } catch (error) {
     console.error('Stripe checkout error:', error);

@@ -1,189 +1,110 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.5.0";
+import Stripe from "https://esm.sh/stripe@13.10.0";
 
-// Define CORS headers for cross-origin requests
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS'
 };
 
+const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
+  apiVersion: '2023-10-16',
+});
+
 serve(async (req) => {
-  console.log("Stripe checkout function called");
-  const startTime = Date.now();
-  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders, status: 204 });
   }
 
+  // Get the authenticated user
   try {
-    // Get Stripe secret key from environment
-    const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
-    console.log("Stripe secret key available:", !!stripeSecretKey);
-    
-    if (!stripeSecretKey) {
-      console.error('STRIPE_SECRET_KEY is not set in environment variables');
-      throw new Error('Missing Stripe API key in server configuration');
-    }
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') || '',
+      Deno.env.get('SUPABASE_ANON_KEY') || '',
+    );
 
-    // Parse request data with improved error handling
-    let requestData;
-    try {
-      requestData = await req.json();
-      console.log('Request data received:', JSON.stringify({
-        ...requestData,
-        customerEmail: requestData.customerEmail ? 'Email provided' : 'No email',
-        timestamp: requestData.timestamp || 'Not provided'
-      }));
-    } catch (e) {
-      console.error('Failed to parse request body:', e);
-      throw new Error('Invalid request format');
-    }
-    
-    // Extract and validate parameters
-    const { priceId, customerEmail, successUrl, cancelUrl, origin, timestamp } = requestData;
-
-    if (!priceId) {
-      console.error('Missing priceId in request');
-      throw new Error('Missing priceId parameter');
-    }
-    
-    console.log('Using priceId:', priceId);
-    
-    // Determine base URL with improved fallback logic
-    let baseUrl = '';
-    
-    if (origin && origin.includes('://')) {
-      baseUrl = origin;
-      if (baseUrl.endsWith('/')) {
-        baseUrl = baseUrl.slice(0, -1);
-      }
-    } else if (origin) {
-      baseUrl = `https://${origin}`;
-      if (baseUrl.endsWith('/')) {
-        baseUrl = baseUrl.slice(0, -1);
-      }
-    } else {
-      const referer = req.headers.get('referer');
-      const originHeader = req.headers.get('origin');
-      
-      if (originHeader) {
-        baseUrl = originHeader;
-        if (baseUrl.endsWith('/')) {
-          baseUrl = baseUrl.slice(0, -1);
-        }
-      } else if (referer) {
-        const url = new URL(referer);
-        baseUrl = `${url.protocol}//${url.host}`;
-      } else {
-        baseUrl = "https://copywrite-assist.com"; // Default fallback
-      }
-    }
-
-    console.log('Using base URL for redirects:', baseUrl);
-
-    // Format redirect URLs
-    const finalSuccessUrl = successUrl && successUrl.startsWith('http') 
-      ? successUrl 
-      : successUrl && successUrl.startsWith('/') 
-        ? `${baseUrl}${successUrl}` 
-        : `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`;
-
-    const finalCancelUrl = cancelUrl && cancelUrl.startsWith('http') 
-      ? cancelUrl 
-      : cancelUrl && cancelUrl.startsWith('/') 
-        ? `${baseUrl}${cancelUrl}` 
-        : `${baseUrl}/pricing?canceled=true`;
-
-    console.log('Final success URL:', finalSuccessUrl);
-    console.log('Final cancel URL:', finalCancelUrl);
-
-    // Create Stripe session with correct parameters
-    try {
-      console.log('Creating Stripe checkout session...');
-      
-      // Create form parameters with the correct Stripe format
-      const formData = new URLSearchParams();
-      formData.append('payment_method_types[]', 'card');
-      formData.append('mode', 'subscription');
-      formData.append('success_url', finalSuccessUrl);
-      formData.append('cancel_url', finalCancelUrl);
-      formData.append('line_items[0][price]', priceId);
-      formData.append('line_items[0][quantity]', '1');
-      formData.append('allow_promotion_codes', 'true');
-      formData.append('billing_address_collection', 'auto');
-      formData.append('subscription_data[trial_period_days]', '3');
-      
-      // Add customer email if provided
-      if (customerEmail) {
-        formData.append('customer_email', customerEmail);
-      }
-      
-      console.log('Stripe API request parameters:', Object.fromEntries(formData.entries()));
-      console.log('Sending request to Stripe API...');
-      
-      // Call Stripe API directly with form parameters
-      const response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${stripeSecretKey}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Stripe-Version': '2023-10-16',
-        },
-        body: formData.toString()
-      });
-
-      const responseText = await response.text();
-      console.log(`Stripe API response status: ${response.status}`);
-      console.log('Stripe API raw response:', responseText);
-
-      if (!response.ok) {
-        console.error(`Stripe API error (${response.status}):`, responseText);
-        throw new Error(`Stripe API error (${response.status}): ${responseText}`);
-      }
-
-      const sessionData = JSON.parse(responseText);
-      
-      const endTime = Date.now();
-      console.log(`Stripe session created successfully in ${endTime - startTime}ms:`, {
-        sessionId: sessionData.id,
-        url: sessionData.url
-      });
-
-      // Return successful response with URL for client
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
       return new Response(
-        JSON.stringify({ 
-          sessionId: sessionData.id,
-          url: sessionData.url 
-        }),
-        { 
-          headers: { 
-            ...corsHeaders,
-            'Content-Type': 'application/json',
-          } 
-        }
+        JSON.stringify({ error: 'Missing Authorization header' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
       );
-    } catch (stripeError) {
-      console.error('Error calling Stripe API:', stripeError);
-      throw new Error(`Stripe API error: ${stripeError.message}`);
     }
+
+    // Get the user's session
+    const { data: { user }, error: userError } = await supabase.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
+
+    if (userError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized', details: userError?.message }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
+    }
+
+    // Get the request body
+    const { priceId, customerEmail, userId, successUrl, cancelUrl } = await req.json();
+
+    if (!priceId || !userId || !successUrl || !cancelUrl) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required parameters' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+
+    // Find or create Stripe customer
+    let customerId;
+    const customers = await stripe.customers.list({ email: customerEmail || user.email, limit: 1 });
     
+    if (customers.data.length > 0) {
+      customerId = customers.data[0].id;
+    } else if (customerEmail || user.email) {
+      const customer = await stripe.customers.create({
+        email: customerEmail || user.email,
+        metadata: {
+          userId: userId
+        }
+      });
+      customerId = customer.id;
+    }
+
+    // Create checkout session
+    const session = await stripe.checkout.sessions.create({
+      customer: customerId,
+      customer_email: customerId ? undefined : (customerEmail || user.email),
+      client_reference_id: userId,
+      metadata: {
+        userId: userId
+      },
+      line_items: [
+        {
+          price: priceId,
+          quantity: 1,
+        },
+      ],
+      mode: 'subscription',
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+    });
+
+    return new Response(
+      JSON.stringify({ url: session.url }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+    );
+
   } catch (error) {
-    const endTime = Date.now();
-    console.error(`Error in Stripe checkout function after ${endTime - startTime}ms:`, error);
+    console.error('Stripe checkout error:', error);
     
     return new Response(
       JSON.stringify({ 
-        error: error.message || 'An error occurred during checkout session creation',
-        timestamp: new Date().toISOString()
+        error: 'Internal Server Error', 
+        details: error instanceof Error ? error.message : 'Unknown error' 
       }),
-      { 
-        status: 400, 
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json',
-        } 
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }
 });
