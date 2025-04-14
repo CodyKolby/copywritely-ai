@@ -58,6 +58,7 @@ serve(async (req) => {
 
     // Create checkout session with customer details
     const session = await stripe.checkout.sessions.create({
+      mode: 'subscription', // This needs to be specified explicitly for subscription mode
       customer_creation: 'always',
       customer_email: customerEmail || user.email,
       client_reference_id: userId,
@@ -70,9 +71,11 @@ serve(async (req) => {
           quantity: 1,
         },
       ],
-      mode: 'subscription',
       success_url: successUrl,
       cancel_url: cancelUrl,
+      subscription_data: {
+        trial_period_days: 3 // Add 3-day trial period
+      }
     });
 
     return new Response(
