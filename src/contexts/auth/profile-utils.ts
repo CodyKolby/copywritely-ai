@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Profile } from './types';
 
@@ -58,32 +57,26 @@ export const createProfile = async (userId: string): Promise<Profile | null> => 
     
     console.log('[PROFILE-UTILS] User data retrieved for profile creation:', user);
     
-    // Try to access auth user metadata
-    try {
-      // This block is removed as we can't access the auth.users table directly
-      // and it was causing the TypeScript error
-      console.log('[PROFILE-UTILS] Using session data for profile creation');
-    } catch (e) {
-      console.log('[PROFILE-UTILS] Expected error accessing auth data:', e);
-    }
+    // Extract useful data from user object
+    const email = user.email;
+    const userMetadata = user.user_metadata || {};
     
-    // Prepare profile data with best available information
-    const email = user?.email;
-    const userMetadata = user?.user_metadata;
+    console.log('[PROFILE-UTILS] Current user metadata:', userMetadata);
     
-    console.log('[PROFILE-UTILS] Current user session data:', {
-      email,
-      metadata: userMetadata
-    });
+    // Generate a default name from email if no name is available in metadata
+    const defaultName = email ? email.split('@')[0] : `User-${userId.substring(0, 8)}`;
+    const fullName = userMetadata.full_name || userMetadata.name || defaultName;
+    
+    console.log('[PROFILE-UTILS] Using name for profile:', fullName);
     
     // Create profile with manual data from session if available
     const { data, error } = await supabase
       .from('profiles')
-      .insert({
+      .upsert({
         id: userId,
         email: email || null,
-        full_name: userMetadata?.full_name || userMetadata?.name || null,
-        avatar_url: userMetadata?.avatar_url || null,
+        full_name: fullName,
+        avatar_url: userMetadata.avatar_url || null,
         is_premium: false,
         updated_at: new Date().toISOString()
       })
@@ -92,6 +85,11 @@ export const createProfile = async (userId: string): Promise<Profile | null> => 
       
     if (error) {
       console.error('[PROFILE-UTILS] Error creating profile:', error);
+      
+      // Fallback approach if first attempt fails - try with service role if available
+      // This is a simplified version just for the logs
+      console.log('[PROFILE-UTILS] Profile creation failed with standard client, error code:', error.code);
+      
       return null;
     }
     

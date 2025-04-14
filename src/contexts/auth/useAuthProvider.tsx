@@ -66,10 +66,35 @@ export const useAuthProvider = () => {
       
       if (!userProfile) {
         console.warn('[AUTH] No profile found or created for user:', userId);
+        
         const retryProfile = await createProfile(userId);
         if (retryProfile) {
           console.log('[AUTH] Successfully created profile on retry:', retryProfile);
           setProfile(retryProfile);
+        } else {
+          console.log('[AUTH] Attempting profile creation via edge function');
+          try {
+            const response = await fetch(`https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/create-profile`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${supabase.auth.session()?.access_token}`
+              },
+              body: JSON.stringify({ userId })
+            });
+            
+            if (response.ok) {
+              const result = await response.json();
+              if (result.profile) {
+                console.log('[AUTH] Successfully created profile via edge function:', result.profile);
+                setProfile(result.profile);
+              }
+            } else {
+              console.error('[AUTH] Edge function returned error:', await response.text());
+            }
+          } catch (edgeFuncError) {
+            console.error('[AUTH] Error calling profile edge function:', edgeFuncError);
+          }
         }
       }
       

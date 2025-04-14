@@ -61,7 +61,11 @@ export const signInWithEmail = async (email: string, password: string) => {
 
 export const signUpWithEmail = async (email: string, password: string) => {
   try {
-    console.log('[AUTH] Attempting email sign up');
+    console.log('[AUTH] Attempting email sign up with email:', email);
+    
+    // Extract a simple username from email for the full_name field
+    const username = email.split('@')[0];
+    console.log('[AUTH] Using generated username for full_name:', username);
     
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -69,7 +73,7 @@ export const signUpWithEmail = async (email: string, password: string) => {
       options: {
         emailRedirectTo: `${window.location.origin}/login`,
         data: {
-          full_name: email.split('@')[0], // Dodajemy podstawowe dane
+          full_name: username, // Use email username part as default name
           avatar_url: null
         }
       }
@@ -78,6 +82,32 @@ export const signUpWithEmail = async (email: string, password: string) => {
     if (error) throw error
     
     console.log('[AUTH] Email sign up success:', data);
+    
+    // After successful signup, try to create the profile directly
+    // This is a backup in case the RLS policies or triggers fail
+    if (data.user) {
+      try {
+        console.log('[AUTH] Attempting direct profile creation after signup');
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: data.user.id,
+            email: data.user.email,
+            full_name: username,
+            avatar_url: null,
+            is_premium: false,
+            updated_at: new Date().toISOString()
+          })
+          
+        if (profileError) {
+          console.error('[AUTH] Error creating profile after signup:', profileError);
+        } else {
+          console.log('[AUTH] Profile created successfully after signup');
+        }
+      } catch (profileErr) {
+        console.error('[AUTH] Exception creating profile after signup:', profileErr);
+      }
+    }
     
     toast.success('Account created! Check your email for verification link.', {
       dismissible: true

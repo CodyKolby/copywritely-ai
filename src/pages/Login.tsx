@@ -7,11 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/auth/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
 
 const Login = () => {
   const [loading, setLoading] = useState(false);
   const [configError, setConfigError] = useState(false);
-  const { user, signInWithGoogle } = useAuth();
+  const { user, signInWithGoogle, refreshSession } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -58,6 +59,16 @@ const Login = () => {
               email: data.session.user.email,
               metadata: data.session.user.user_metadata
             });
+            
+            // Force a session refresh to make sure profile is properly created
+            setTimeout(async () => {
+              try {
+                await refreshSession();
+                toast.success('Successfully authenticated! Redirecting...');
+              } catch (err) {
+                console.error('[LOGIN] Error refreshing session:', err);
+              }
+            }, 1000);
           } else {
             console.log('[LOGIN] Auth callback processed but no session found');
           }
@@ -70,7 +81,7 @@ const Login = () => {
     };
     
     handleAuthCallback();
-  }, []);
+  }, [refreshSession]);
 
   useEffect(() => {
     // If user is already logged in, redirect to home
