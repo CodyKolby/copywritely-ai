@@ -100,7 +100,6 @@ export const useAudienceManagement = (userId: string, props: AudienceManagementP
     setIsProcessing(true);
     
     // Set up timeout to show goal dialog with proper state management
-    // Zwiększamy opóźnienia dla lepszego efektu wizualnego
     dialogTransitionRef.current = setTimeout(() => {
       setShowGoalDialog(true);
       
@@ -108,14 +107,14 @@ export const useAudienceManagement = (userId: string, props: AudienceManagementP
       // before resetting the processing state
       processingTimeoutRef.current = setTimeout(() => {
         setIsProcessing(false);
-      }, 500); // Slightly longer timeout to ensure dialog is rendered
-    }, 250); // Longer delay to prevent flickering
+      }, 300); // Longer timeout to ensure dialog is rendered
+    }, 300); // Longer delay to prevent flickering
 
     // Safety timeout to ensure processing state is eventually reset
     // even if something goes wrong with the dialog transitions
     failsafeTimeoutRef.current = setTimeout(() => {
       setIsProcessing(false);
-    }, 3000); // Failsafe timeout
+    }, 5000); // Longer failsafe timeout (5 seconds)
   }, [audienceChoice, selectedAudienceId, userId, setIsProcessing, setShowGoalDialog, clearAllTimeouts]);
 
   // Handle create new audience button
@@ -132,7 +131,6 @@ export const useAudienceManagement = (userId: string, props: AudienceManagementP
     setIsProcessing(true);
     
     // Set up timeout to show form with proper state management
-    // Zwiększamy opóźnienia dla lepszego efektu wizualnego
     dialogTransitionRef.current = setTimeout(() => {
       setShowForm(true);
       
@@ -140,14 +138,14 @@ export const useAudienceManagement = (userId: string, props: AudienceManagementP
       // before resetting the processing state
       processingTimeoutRef.current = setTimeout(() => {
         setIsProcessing(false);
-      }, 500); // Slightly longer timeout to ensure form is rendered
-    }, 250); // Longer delay to prevent flickering
+      }, 300); // Longer timeout to ensure form is rendered
+    }, 300); // Longer delay to prevent flickering
 
     // Safety timeout to ensure processing state is eventually reset
     // even if something goes wrong with the dialog transitions
     failsafeTimeoutRef.current = setTimeout(() => {
       setIsProcessing(false);
-    }, 3000); // Failsafe timeout
+    }, 5000); // Longer failsafe timeout (5 seconds)
   }, [userId, setIsProcessing, setShowForm, clearAllTimeouts]);
 
   return {

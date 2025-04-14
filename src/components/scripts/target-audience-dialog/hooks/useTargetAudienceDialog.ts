@@ -56,7 +56,7 @@ export const useTargetAudienceDialog = ({
     selectedAudienceId: dialogState.selectedAudienceId
   });
   
-  // Use the hook for dialog navigation
+  // Use the hook for dialog navigation - Pass onOpenChange to control the parent dialog
   const dialogNavigation = useDialogNavigation({
     setShowForm: dialogState.setShowForm,
     setShowGoalDialog: dialogState.setShowGoalDialog,
@@ -69,6 +69,7 @@ export const useTargetAudienceDialog = ({
     setEmailStyle: dialogState.setEmailStyle,
     setSocialMediaPlatform: dialogState.setSocialMediaPlatform,
     setIsProcessing: dialogState.setIsProcessing,
+    onOpenChange: onOpenChange,
   }, templateId);
   
   // Use the hook for form submission
@@ -121,13 +122,21 @@ export const useTargetAudienceDialog = ({
         // First hide the form
         dialogState.setShowForm(false);
         
+        // Close the main dialog completely to prevent background visibility
+        onOpenChange(false);
+        
         // Reset isProcessing to false immediately
         dialogState.setIsProcessing(false);
         
-        // Switch to the goal dialog after a very brief delay
+        // Reopen dialogs in correct sequence
         setTimeout(() => {
-          dialogState.setShowGoalDialog(true);
-        }, 50);
+          onOpenChange(true);
+          
+          // Switch to the goal dialog after a very brief delay
+          setTimeout(() => {
+            dialogState.setShowGoalDialog(true);
+          }, 50);
+        }, 100);
         
         // Refresh audience list
         await fetchExistingAudiences();

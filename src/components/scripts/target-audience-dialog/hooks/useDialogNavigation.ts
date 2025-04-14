@@ -15,6 +15,7 @@ interface DialogNavigationProps {
   setEmailStyle: (style: EmailStyle | null) => void;
   setSocialMediaPlatform: (platform: SocialMediaPlatform | null) => void;
   setIsProcessing: (isProcessing: boolean) => void;
+  onOpenChange: (open: boolean) => void;
 }
 
 export const useDialogNavigation = (
@@ -33,6 +34,7 @@ export const useDialogNavigation = (
     setEmailStyle,
     setSocialMediaPlatform,
     setIsProcessing,
+    onOpenChange,
   } = props;
 
   // Handle going back from the form to the audience selection
@@ -45,32 +47,43 @@ export const useDialogNavigation = (
   }, [setShowForm, setIsProcessing]);
 
   // Handle going back from the goal dialog to the audience selection dialog directly
-  // This was the issue - it was going back to the form instead of main audience dialog
   const handleGoalBack = useCallback(() => {
     // First reset processing state
     setIsProcessing(false);
     
-    // Then change dialogs with a longer delay to prevent flickering
+    // Close the goal dialog completely
+    setShowGoalDialog(false);
+    
+    // Close the main dialog to prevent flickering
+    onOpenChange(false);
+    
+    // Reopen the main dialog after a short delay
     setTimeout(() => {
-      setShowGoalDialog(false);
-      
-      // Instead of showing the form again, we just hide the goal dialog
-      // This will reveal the main audience selection dialog that's underneath
-    }, 150);
-  }, [setShowGoalDialog, setIsProcessing]);
+      onOpenChange(true);
+    }, 50);
+    
+  }, [setShowGoalDialog, setIsProcessing, onOpenChange]);
 
   // Handle goal submission
   const handleGoalSubmit = useCallback((goal: string) => {
-    // First update processing state
-    setIsProcessing(true);
+    // Store the goal value first
     setAdvertisingGoal(goal);
     
-    // First hide current dialog with a longer delay
+    // Update processing state
+    setIsProcessing(true);
+    
+    // First hide current dialog without delay
+    setShowGoalDialog(false);
+    
+    // Close the main dialog completely to prevent background visibility
+    onOpenChange(false);
+    
+    // Determine and open the next dialog after a short delay
     setTimeout(() => {
-      setShowGoalDialog(false);
+      // First re-open the main container dialog
+      onOpenChange(true);
       
-      // Route to the appropriate next dialog based on template type after a brief delay
-      // Added a slightly longer delay here to prevent flickering
+      // Then after a tiny delay, show the appropriate next dialog
       setTimeout(() => {
         if (templateId === 'email') {
           setShowEmailStyleDialog(true);
@@ -81,100 +94,147 @@ export const useDialogNavigation = (
           setShowScriptDialog(true);
         }
         
-        // Reset processing state AFTER dialog is shown with increased delay
+        // Reset processing state after everything is shown
         setTimeout(() => {
           setIsProcessing(false);
-        }, 300);
-      }, 150);
+        }, 100);
+      }, 50);
     }, 100);
-  }, [templateId, setAdvertisingGoal, setShowGoalDialog, setShowEmailStyleDialog, 
-      setShowSocialMediaPlatformDialog, setShowScriptDialog, setIsProcessing]);
+  }, [
+    templateId, setAdvertisingGoal, setShowGoalDialog, setShowEmailStyleDialog,
+    setShowSocialMediaPlatformDialog, setShowScriptDialog, setIsProcessing, onOpenChange
+  ]);
 
   // Handle going back from the email style dialog
   const handleEmailStyleBack = useCallback(() => {
-    // First reset processing state
+    // Reset processing state
     setIsProcessing(false);
     
-    // Then change dialogs with a longer delay
+    // Close current dialog
+    setShowEmailStyleDialog(false);
+    
+    // Close the main dialog completely to prevent background visibility
+    onOpenChange(false);
+    
+    // Reopen dialogs in correct sequence
     setTimeout(() => {
-      setShowEmailStyleDialog(false);
-      setShowGoalDialog(true);
-    }, 150);
-  }, [setShowEmailStyleDialog, setShowGoalDialog, setIsProcessing]);
+      onOpenChange(true);
+      
+      setTimeout(() => {
+        setShowGoalDialog(true);
+      }, 50);
+    }, 100);
+  }, [setShowEmailStyleDialog, setShowGoalDialog, setIsProcessing, onOpenChange]);
 
   // Handle email style submission
   const handleEmailStyleSubmit = useCallback((style: EmailStyle) => {
-    // First update processing state
-    setIsProcessing(true);
+    // Store the style value first
     setEmailStyle(style);
     
-    // First hide current dialog with a delay
+    // Update processing state
+    setIsProcessing(true);
+    
+    // Hide current dialog
+    setShowEmailStyleDialog(false);
+    
+    // Close the main dialog completely to prevent background visibility
+    onOpenChange(false);
+    
+    // Determine and open the next dialog after a short delay
     setTimeout(() => {
-      setShowEmailStyleDialog(false);
+      // First re-open the main container dialog
+      onOpenChange(true);
       
-      // Show next dialog after a slightly longer delay
+      // Then after a tiny delay, show the next dialog
       setTimeout(() => {
         setShowEmailDialog(true);
         
-        // Reset processing state AFTER dialog is shown
+        // Reset processing state after everything is shown
         setTimeout(() => {
           setIsProcessing(false);
-        }, 300);
-      }, 150);
+        }, 100);
+      }, 50);
     }, 100);
-  }, [setEmailStyle, setShowEmailStyleDialog, setShowEmailDialog, setIsProcessing]);
+  }, [setEmailStyle, setShowEmailStyleDialog, setShowEmailDialog, setIsProcessing, onOpenChange]);
 
   // Handle going back from the social media platform dialog
   const handleSocialMediaPlatformBack = useCallback(() => {
-    // First reset processing state
+    // Reset processing state
     setIsProcessing(false);
     
-    // Then change dialogs with a longer delay
+    // Close current dialog
+    setShowSocialMediaPlatformDialog(false);
+    
+    // Close the main dialog completely to prevent background visibility
+    onOpenChange(false);
+    
+    // Reopen dialogs in correct sequence
     setTimeout(() => {
-      setShowSocialMediaPlatformDialog(false);
-      setShowGoalDialog(true);
-    }, 150);
-  }, [setShowSocialMediaPlatformDialog, setShowGoalDialog, setIsProcessing]);
+      onOpenChange(true);
+      
+      setTimeout(() => {
+        setShowGoalDialog(true);
+      }, 50);
+    }, 100);
+  }, [setShowSocialMediaPlatformDialog, setShowGoalDialog, setIsProcessing, onOpenChange]);
 
   // Handle social media platform submission
   const handleSocialMediaPlatformSubmit = useCallback((platform: SocialMediaPlatform) => {
-    // First update processing state
-    setIsProcessing(true);
+    // Store the platform value first
     setSocialMediaPlatform(platform);
     
-    // First hide current dialog with a delay
+    // Update processing state
+    setIsProcessing(true);
+    
+    // Hide current dialog
+    setShowSocialMediaPlatformDialog(false);
+    
+    // Close the main dialog completely to prevent background visibility
+    onOpenChange(false);
+    
+    // Determine and open the next dialog after a short delay
     setTimeout(() => {
-      setShowSocialMediaPlatformDialog(false);
+      // First re-open the main container dialog
+      onOpenChange(true);
       
-      // Show next dialog after a slightly longer delay
+      // Then after a tiny delay, show the next dialog
       setTimeout(() => {
         setShowSocialDialog(true);
         
-        // Reset processing state AFTER dialog is shown
+        // Reset processing state after everything is shown
         setTimeout(() => {
           setIsProcessing(false);
-        }, 300);
-      }, 150);
+        }, 100);
+      }, 50);
     }, 100);
-  }, [setSocialMediaPlatform, setShowSocialMediaPlatformDialog, setShowSocialDialog, setIsProcessing]);
+  }, [
+    setSocialMediaPlatform, setShowSocialMediaPlatformDialog, 
+    setShowSocialDialog, setIsProcessing, onOpenChange
+  ]);
 
   // Handle closing the script dialog
   const handleScriptDialogClose = useCallback(() => {
     setIsProcessing(false);  // Reset processing state
     setShowScriptDialog(false);
-  }, [setShowScriptDialog, setIsProcessing]);
+    // Close the parent dialog as well
+    onOpenChange(false);
+  }, [setShowScriptDialog, setIsProcessing, onOpenChange]);
 
   // Handle closing the email dialog
   const handleEmailDialogClose = useCallback(() => {
     setIsProcessing(false);  // Reset processing state
     setShowEmailDialog(false);
-  }, [setShowEmailDialog, setIsProcessing]);
+    // Close the parent dialog as well
+    onOpenChange(false);
+  }, [setShowEmailDialog, setIsProcessing, onOpenChange]);
   
   // Handle closing the social dialog
   const handleSocialDialogClose = useCallback(() => {
     setIsProcessing(false);  // Reset processing state
     setShowSocialDialog(false);
-  }, [setShowSocialDialog, setIsProcessing]);
+    // Close the parent dialog as well
+    onOpenChange(false);
+  }, [setShowSocialDialog, setIsProcessing, onOpenChange]);
 
   return {
     handleBack,
