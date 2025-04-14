@@ -20,17 +20,20 @@ export const useFormHandling = ({
   goToNextStep
 }: FormHandlingProps) => {
   // Handle form submission
-  const handleFormSubmit = useCallback((audienceId: string) => {
-    setSelectedAudienceId(audienceId);
-    setIsProcessing(true);
-    
-    // Hide the form and go to the next step
-    setIsTransitioning(true);
-    setTimeout(() => {
-      setShowForm(false);
-      goToNextStep();
-    }, 300);
-  }, [goToNextStep]);
+  const handleFormSubmit = useCallback((audienceId: string): Promise<void> => {
+    return new Promise<void>((resolve) => {
+      setSelectedAudienceId(audienceId);
+      setIsProcessing(true);
+      
+      // Hide the form and go to the next step
+      setIsTransitioning(true);
+      setTimeout(() => {
+        setShowForm(false);
+        goToNextStep();
+        resolve(); // Resolve the promise when the operation is complete
+      }, 300);
+    });
+  }, [goToNextStep, setSelectedAudienceId, setIsProcessing, setIsTransitioning, setShowForm]);
 
   // Handle back button in form
   const handleBack = useCallback(() => {
@@ -39,7 +42,7 @@ export const useFormHandling = ({
       setShowForm(false);
       setIsTransitioning(false);
     }, 300);
-  }, []);
+  }, [setIsTransitioning, setShowForm]);
 
   return {
     handleFormSubmit,

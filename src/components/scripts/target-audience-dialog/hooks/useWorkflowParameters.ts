@@ -9,7 +9,7 @@ import { SocialMediaPlatform } from '../../SocialMediaPlatformDialog';
 export const useWorkflowParameters = () => {
   // State for additional parameters
   const [advertisingGoal, setAdvertisingGoal] = useState<string>('');
-  const [emailStyle, setEmailStyle] = useState<string>('direct-sales');
+  const [emailStyle, setEmailStyle] = useState<EmailStyle>('direct-sales'); // Updated to use EmailStyle type
   const [socialMediaPlatform, setSocialMediaPlatform] = useState<SocialMediaPlatform | undefined>(undefined);
   
   // Reset parameters function

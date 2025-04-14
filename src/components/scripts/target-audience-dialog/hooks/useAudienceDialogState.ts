@@ -90,6 +90,11 @@ export const useAudienceDialogState = ({
     parameters.resetParameters
   ]);
 
+  // Add a basic validatePremiumStatus function
+  const validatePremiumStatus = useCallback(async () => {
+    return Promise.resolve(isPremium);
+  }, [isPremium]);
+
   // Return combined state and methods
   return {
     isLoading: audienceSelection.isLoading,
@@ -124,7 +129,7 @@ export const useAudienceDialogState = ({
     handleEmailDialogClose: dialogSteps.handleEmailDialogClose,
     handleSocialDialogClose: dialogSteps.handleSocialDialogClose,
     resetState,
-    validatePremiumStatus: () => Promise.resolve(isPremium),
-    handleDeleteAudience: () => Promise.resolve()
+    validatePremiumStatus,
+    handleDeleteAudience: async () => Promise.resolve()
   };
 };

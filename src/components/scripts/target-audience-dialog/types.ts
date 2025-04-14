@@ -43,7 +43,7 @@ export interface UseTargetAudienceDialogReturn {
   handleExistingAudienceSelect: (id: string) => void;
   handleContinue: () => void;
   handleCreateNewAudience: () => void;
-  handleFormSubmit: (audienceId: string) => void;
+  handleFormSubmit: (audienceId: string) => Promise<void>; // Changed to Promise<void>
   handleBack: () => void;
   handleGoalSubmit: (goal: string) => void;
   handleGoalBack: () => void;
@@ -56,4 +56,5 @@ export interface UseTargetAudienceDialogReturn {
   handleSocialDialogClose: () => void;
   resetState: () => void;
   handleDeleteAudience?: (audienceId: string) => Promise<void>;
+  validatePremiumStatus?: () => Promise<boolean>; // Added this property
 }
