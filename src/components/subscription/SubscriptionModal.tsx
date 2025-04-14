@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { createCheckoutSession, PRICE_IDS } from '@/lib/stripe';
 import { SubscriptionDetails, getSubscriptionDetails } from '@/lib/stripe/subscription';
@@ -29,7 +29,6 @@ interface SubscriptionModalProps {
 
 const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChange }) => {
   const { user, isPremium, refreshSession } = useAuth();
-  const [cancelConfirm, setCancelConfirm] = useState(false);
   const [manualRefetch, setManualRefetch] = useState(false);
 
   const { data, isLoading, error, refetch } = useQuery({
@@ -55,7 +54,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
             currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
             daysUntilRenewal: 30,
             cancelAtPeriodEnd: false,
-            portalUrl: 'https://billing.stripe.com/p/login/test_cN26rW4Ym21J8Qo144',
+            portalUrl: 'https://dashboard.stripe.com/test/settings/billing/portal',
             plan: 'Pro',
             paymentMethod: {
               brand: 'card',
@@ -80,37 +79,6 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
     }
   }, [open, isPremium]);
 
-  const cancelSubscription = useMutation({
-    mutationFn: async () => {
-      if (!user?.id || !data?.subscriptionId) {
-        throw new Error('Brak danych do anulowania subskrypcji');
-      }
-
-      const { data: cancelData, error } = await supabase.functions.invoke('cancel-subscription', {
-        body: { 
-          userId: user.id,
-          subscriptionId: data.subscriptionId
-        }
-      });
-
-      if (error) throw new Error(error.message);
-      return cancelData;
-    },
-    onSuccess: () => {
-      toast.success('Subskrypcja została anulowana', {
-        description: 'Twoja subskrypcja będzie aktywna do końca bieżącego okresu rozliczeniowego.'
-      });
-      setCancelConfirm(false);
-      refetch();
-    },
-    onError: (error) => {
-      toast.error('Błąd podczas anulowania subskrypcji', {
-        description: error instanceof Error ? error.message : 'Spróbuj ponownie później.'
-      });
-      setCancelConfirm(false);
-    }
-  });
-
   const handleManualRefresh = async () => {
     console.log('Manual refresh triggered');
     
@@ -133,8 +101,16 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
 
   const handleOpenPortal = () => {
     try {
-      if (data?.portalUrl && data.portalUrl !== '#') {
-        console.log('Opening customer portal URL:', data.portalUrl);
+      if (data?.portalUrl) {
+        console.log('Opening URL:', data.portalUrl);
+        
+        // Przekierowujemy użytkownika do Stripe Dashboard, aby mógł skonfigurować Customer Portal
+        if (data.portalUrl.includes('dashboard.stripe.com')) {
+          toast.info('Przekierowujemy do ustawień Customer Portal w Stripe Dashboard', {
+            description: 'Skonfiguruj portal klienta w Stripe Dashboard, aby móc zarządzać subskrypcją.'
+          });
+        }
+        
         window.open(data.portalUrl, '_blank');
       } else {
         console.error('No valid portal URL available:', data?.portalUrl);
@@ -283,7 +259,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
         brand: 'card',
         last4: '0000'
       },
-      portalUrl: 'https://billing.stripe.com/p/login/test_cN26rW4Ym21J8Qo144'
+      portalUrl: 'https://dashboard.stripe.com/test/settings/billing/portal'
     };
     
     return (
@@ -349,7 +325,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
                   variant="outline"
                 >
                   <CreditCard className="h-4 w-4" />
-                  Zarządzaj subskrypcją
+                  Zarządzaj subskrypcją w Stripe
                   <ExternalLink className="h-3 w-3 ml-1" />
                 </Button>
               </div>
@@ -474,42 +450,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
                   <RefreshCcw className="h-4 w-4" />
                   Odnów subskrypcję
                 </Button>
-              ) : data.subscriptionId !== 'manual_premium' && (
-                cancelConfirm ? (
-                  <div className="space-y-2">
-                    <p className="text-sm text-red-600">
-                      <AlertTriangle className="h-4 w-4 inline mr-1" />
-                      Czy na pewno chcesz anulować subskrypcję? Będziesz mieć dostęp do końca opłaconego okresu.
-                    </p>
-                    <div className="flex gap-2">
-                      <Button 
-                        onClick={() => setCancelConfirm(false)} 
-                        variant="outline" 
-                        className="flex-1"
-                      >
-                        Anuluj
-                      </Button>
-                      <Button 
-                        onClick={() => cancelSubscription.mutate()} 
-                        variant="destructive" 
-                        className="flex-1"
-                        disabled={cancelSubscription.isPending}
-                      >
-                        {cancelSubscription.isPending ? 'Anulowanie...' : 'Potwierdzam'}
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <Button 
-                    onClick={() => setCancelConfirm(true)} 
-                    className="w-full flex items-center gap-2" 
-                    variant="outline"
-                  >
-                    <XCircle className="h-4 w-4" />
-                    Anuluj subskrypcję
-                  </Button>
-                )
-              )}
+              ) : null }
               
               <Button 
                 onClick={handleOpenPortal} 
@@ -517,7 +458,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
                 variant="outline"
               >
                 <CreditCard className="h-4 w-4" />
-                Zarządzaj subskrypcją
+                Zarządzaj subskrypcją w Stripe
                 <ExternalLink className="h-3 w-3 ml-1" />
               </Button>
             </div>

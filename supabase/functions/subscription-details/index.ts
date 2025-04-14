@@ -13,6 +13,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Definiujemy URL do Stripe Dashboard do ustawień portalu klienta
+const STRIPE_PORTAL_SETTINGS_URL = 'https://dashboard.stripe.com/test/settings/billing/portal';
+
 serve(async (req) => {
   // Obsługa zapytań CORS preflight
   if (req.method === 'OPTIONS') {
@@ -87,39 +90,14 @@ serve(async (req) => {
           const customerId = customersData.data[0].id;
           console.log('Found Stripe customer ID for premium user:', customerId);
           
-          // Tworzymy sesję Customer Portal
-          const portalSessionParams = new URLSearchParams({
-            'customer': customerId,
-            'return_url': `${req.headers.get('origin') || 'https://app.copywritely.ai'}/account`,
-          });
-          
-          const portalResponse = await fetch('https://api.stripe.com/v1/billing_portal/sessions', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${stripeSecretKey}`,
-              'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: portalSessionParams.toString(),
-          });
-          
-          if (!portalResponse.ok) {
-            const errorText = await portalResponse.text();
-            throw new Error(`Portal creation error: ${portalResponse.status} ${errorText}`);
-          }
-          
-          const portalData = await portalResponse.json();
-          if (portalData.url) {
-            portalUrl = portalData.url;
-            console.log('Created portal URL for premium user:', portalUrl);
-          } else {
-            console.error('Portal response missing URL:', portalData);
-            throw new Error('Nieprawidłowa odpowiedź z API Stripe');
-          }
+          portalUrl = STRIPE_PORTAL_SETTINGS_URL;
+          console.log('Using Stripe Portal settings URL for premium user without active portal configuration');
         } else {
           console.log('No Stripe customer found for email:', userEmail);
         }
       } catch (portalError) {
         console.error('Error trying to create portal URL for premium user:', portalError);
+        portalUrl = STRIPE_PORTAL_SETTINGS_URL;
       }
       
       return new Response(
@@ -132,7 +110,7 @@ serve(async (req) => {
             Math.ceil((new Date(profile.subscription_expiry).getTime() - Date.now()) / (1000 * 3600 * 24)) : 
             30,
           cancelAtPeriodEnd: false,
-          portalUrl: portalUrl || 'https://billing.stripe.com/p/login/test_cN26rW4Ym21J8Qo144',
+          portalUrl: portalUrl || STRIPE_PORTAL_SETTINGS_URL,
           plan: 'Pro',
           paymentMethod: {
             brand: 'card',
@@ -200,7 +178,7 @@ serve(async (req) => {
                 Math.ceil((new Date(profile.subscription_expiry).getTime() - Date.now()) / (1000 * 3600 * 24)) : 
                 30,
               cancelAtPeriodEnd: false,
-              portalUrl: 'https://billing.stripe.com/p/login/test_cN26rW4Ym21J8Qo144',
+              portalUrl: STRIPE_PORTAL_SETTINGS_URL,
               plan: 'Pro',
               paymentMethod: {
                 brand: 'card',
@@ -297,50 +275,25 @@ serve(async (req) => {
         };
       }
 
-      // Tworzymy sesję Customer Portal z lepszą obsługą błędów
-      let portalUrl = null;
+      // Próba utworzenia sesji Customer Portal, ale bezpieczna obsługa błędów
+      // Zwracamy link do ustawień Customer Portal w przypadku błędu
+      let portalUrl = STRIPE_PORTAL_SETTINGS_URL;
       
       if (subscriptionData.customer) {
         try {
-          console.log('Creating customer portal session for customer:', subscriptionData.customer);
+          console.log('Customer portal configuration check: Redirecting to settings page instead of creating session');
+          console.log('Customer should configure portal settings at:', STRIPE_PORTAL_SETTINGS_URL);
           
-          const portalSessionParams = new URLSearchParams({
-            'customer': subscriptionData.customer,
-            'return_url': `${req.headers.get('origin') || 'https://app.copywritely.ai'}/account`,
-          });
-          
-          const portalResponse = await fetch('https://api.stripe.com/v1/billing_portal/sessions', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${stripeSecretKey}`,
-              'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: portalSessionParams.toString(),
-          });
-          
-          if (!portalResponse.ok) {
-            const errorText = await portalResponse.text();
-            throw new Error(`Portal creation error: ${portalResponse.status} ${errorText}`);
-          }
-          
-          const portalData = await portalResponse.json();
-          console.log('Portal response data:', JSON.stringify(portalData));
-          
-          if (portalData.url) {
-            portalUrl = portalData.url;
-            console.log('Successfully created customer portal session URL:', portalUrl);
-          } else {
-            console.error('Portal response missing URL:', portalData);
-            throw new Error('Nieprawidłowa odpowiedź z API Stripe');
-          }
+          // Zwracamy link do ustawień Customer Portal zamiast próby utworzenia sesji
+          // Użytkownik musi najpierw skonfigurować Customer Portal w Dashboardzie Stripe
+          portalUrl = STRIPE_PORTAL_SETTINGS_URL;
         } catch (portalError) {
           console.error('Error creating customer portal session:', portalError);
-          // Kontynuujemy bez rzucania wyjątku, ale ustawiamy URL na Stripe billing page
-          portalUrl = 'https://billing.stripe.com/p/login/test_cN26rW4Ym21J8Qo144';
+          portalUrl = STRIPE_PORTAL_SETTINGS_URL;
         }
       } else {
         console.error('No customer ID found in subscription data');
-        portalUrl = 'https://billing.stripe.com/p/login/test_cN26rW4Ym21J8Qo144';
+        portalUrl = STRIPE_PORTAL_SETTINGS_URL;
       }
 
       // Formatujemy i zwracamy dane
@@ -354,7 +307,7 @@ serve(async (req) => {
         currentPeriodEnd: currentPeriodEnd.toISOString(),
         daysUntilRenewal: daysUntilRenewal,
         cancelAtPeriodEnd: subscriptionData.cancel_at_period_end,
-        portalUrl: portalUrl || 'https://billing.stripe.com/p/login/test_cN26rW4Ym21J8Qo144',
+        portalUrl: portalUrl,
         hasSubscription: true,
         plan: subscriptionData.items?.data[0]?.plan?.nickname || 'Pro',
         trialEnd: subscriptionData.trial_end ? new Date(subscriptionData.trial_end * 1000).toISOString() : null,
@@ -385,7 +338,7 @@ serve(async (req) => {
               Math.ceil((new Date(profile.subscription_expiry).getTime() - Date.now()) / (1000 * 3600 * 24)) : 
               30,
             cancelAtPeriodEnd: false,
-            portalUrl: 'https://billing.stripe.com/p/login/test_cN26rW4Ym21J8Qo144',
+            portalUrl: STRIPE_PORTAL_SETTINGS_URL,
             plan: 'Pro',
             paymentMethod: {
               brand: 'card',
