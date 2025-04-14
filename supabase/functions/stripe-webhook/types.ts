@@ -1,7 +1,7 @@
 
 // Remove the supabase client import as it's not needed in this types file
 // import { SupabaseClient } from '@supabase/supabase-js';
-import Stripe from 'stripe';
+import Stripe from 'https://esm.sh/stripe@12.1.1';
 
 export interface WebhookHandlerResponse {
   received: boolean;

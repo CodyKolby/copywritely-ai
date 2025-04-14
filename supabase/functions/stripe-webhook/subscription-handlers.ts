@@ -1,6 +1,6 @@
-
 import { DatabaseOperations } from './types.ts';
-import Stripe from 'stripe';
+import Stripe from 'https://esm.sh/stripe@12.1.1';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7';
 
 export async function handleCheckoutSessionCompleted(
   session: Stripe.Checkout.Session,
@@ -171,4 +171,3 @@ async function updateUserProfile(
     updated_at: new Date().toISOString()
   });
 }
-
