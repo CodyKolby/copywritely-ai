@@ -56,26 +56,10 @@ serve(async (req) => {
       );
     }
 
-    // Find or create Stripe customer
-    let customerId;
-    const customers = await stripe.customers.list({ email: customerEmail || user.email, limit: 1 });
-    
-    if (customers.data.length > 0) {
-      customerId = customers.data[0].id;
-    } else if (customerEmail || user.email) {
-      const customer = await stripe.customers.create({
-        email: customerEmail || user.email,
-        metadata: {
-          userId: userId
-        }
-      });
-      customerId = customer.id;
-    }
-
-    // Create checkout session
+    // Create checkout session with customer details
     const session = await stripe.checkout.sessions.create({
-      customer: customerId,
-      customer_email: customerId ? undefined : (customerEmail || user.email),
+      customer_creation: 'always',
+      customer_email: customerEmail || user.email,
       client_reference_id: userId,
       metadata: {
         userId: userId
