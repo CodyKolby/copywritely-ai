@@ -51,6 +51,64 @@ serve(async (req) => {
     if (profile?.is_premium && (!profile?.subscription_id || profile.subscription_id === '')) {
       console.log('User has premium status without subscription ID');
       
+      // Dla użytkowników premium bez ID subskrypcji, próbujemy sprawdzić czy istnieje klient w Stripe
+      let portalUrl = '#';
+      try {
+        // Pobieramy email użytkownika z profilu lub bezpośrednio z auth.users
+        const { data: userData, error: userError } = await supabase
+          .from('profiles')
+          .select('email')
+          .eq('id', userId)
+          .single();
+          
+        if (!userError && userData?.email) {
+          console.log('Checking for Stripe customer with email:', userData.email);
+          
+          // Sprawdzamy czy użytkownik istnieje w Stripe
+          const response = await fetch(`https://api.stripe.com/v1/customers?email=${encodeURIComponent(userData.email)}&limit=1`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${stripeSecretKey}`,
+              'Content-Type': 'application/json',
+            },
+          });
+          
+          const customersData = await response.json();
+          
+          if (customersData.data && customersData.data.length > 0) {
+            const customerId = customersData.data[0].id;
+            console.log('Found Stripe customer ID for premium user:', customerId);
+            
+            // Tworzymy sesję Customer Portal
+            const portalResponse = await fetch('https://api.stripe.com/v1/billing_portal/sessions', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${stripeSecretKey}`,
+                'Content-Type': 'application/x-www-form-urlencoded',
+              },
+              body: new URLSearchParams({
+                'customer': customerId,
+                'return_url': `${req.headers.get('origin') || ''}/account`,
+              }).toString(),
+            });
+            
+            const portalData = await portalResponse.json();
+            if (!portalData.error && portalData.url) {
+              portalUrl = portalData.url;
+              console.log('Created portal URL for premium user:', portalUrl);
+            } else {
+              console.error('Error creating portal URL:', portalData.error);
+            }
+          } else {
+            console.log('No Stripe customer found for email:', userData.email);
+          }
+        } else {
+          console.error('Could not find user email');
+        }
+      } catch (portalError) {
+        console.error('Error trying to create portal URL for premium user:', portalError);
+      }
+      
       return new Response(
         JSON.stringify({ 
           hasSubscription: true,
@@ -61,9 +119,8 @@ serve(async (req) => {
             Math.ceil((new Date(profile.subscription_expiry).getTime() - Date.now()) / (1000 * 3600 * 24)) : 
             30,
           cancelAtPeriodEnd: false,
-          portalUrl: '#',
+          portalUrl: portalUrl,
           plan: 'Pro',
-          // Dodajemy domyślne informacje o metodzie płatności
           paymentMethod: {
             brand: 'card',
             last4: '0000'
@@ -123,7 +180,6 @@ serve(async (req) => {
               cancelAtPeriodEnd: false,
               portalUrl: '#',
               plan: 'Pro',
-              // Dodajemy domyślne informacje o metodzie płatności
               paymentMethod: {
                 brand: 'card',
                 last4: '0000'
@@ -209,11 +265,13 @@ serve(async (req) => {
         };
       }
 
-      // Tworzymy sesję Customer Portal
+      // Tworzymy sesję Customer Portal - poprawiony kod zgodnie z dokumentacją Stripe
       let portalUrl = '#'; // Domyślna wartość
       
-      try {
-        if (subscriptionData.customer) {
+      if (subscriptionData.customer) {
+        try {
+          console.log('Creating customer portal session for customer:', subscriptionData.customer);
+          
           const portalResponse = await fetch('https://api.stripe.com/v1/billing_portal/sessions', {
             method: 'POST',
             headers: {
@@ -223,23 +281,31 @@ serve(async (req) => {
             body: new URLSearchParams({
               'customer': subscriptionData.customer,
               'return_url': `${req.headers.get('origin') || ''}/account`,
-            }),
+            }).toString(), // Używamy toString(), aby upewnić się, że body zostanie poprawnie zakodowane
           });
-
-          const portalData = await portalResponse.json();
           
-          if (!portalData.error) {
-            portalUrl = portalData.url;
-            console.log('Successfully created customer portal session:', portalUrl);
-          } else {
-            console.error('Ostrzeżenie: Nie można utworzyć sesji Customer Portal:', portalData.error);
+          if (!portalResponse.ok) {
+            console.error('Portal response not OK:', portalResponse.status, portalResponse.statusText);
+            const errorText = await portalResponse.text();
+            console.error('Error response body:', errorText);
+            throw new Error(`Portal creation failed with status ${portalResponse.status}: ${errorText}`);
           }
-        } else {
-          console.error('Nie znaleziono ID klienta w danych subskrypcji');
+          
+          const portalData = await portalResponse.json();
+          console.log('Portal response data:', JSON.stringify(portalData));
+          
+          if (portalData.url) {
+            portalUrl = portalData.url;
+            console.log('Successfully created customer portal session URL:', portalUrl);
+          } else {
+            console.error('Portal response missing URL:', portalData);
+          }
+        } catch (portalError) {
+          console.error('Error creating customer portal session:', portalError);
+          // Kontynuujemy bez rzucania wyjątku
         }
-      } catch (portalError) {
-        console.error('Błąd podczas tworzenia sesji Customer Portal:', portalError);
-        // Kontynuujemy bez rzucania wyjątku
+      } else {
+        console.error('No customer ID found in subscription data');
       }
 
       // Formatujemy i zwracamy dane
@@ -286,7 +352,6 @@ serve(async (req) => {
             cancelAtPeriodEnd: false,
             portalUrl: '#',
             plan: 'Pro',
-            // Dodajemy domyślne informacje o metodzie płatności
             paymentMethod: {
               brand: 'card',
               last4: '0000'

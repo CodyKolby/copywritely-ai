@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -32,38 +31,23 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
   const [cancelConfirm, setCancelConfirm] = useState(false);
   const [manualRefetch, setManualRefetch] = useState(false);
 
-  // Debug log for initial state
-  console.log('SubscriptionModal initial state:', {
-    open,
-    userId: user?.id,
-    isPremium,
-    manualRefetch
-  });
-
-  // Pobieramy dane subskrypcji
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['subscriptionDetails', user?.id, manualRefetch, open],
     queryFn: async () => {
       if (!user?.id) return null;
-      
-      console.log('Fetching subscription details for user:', user.id);
-      
+
       try {
         const { data, error } = await supabase.functions.invoke('subscription-details', {
           body: { userId: user.id }
         });
-        
+
         if (error) {
           console.error('Error fetching subscription details:', error);
           throw new Error(error.message);
         }
-        
-        console.log('Received subscription data:', data);
+
         return data as SubscriptionDetails;
       } catch (err) {
-        console.error('Exception fetching subscription details:', err);
-        
-        // Jeśli mamy błąd, ale użytkownik ma status premium, zwracamy podstawowe informacje
         if (isPremium) {
           return {
             hasSubscription: true,
@@ -80,40 +64,36 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
             }
           } as SubscriptionDetails;
         }
-        
         throw err;
       }
     },
     enabled: !!user?.id && open,
     retry: 2,
     retryDelay: 1000,
-    staleTime: 1000 * 60 * 2, // 2 minutes
+    staleTime: 1000 * 60 * 2,
   });
 
-  // Trigger manual refresh when modal opens or isPremium changes
   useEffect(() => {
     if (open) {
-      console.log('Modal opened or isPremium changed, refreshing subscription details');
       setTimeout(() => {
         setManualRefetch(prev => !prev);
-      }, 300); // Slight delay to ensure modal is fully opened
+      }, 300);
     }
   }, [open, isPremium]);
 
-  // Anulowanie subskrypcji
   const cancelSubscription = useMutation({
     mutationFn: async () => {
       if (!user?.id || !data?.subscriptionId) {
         throw new Error('Brak danych do anulowania subskrypcji');
       }
-      
+
       const { data: cancelData, error } = await supabase.functions.invoke('cancel-subscription', {
         body: { 
           userId: user.id,
           subscriptionId: data.subscriptionId
         }
       });
-      
+
       if (error) throw new Error(error.message);
       return cancelData;
     },
@@ -132,22 +112,17 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
     }
   });
 
-  // Manual refresh function with session refresh
   const handleManualRefresh = async () => {
     console.log('Manual refresh triggered');
     
-    // First refresh the auth session which updates premium status
     await refreshSession();
     
-    // Then refetch subscription details
     setManualRefetch(prev => !prev);
     toast.info('Odświeżanie informacji o subskrypcji...');
   };
 
-  // Odnowienie subskrypcji
   const renewSubscription = () => {
     try {
-      // Używamy bieżącego planu (miesięczny lub roczny)
       const priceId = data?.plan?.includes('roczn') ? PRICE_IDS.PRO_ANNUAL : PRICE_IDS.PRO_MONTHLY;
       createCheckoutSession(priceId);
     } catch (error) {
@@ -157,7 +132,6 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
     }
   };
 
-  // Funkcja formatująca datę
   const formatDate = (dateString: string) => {
     try {
       const options: Intl.DateTimeFormatOptions = { 
@@ -171,7 +145,6 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
     }
   };
 
-  // Funkcja renderująca status
   const renderStatus = () => {
     if (!data) return null;
     
@@ -193,7 +166,6 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
     );
   };
 
-  // Funkcja formatująca metodę płatności
   const formatPaymentMethod = () => {
     if (!data?.paymentMethod) return null;
     
@@ -210,17 +182,6 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
     );
   };
 
-  // Debug log for decision making
-  console.log('Subscription decision data:', {
-    data,
-    isLoading,
-    error,
-    isPremium,
-    hasSubscription: data?.hasSubscription,
-    userExists: !!user?.id
-  });
-
-  // Special case for premium users where we fail to fetch data
   const isPremiumButNoData = isPremium && (!data || !data.hasSubscription);
 
   if (isLoading) {
@@ -238,7 +199,6 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
     );
   }
 
-  // If isPremium is true but data doesn't show hasSubscription, give option to refresh
   if (isPremiumButNoData || error) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -265,7 +225,6 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
               }
             </p>
             
-            {/* Display error details for debugging */}
             {error && (
               <p className="text-sm text-red-500 text-center max-w-xs">
                 Szczegóły błędu: {error instanceof Error ? error.message : String(error)}
@@ -297,7 +256,6 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
     );
   }
 
-  // Fallback for premium users without subscription details
   if (isPremium && (!data?.hasSubscription)) {
     const fallbackData = {
       hasSubscription: true,
@@ -436,7 +394,6 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
     );
   }
 
-  // If we get here, we have subscription data to display
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="mx-4 sm:max-w-md rounded-lg">
@@ -537,12 +494,13 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
                 )
               ) : null}
               
-              {/* Use the Stripe Customer Portal URL if available */}
               <Button 
                 onClick={() => {
                   if (data.portalUrl && data.portalUrl !== '#') {
+                    console.log('Opening customer portal URL:', data.portalUrl);
                     window.open(data.portalUrl, '_blank');
                   } else {
+                    console.error('No portal URL available:', data.portalUrl);
                     toast.error('Nie udało się utworzyć sesji portalu klienta');
                   }
                 }} 
