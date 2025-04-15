@@ -1,104 +1,82 @@
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { LazyMotion, domAnimation } from "framer-motion";
-import { AuthProvider } from "./contexts/auth/AuthProvider";
-import Index from "./pages/Index";
-import BriefGenerator from "./pages/BriefGenerator";
-import ScriptGenerator from "./pages/ScriptGenerator";
-import CopyEditor from "./pages/CopyEditor";
-import About from "./pages/About";
-import Pricing from "./pages/Pricing";
-import Contact from "./pages/Contact";
-import Login from "./pages/Login";
-import NotFound from "./pages/NotFound";
-import Projekty from "./pages/Projekty";
-import Navbar from "./components/Navbar";
-import Footer from "./components/home/Footer";
-import AnimatedTransition from "./components/AnimatedTransition";
-import Success from './pages/Success';
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import TermsOfService from "./pages/TermsOfService";
-import { checkSupabaseConnection } from "./lib/supabase";
-import { toast } from "sonner";
-import { useEffect } from "react";
+import { BrowserRouter as Router } from 'react-router-dom';
+import { AuthProvider } from './contexts/auth/AuthContext';
+import { Toaster } from '@/components/ui/toaster';
+import { AppLayout } from './components/layout/AppLayout';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Routes } from './routes';
+import { Toaster as SonnerToaster } from 'sonner';
+import React, { useState, useEffect } from 'react';
+import { supabase, validateSupabaseConnection } from './integrations/supabase/client';
+import { ConnectionStatusAlert } from './components/ui/ConnectionStatusAlert';
 
-// Configure query client with better error handling
+// Configure longer default timeouts for React Query
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
+      retry: 3,
+      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30000),
+      staleTime: 60000,
+      refetchOnWindowFocus: false,
+      timeout: 30000
+    },
+    mutations: {
       retry: 2,
-      staleTime: 30000,
-      refetchOnWindowFocus: false
+      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 15000)
     }
   }
 });
 
-const App = () => {
-  // Perform connection check when app loads
+function App() {
+  const [supabaseConnected, setSupabaseConnected] = useState(true);
+
+  // Verify Supabase connection on app start
   useEffect(() => {
-    checkSupabaseConnection()
-      .then(connected => {
-        if (connected) {
-          console.log('[APP] Supabase connection verified successfully');
-        } else {
-          console.error('[APP] Failed to connect to Supabase');
-          toast.error('Problem z połączeniem do bazy danych', {
-            description: 'Spróbuj odświeżyć stronę lub spróbuj później',
-            duration: 5000,
-          });
+    const checkConnection = async () => {
+      try {
+        const connected = await validateSupabaseConnection();
+        setSupabaseConnected(connected);
+        
+        console.log('[APP] Supabase connection verified:', connected ? 'successfully' : 'failed');
+        
+        if (!connected) {
+          // If initial connection fails, try again after 3 seconds
+          setTimeout(async () => {
+            const retryResult = await validateSupabaseConnection();
+            setSupabaseConnected(retryResult);
+            console.log('[APP] Supabase connection retry:', retryResult ? 'success' : 'failed');
+          }, 3000);
         }
-      })
-      .catch(error => {
-        console.error('[APP] Error checking Supabase connection:', error);
-        toast.error('Problem z połączeniem do bazy danych', {
-          description: 'Spróbuj odświeżyć stronę lub spróbuj później',
-          duration: 5000,
-        });
-      });
+      } catch (error) {
+        console.error('[APP] Error verifying Supabase connection:', error);
+        setSupabaseConnected(false);
+      }
+    };
+    
+    checkConnection();
   }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
+      <Router>
         <AuthProvider>
-          <LazyMotion features={domAnimation}>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <div className="flex flex-col min-h-screen">
-                <Navbar />
-                <div className="flex-grow">
-                  <AnimatedTransition>
-                    <Routes>
-                      <Route path="/" element={<Index />} />
-                      <Route path="/brief-generator" element={<BriefGenerator />} />
-                      <Route path="/script-generator" element={<ScriptGenerator />} />
-                      <Route path="/copy-editor" element={<CopyEditor />} />
-                      <Route path="/copy-editor/:projectId" element={<CopyEditor />} />
-                      <Route path="/about" element={<About />} />
-                      <Route path="/pricing" element={<Pricing />} />
-                      <Route path="/contact" element={<Contact />} />
-                      <Route path="/login" element={<Login />} />
-                      <Route path="/projekty" element={<Projekty />} />
-                      <Route path="/success" element={<Success />} />
-                      <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-                      <Route path="/terms-of-service" element={<TermsOfService />} />
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </AnimatedTransition>
-                </div>
-                <Footer />
-              </div>
-            </BrowserRouter>
-          </LazyMotion>
+          <AppLayout>
+            {/* Connection status alert */}
+            <ConnectionStatusAlert 
+              onRetry={async () => {
+                const connected = await validateSupabaseConnection();
+                setSupabaseConnected(connected);
+              }}
+            />
+            
+            <Routes />
+          </AppLayout>
+          <Toaster />
+          <SonnerToaster position="top-center" closeButton richColors />
         </AuthProvider>
-      </TooltipProvider>
+      </Router>
     </QueryClientProvider>
   );
-};
+}
 
 export default App;

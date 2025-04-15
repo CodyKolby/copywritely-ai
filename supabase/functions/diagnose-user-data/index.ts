@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.20.0";
 
@@ -21,91 +22,82 @@ serve(async (req) => {
   try {
     console.log("[DIAGNOSE-USER] Edge function started");
     
-    // Send an immediate initial response to prevent timeouts
-    const responseStream = new TransformStream();
-    const writer = responseStream.writable.getWriter();
+    // Initialize timeout controller
+    const timeoutController = new AbortController();
+    const timeoutId = setTimeout(() => timeoutController.abort(), 15000); // 15s timeout
     
-    // Create quick initial response
-    const initialResponseData = {
-      status: "processing",
-      message: "Diagnostic process started",
-      timestamp: new Date().toISOString()
-    };
-    
-    writer.write(new TextEncoder().encode(JSON.stringify(initialResponseData)));
-    
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-    
-    if (!supabaseUrl || !supabaseKey) {
-      console.error('[DIAGNOSE-USER] Missing Supabase environment variables');
-      throw new Error('Missing required environment variables');
-    }
-    
-    // Get request data
-    let requestData: { userId?: string; forceFixPremium?: boolean } = {};
     try {
-      if (req.body) {
-        requestData = await req.json();
+      // Send an immediate initial response to prevent timeouts
+      const initialResponseData = {
+        status: "processing",
+        message: "Diagnostic process started",
+        timestamp: new Date().toISOString()
+      };
+      
+      // Initialize Supabase client
+      const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+      
+      if (!supabaseUrl || !supabaseKey) {
+        console.error('[DIAGNOSE-USER] Missing Supabase environment variables');
+        throw new Error('Missing required environment variables');
       }
-    } catch (parseError) {
-      console.error('[DIAGNOSE-USER] Error parsing request body:', parseError);
-    }
-    
-    const { userId, forceFixPremium } = requestData;
-    
-    if (!userId) {
-      throw new Error('No user ID provided');
-    }
-    
-    console.log(`[DIAGNOSE-USER] Running diagnostics for user: ${userId}`);
-    
-    // Create Supabase client with a shorter timeout for quicker response
-    const supabase = createClient(supabaseUrl, supabaseKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false
-      },
-      global: {
-        headers: {
-          'X-Client-Info': 'diagnose-user-data-edge-function'
+      
+      // Get request data
+      let requestData: { userId?: string; forceFixPremium?: boolean } = {};
+      try {
+        if (req.body) {
+          requestData = await req.json();
         }
-      },
-      db: {
-        schema: 'public'
+      } catch (parseError) {
+        console.error('[DIAGNOSE-USER] Error parsing request body:', parseError);
       }
-    });
-    
-    // Perform quick validation check - just to ensure we can connect
-    try {
-      const startCheck = Date.now();
-      console.log('[DIAGNOSE-USER] Performing quick connection check');
       
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('count')
-        .limit(1)
-        .maybeSingle();
-        
-      const checkDuration = Date.now() - startCheck;
+      const { userId, forceFixPremium } = requestData;
       
-      if (error) {
-        console.error(`[DIAGNOSE-USER] Connection check failed after ${checkDuration}ms:`, error);
-      } else {
-        console.log(`[DIAGNOSE-USER] Connection check succeeded in ${checkDuration}ms`);
+      if (!userId) {
+        throw new Error('No user ID provided');
       }
-    } catch (checkError) {
-      console.error('[DIAGNOSE-USER] Exception during connection check:', checkError);
+      
+      console.log(`[DIAGNOSE-USER] Running diagnostics for user: ${userId}`);
+      
+      // Create Supabase client with optimized options
+      const supabase = createClient(supabaseUrl, supabaseKey, {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false
+        },
+        global: {
+          headers: { 'X-Client-Info': 'diagnose-user-data-edge-function' }
+        },
+        db: { schema: 'public' }
+      });
+      
+      // Run diagnostics with timeout
+      const diagnosticResults = await runDiagnostics(userId, supabase, forceFixPremium, timeoutController.signal);
+      
+      clearTimeout(timeoutId);
+      
+      return new Response(JSON.stringify(diagnosticResults), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    } catch (innerError) {
+      clearTimeout(timeoutId);
+      
+      // Check if this was a timeout
+      if (innerError.name === 'AbortError') {
+        console.log('[DIAGNOSE-USER] Diagnostic operation timed out');
+        return new Response(JSON.stringify({
+          error: 'Diagnostic operation timed out',
+          timestamp: new Date().toISOString()
+        }), {
+          status: 408, // Request Timeout
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      
+      throw innerError;
     }
-    
-    // Perform actual diagnostic checks
-    const diagnosticResults = await runDiagnostics(userId, supabase, forceFixPremium);
-    
-    return new Response(JSON.stringify(diagnosticResults), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
-    
   } catch (error) {
     console.error('[DIAGNOSE-USER] Error:', error);
     
@@ -125,7 +117,7 @@ serve(async (req) => {
 /**
  * Run actual diagnostic checks for the user
  */
-async function runDiagnostics(userId: string, supabase: any, forceFixPremium?: boolean) {
+async function runDiagnostics(userId: string, supabase: any, forceFixPremium?: boolean, signal?: AbortSignal) {
   const services: Record<string, any> = {};
   const problems: string[] = [];
   let servicesFailed = 0;
@@ -137,40 +129,7 @@ async function runDiagnostics(userId: string, supabase: any, forceFixPremium?: b
     const startTime = Date.now();
     console.log(`[DIAGNOSE-USER] Starting diagnostics at ${new Date().toISOString()}`);
     
-    // Check 1: Auth service - REMOVED admin.getUserById API call as it's causing errors
-    servicesChecked++;
-    try {
-      console.log('[DIAGNOSE-USER] Checking user in auth service via session');
-      
-      // Instead of using admin API, we'll check if user exists in profiles table
-      const { data: profile, error: profileCheckError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', userId)
-        .maybeSingle();
-      
-      if (profileCheckError) {
-        servicesFailed++;
-        services.auth = { success: false, error: profileCheckError.message };
-        problems.push('Problem z weryfikacją użytkownika');
-        console.error('[DIAGNOSE-USER] User verification error:', profileCheckError);
-      } else if (!profile) {
-        servicesFailed++;
-        services.auth = { success: false, error: 'User not found in profiles' };
-        problems.push('Nie znaleziono użytkownika w tabeli profile');
-        console.error('[DIAGNOSE-USER] User not found in profiles table:', userId);
-      } else {
-        services.auth = { success: true, id: profile.id };
-        console.log('[DIAGNOSE-USER] User verified via profiles table:', profile.id);
-      }
-    } catch (authError) {
-      servicesFailed++;
-      services.auth = { success: false, error: String(authError) };
-      problems.push('Błąd weryfikacji użytkownika');
-      console.error('[DIAGNOSE-USER] Exception in auth check:', authError);
-    }
-    
-    // Check 2: Profile service - Does the user have a profile?
+    // Check 1: Profile service - Does the user have a profile?
     servicesChecked++;
     try {
       console.log('[DIAGNOSE-USER] Checking user profile');
@@ -190,6 +149,11 @@ async function runDiagnostics(userId: string, supabase: any, forceFixPremium?: b
         services.profile = { success: false, error: 'Profile not found' };
         problems.push('Nie znaleziono profilu użytkownika');
         console.log('[DIAGNOSE-USER] Profile not found, attempting to create');
+        
+        // Check if operation was aborted
+        if (signal?.aborted) {
+          throw new DOMException("Operation aborted", "AbortError");
+        }
         
         // Try to fix: Create profile
         try {
@@ -220,6 +184,11 @@ async function runDiagnostics(userId: string, supabase: any, forceFixPremium?: b
         if (profile.is_premium && (!profile.subscription_status || !profile.subscription_expiry)) {
           problems.push('Niespójne dane subskrypcji premium');
           console.log('[DIAGNOSE-USER] Inconsistent premium data detected');
+          
+          // Check if operation was aborted
+          if (signal?.aborted) {
+            throw new DOMException("Operation aborted", "AbortError");
+          }
           
           // Try to fix premium status inconsistency if requested
           if (forceFixPremium) {
@@ -257,6 +226,11 @@ async function runDiagnostics(userId: string, supabase: any, forceFixPremium?: b
       console.error('[DIAGNOSE-USER] Exception during profile check:', profileError);
     }
     
+    // Check if operation was aborted
+    if (signal?.aborted) {
+      throw new DOMException("Operation aborted", "AbortError");
+    }
+    
     // Determine overall status
     let overallStatus = 'healthy';
     if (servicesFailed > 0) {
@@ -288,6 +262,11 @@ async function runDiagnostics(userId: string, supabase: any, forceFixPremium?: b
       }
     };
   } catch (error) {
+    // Re-throw AbortError to be caught by the caller
+    if (error.name === "AbortError") {
+      throw error;
+    }
+    
     console.error('[DIAGNOSE-USER] Exception in diagnostics:', error);
     return {
       timestamp: new Date().toISOString(),

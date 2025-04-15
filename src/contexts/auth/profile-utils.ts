@@ -1,176 +1,193 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Profile } from './types';
 
+// Helper function to add delay for retries
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 /**
- * Fetches user profile from database
+ * Fetches user profile from database with retry logic
  */
-export const fetchProfile = async (userId: string): Promise<Profile | null> => {
+export const fetchProfile = async (userId: string, maxAttempts = 3): Promise<Profile | null> => {
   if (!userId) {
     console.error('[PROFILE-UTILS] No user ID provided for profile fetch');
     return null;
   }
 
-  try {
-    console.log(`[PROFILE-UTILS] Fetching profile for user: ${userId}`);
-    
-    // First, try to find an existing profile with standard query
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle();
-      
-    if (error) {
-      console.error('[PROFILE-UTILS] Error fetching profile:', error);
-    } else if (data) {
-      console.log('[PROFILE-UTILS] Profile fetched successfully:', data);
-      return data as Profile;
-    } else {
-      console.warn('[PROFILE-UTILS] No profile found for user ID:', userId);
-    }
-    
-    // If we get here, either no profile found or error occurred
-    // Explicitly try again with a simplified query to avoid possible 406 errors
+  let currentAttempt = 0;
+  
+  while (currentAttempt < maxAttempts) {
     try {
-      console.log('[PROFILE-UTILS] Trying simplified query');
-      const { data: simpleData, error: simpleError } = await supabase
+      currentAttempt++;
+      const retryText = currentAttempt > 1 ? ` (attempt ${currentAttempt}/${maxAttempts})` : '';
+      console.log(`[PROFILE-UTILS] Fetching profile for user: ${userId}${retryText}`);
+      
+      // First, try to find an existing profile with standard query
+      const { data, error } = await supabase
         .from('profiles')
-        .select('id, email, full_name, is_premium, avatar_url, created_at, updated_at')
+        .select('*')
         .eq('id', userId)
-        .maybeSingle();
+        .maybeSingle()
+        .timeout(8000); // 8 second timeout for this query
         
-      if (simpleError) {
-        console.error('[PROFILE-UTILS] Error with simplified query:', simpleError);
-      } else if (simpleData) {
-        console.log('[PROFILE-UTILS] Profile fetched with simplified query:', simpleData);
-        return simpleData as Profile;
+      if (error) {
+        console.error(`[PROFILE-UTILS] Error fetching profile${retryText}:`, error);
+        
+        // If we have more attempts, wait and try again
+        if (currentAttempt < maxAttempts) {
+          const backoffTime = 1000 * Math.pow(2, currentAttempt - 1); // Exponential backoff
+          console.log(`[PROFILE-UTILS] Retrying in ${backoffTime}ms...`);
+          await delay(backoffTime);
+          continue;
+        }
+      } else if (data) {
+        console.log('[PROFILE-UTILS] Profile fetched successfully:', data);
+        return data as Profile;
       } else {
-        console.warn('[PROFILE-UTILS] No profile found with simplified query');
+        console.warn('[PROFILE-UTILS] No profile found for user ID:', userId);
+        
+        // If we tried multiple times and still no profile, try to create one
+        if (currentAttempt >= maxAttempts) {
+          return await createProfile(userId);
+        }
+        
+        // Otherwise continue with retries
+        if (currentAttempt < maxAttempts) {
+          const backoffTime = 1000 * Math.pow(2, currentAttempt - 1);
+          console.log(`[PROFILE-UTILS] Retrying profile fetch in ${backoffTime}ms...`);
+          await delay(backoffTime);
+          continue;
+        }
       }
-    } catch (simpleQueryError) {
-      console.error('[PROFILE-UTILS] Exception in simplified query:', simpleQueryError);
+    } catch (error) {
+      console.error(`[PROFILE-UTILS] Exception fetching profile (attempt ${currentAttempt}/${maxAttempts}):`, error);
+      
+      // If more attempts are available, retry with backoff
+      if (currentAttempt < maxAttempts) {
+        const backoffTime = 1000 * Math.pow(2, currentAttempt - 1);
+        console.log(`[PROFILE-UTILS] Retrying after error in ${backoffTime}ms...`);
+        await delay(backoffTime);
+        continue;
+      }
+      
+      // Last attempt failed, try to create profile
+      return createProfile(userId);
     }
-    
-    // If no profile or error, try to create one
-    return await createProfile(userId);
-  } catch (error) {
-    console.error('[PROFILE-UTILS] Exception fetching profile:', error);
-    // Try to create profile as a fallback
-    return createProfile(userId);
   }
+  
+  // If we get here, all attempts failed
+  console.log('[PROFILE-UTILS] All profile fetch attempts failed, trying to create profile');
+  return createProfile(userId);
 };
 
 /**
- * Creates a new profile for a user
+ * Creates a new profile for a user with retry logic
  */
-export const createProfile = async (userId: string): Promise<Profile | null> => {
+export const createProfile = async (userId: string, maxAttempts = 2): Promise<Profile | null> => {
   if (!userId) {
     console.error('[PROFILE-UTILS] No user ID provided for profile creation');
     return null;
   }
 
-  try {
-    console.log(`[PROFILE-UTILS] Creating profile for user: ${userId}`);
-    
-    // Get current session for user data
-    const { data: sessionData } = await supabase.auth.getSession();
-    const user = sessionData?.session?.user;
-    
-    if (!user) {
-      console.warn('[PROFILE-UTILS] No user session available for profile creation');
+  let currentAttempt = 0;
+  
+  while (currentAttempt < maxAttempts) {
+    try {
+      currentAttempt++;
+      const retryText = currentAttempt > 1 ? ` (attempt ${currentAttempt}/${maxAttempts})` : '';
+      console.log(`[PROFILE-UTILS] Creating profile for user: ${userId}${retryText}`);
       
-      // Try to create a minimal profile anyway since we have the ID
-      try {
-        console.log('[PROFILE-UTILS] Attempting minimal profile creation with ID only');
-        const { data: minimalData, error: minimalError } = await supabase
-          .from('profiles')
-          .insert({
-            id: userId,
-            is_premium: false,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
-          .select('id, is_premium')
-          .maybeSingle();
+      // Get current session for user data
+      const { data: sessionData } = await supabase.auth.getSession();
+      const user = sessionData?.session?.user;
+      
+      if (!user) {
+        console.warn('[PROFILE-UTILS] No user session available for profile creation');
+        
+        // Try to create a minimal profile anyway since we have the ID
+        try {
+          console.log('[PROFILE-UTILS] Attempting minimal profile creation with ID only');
+          const { data: minimalData, error: minimalError } = await supabase
+            .from('profiles')
+            .insert({
+              id: userId,
+              is_premium: false,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .select('id, is_premium')
+            .maybeSingle()
+            .timeout(8000);
+            
+          if (minimalError) {
+            console.error('[PROFILE-UTILS] Error creating minimal profile:', minimalError);
+            
+            if (currentAttempt < maxAttempts) {
+              await delay(1000 * currentAttempt);
+              continue;
+            }
+          } else if (minimalData) {
+            console.log('[PROFILE-UTILS] Minimal profile created:', minimalData);
+            return minimalData as Profile;
+          }
+        } catch (minimalCreateError) {
+          console.error('[PROFILE-UTILS] Exception creating minimal profile:', minimalCreateError);
           
-        if (minimalError) {
-          console.error('[PROFILE-UTILS] Error creating minimal profile:', minimalError);
-        } else if (minimalData) {
-          console.log('[PROFILE-UTILS] Minimal profile created:', minimalData);
-          return minimalData as Profile;
-        }
-      } catch (minimalCreateError) {
-        console.error('[PROFILE-UTILS] Exception creating minimal profile:', minimalCreateError);
-      }
-      
-      return null;
-    }
-    
-    console.log('[PROFILE-UTILS] User data retrieved for profile creation:', user);
-    
-    // Extract useful data from user object
-    const email = user.email;
-    const userMetadata = user.user_metadata || {};
-    
-    console.log('[PROFILE-UTILS] Current user metadata:', userMetadata);
-    
-    // Generate a default name from email if no name is available in metadata
-    const defaultName = email ? email.split('@')[0] : `User-${userId.substring(0, 8)}`;
-    const fullName = userMetadata.full_name || userMetadata.name || defaultName;
-    
-    console.log('[PROFILE-UTILS] Using name for profile:', fullName);
-    
-    // Create profile with manual data from session if available
-    const { data, error } = await supabase
-      .from('profiles')
-      .upsert({
-        id: userId,
-        email: email || null,
-        full_name: fullName,
-        avatar_url: userMetadata.avatar_url || null,
-        is_premium: false,
-        updated_at: new Date().toISOString()
-      })
-      .select('id, email, full_name, avatar_url, is_premium')
-      .maybeSingle();
-      
-    if (error) {
-      console.error('[PROFILE-UTILS] Error creating profile:', error);
-      
-      // Try a direct insert as a last attempt
-      try {
-        const { data: insertData, error: insertError } = await supabase
-          .from('profiles')
-          .insert({
-            id: userId,
-            email: email || null,
-            full_name: fullName,
-            is_premium: false,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
-          .select('id, email, full_name, is_premium')
-          .maybeSingle();
-        
-        if (insertError) {
-          console.error('[PROFILE-UTILS] Error inserting profile:', insertError);
-          return null;
+          if (currentAttempt < maxAttempts) {
+            await delay(1000 * currentAttempt);
+            continue;
+          }
         }
         
-        console.log('[PROFILE-UTILS] Profile inserted successfully:', insertData);
-        return insertData as Profile;
-      } catch (insertErr) {
-        console.error('[PROFILE-UTILS] Exception inserting profile:', insertErr);
         return null;
       }
+      
+      // Extract useful data from user object
+      const email = user.email;
+      const userMetadata = user.user_metadata || {};
+      
+      // Generate a default name from email if no name is available in metadata
+      const defaultName = email ? email.split('@')[0] : `User-${userId.substring(0, 8)}`;
+      const fullName = userMetadata.full_name || userMetadata.name || defaultName;
+      
+      // Create profile with manual data from session if available
+      const { data, error } = await supabase
+        .from('profiles')
+        .upsert({
+          id: userId,
+          email: email || null,
+          full_name: fullName,
+          avatar_url: userMetadata.avatar_url || null,
+          is_premium: false,
+          updated_at: new Date().toISOString()
+        })
+        .select('id, email, full_name, avatar_url, is_premium')
+        .maybeSingle()
+        .timeout(8000);
+        
+      if (error) {
+        console.error(`[PROFILE-UTILS] Error creating profile${retryText}:`, error);
+        
+        if (currentAttempt < maxAttempts) {
+          await delay(1000 * currentAttempt);
+          continue;
+        }
+      } else if (data) {
+        console.log('[PROFILE-UTILS] Profile created successfully:', data);
+        return data as Profile;
+      }
+    } catch (error) {
+      console.error(`[PROFILE-UTILS] Exception creating profile (attempt ${currentAttempt}/${maxAttempts}):`, error);
+      
+      if (currentAttempt < maxAttempts) {
+        await delay(1000 * currentAttempt);
+        continue;
+      }
     }
-    
-    console.log('[PROFILE-UTILS] Profile created successfully:', data);
-    return data as Profile;
-  } catch (error) {
-    console.error('[PROFILE-UTILS] Exception creating profile:', error);
-    return null;
   }
+  
+  // All attempts failed
+  console.error('[PROFILE-UTILS] All attempts to create profile failed');
+  return null;
 };
 
 /**
