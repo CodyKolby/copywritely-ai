@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
-import { supabase, checkConnectionHealth } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 import { Profile } from './types';
 import { fetchProfile } from './profile-utils';
 import { signInWithGoogle, signInWithEmail, signUpWithEmail, signOut } from './auth-methods';
@@ -52,8 +51,7 @@ export const useAuthProvider = () => {
   const checkConnection = useCallback(async (force = false) => {
     const now = Date.now();
     
-    // Don't check too frequently unless forced
-    if (!force && now - connectionStatus.lastChecked < 15000) {
+    if (!force && now - connectionStatus.lastChecked < 60000) {
       return connectionStatus;
     }
     
@@ -61,22 +59,34 @@ export const useAuthProvider = () => {
       console.log('[AUTH] Checking connection health');
       setConnectionStatus(prev => ({...prev, lastChecked: now}));
       
-      const status = await checkConnectionHealth();
+      const isOnline = navigator.onLine;
+      let supabaseConnected = connectionStatus.supabaseConnected;
+      
+      if (isOnline) {
+        try {
+          const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL || "https://jorbqjareswzdrsmepbv.supabase.co"}/rest/v1/`, {
+            method: 'OPTIONS',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpvcmJxamFyZXN3emRyc21lcGJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI1NTcyNjMsImV4cCI6MjA1ODEzMzI2M30.WtGgnQKLVD2ZuOq4qNrIfcmFc98U3Q6YLrCCRG_mrH4"
+            },
+            mode: 'cors'
+          });
+          
+          supabaseConnected = response.ok;
+        } catch (e) {
+          console.error('[AUTH] Error checking connection with direct fetch:', e);
+          supabaseConnected = false;
+        }
+      }
       
       const newStatus = {
-        online: status.online,
-        supabaseConnected: status.supabaseConnected,
+        online: isOnline,
+        supabaseConnected,
         lastChecked: now
       };
       
       setConnectionStatus(newStatus);
-      
-      // If connection was previously down but is now up, trigger session refresh
-      if (!connectionStatus.supabaseConnected && status.supabaseConnected && user) {
-        console.log('[AUTH] Connection restored, refreshing session');
-        setTimeout(() => refreshSession(), 1000);
-      }
-      
       return newStatus;
     } catch (e) {
       console.error('[AUTH] Error checking connection health:', e);
@@ -90,27 +100,21 @@ export const useAuthProvider = () => {
       setConnectionStatus(newStatus);
       return newStatus;
     }
-  }, [connectionStatus.lastChecked, connectionStatus.supabaseConnected, refreshSession, user]);
+  }, [connectionStatus.lastChecked, connectionStatus.supabaseConnected]);
 
   const fetchAndSetProfile = async (userId: string) => {
     try {
-      const connStatus = await checkConnection();
-      
-      if (!connStatus.online) {
+      if (!navigator.onLine) {
         console.log('[AUTH] Device is offline, skipping profile fetch');
         return null;
       }
       
-      if (!connStatus.supabaseConnected) {
-        console.log('[AUTH] Connection issues detected, will attempt profile fetch anyway');
-      }
-      
       console.log('[AUTH] Fetching profile for user:', userId);
       
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000); // Increased timeout
-        
         const userProfile = await fetchProfile(userId, controller.signal);
         clearTimeout(timeoutId);
         
@@ -121,11 +125,8 @@ export const useAuthProvider = () => {
         } else {
           console.warn('[AUTH] No profile found for user:', userId);
           
-          if (connStatus.supabaseConnected) {
+          if (navigator.onLine) {
             console.log('[AUTH] Creating new profile for user');
-            const createController = new AbortController();
-            const createTimeoutId = setTimeout(() => createController.abort(), 8000);
-            
             try {
               const { data: createData, error: createError } = await supabase
                 .from('profiles')
@@ -138,57 +139,21 @@ export const useAuthProvider = () => {
                 .select()
                 .single();
                 
-              clearTimeout(createTimeoutId);
-              
               if (!createError && createData) {
                 console.log('[AUTH] Profile created successfully');
                 setProfile(createData as Profile);
                 return createData as Profile;
               } else {
                 console.error('[AUTH] Error creating profile:', createError);
-                
-                // Try one more time with basic insert if upsert failed
-                if (createError) {
-                  try {
-                    const { data: insertData, error: insertError } = await supabase
-                      .from('profiles')
-                      .insert({
-                        id: userId,
-                        is_premium: false,
-                        created_at: new Date().toISOString(),
-                        updated_at: new Date().toISOString()
-                      })
-                      .select()
-                      .single();
-                      
-                    if (!insertError && insertData) {
-                      console.log('[AUTH] Profile inserted successfully on second attempt');
-                      setProfile(insertData as Profile);
-                      return insertData as Profile;
-                    }
-                  } catch (secondAttemptError) {
-                    console.error('[AUTH] Error on second profile creation attempt:', secondAttemptError);
-                  }
-                }
               }
-            } catch (createAbortError) {
-              clearTimeout(createTimeoutId);
-              if (createAbortError.name === 'AbortError') {
-                console.error('[AUTH] Profile creation timed out');
-              } else {
-                console.error('[AUTH] Error during profile creation:', createAbortError);
-              }
+            } catch (createError) {
+              console.error('[AUTH] Error during profile creation:', createError);
             }
-          } else {
-            console.log('[AUTH] Skipping profile creation due to connection issues');
           }
         }
-      } catch (abortError) {
-        if (abortError.name === 'AbortError') {
-          console.error('[AUTH] Profile fetch timed out');
-        } else {
-          console.error('[AUTH] Error during profile fetch:', abortError);
-        }
+      } catch (error) {
+        clearTimeout(timeoutId);
+        console.error('[AUTH] Error during profile fetch:', error);
       }
     } catch (profileError) {
       console.error('[AUTH] Error in fetchAndSetProfile:', profileError);
@@ -202,18 +167,8 @@ export const useAuthProvider = () => {
       console.log('[AUTH] Device went online');
       setConnectionStatus(prev => ({
         ...prev,
-        online: true,
-        lastChecked: 0
+        online: true
       }));
-      
-      // When going online, check connection and refresh if needed
-      setTimeout(async () => {
-        const status = await checkConnection(true);
-        if (status.supabaseConnected && user) {
-          console.log('[AUTH] Connection restored, refreshing session');
-          refreshSession();
-        }
-      }, 1500);
     };
     
     const handleOffline = () => {
@@ -223,7 +178,6 @@ export const useAuthProvider = () => {
         online: false
       }));
       
-      // Show a toast when going offline
       toast.error('Brak połączenia z internetem', {
         description: 'Niektóre funkcje mogą być niedostępne'
       });
@@ -232,20 +186,13 @@ export const useAuthProvider = () => {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     
-    // Check connection initially
     checkConnection(true);
-    
-    // Set up periodic connection checking
-    const intervalId = setInterval(() => {
-      checkConnection();
-    }, 30000);
     
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
-      clearInterval(intervalId);
     };
-  }, [checkConnection, refreshSession, user]);
+  }, [checkConnection]);
 
   useEffect(() => {
     console.log("[AUTH] Setting up auth state listener");
@@ -260,27 +207,17 @@ export const useAuthProvider = () => {
             localStorage.setItem('userEmail', newSession.user.email);
           }
           
-          let retries = 2;
-          let userProfile = null;
-          
-          while (retries >= 0 && !userProfile) {
-            try {
-              userProfile = await fetchAndSetProfile(newSession.user.id);
-              if (userProfile) break;
-            } catch (profileError) {
-              console.error(`[AUTH] Error fetching profile (try ${2-retries}/2):`, profileError);
-            }
+          try {
+            const userProfile = await fetchAndSetProfile(newSession.user.id);
             
-            retries--;
-            if (retries >= 0) {
-              console.log(`[AUTH] Retrying profile fetch, ${retries+1} attempts remaining`);
-              await new Promise(resolve => setTimeout(resolve, 2000)); // Increased backoff time
+            if (userProfile) {
+              setTimeout(() => {
+                handleUserAuthenticated(newSession.user.id);
+              }, 0);
             }
+          } catch (profileError) {
+            console.error(`[AUTH] Error fetching profile:`, profileError);
           }
-          
-          setTimeout(() => {
-            handleUserAuthenticated(newSession.user.id);
-          }, 0);
         } else {
           setIsPremium(false);
           setProfile(null);
@@ -303,31 +240,11 @@ export const useAuthProvider = () => {
           return;
         }
 
-        // Check connection status first
-        const connStatus = await checkConnection(true);
-        
-        if (!connStatus.supabaseConnected) {
-          console.log('[AUTH] Connection issues detected during initialization');
-          toast.error('Problem z połączeniem do serwera', {
-            description: 'Próbujemy nawiązać połączenie...'
-          });
-          
-          setTimeout(async () => {
-            await checkConnection(true);
-          }, 3000);
-        }
-
         try {
           const { data, error } = await supabase.auth.getSession();
           
           if (error) {
             console.error('[AUTH] Error getting session:', error);
-            // Show a specific error message for this common issue
-            if (error.message?.includes('failed to get session from storage')) {
-              toast.error('Problem z danymi sesji', {
-                description: 'Spróbuj wyczyścić pamięć podręczną przeglądarki'
-              });
-            }
             throw error;
           }
           
@@ -343,23 +260,17 @@ export const useAuthProvider = () => {
             setSession(currentSession);
             setUser(currentSession.user);
             
-            let retries = 1;
-            let userProfile = null;
-            
-            while (retries >= 0 && !userProfile) {
-              try {
-                userProfile = await fetchAndSetProfile(currentSession.user.id);
-                if (userProfile) break;
-              } catch (profileError) {
-                console.error(`[AUTH] Error fetching profile during init (try ${1-retries}/1):`, profileError);
+            try {
+              const userProfile = await fetchAndSetProfile(currentSession.user.id);
+              
+              if (userProfile) {
+                setTimeout(async () => {
+                  await handleUserAuthenticated(currentSession.user.id);
+                }, 0);
               }
-              retries--;
-              if (retries >= 0) await new Promise(resolve => setTimeout(resolve, 2000));
+            } catch (profileError) {
+              console.error(`[AUTH] Error fetching profile during init:`, profileError);
             }
-            
-            setTimeout(async () => {
-              await handleUserAuthenticated(currentSession.user.id);
-            }, 0);
           } else {
             console.log('[AUTH] No active session found');
             setSession(null);
@@ -367,14 +278,7 @@ export const useAuthProvider = () => {
             clearPremiumFromLocalStorage();
           }
         } catch (sessionError) {
-          if (sessionError.name === 'AbortError') {
-            console.error('[AUTH] Session fetch timed out');
-            toast.error('Problem z weryfikacją sesji', {
-              description: 'Odśwież stronę lub spróbuj ponownie za chwilę'
-            });
-          } else {
-            console.error('[AUTH] Error getting session:', sessionError);
-          }
+          console.error('[AUTH] Error getting session:', sessionError);
           
           setSession(null);
           setUser(null);
@@ -396,7 +300,6 @@ export const useAuthProvider = () => {
     };
   }, [testUser, testSession, testIsPremium, testProfile, handleUserAuthenticated, setIsPremium, setUser, setSession, checkConnection]);
 
-  // Return all needed values
   return {
     user: testUser || user, 
     session: testSession || session, 

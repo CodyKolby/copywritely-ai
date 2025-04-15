@@ -7,7 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Routes } from './routes';
 import { Toaster as SonnerToaster, toast } from 'sonner'; // Import toast directly here
 import React, { useState, useEffect } from 'react';
-import { supabase, validateSupabaseConnection, checkConnectionHealth } from './integrations/supabase/client';
+import { supabase } from './integrations/supabase/client';
 import { ConnectionStatusAlert } from './components/ui/ConnectionStatusAlert';
 
 // Configure React Query with better error handling
@@ -30,70 +30,54 @@ function App() {
   const [supabaseConnected, setSupabaseConnected] = useState(true);
   const [isCheckingConnection, setIsCheckingConnection] = useState(false);
   const [corsIssueDetected, setCorsIssueDetected] = useState(false);
+  const [lastCheckTime, setLastCheckTime] = useState(0);
 
-  // Verify Supabase connection on app start
+  // Verify Supabase connection on app start - with reduced frequency
   useEffect(() => {
+    // Only check connection once at startup to avoid infinite loops
     const checkConnection = async () => {
+      // Skip if we've checked in the last 60 seconds
+      const now = Date.now();
+      if (now - lastCheckTime < 60000) return;
+      
       if (isCheckingConnection) return;
       
       try {
         setIsCheckingConnection(true);
+        setLastCheckTime(now);
         
         // First check if we're online at all
         if (!navigator.onLine) {
-          console.log('[APP] Device is offline, waiting for online event');
           setSupabaseConnected(false);
           return;
         }
         
-        const startTime = Date.now();
-        const connected = await validateSupabaseConnection();
-        const duration = Date.now() - startTime;
-        
-        setSupabaseConnected(connected);
-        console.log(`[APP] Supabase connection verified in ${duration}ms:`, connected ? 'successfully' : 'failed');
-        
-        if (!connected) {
-          // Check if it's specifically a CORS issue
-          const status = await checkConnectionHealth();
-          setCorsIssueDetected(status.corsIssue);
+        try {
+          // Simple preflight check - just once
+          const corsResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL || "https://jorbqjareswzdrsmepbv.supabase.co"}/rest/v1/`, {
+            method: 'OPTIONS',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpvcmJxamFyZXN3emRyc21lcGJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI1NTcyNjMsImV4cCI6MjA1ODEzMzI2M30.WtGgnQKLVD2ZuOq4qNrIfcmFc98U3Q6YLrCCRG_mrH4"
+            },
+            mode: 'cors'
+          });
           
-          if (status.corsIssue) {
-            console.warn('[APP] CORS issue detected, recommend adding domain to Supabase allowed origins');
-            
-            // Display CORS error message
-            const currentDomain = window.location.origin;
-            toast.error('Wykryto problem z CORS', {
-              description: `Dodaj domenę ${currentDomain} do dozwolonych źródeł w ustawieniach Supabase`,
-              duration: 10000
-            });
+          if (!corsResponse.ok) {
+            setCorsIssueDetected(true);
+            setSupabaseConnected(false);
+          } else {
+            setCorsIssueDetected(false);
+            setSupabaseConnected(true);
           }
-          
-          // If initial connection fails, try again after 3 seconds
-          setTimeout(async () => {
-            try {
-              const retryResult = await validateSupabaseConnection();
-              setSupabaseConnected(retryResult);
-              console.log('[APP] Supabase connection retry:', retryResult ? 'success' : 'failed');
-              
-              if (!retryResult) {
-                const retryStatus = await checkConnectionHealth();
-                setCorsIssueDetected(retryStatus.corsIssue);
-              }
-            } catch (retryError) {
-              console.error('[APP] Error during connection retry:', retryError);
-            }
-          }, 3000);
+        } catch (error) {
+          console.error('[APP] Error during CORS check:', error);
+          setCorsIssueDetected(true);
+          setSupabaseConnected(false);
         }
       } catch (error) {
         console.error('[APP] Error verifying Supabase connection:', error);
         setSupabaseConnected(false);
-        
-        // Check if it's a CORS error
-        if (error.toString().includes('CORS') || 
-            error.message?.includes('CORS')) {
-          setCorsIssueDetected(true);
-        }
       } finally {
         setIsCheckingConnection(false);
       }
@@ -103,57 +87,67 @@ function App() {
     
     // Set up event listeners for online/offline status
     const handleOnline = () => {
-      console.log('[APP] Device went online, checking Supabase connection');
-      checkConnection();
+      setSupabaseConnected(true);
     };
     
     const handleOffline = () => {
-      console.log('[APP] Device went offline');
       setSupabaseConnected(false);
     };
     
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     
-    // Periodically check connection status
-    const intervalId = setInterval(checkConnection, 30000); // Check every 30 seconds
+    // Do NOT set periodic check to avoid spamming
     
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
-      clearInterval(intervalId);
     };
-  }, [isCheckingConnection]);
-
-  // Remove the require statement - Use the imported toast directly
+  }, [isCheckingConnection, lastCheckTime]);
 
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
         <AuthProvider>
           <AppLayout>
-            {/* Connection status alert with CORS information */}
-            <ConnectionStatusAlert 
-              onRetry={async () => {
-                try {
-                  setIsCheckingConnection(true);
-                  const connected = await validateSupabaseConnection();
-                  setSupabaseConnected(connected);
-                  
-                  if (!connected) {
-                    const status = await checkConnectionHealth();
-                    setCorsIssueDetected(status.corsIssue);
-                  } else {
-                    setCorsIssueDetected(false);
+            {/* Only show connection status alert if there's an issue */}
+            {(!supabaseConnected || corsIssueDetected) && (
+              <ConnectionStatusAlert 
+                onRetry={async () => {
+                  if (Date.now() - lastCheckTime < 10000) {
+                    toast.info('Proszę poczekaj chwilę przed ponowną próbą');
+                    return;
                   }
                   
-                  console.log('[APP] Connection retry result:', connected);
-                } finally {
-                  setIsCheckingConnection(false);
-                }
-              }}
-              isChecking={isCheckingConnection}
-            />
+                  try {
+                    setIsCheckingConnection(true);
+                    
+                    // Simple check
+                    const corsResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL || "https://jorbqjareswzdrsmepbv.supabase.co"}/rest/v1/`, {
+                      method: 'OPTIONS',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpvcmJxamFyZXN3emRyc21lcGJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI1NTcyNjMsImV4cCI6MjA1ODEzMzI2M30.WtGgnQKLVD2ZuOq4qNrIfcmFc98U3Q6YLrCCRG_mrH4"
+                      },
+                      mode: 'cors'
+                    });
+                    
+                    if (corsResponse.ok) {
+                      setCorsIssueDetected(false);
+                      setSupabaseConnected(true);
+                      setLastCheckTime(Date.now());
+                    } else {
+                      setCorsIssueDetected(true);
+                      setSupabaseConnected(false);
+                      setLastCheckTime(Date.now());
+                    }
+                  } finally {
+                    setIsCheckingConnection(false);
+                  }
+                }}
+                isChecking={isCheckingConnection}
+              />
+            )}
             
             <Routes />
           </AppLayout>
