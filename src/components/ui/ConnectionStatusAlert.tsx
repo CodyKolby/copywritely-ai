@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { AlertCircle, WifiOff, RefreshCw, CheckCircle } from 'lucide-react';
+import { AlertCircle, WifiOff, RefreshCw, CheckCircle, Info } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { checkConnectionHealth, diagnoseConnectionIssues } from '@/lib/supabase';
@@ -27,6 +27,7 @@ export const ConnectionStatusAlert: React.FC<ConnectionStatusAlertProps> = ({
   const [diagnosticInfo, setDiagnosticInfo] = useState<{
     canReachSupabaseUrl?: boolean;
     canMakeApiCall?: boolean;
+    corsIssue?: boolean;
     message?: string;
   } | null>(null);
 
@@ -50,7 +51,8 @@ export const ConnectionStatusAlert: React.FC<ConnectionStatusAlertProps> = ({
         setDiagnosticInfo({
           canReachSupabaseUrl: diagnostics.canReachSupabaseUrl,
           canMakeApiCall: diagnostics.canMakeApiCall,
-          message: diagnostics.message
+          corsIssue: status.corsIssue,
+          message: status.message || diagnostics.message
         });
       } else {
         setDiagnosticInfo(null);
@@ -62,6 +64,7 @@ export const ConnectionStatusAlert: React.FC<ConnectionStatusAlertProps> = ({
       console.log('[CONNECTION-ALERT] Connection check result:', {
         online: status.online,
         supabaseConnected: status.supabaseConnected,
+        corsIssue: status.corsIssue,
         message: status.message
       });
       
@@ -78,7 +81,8 @@ export const ConnectionStatusAlert: React.FC<ConnectionStatusAlertProps> = ({
       setVisible(true);
       setSupabaseConnected(false);
       setDiagnosticInfo({
-        message: 'Wystąpił błąd podczas sprawdzania połączenia'
+        message: 'Wystąpił błąd podczas sprawdzania połączenia',
+        corsIssue: e.message?.includes('CORS') || e.toString().includes('CORS')
       });
       return null;
     } finally {
@@ -137,6 +141,8 @@ export const ConnectionStatusAlert: React.FC<ConnectionStatusAlertProps> = ({
     }
   };
 
+  const showCorsAlert = diagnosticInfo?.corsIssue;
+
   return (
     <Alert 
       variant="destructive" 
@@ -146,6 +152,8 @@ export const ConnectionStatusAlert: React.FC<ConnectionStatusAlertProps> = ({
         <div className="mr-2">
           {!isOnline ? (
             <WifiOff className="h-5 w-5" />
+          ) : showCorsAlert ? (
+            <Info className="h-5 w-5" />
           ) : (
             <AlertCircle className="h-5 w-5" />
           )}
@@ -154,12 +162,16 @@ export const ConnectionStatusAlert: React.FC<ConnectionStatusAlertProps> = ({
           <AlertTitle>
             {!isOnline 
               ? "Brak połączenia z internetem" 
-              : "Problem z połączeniem do serwera"}
+              : showCorsAlert
+                ? "Problem z CORS (Cross-Origin Resource Sharing)"
+                : "Problem z połączeniem do serwera"}
           </AlertTitle>
           <AlertDescription className="mt-2">
             {!isOnline 
               ? "Sprawdź swoje połączenie z internetem i spróbuj ponownie." 
-              : diagnosticInfo?.message || "Wystąpił problem z połączeniem do serwera."}
+              : showCorsAlert
+                ? "Występuje błąd CORS, który blokuje połączenie z serwerem Supabase. Upewnij się, że domena jest skonfigurowana w ustawieniach Supabase."
+                : diagnosticInfo?.message || "Wystąpił problem z połączeniem do serwera."}
             
             {diagnosticInfo && (
               <div className="mt-2 text-sm">
@@ -185,6 +197,14 @@ export const ConnectionStatusAlert: React.FC<ConnectionStatusAlertProps> = ({
                     </span>
                     Możliwość wykonania zapytania API
                   </li>
+                  {showCorsAlert && (
+                    <li className="flex items-center">
+                      <span className="w-4 h-4 inline-block mr-2 text-red-500">
+                        <AlertCircle size={16} />
+                      </span>
+                      Ustawienia CORS (cross-origin)
+                    </li>
+                  )}
                 </ul>
               </div>
             )}
@@ -192,6 +212,9 @@ export const ConnectionStatusAlert: React.FC<ConnectionStatusAlertProps> = ({
             <div className="mt-3 text-sm">
               <strong>Możliwe rozwiązania:</strong>
               <ul className="list-disc pl-5 mt-1">
+                {showCorsAlert && (
+                  <li>Dodaj domenę aplikacji do dozwolonych źródeł w ustawieniach CORS w Supabase</li>
+                )}
                 <li>Odśwież stronę</li>
                 <li>Sprawdź połączenie internetowe</li>
                 <li>Wyczyść pamięć podręczną przeglądarki</li>

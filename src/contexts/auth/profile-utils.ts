@@ -19,26 +19,87 @@ export const fetchProfile = async (userId: string, signal?: AbortSignal): Promis
       });
     }
     
-    // Start the query
-    const queryPromise = supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle();
+    // Add retry logic for profile fetch with CORS handling
+    let retries = 2;
+    let lastError: any = null;
     
-    // Either wait for the query or for an abort signal
-    const { data, error } = await (abortPromise 
-      ? Promise.race([queryPromise, abortPromise as Promise<never>])
-      : queryPromise);
-    
-    // Check for errors from Supabase
-    if (error) {
-      console.error('[PROFILE-UTILS] Error fetching profile:', error);
-      return null;
+    while (retries >= 0) {
+      try {
+        // Try direct fetch first to check for CORS issues
+        if (retries === 2) {
+          try {
+            const corsCheckResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL || "https://jorbqjareswzdrsmepbv.supabase.co"}/rest/v1/profiles?id=eq.${userId}&limit=1`, {
+              method: 'GET',
+              headers: {
+                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpvcmJxamFyZXN3emRyc21lcGJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI1NTcyNjMsImV4cCI6MjA1ODEzMzI2M30.WtGgnQKLVD2ZuOq4qNrIfcmFc98U3Q6YLrCCRG_mrH4",
+                'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpvcmJxamFyZXN3emRyc21lcGJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI1NTcyNjMsImV4cCI6MjA1ODEzMzI2M30.WtGgnQKLVD2ZuOq4qNrIfcmFc98U3Q6YLrCCRG_mrH4"}`,
+                'X-Client-Info': 'supabase-js',
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+              },
+              mode: 'cors'
+            });
+
+            if (corsCheckResponse.ok) {
+              const profileData = await corsCheckResponse.json();
+              if (profileData && profileData.length > 0) {
+                console.log('[PROFILE-UTILS] Profile fetched through direct API (no CORS issues)');
+                return profileData[0] as Profile;
+              }
+            }
+          } catch (corsError) {
+            console.warn('[PROFILE-UTILS] Direct fetch failed - possible CORS issue:', corsError);
+          }
+        }
+        
+        // Start the query using SDK
+        const queryPromise = supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle()
+          .abortSignal(signal); // This will properly handle the abort signal
+        
+        // Either wait for the query or for an abort signal
+        const { data, error } = await queryPromise;
+        
+        // Check for errors from Supabase
+        if (error) {
+          console.error(`[PROFILE-UTILS] Error fetching profile (attempt ${2-retries}/2):`, error);
+          lastError = error;
+          retries--;
+          
+          if (retries >= 0) {
+            // Add backoff delay
+            await new Promise(resolve => setTimeout(resolve, 1000 * (2 - retries)));
+            continue;
+          }
+          return null;
+        }
+        
+        console.log('[PROFILE-UTILS] Profile fetch result:', data ? 'Found' : 'Not found');
+        return data as Profile;
+      } catch (error) {
+        if (error.name === 'AbortError') {
+          console.log('[PROFILE-UTILS] Fetch aborted by caller');
+          throw error;
+        } else {
+          console.error(`[PROFILE-UTILS] Exception in fetchProfile (attempt ${2-retries}/2):`, error);
+          lastError = error;
+          retries--;
+          
+          if (retries >= 0) {
+            // Add backoff delay
+            await new Promise(resolve => setTimeout(resolve, 1000 * (2 - retries)));
+            continue;
+          }
+          throw error;
+        }
+      }
     }
     
-    console.log('[PROFILE-UTILS] Profile fetch result:', data ? 'Found' : 'Not found');
-    return data as Profile;
+    console.error('[PROFILE-UTILS] All fetch attempts failed, last error:', lastError);
+    return null;
   } catch (error) {
     if (error.name === 'AbortError') {
       console.log('[PROFILE-UTILS] Fetch aborted by caller');
@@ -75,6 +136,35 @@ export const createProfile = async (
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         };
+        
+        // Try direct fetch first to check for CORS issues
+        if (tries === 1) {
+          try {
+            const corsCheckResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL || "https://jorbqjareswzdrsmepbv.supabase.co"}/rest/v1/profiles`, {
+              method: 'POST',
+              headers: {
+                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpvcmJxamFyZXN3emRyc21lcGJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI1NTcyNjMsImV4cCI6MjA1ODEzMzI2M30.WtGgnQKLVD2ZuOq4qNrIfcmFc98U3Q6YLrCCRG_mrH4",
+                'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpvcmJxamFyZXN3emRyc21lcGJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI1NTcyNjMsImV4cCI6MjA1ODEzMzI2M30.WtGgnQKLVD2ZuOq4qNrIfcmFc98U3Q6YLrCCRG_mrH4"}`,
+                'X-Client-Info': 'supabase-js',
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+              },
+              body: JSON.stringify(profileData),
+              mode: 'cors'
+            });
+
+            if (corsCheckResponse.ok) {
+              const responseData = await corsCheckResponse.json();
+              if (responseData && responseData.length > 0) {
+                console.log('[PROFILE-UTILS] Profile created through direct API (no CORS issues)');
+                return responseData[0] as Profile;
+              }
+            }
+          } catch (corsError) {
+            console.warn('[PROFILE-UTILS] Direct profile creation failed - possible CORS issue:', corsError);
+          }
+        }
         
         const { data, error } = await supabase
           .from('profiles')

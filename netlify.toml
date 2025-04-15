@@ -19,4 +19,13 @@
   status = 200
   force = true
   methods = "GET,POST,OPTIONS"
-  headers = { Access-Control-Allow-Origin = "*", Access-Control-Allow-Methods = "GET,POST,OPTIONS", Access-Control-Allow-Headers = "Content-Type, Authorization, X-Requested-With" }
+  headers = { Access-Control-Allow-Origin = "*", Access-Control-Allow-Methods = "GET,POST,OPTIONS", Access-Control-Allow-Headers = "Content-Type, Authorization, X-Requested-With, apikey, X-Client-Info, Cache-Control, Pragma, Expires, X-Timestamp, X-Random" }
+
+# Handle CORS for Supabase requests
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
+    Access-Control-Allow-Headers = "X-Requested-With, Content-Type, Accept, Authorization, apikey, X-Client-Info, Cache-Control, Pragma, Expires, X-No-Cache, X-Cache-Buster, X-Timestamp, X-Random"
+    Access-Control-Max-Age = "86400"

@@ -10,7 +10,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase, validateSupabaseConnection, checkConnectionHealth } from './integrations/supabase/client';
 import { ConnectionStatusAlert } from './components/ui/ConnectionStatusAlert';
 
-// Configure React Query with corrected options
+// Configure React Query with better error handling
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -29,6 +29,7 @@ const queryClient = new QueryClient({
 function App() {
   const [supabaseConnected, setSupabaseConnected] = useState(true);
   const [isCheckingConnection, setIsCheckingConnection] = useState(false);
+  const [corsIssueDetected, setCorsIssueDetected] = useState(false);
 
   // Verify Supabase connection on app start
   useEffect(() => {
@@ -53,12 +54,32 @@ function App() {
         console.log(`[APP] Supabase connection verified in ${duration}ms:`, connected ? 'successfully' : 'failed');
         
         if (!connected) {
+          // Check if it's specifically a CORS issue
+          const status = await checkConnectionHealth();
+          setCorsIssueDetected(status.corsIssue);
+          
+          if (status.corsIssue) {
+            console.warn('[APP] CORS issue detected, recommend adding domain to Supabase allowed origins');
+            
+            // Display CORS error message
+            const currentDomain = window.location.origin;
+            toast.error('Wykryto problem z CORS', {
+              description: `Dodaj domenę ${currentDomain} do dozwolonych źródeł w ustawieniach Supabase`,
+              duration: 10000
+            });
+          }
+          
           // If initial connection fails, try again after 3 seconds
           setTimeout(async () => {
             try {
               const retryResult = await validateSupabaseConnection();
               setSupabaseConnected(retryResult);
               console.log('[APP] Supabase connection retry:', retryResult ? 'success' : 'failed');
+              
+              if (!retryResult) {
+                const retryStatus = await checkConnectionHealth();
+                setCorsIssueDetected(retryStatus.corsIssue);
+              }
             } catch (retryError) {
               console.error('[APP] Error during connection retry:', retryError);
             }
@@ -67,6 +88,12 @@ function App() {
       } catch (error) {
         console.error('[APP] Error verifying Supabase connection:', error);
         setSupabaseConnected(false);
+        
+        // Check if it's a CORS error
+        if (error.toString().includes('CORS') || 
+            error.message?.includes('CORS')) {
+          setCorsIssueDetected(true);
+        }
       } finally {
         setIsCheckingConnection(false);
       }
@@ -98,18 +125,29 @@ function App() {
     };
   }, [isCheckingConnection]);
 
+  // Import toast on component mount
+  const { toast } = require('sonner');
+
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
         <AuthProvider>
           <AppLayout>
-            {/* Connection status alert */}
+            {/* Connection status alert with CORS information */}
             <ConnectionStatusAlert 
               onRetry={async () => {
                 try {
                   setIsCheckingConnection(true);
                   const connected = await validateSupabaseConnection();
                   setSupabaseConnected(connected);
+                  
+                  if (!connected) {
+                    const status = await checkConnectionHealth();
+                    setCorsIssueDetected(status.corsIssue);
+                  } else {
+                    setCorsIssueDetected(false);
+                  }
+                  
                   console.log('[APP] Connection retry result:', connected);
                 } finally {
                   setIsCheckingConnection(false);
