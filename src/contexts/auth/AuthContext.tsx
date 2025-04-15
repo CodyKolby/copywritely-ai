@@ -1,9 +1,21 @@
 
-import { createContext, useContext } from 'react'
-import { AuthContextType } from './types'
+import { createContext, useContext, ReactNode } from 'react';
+import { AuthContextType } from './types';
+import { useAuthProvider } from './useAuthProvider';
 
 // Create the auth context with undefined as default value
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Auth Provider component
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const authState = useAuthProvider();
+
+  return (
+    <AuthContext.Provider value={authState}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
 
 // Custom hook to use the auth context
 export function useAuth() {
@@ -13,6 +25,3 @@ export function useAuth() {
   }
   return context;
 }
-
-// Export the context for use in the provider
-export { AuthContext };

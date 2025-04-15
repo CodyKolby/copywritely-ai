@@ -1,4 +1,3 @@
-
 import { supabase, validateSupabaseConnection, checkConnectionHealth } from '@/integrations/supabase/client';
 
 // Re-export the Supabase client and util functions for easier imports
@@ -16,8 +15,7 @@ export const checkSupabaseConnectionWithRetry = async (maxRetries = 3): Promise<
         const { data, error } = await supabase
           .from('profiles')
           .select('count')
-          .limit(1)
-          .timeout(6000); // 6 second timeout
+          .limit(1);
         
         if (error) {
           console.error(`[SUPABASE-CHECK] Connection error on attempt ${attempt + 1}:`, error);
@@ -91,8 +89,7 @@ export const diagnoseConnectionIssues = async (): Promise<{
     const { data, error } = await supabase
       .from('profiles')
       .select('count')
-      .limit(1)
-      .timeout(5000);
+      .limit(1);
     
     result.canMakeApiCall = !error;
   } catch (e) {

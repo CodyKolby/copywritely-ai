@@ -26,8 +26,7 @@ export const fetchProfile = async (userId: string, maxAttempts = 3): Promise<Pro
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .maybeSingle()
-        .timeout(8000); // 8 second timeout for this query
+        .maybeSingle();
         
       if (error) {
         console.error(`[PROFILE-UTILS] Error fetching profile${retryText}:`, error);
@@ -115,8 +114,7 @@ export const createProfile = async (userId: string, maxAttempts = 2): Promise<Pr
               updated_at: new Date().toISOString()
             })
             .select('id, is_premium')
-            .maybeSingle()
-            .timeout(8000);
+            .maybeSingle();
             
           if (minimalError) {
             console.error('[PROFILE-UTILS] Error creating minimal profile:', minimalError);
@@ -161,8 +159,7 @@ export const createProfile = async (userId: string, maxAttempts = 2): Promise<Pr
           updated_at: new Date().toISOString()
         })
         .select('id, email, full_name, avatar_url, is_premium')
-        .maybeSingle()
-        .timeout(8000);
+        .maybeSingle();
         
       if (error) {
         console.error(`[PROFILE-UTILS] Error creating profile${retryText}:`, error);

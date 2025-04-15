@@ -10,15 +10,14 @@ import React, { useState, useEffect } from 'react';
 import { supabase, validateSupabaseConnection } from './integrations/supabase/client';
 import { ConnectionStatusAlert } from './components/ui/ConnectionStatusAlert';
 
-// Configure longer default timeouts for React Query
+// Configure React Query with corrected options
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 3,
       retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30000),
       staleTime: 60000,
-      refetchOnWindowFocus: false,
-      timeout: 30000
+      refetchOnWindowFocus: false
     },
     mutations: {
       retry: 2,

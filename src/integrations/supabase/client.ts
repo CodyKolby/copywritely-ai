@@ -50,8 +50,7 @@ export const validateSupabaseConnection = async (maxRetries = 3): Promise<boolea
       const { data, error } = await supabase
         .from('profiles')
         .select('count')
-        .limit(1)
-        .timeout(10000); // 10 second timeout for this query
+        .limit(1);
       
       const duration = Date.now() - startTime;
       
@@ -117,8 +116,7 @@ export const checkConnectionHealth = async (): Promise<{
     const { data, error } = await supabase
       .from('profiles')
       .select('count')
-      .limit(1)
-      .timeout(5000);
+      .limit(1);
       
     const duration = Date.now() - startTime;
     
