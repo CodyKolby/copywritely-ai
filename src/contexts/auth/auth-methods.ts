@@ -67,15 +67,21 @@ export const signUpWithEmail = async (email: string, password: string) => {
     const username = email.split('@')[0];
     console.log('[AUTH] Using generated username for full_name:', username);
     
+    // Enhanced user metadata with additional fields
+    const userData = {
+      full_name: username,
+      name: username,  // Add name as fallback
+      avatar_url: null
+    };
+    
+    console.log('[AUTH] Including user metadata in signup:', userData);
+    
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/login`,
-        data: {
-          full_name: username, // Use email username part as default name
-          avatar_url: null
-        }
+        data: userData
       }
     })
     
@@ -101,6 +107,27 @@ export const signUpWithEmail = async (email: string, password: string) => {
           
         if (profileError) {
           console.error('[AUTH] Error creating profile after signup:', profileError);
+          
+          // Try with create-profile edge function as a fallback
+          try {
+            console.log('[AUTH] Attempting profile creation with edge function');
+            
+            const response = await fetch('https://jorbqjareswzdrsmepbv.functions.supabase.co/create-profile', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ userId: data.user.id }),
+            });
+            
+            if (response.ok) {
+              console.log('[AUTH] Edge function profile creation successful');
+            } else {
+              console.error('[AUTH] Edge function profile creation failed:', await response.text());
+            }
+          } catch (edgeFunctionError) {
+            console.error('[AUTH] Error calling create-profile edge function:', edgeFunctionError);
+          }
         } else {
           console.log('[AUTH] Profile created successfully after signup');
         }

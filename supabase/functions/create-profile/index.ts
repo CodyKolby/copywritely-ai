@@ -79,25 +79,48 @@ serve(async (req) => {
     const defaultName = email ? email.split('@')[0] : `User-${userId.substring(0, 8)}`
     const fullName = metadata.full_name || metadata.name || defaultName
 
-    // Insert or update the profile
-    const { data: profile, error: profileError } = await supabaseAdmin
+    // Check if profile already exists
+    const { data: existingProfile } = await supabaseAdmin
       .from('profiles')
-      .upsert({
-        id: userId,
-        email: email || null,
-        full_name: fullName,
-        avatar_url: metadata.avatar_url || null,
-        is_premium: false,
-        updated_at: new Date().toISOString()
-      })
-      .select()
-      .single()
+      .select('id')
+      .eq('id', userId)
+      .maybeSingle()
+
+    // Insert or update the profile
+    let operation
+    if (existingProfile) {
+      console.log(`Profile exists for user ${userId}, updating it`)
+      operation = supabaseAdmin
+        .from('profiles')
+        .update({
+          email: email || null,
+          full_name: fullName,
+          avatar_url: metadata.avatar_url || null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId)
+    } else {
+      console.log(`Creating new profile for user ${userId}`)
+      operation = supabaseAdmin
+        .from('profiles')
+        .insert({
+          id: userId,
+          email: email || null,
+          full_name: fullName,
+          avatar_url: metadata.avatar_url || null,
+          is_premium: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+    }
+
+    const { data: profile, error: profileError } = await operation.select().single()
 
     if (profileError) {
-      console.error('Error creating profile:', profileError)
+      console.error('Error creating/updating profile:', profileError)
       return new Response(
         JSON.stringify({
-          error: 'Failed to create profile',
+          error: 'Failed to create/update profile',
           details: profileError.message
         }),
         {

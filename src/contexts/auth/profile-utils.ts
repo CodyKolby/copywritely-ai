@@ -56,7 +56,7 @@ export const createProfile = async (userId: string): Promise<Profile | null> => 
       
       // Fallback: Fetch user directly from auth.admin (via edge function)
       try {
-        const response = await fetch(`https://jorbqjareswzdrsmepbv.functions.supabase.co/create-profile`, {
+        const response = await fetch(`${window.location.origin}/.netlify/functions/create-profile`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -65,15 +65,33 @@ export const createProfile = async (userId: string): Promise<Profile | null> => 
           body: JSON.stringify({ userId }),
         });
         
-        if (response.ok) {
-          const result = await response.json();
-          console.log('[PROFILE-UTILS] Profile created via edge function:', result);
-          return result.profile as Profile;
+        if (!response.ok) {
+          console.error('[PROFILE-UTILS] Edge function failed with status:', response.status);
+          
+          // Try Supabase Edge Function directly
+          const edgeResponse = await fetch('https://jorbqjareswzdrsmepbv.functions.supabase.co/create-profile', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${sessionData?.session?.access_token || ''}`,
+            },
+            body: JSON.stringify({ userId }),
+          });
+          
+          if (edgeResponse.ok) {
+            const result = await edgeResponse.json();
+            console.log('[PROFILE-UTILS] Profile created via Supabase edge function:', result);
+            return result.profile as Profile;
+          } else {
+            console.error('[PROFILE-UTILS] Supabase edge function failed:', await edgeResponse.text());
+          }
         } else {
-          console.error('[PROFILE-UTILS] Edge function failed to create profile:', await response.text());
+          const result = await response.json();
+          console.log('[PROFILE-UTILS] Profile created via Netlify function:', result);
+          return result.profile as Profile;
         }
       } catch (edgeFnError) {
-        console.error('[PROFILE-UTILS] Error calling create-profile edge function:', edgeFnError);
+        console.error('[PROFILE-UTILS] Error calling create-profile function:', edgeFnError);
       }
       
       return null;
@@ -109,10 +127,32 @@ export const createProfile = async (userId: string): Promise<Profile | null> => 
       
     if (error) {
       console.error('[PROFILE-UTILS] Error creating profile:', error);
-      
-      // Fallback approach if first attempt fails - try with service role if available
-      // This is a simplified version just for the logs
       console.log('[PROFILE-UTILS] Profile creation failed with standard client, error code:', error.code);
+      
+      if (error.code === '42501' || error.message.includes('permission denied')) {
+        console.log('[PROFILE-UTILS] Trying to create profile with edge function due to permissions issue');
+        
+        // Try calling the edge function directly if we have permission issues
+        try {
+          const response = await fetch('https://jorbqjareswzdrsmepbv.functions.supabase.co/create-profile', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ userId }),
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            console.log('[PROFILE-UTILS] Profile created via edge function after permission error:', result);
+            return result.profile as Profile;
+          } else {
+            console.error('[PROFILE-UTILS] Edge function failed after permission error:', await response.text());
+          }
+        } catch (edgeFnError) {
+          console.error('[PROFILE-UTILS] Error calling create-profile edge function after permission error:', edgeFnError);
+        }
+      }
       
       return null;
     }

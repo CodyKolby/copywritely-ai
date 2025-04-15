@@ -39,6 +39,51 @@ export const useAuthProvider = () => {
     refreshSession
   } = useSessionManagement(handleUserAuthenticated);
 
+  // Function to fetch and set user profile
+  const fetchAndSetProfile = async (userId: string) => {
+    try {
+      console.log('[AUTH] Fetching profile for user:', userId);
+      const userProfile = await fetchProfile(userId);
+      
+      if (userProfile) {
+        console.log('[AUTH] Profile fetched successfully:', userProfile);
+        setProfile(userProfile);
+        return userProfile;
+      } else {
+        console.warn('[AUTH] No profile found for user:', userId);
+        
+        // Try direct edge function call as a last resort
+        try {
+          console.log('[AUTH] Attempting profile creation with edge function directly');
+          
+          const response = await fetch('https://jorbqjareswzdrsmepbv.functions.supabase.co/create-profile', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ userId }),
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            if (result.profile) {
+              console.log('[AUTH] Profile created via edge function:', result.profile);
+              setProfile(result.profile);
+              return result.profile;
+            }
+          } else {
+            console.error('[AUTH] Edge function call failed:', await response.text());
+          }
+        } catch (edgeFnError) {
+          console.error('[AUTH] Error calling create-profile edge function directly:', edgeFnError);
+        }
+      }
+    } catch (profileError) {
+      console.error('[AUTH] Error fetching profile:', profileError);
+    }
+    return null;
+  };
+
   useEffect(() => {
     console.log("[AUTH] Setting up auth state listener");
     
@@ -54,15 +99,19 @@ export const useAuthProvider = () => {
             localStorage.setItem('userEmail', newSession.user.email);
           }
           
-          // Fetch profile info
-          try {
-            const userProfile = await fetchProfile(newSession.user.id);
-            if (userProfile) {
-              console.log('[AUTH] Profile fetched during auth change:', userProfile);
-              setProfile(userProfile);
+          // Fetch profile info with retries
+          let retries = 3;
+          let userProfile = null;
+          
+          while (retries > 0 && !userProfile) {
+            try {
+              userProfile = await fetchAndSetProfile(newSession.user.id);
+              if (userProfile) break;
+            } catch (profileError) {
+              console.error(`[AUTH] Error fetching profile during auth change (retry ${4-retries}/3):`, profileError);
             }
-          } catch (profileError) {
-            console.error('[AUTH] Error fetching profile during auth change:', profileError);
+            retries--;
+            if (retries > 0) await new Promise(resolve => setTimeout(resolve, 1000));
           }
           
           setTimeout(() => {
@@ -106,15 +155,19 @@ export const useAuthProvider = () => {
           setSession(currentSession);
           setUser(currentSession.user);
           
-          // Fetch profile info
-          try {
-            const userProfile = await fetchProfile(currentSession.user.id);
-            if (userProfile) {
-              console.log('[AUTH] Profile fetched during initialization:', userProfile);
-              setProfile(userProfile);
+          // Fetch profile info with retries
+          let retries = 3;
+          let userProfile = null;
+          
+          while (retries > 0 && !userProfile) {
+            try {
+              userProfile = await fetchAndSetProfile(currentSession.user.id);
+              if (userProfile) break;
+            } catch (profileError) {
+              console.error(`[AUTH] Error fetching profile during initialization (retry ${4-retries}/3):`, profileError);
             }
-          } catch (profileError) {
-            console.error('[AUTH] Error fetching profile during initialization:', profileError);
+            retries--;
+            if (retries > 0) await new Promise(resolve => setTimeout(resolve, 1000));
           }
           
           await handleUserAuthenticated(currentSession.user.id);
@@ -158,6 +211,7 @@ export const useAuthProvider = () => {
     },
     checkPremiumStatus: checkUserPremiumStatus,
     refreshSession,
-    setTestUserState
+    setTestUserState,
+    fetchAndSetProfile
   };
 };
