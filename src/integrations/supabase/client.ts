@@ -49,8 +49,11 @@ export const validateSupabaseConnection = async () => {
     console.log('[SUPABASE] Validating connection to:', SUPABASE_URL);
     const startTime = Date.now();
     
-    // Make a simple RPC call to check connectivity
-    const { error } = await supabase.rpc('version');
+    // Instead of using rpc('version'), let's use a simple query to check connectivity
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('count')
+      .limit(1);
     
     const duration = Date.now() - startTime;
     
