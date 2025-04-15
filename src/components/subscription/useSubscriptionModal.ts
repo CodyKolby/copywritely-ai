@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 export const useSubscriptionModal = (open: boolean) => {
   const { user, isPremium, refreshSession } = useAuth();
   const [manualRefetch, setManualRefetch] = useState(false);
+  const [timeoutErrored, setTimeoutErrored] = useState(false);
 
   // Format date helper function
   const formatDate = (dateString: string) => {
@@ -25,6 +26,24 @@ export const useSubscriptionModal = (open: boolean) => {
     }
   };
 
+  // Set timeout to prevent infinite loading
+  useEffect(() => {
+    let timeoutId: number | null = null;
+    
+    if (open) {
+      timeoutId = window.setTimeout(() => {
+        setTimeoutErrored(true);
+        console.log('Subscription data fetch timeout reached');
+      }, 10000);
+    }
+    
+    return () => {
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
+    };
+  }, [open]);
+
   // Fetch subscription data
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['subscriptionDetails', user?.id, manualRefetch, open],
@@ -32,6 +51,11 @@ export const useSubscriptionModal = (open: boolean) => {
       if (!user?.id) return null;
 
       try {
+        // If we hit the timeout error, throw early to avoid waiting
+        if (timeoutErrored) {
+          throw new Error('Przekroczono czas oczekiwania na dane subskrypcji');
+        }
+
         const subscriptionData = await getSubscriptionDetails(user.id);
         
         if (!subscriptionData) {
@@ -57,6 +81,8 @@ export const useSubscriptionModal = (open: boolean) => {
         return subscriptionData;
       } catch (err) {
         if (isPremium) {
+          console.log('Creating fallback subscription for premium user');
+          
           // Create a fallback subscription object for users with premium status
           // but no subscription details (e.g. trial users)
           
@@ -84,12 +110,7 @@ export const useSubscriptionModal = (open: boolean) => {
               // Calculate days until expiry
               const daysUntil = Math.ceil((new Date(currentExpiryDate).getTime() - Date.now()) / (1000 * 3600 * 24));
               
-              // If days until is negative or zero, subscription has expired
-              if (daysUntil <= 0 && !isTrial) {
-                console.error('Subscription expired according to profile data');
-                await refreshSession();
-                throw new Error('Twoja subskrypcja wygasła');
-              }
+              console.log('Created fallback subscription from profile data');
               
               return {
                 hasSubscription: true,
@@ -125,11 +146,13 @@ export const useSubscriptionModal = (open: boolean) => {
             isTrial: false
           } as SubscriptionDetails;
         }
+        
+        console.error('Error fetching subscription details:', err);
         throw err;
       }
     },
     enabled: !!user?.id && open,
-    retry: 2,
+    retry: timeoutErrored ? 0 : 2,
     retryDelay: 1000,
     staleTime: 1000 * 60 * 2,
   });
@@ -137,11 +160,12 @@ export const useSubscriptionModal = (open: boolean) => {
   // Refresh data when modal is opened
   useEffect(() => {
     if (open) {
+      setTimeoutErrored(false);
       setTimeout(() => {
         setManualRefetch(prev => !prev);
       }, 300);
     }
-  }, [open, isPremium]);
+  }, [open]);
 
   // Handle subscription renewal
   const renewSubscription = () => {
@@ -198,13 +222,14 @@ export const useSubscriptionModal = (open: boolean) => {
 
   return {
     data,
-    isLoading,
-    error,
+    isLoading: isLoading && !timeoutErrored,
+    error: timeoutErrored ? new Error('Przekroczono czas oczekiwania na dane subskrypcji') : error,
     isPremiumButNoData,
     formatDate,
     renewSubscription,
     handleOpenPortal,
     fallbackData: getFallbackData(),
-    refetch
+    refetch,
+    timeoutErrored
   };
 };

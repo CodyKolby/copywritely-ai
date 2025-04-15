@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -29,7 +30,7 @@ interface RawProject {
   subtype?: string;
   platform?: string;
   subject?: string;
-  alternativeSubject?: string; // Added missing property for alternativeSubject
+  alternativeSubject?: string;
   metadata?: {
     alternativeSubject?: string;
     [key: string]: any;
@@ -42,6 +43,7 @@ export const useProjects = (userId: string | undefined) => {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [loadingErrored, setLoadingErrored] = useState<boolean>(false);
   
   // New state variables for dialog control
   const [emailDialogOpen, setEmailDialogOpen] = useState<boolean>(false);
@@ -49,7 +51,24 @@ export const useProjects = (userId: string | undefined) => {
   const [socialDialogOpen, setSocialDialogOpen] = useState<boolean>(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
-  const fetchProjects = async () => {
+  // Set timeout to avoid infinite loading state
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (loading) {
+        console.log('Projects loading timeout reached');
+        setLoading(false);
+        setLoadingErrored(true);
+        setProjects([]);
+        toast.error('Nie udało się załadować projektów', {
+          description: 'Spróbuj odświeżyć stronę'
+        });
+      }
+    }, 15000);
+    
+    return () => clearTimeout(timeout);
+  }, [loading]);
+
+  const fetchProjects = useCallback(async () => {
     // If no userId, exit and reset loading state
     if (!userId) {
       setLoading(false);
@@ -59,6 +78,9 @@ export const useProjects = (userId: string | undefined) => {
     
     try {
       setLoading(true);
+      setLoadingErrored(false);
+      
+      console.log('Fetching projects for user:', userId);
       
       const { data, error } = await supabase
         .from('projects')
@@ -67,7 +89,15 @@ export const useProjects = (userId: string | undefined) => {
         .order('updated_at', { ascending: false });
       
       if (error) {
+        console.error('Error fetching projects:', error);
         throw error;
+      }
+      
+      if (!data || data.length === 0) {
+        console.log('No projects found for user');
+        setProjects([]);
+        setLoading(false);
+        return;
       }
       
       // Handle the case where the 'type' field may not exist in some records
@@ -100,16 +130,19 @@ export const useProjects = (userId: string | undefined) => {
       });
       
       setProjects(processedData);
-      console.log('Pobrano projekty:', processedData);
+      console.log('Projects loaded successfully:', processedData.length);
     } catch (error) {
-      console.error('Błąd podczas pobierania projektów:', error);
+      console.error('Error fetching projects:', error);
+      setLoadingErrored(true);
       toast.error('Nie udało się pobrać projektów', {
+        description: 'Spróbuj odświeżyć stronę',
         dismissible: true
       });
+      setProjects([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
 
   useEffect(() => {
     if (userId) {
@@ -118,10 +151,10 @@ export const useProjects = (userId: string | undefined) => {
       setLoading(false);
       setProjects([]);
     }
-  }, [userId]);
+  }, [userId, fetchProjects]);
 
   const handleOpenProject = (projectId: string) => {
-    console.log(`Otwieranie projektu: ${projectId}`);
+    console.log(`Opening project: ${projectId}`);
     
     const project = projects.find(p => p.id === projectId);
     
@@ -173,7 +206,7 @@ export const useProjects = (userId: string | undefined) => {
         dismissible: true
       });
     } catch (error) {
-      console.error('Błąd podczas usuwania projektu:', error);
+      console.error('Error deleting project:', error);
       toast.error('Nie udało się usunąć projektu', {
         dismissible: true
       });
@@ -190,12 +223,13 @@ export const useProjects = (userId: string | undefined) => {
     selectedProjectId,
     deleteDialogOpen,
     isDeleting,
+    loadingErrored,
     fetchProjects,
     handleOpenProject,
     handleDeleteDialog,
     handleDeleteProject,
     setDeleteDialogOpen,
-    // New dialog-related values
+    // Dialog-related values
     emailDialogOpen,
     setEmailDialogOpen,
     scriptDialogOpen, 

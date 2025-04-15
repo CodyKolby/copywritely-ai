@@ -1,51 +1,73 @@
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
-import { scriptTemplates } from '@/data/scriptTemplates';
+import { useNavigate } from 'react-router-dom';
 
-export const useTemplateSelection = (validatePremiumStatus: () => Promise<boolean>) => {
-  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+/**
+ * Hook for managing template selection and dialog state
+ */
+export function useTemplateSelection(validatePremium?: () => Promise<boolean>) {
   const [targetAudienceDialogOpen, setTargetAudienceDialogOpen] = useState(false);
-  const [currentTemplateId, setCurrentTemplateId] = useState<string>('');
+  const [currentTemplateId, setCurrentTemplateId] = useState<string | null>(null);
+  const navigate = useNavigate();
 
-  const handleTemplateSelect = async (templateId: string) => {
-    // Check if template is "landing" which is marked as coming soon
-    const selectedTemplate = scriptTemplates.find(template => template.id === templateId);
+  // Handle template selection
+  const handleTemplateSelect = useCallback(async (templateId: string) => {
+    console.log(`Template selected: ${templateId}`);
     
-    if (selectedTemplate?.comingSoon) {
-      toast.info('Wkrótce dostępne', {
-        description: 'Ta funkcjonalność będzie dostępna w przyszłych aktualizacjach.',
-        dismissible: true
-      });
-      return;
-    }
-    
+    // Set the current template ID
     setCurrentTemplateId(templateId);
-    setSelectedTemplate(templateId);
     
-    // Thoroughly check premium status before proceeding
-    const hasPremium = await validatePremiumStatus();
-    
-    if (!hasPremium) {
-      toast.error('Ta funkcja wymaga konta Premium', {
-        description: 'Wykup subskrypcję, aby uzyskać dostęp do tej funkcji.',
-        dismissible: true
-      });
-      return;
+    // If we need to validate premium, do it first
+    if (validatePremium) {
+      try {
+        console.log('Validating premium status...');
+        const isPremium = await validatePremium();
+        
+        if (!isPremium) {
+          console.log('User does not have premium, redirecting to pricing');
+          toast.error('Ta funkcja wymaga konta Premium', {
+            description: 'Przejdź do strony cennika, aby wykupić subskrypcję.',
+            action: {
+              label: 'Cennik',
+              onClick: () => navigate('/pricing')
+            }
+          });
+          return;
+        }
+      } catch (error) {
+        console.error('Error validating premium status:', error);
+        toast.error('Błąd weryfikacji statusu premium', {
+          description: 'Prosimy odświeżyć stronę i spróbować ponownie.'
+        });
+        return;
+      }
     }
     
-    setTargetAudienceDialogOpen(true);
-  };
+    // Open the dialog with a slight delay
+    console.log('Opening target audience dialog...');
+    setTimeout(() => {
+      setTargetAudienceDialogOpen(true);
+    }, 100);
+    
+  }, [validatePremium, navigate]);
 
-  const handleDialogOpenChange = (open: boolean) => {
+  // Handle dialog open state changes
+  const handleDialogOpenChange = useCallback((open: boolean) => {
+    console.log(`Dialog open state changed to: ${open}`);
     setTargetAudienceDialogOpen(open);
-  };
+    
+    // If dialog is closed without completing the flow, reset template ID
+    if (!open) {
+      console.log('Dialog closed, resetting template ID');
+      setCurrentTemplateId(null);
+    }
+  }, []);
 
   return {
-    selectedTemplate,
     targetAudienceDialogOpen,
     currentTemplateId,
     handleTemplateSelect,
     handleDialogOpenChange
   };
-};
+}

@@ -28,9 +28,21 @@ const ScriptGenerator = () => {
     window.scrollTo(0, 0);
   }, []);
   
+  // Ensure targetAudienceDialogOpen is properly set 
+  useEffect(() => {
+    console.log("Script generator page loaded", {
+      currentTemplateId: templateSelection.currentTemplateId,
+      dialogOpen: templateSelection.targetAudienceDialogOpen
+    });
+  }, [templateSelection.currentTemplateId, templateSelection.targetAudienceDialogOpen]);
+  
   // Handle dialog closed - recheck premium status and reset templateId if needed
   const handleDialogOpenChange = (open: boolean) => {
-    console.log(`Dialog ${open ? 'opening' : 'closing'} - handling change`);
+    console.log(`Dialog ${open ? 'opening' : 'closing'} - handling change`, {
+      currentDialogState: templateSelection.targetAudienceDialogOpen,
+      currentTemplateId: templateSelection.currentTemplateId
+    });
+    
     templateSelection.handleDialogOpenChange(open);
     
     // When dialog is closed, perform cleanup
@@ -41,6 +53,15 @@ const ScriptGenerator = () => {
         premiumVerification.validatePremiumStatus();
       }
     }
+  };
+  
+  // Create a handler for template selection that logs details
+  const handleTemplateSelect = (templateId: string) => {
+    console.log(`Template ${templateId} selected, current state:`, {
+      isPremium: premiumVerification.isPremium,
+      isCheckingPremium: premiumVerification.isCheckingPremium
+    });
+    templateSelection.handleTemplateSelect(templateId);
   };
 
   // Determine if we should show the premium feature alert
@@ -82,10 +103,9 @@ const ScriptGenerator = () => {
 
         <ScriptTemplateGrid 
           templates={scriptTemplates}
-          onSelectTemplate={templateSelection.handleTemplateSelect}
+          onSelectTemplate={handleTemplateSelect}
         />
 
-        {/* Przechowujemy stały key dla dialogu, aby uniknąć resetowania przy odświeżaniu */}
         {!premiumVerification.isCheckingPremium && (
           <TargetAudienceDialog
             key={`dialog-${templateSelection.currentTemplateId || 'default'}`}

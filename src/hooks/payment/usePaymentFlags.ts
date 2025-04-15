@@ -13,11 +13,12 @@ export function usePaymentFlags() {
   const clearPaymentFlags = useCallback(() => {
     console.log('Explicitly clearing payment flags');
     
-    // Bezpiecznie wyczyść flagi w session storage
+    // Safely clear flags in session storage
     try {
       // Clear session storage flags
       sessionStorage.removeItem('redirectingToStripe');
       sessionStorage.removeItem('stripeCheckoutInProgress');
+      sessionStorage.removeItem('paymentProcessed'); // Also clear the payment processed flag
     } catch (e) {
       console.error('Error clearing session storage:', e);
     }
@@ -32,7 +33,7 @@ export function usePaymentFlags() {
       }
     }
     
-    // Informacja dla użytkownika
+    // Info for user
     toast.info('System płatności zresetowany');
   }, []);
   

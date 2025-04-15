@@ -1,4 +1,5 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/contexts/auth/AuthContext';
@@ -19,6 +20,7 @@ const DEFAULT_EMAIL_STYLE: EmailStyle = "direct-sales";
 const Projekty = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<string>('all');
+  const [attemptedRefresh, setAttemptedRefresh] = useState(false);
   
   const {
     projects,
@@ -26,6 +28,7 @@ const Projekty = () => {
     deleteDialogOpen,
     isDeleting,
     selectedProjectId,
+    loadingErrored,
     fetchProjects,
     handleOpenProject,
     handleDeleteDialog,
@@ -40,6 +43,21 @@ const Projekty = () => {
     setSocialDialogOpen,
     selectedProject
   } = useProjects(user?.id);
+
+  // Force refresh after 3 seconds if still loading
+  useEffect(() => {
+    if (loading && !attemptedRefresh) {
+      const timer = setTimeout(() => {
+        if (user?.id) {
+          console.log('Auto-refreshing projects after delay');
+          setAttemptedRefresh(true);
+          fetchProjects();
+        }
+      }, 3000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [loading, attemptedRefresh, fetchProjects, user?.id]);
 
   const filteredProjects = activeTab === 'all' 
     ? projects 
@@ -68,6 +86,12 @@ const Projekty = () => {
     return undefined;
   };
 
+  // Handle manual refresh
+  const handleManualRefresh = () => {
+    fetchProjects();
+    setAttemptedRefresh(true);
+  };
+
   return (
     <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
       <div className="max-w-5xl mx-auto">
@@ -81,7 +105,7 @@ const Projekty = () => {
             <Button 
               variant="ghost" 
               size="icon" 
-              onClick={fetchProjects}
+              onClick={handleManualRefresh}
               className="text-gray-500 hover:text-copywrite-teal"
               disabled={loading}
             >
@@ -98,6 +122,14 @@ const Projekty = () => {
             <div className="flex justify-center items-center py-20">
               <Loader2 className="h-8 w-8 animate-spin text-copywrite-teal" />
               <span className="ml-2 text-lg text-gray-600">Ładowanie projektów...</span>
+            </div>
+          ) : loadingErrored ? (
+            <div className="text-center p-10 border rounded-lg bg-white">
+              <p className="text-red-500 mb-6">Wystąpił błąd podczas ładowania projektów.</p>
+              <Button onClick={handleManualRefresh} variant="outline">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Odśwież projekty
+              </Button>
             </div>
           ) : filteredProjects.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
