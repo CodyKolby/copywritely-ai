@@ -13,17 +13,26 @@ export function usePaymentFlags() {
   const clearPaymentFlags = useCallback(() => {
     console.log('Explicitly clearing payment flags');
     
-    // Clear session storage flags
-    sessionStorage.removeItem('redirectingToStripe');
-    sessionStorage.removeItem('stripeCheckoutInProgress');
+    // Bezpiecznie wyczyść flagi w session storage
+    try {
+      // Clear session storage flags
+      sessionStorage.removeItem('redirectingToStripe');
+      sessionStorage.removeItem('stripeCheckoutInProgress');
+    } catch (e) {
+      console.error('Error clearing session storage:', e);
+    }
     
     // Clear any pending timeout
     if (timeoutRef.current) {
-      window.clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
+      try {
+        window.clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      } catch (e) {
+        console.error('Error clearing timeout:', e);
+      }
     }
     
-    // Reset loading state (will be handled by parent hook)
+    // Informacja dla użytkownika
     toast.info('System płatności zresetowany');
   }, []);
   

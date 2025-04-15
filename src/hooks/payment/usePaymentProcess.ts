@@ -83,7 +83,7 @@ export function usePaymentProcess(
             onClick: () => window.location.reload()
           }
         });
-      }, 45000); // 45 seconds timeout
+      }, 60000); // Zwiększ timeout do 60 sekund
       
       // Log environment details for debugging
       console.log('Browser details:', navigator.userAgent);

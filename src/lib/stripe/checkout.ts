@@ -34,39 +34,50 @@ export const createCheckoutSession = async (priceId: string) => {
       cancelUrl
     });
     
-    // Zamiast używać stripe.redirectToCheckout, użyjmy funkcji edge do utworzenia sesji
+    // Ustaw flagę, że proces checkout jest w toku
+    sessionStorage.setItem('stripeCheckoutInProgress', 'true');
+    sessionStorage.setItem('redirectingToStripe', 'true');
+    
+    // Wywołaj funkcję edge
     const { data, error } = await supabase.functions.invoke('stripe-checkout', {
       body: {
         priceId,
         customerEmail: userEmail || undefined,
         userId: user.id,
         successUrl,
-        cancelUrl
+        cancelUrl,
+        timestamp: new Date().toISOString() // Dodaj timestamp, aby zapobiec cachowaniu
       }
     });
     
     if (error) {
       console.error('Stripe checkout error:', error);
+      // Wyczyść flagi sesji
+      sessionStorage.removeItem('stripeCheckoutInProgress');
+      sessionStorage.removeItem('redirectingToStripe');
+      
       throw new Error(error.message || 'Błąd podczas tworzenia sesji płatności');
     }
 
     if (data?.url) {
       console.log('Redirecting to Stripe checkout URL:', data.url);
-      // Zapisz flagę informującą o trwającym procesie checkout
-      sessionStorage.setItem('stripeCheckoutInProgress', 'true');
-      sessionStorage.setItem('redirectingToStripe', 'true');
       
       // Przekieruj do URL sesji Stripe
       window.location.href = data.url;
       return true;
     } else {
+      console.error('No URL received from checkout session');
+      // Wyczyść flagi sesji
+      sessionStorage.removeItem('stripeCheckoutInProgress');
+      sessionStorage.removeItem('redirectingToStripe');
+      
       throw new Error('Nie otrzymano URL sesji checkout');
     }
     
   } catch (error) {
     console.error('Stripe checkout error:', error);
     
-    // Clear session storage flags
+    // Wyczyść flagi sesji
     sessionStorage.removeItem('stripeCheckoutInProgress');
     sessionStorage.removeItem('redirectingToStripe');
     

@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PricingFeatureItem } from "./PricingFeatureItem";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface PricingCardProps {
   price: string;
@@ -23,6 +23,12 @@ export const PricingCard = ({
   onSubscribe
 }: PricingCardProps) => {
   const [clickCount, setClickCount] = useState(0);
+  const [internalLoading, setInternalLoading] = useState(false);
+  
+  // Synchronizuj stan zewnętrzny ze stanem wewnętrznym
+  useEffect(() => {
+    setInternalLoading(isLoading);
+  }, [isLoading]);
   
   const itemVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -45,21 +51,36 @@ export const PricingCard = ({
   // Function to handle the click event with improved logging
   const handleSubscribeClick = () => {
     console.log('Subscribe button clicked in PricingCard component');
+    
+    // Zapobiegnij wielokrotnym kliknięciom
+    if (internalLoading) {
+      console.log('Button already in loading state, ignoring click');
+      return;
+    }
+    
     setClickCount(prev => prev + 1);
+    setInternalLoading(true);
     
     // Log click count for debugging
     if (clickCount > 0) {
       console.log(`Button clicked ${clickCount + 1} times`);
     }
     
-    // Prevent multiple clicks
-    if (isLoading) {
-      console.log('Button already in loading state, ignoring click');
-      return;
+    try {
+      // Call the parent onSubscribe function
+      onSubscribe();
+      
+      // Ustawienie timeouta na wypadek, gdyby props isLoading nie został zaktualizowany
+      setTimeout(() => {
+        if (internalLoading) {
+          console.log('Resetting internal loading state after timeout');
+          setInternalLoading(false);
+        }
+      }, 10000);
+    } catch (error) {
+      console.error('Error in subscribe handler:', error);
+      setInternalLoading(false);
     }
-    
-    // Call the parent onSubscribe function
-    onSubscribe();
   };
 
   return (
@@ -110,9 +131,9 @@ export const PricingCard = ({
           <Button 
             className="w-full mb-6 bg-copywrite-teal hover:bg-copywrite-teal-dark h-12 text-base relative text-white"
             onClick={handleSubscribeClick}
-            disabled={isLoading}
+            disabled={internalLoading || isLoading}
           >
-            {isLoading ? (
+            {(internalLoading || isLoading) ? (
               <div className="flex items-center justify-center w-full">
                 <div className="h-5 w-5 rounded-full border-2 border-t-transparent border-white animate-spin mr-2"></div>
                 <span className="text-white">Ładowanie...</span>

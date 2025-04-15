@@ -19,6 +19,8 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders, status: 204 });
   }
 
+  console.log('Stripe checkout function started');
+
   // Get the authenticated user
   try {
     const supabase = createClient(
@@ -28,6 +30,7 @@ serve(async (req) => {
 
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.error('Missing Authorization header');
       return new Response(
         JSON.stringify({ error: 'Missing Authorization header' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
@@ -40,6 +43,7 @@ serve(async (req) => {
     );
 
     if (userError || !user) {
+      console.error('Unauthorized:', userError?.message);
       return new Response(
         JSON.stringify({ error: 'Unauthorized', details: userError?.message }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
@@ -47,9 +51,19 @@ serve(async (req) => {
     }
 
     // Get the request body
-    const { priceId, customerEmail, userId, successUrl, cancelUrl } = await req.json();
+    const { priceId, customerEmail, successUrl, cancelUrl } = await req.json();
 
-    if (!priceId || !userId || !successUrl || !cancelUrl) {
+    console.log('Request data:', { 
+      priceId, 
+      customerEmail: customerEmail ? 'Email provided' : 'No email', 
+      userEmail: user.email,
+      successUrl: successUrl ? 'Yes' : 'No',
+      cancelUrl: cancelUrl ? 'Yes' : 'No',
+      userId: user.id
+    });
+
+    if (!priceId || !successUrl || !cancelUrl) {
+      console.error('Missing required parameters');
       return new Response(
         JSON.stringify({ error: 'Missing required parameters' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
@@ -57,7 +71,7 @@ serve(async (req) => {
     }
 
     // Create checkout session with customer details
-    const session = await stripe.checkout.sessions.create({
+    const sessionParams = {
       mode: 'subscription',
       customer_email: customerEmail || user.email,
       line_items: [
@@ -66,9 +80,9 @@ serve(async (req) => {
           quantity: 1,
         },
       ],
-      client_reference_id: userId,
+      client_reference_id: user.id,
       metadata: {
-        userId: userId
+        userId: user.id
       },
       locale: 'pl', // Set Polish language
       success_url: successUrl,
@@ -76,6 +90,15 @@ serve(async (req) => {
       subscription_data: {
         trial_period_days: 3
       }
+    };
+    
+    console.log('Creating Stripe checkout session with params:', JSON.stringify(sessionParams, null, 2));
+    
+    const session = await stripe.checkout.sessions.create(sessionParams);
+    
+    console.log('Stripe session created successfully:', {
+      id: session.id,
+      url: session.url
     });
 
     return new Response(
