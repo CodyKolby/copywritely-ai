@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -18,8 +17,7 @@ export const testCriticalFunctions = async (userId: string) => {
   
   // Show initial toast that will be updated or dismissed later
   const toastId = 'diagnostics-running';
-  toast({
-    id: toastId,
+  const initialToast = toast({
     title: 'Diagnostyka w toku...',
     description: 'Sprawdzanie połączenia z serwerem...',
     duration: 30000 // Set a long duration as we'll dismiss it manually
@@ -262,7 +260,6 @@ export const testCriticalFunctions = async (userId: string) => {
   
   // Dismiss the loading toast
   toast({
-    id: toastId,
     title: 'Diagnostyka zakończona',
     description: 'Przetwarzanie wyników...',
     duration: 2000
