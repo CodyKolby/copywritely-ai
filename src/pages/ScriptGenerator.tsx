@@ -1,10 +1,11 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { ExclamationTriangleIcon } from '@radix-ui/react-icons';
 import { useAuth } from '@/contexts/auth/AuthContext';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 // Import hooks
 import { usePremiumVerification } from '@/hooks/usePremiumVerification';
@@ -20,10 +21,86 @@ import { scriptTemplates } from '@/data/scriptTemplates';
 const ScriptGenerator = () => {
   const { user, isPremium, refreshSession } = useAuth();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [directPremiumCheck, setDirectPremiumCheck] = useState<boolean | null>(null);
   
   // Use custom hooks
   const premiumVerification = usePremiumVerification();
-  const templateSelection = useTemplateSelection(premiumVerification.validatePremiumStatus);
+  const templateSelection = useTemplateSelection(checkPremiumStatus);
+
+  // Direct check for premium status
+  const checkPremiumDirectly = useCallback(async (userId: string): Promise<boolean> => {
+    try {
+      console.log(`[ScriptGenerator] Checking premium status directly for: ${userId}`);
+      
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('is_premium, subscription_status, subscription_expiry')
+        .eq('id', userId)
+        .maybeSingle();
+      
+      if (error) {
+        console.error('[ScriptGenerator] Error checking premium directly:', error);
+        return false;
+      }
+      
+      if (profile && profile.is_premium === true) {
+        // Check expiry date if available
+        if (profile.subscription_expiry) {
+          const now = new Date();
+          const expiry = new Date(profile.subscription_expiry);
+          if (expiry < now) {
+            console.log('[ScriptGenerator] Premium expired:', profile.subscription_expiry);
+            return false;
+          }
+        }
+        
+        console.log('[ScriptGenerator] User has premium status:', profile);
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('[ScriptGenerator] Error checking premium directly:', error);
+      return false;
+    }
+  }, []);
+
+  // Consolidated function to check premium status
+  async function checkPremiumStatus(): Promise<boolean> {
+    if (!user?.id) {
+      toast.error('Wymagane jest zalogowanie', {
+        description: 'Zaloguj się, aby kontynuować.',
+      });
+      return false;
+    }
+    
+    try {
+      // Try direct database check first (most reliable)
+      const directCheck = await checkPremiumDirectly(user.id);
+      if (directCheck) {
+        console.log('[ScriptGenerator] Direct DB check confirms premium status');
+        setDirectPremiumCheck(true);
+        return true;
+      }
+      
+      // Fall back to verification hook
+      const verificationResult = await premiumVerification.validatePremiumStatus();
+      
+      if (verificationResult) {
+        console.log('[ScriptGenerator] Premium verification succeeds');
+        setDirectPremiumCheck(true);
+        return true;
+      }
+      
+      console.log('[ScriptGenerator] Premium verification failed, user does not have premium');
+      setDirectPremiumCheck(false);
+      return false;
+    } catch (error) {
+      console.error('[ScriptGenerator] Error verifying premium status:', error);
+      setDirectPremiumCheck(false);
+      return false;
+    }
+  }
 
   // On mount, scroll to top and refresh auth if needed
   useEffect(() => {
@@ -38,7 +115,7 @@ const ScriptGenerator = () => {
           await refreshSession();
           // After refreshing, verify premium status
           if (user.id) {
-            await premiumVerification.validatePremiumStatus();
+            await checkPremiumStatus();
           }
         } catch (e) {
           console.error("Error refreshing session:", e);
@@ -49,7 +126,25 @@ const ScriptGenerator = () => {
     };
     
     attemptRefresh();
-  }, [user?.id, refreshSession, premiumVerification]);
+  }, [user?.id, refreshSession]);
+  
+  // Check premium status directly when user changes
+  useEffect(() => {
+    const verifyPremium = async () => {
+      if (user?.id) {
+        try {
+          const result = await checkPremiumDirectly(user.id);
+          setDirectPremiumCheck(result);
+        } catch (e) {
+          console.error('Error in direct premium check:', e);
+        }
+      } else {
+        setDirectPremiumCheck(null);
+      }
+    };
+    
+    verifyPremium();
+  }, [user?.id, checkPremiumDirectly]);
   
   // Log state for debugging
   useEffect(() => {
@@ -58,13 +153,15 @@ const ScriptGenerator = () => {
       userId: user?.id,
       isPremium: premiumVerification.isPremium,
       isCheckingPremium: premiumVerification.isCheckingPremium,
+      directPremiumCheck,
       currentTemplateId: templateSelection.currentTemplateId,
       dialogOpen: templateSelection.targetAudienceDialogOpen
     });
   }, [
     user, 
     premiumVerification.isPremium, 
-    premiumVerification.isCheckingPremium, 
+    premiumVerification.isCheckingPremium,
+    directPremiumCheck,
     templateSelection.currentTemplateId, 
     templateSelection.targetAudienceDialogOpen
   ]);
@@ -83,7 +180,7 @@ const ScriptGenerator = () => {
       // Revalidate premium after dialog closes
       if (user?.id) {
         console.log("Revalidating premium status after dialog close");
-        premiumVerification.validatePremiumStatus();
+        checkPremiumStatus();
       }
     }
   };
@@ -100,6 +197,7 @@ const ScriptGenerator = () => {
     console.log(`Template ${templateId} selected, current state:`, {
       userId: user?.id,
       isPremium: premiumVerification.isPremium,
+      directPremiumCheck,
       isCheckingPremium: premiumVerification.isCheckingPremium
     });
     
@@ -107,7 +205,9 @@ const ScriptGenerator = () => {
   };
 
   // Determine if we should show the premium feature alert
-  const shouldShowPremiumAlert = !premiumVerification.isPremium && 
+  const shouldShowPremiumAlert = !directPremiumCheck && 
+                                !isPremium && 
+                                !premiumVerification.isPremium && 
                                 !premiumVerification.isCheckingPremium && 
                                 !isRefreshing;
 
@@ -150,14 +250,14 @@ const ScriptGenerator = () => {
           onSelectTemplate={handleTemplateSelect}
         />
 
-        {!premiumVerification.isCheckingPremium && user?.id && (
+        {user?.id && (
           <TargetAudienceDialog
             key={`dialog-${templateSelection.currentTemplateId || 'default'}`}
             open={templateSelection.targetAudienceDialogOpen}
             onOpenChange={handleDialogOpenChange}
             templateId={templateSelection.currentTemplateId}
             userId={user?.id}
-            isPremium={premiumVerification.isPremium}
+            isPremium={!!directPremiumCheck || isPremium || premiumVerification.isPremium}
           />
         )}
       </div>

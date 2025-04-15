@@ -1,6 +1,6 @@
 
 import { User } from '@supabase/supabase-js';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { LogOut, FolderOpen, CreditCard, Shield, RefreshCw } from 'lucide-react';
 import { Profile } from '@/contexts/auth/types';
@@ -29,7 +29,7 @@ interface UserMenuProps {
 
 export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: UserMenuProps) => {
   const [subscriptionModalOpen, setSubscriptionModalOpen] = useState(false);
-  const [effectivePremium, setEffectivePremium] = useState(false);
+  const [effectivePremium, setEffectivePremium] = useState(isPremium || localPremium);
   const [isCheckingPremium, setIsCheckingPremium] = useState(false);
 
   const getInitials = () => {
@@ -38,7 +38,9 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
   };
 
   // Force direct database check for premium status
-  const verifyPremiumDirectly = async () => {
+  const verifyPremiumDirectly = useCallback(async () => {
+    if (!user?.id) return false;
+    
     setIsCheckingPremium(true);
     try {
       console.log('[UserMenu] Directly checking premium status for user:', user.id);
@@ -46,7 +48,7 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
         .from('profiles')
         .select('id, is_premium, subscription_status, subscription_expiry')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
       
       if (error) {
         console.error('[UserMenu] Error fetching profile:', error);
@@ -57,12 +59,13 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
         console.log('[UserMenu] Direct DB check result:', dbProfile);
         
         // Check expiry
-        const isExpired = dbProfile.subscription_expiry ? 
-          new Date(dbProfile.subscription_expiry) < new Date() : false;
-        
-        if (isExpired) {
-          console.log('[UserMenu] Subscription expired according to date');
-          return false;
+        if (dbProfile.subscription_expiry) {
+          const isExpired = new Date(dbProfile.subscription_expiry) < new Date();
+          
+          if (isExpired) {
+            console.log('[UserMenu] Subscription expired according to date');
+            return false;
+          }
         }
         
         // Premium is valid if explicitly true and not expired
@@ -79,66 +82,66 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
     } finally {
       setIsCheckingPremium(false);
     }
-  };
+  }, [user?.id]);
 
-  // Check all premium indicators and update local state
+  // Check premium status when component mounts or when props change
   useEffect(() => {
-    const verifyPremiumStatus = async () => {
-      console.log('[UserMenu] Verifying premium status with inputs:', {
+    const checkPremiumStatus = async () => {
+      console.log('[UserMenu] Checking premium status with inputs:', {
         contextIsPremium: isPremium,
         localPremium,
         profileIsPremium: profile?.is_premium,
-        userId: user.id
+        userIdAvailable: !!user?.id
       });
       
-      // Start with context-provided premium status
-      let isPremiumUser = isPremium;
+      if (!user?.id) {
+        console.log('[UserMenu] No user ID available, skipping premium check');
+        setEffectivePremium(false);
+        return;
+      }
       
-      // If profile exists, check that first (it's the most reliable source)
+      // Start with direct DB check as most reliable source
+      const directCheckResult = await verifyPremiumDirectly();
+      
+      if (directCheckResult) {
+        console.log('[UserMenu] Direct check confirms premium status');
+        setEffectivePremium(true);
+        return;
+      }
+      
+      // Fall back to profile check
       if (profile) {
         // Check expiry date if it exists
         if (profile.subscription_expiry) {
           const isExpired = new Date(profile.subscription_expiry) < new Date();
           if (isExpired) {
             console.log('[UserMenu] Premium expired according to expiry date');
-            isPremiumUser = false;
-          } else {
-            console.log('[UserMenu] Subscription not expired, expiry date:', profile.subscription_expiry);
+            setEffectivePremium(false);
+            return;
           }
         }
         
         // Check for canceled status
         if (profile.subscription_status === 'canceled') {
           console.log('[UserMenu] Subscription is canceled');
-          isPremiumUser = false;
+          setEffectivePremium(false);
+          return;
         }
         
         // If profile.is_premium is explicitly true, user is premium
         if (profile.is_premium === true) {
           console.log('[UserMenu] Profile explicitly has is_premium=true');
-          isPremiumUser = true;
-        } else if (profile.is_premium === false) {
-          console.log('[UserMenu] Profile explicitly has is_premium=false');
-          isPremiumUser = false;
+          setEffectivePremium(true);
+          return;
         }
       }
       
-      // If we're still uncertain, double check with database directly
-      if (!isPremiumUser) {
-        const directCheck = await verifyPremiumDirectly();
-        if (directCheck) {
-          console.log('[UserMenu] Direct DB check confirms premium status');
-          isPremiumUser = true;
-        }
-      }
-      
-      // Update local state based on all checks
-      console.log('[UserMenu] Final premium determination:', isPremiumUser);
-      setEffectivePremium(isPremiumUser);
+      // Finally, fall back to context values
+      setEffectivePremium(isPremium || localPremium);
     };
     
-    verifyPremiumStatus();
-  }, [user.id, isPremium, profile, localPremium]);
+    checkPremiumStatus();
+  }, [user?.id, isPremium, profile, localPremium, verifyPremiumDirectly]);
 
   const handleSignOut = () => {
     // Clear localStorage premium backup on logout
@@ -150,8 +153,9 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
     setIsCheckingPremium(true);
     try {
       const directCheck = await verifyPremiumDirectly();
+      setEffectivePremium(directCheck);
+      
       if (directCheck) {
-        setEffectivePremium(true);
         toast.success('Status premium potwierdzony');
       } else {
         toast.info('Status premium nie został potwierdzony');

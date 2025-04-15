@@ -1,5 +1,5 @@
 
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 
 /**
@@ -8,6 +8,16 @@ import { toast } from 'sonner';
 export function usePaymentFlags() {
   // Timeout reference
   const timeoutRef = useRef<number | null>(null);
+  
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current !== null) {
+        window.clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
+  }, []);
 
   // Clear all payment flags and timeouts
   const clearPaymentFlags = useCallback(() => {

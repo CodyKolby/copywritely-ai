@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/auth/AuthContext';
 import { toast } from 'sonner';
@@ -12,6 +12,17 @@ export const useSubscriptionModal = (open: boolean) => {
   const [manualRefetch, setManualRefetch] = useState(false);
   const [timeoutErrored, setTimeoutErrored] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const timeoutRef = useRef<number | null>(null);
+
+  // Clear timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        window.clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
+  }, []);
 
   // Format date helper function
   const formatDate = (dateString: string) => {
@@ -29,21 +40,25 @@ export const useSubscriptionModal = (open: boolean) => {
 
   // Set timeout to prevent infinite loading
   useEffect(() => {
-    let timeoutId: number | null = null;
+    if (timeoutRef.current) {
+      window.clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
     
     if (open) {
       console.log('[SubscriptionModal] Modal opened, starting timeout check');
       setTimeoutErrored(false); // Reset timeout error when opening
       
-      timeoutId = window.setTimeout(() => {
+      timeoutRef.current = window.setTimeout(() => {
         setTimeoutErrored(true);
         console.log('[SubscriptionModal] Subscription data fetch timeout reached');
       }, 15000); // Increased timeout
     }
     
     return () => {
-      if (timeoutId !== null) {
-        window.clearTimeout(timeoutId);
+      if (timeoutRef.current !== null) {
+        window.clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
       }
     };
   }, [open, retryCount]);
@@ -60,13 +75,15 @@ export const useSubscriptionModal = (open: boolean) => {
 
   // Direct DB check for premium status
   const checkPremiumDirectly = useCallback(async (userId: string) => {
+    if (!userId) return null;
+    
     try {
       console.log('[SubscriptionModal] Direct DB premium check for user:', userId);
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('is_premium, subscription_status, subscription_expiry, subscription_id')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
         
       if (error) {
         console.error('[SubscriptionModal] Error checking DB for premium:', error);
@@ -80,6 +97,39 @@ export const useSubscriptionModal = (open: boolean) => {
       return null;
     }
   }, []);
+
+  // Helper function to get default expiry date (30 days from now)
+  const getDefaultExpiryDate = () => {
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + 30);
+    return expiryDate.toISOString();
+  };
+  
+  // Helper function to calculate days until renewal
+  const calculateDaysUntilRenewal = (dateString: string) => {
+    try {
+      return Math.ceil((new Date(dateString).getTime() - Date.now()) / (1000 * 3600 * 24));
+    } catch (e) {
+      return 30; // Default to 30 days if calculation fails
+    }
+  };
+  
+  // Get fallback subscription data
+  const getFallbackSubscriptionData = (): SubscriptionDetails => {
+    const expiryDate = getDefaultExpiryDate();
+    return {
+      hasSubscription: true,
+      subscriptionId: 'manual_premium',
+      status: 'active',
+      plan: 'Pro',
+      daysUntilRenewal: 30,
+      currentPeriodEnd: expiryDate,
+      portalUrl: null,
+      trialEnd: null,
+      isTrial: false,
+      cancelAtPeriodEnd: false
+    };
+  };
 
   // Fetch subscription data
   const { data, isLoading, error, refetch } = useQuery({
@@ -98,34 +148,32 @@ export const useSubscriptionModal = (open: boolean) => {
         // First check DB directly to verify subscription status
         const profileData = await checkPremiumDirectly(user.id);
         
+        if (profileData && profileData.is_premium === true) {
+          console.log('[SubscriptionModal] Creating fallback data from profile');
+            
+          // Get expiry date from profile
+          const expiryDate = profileData.subscription_expiry || getDefaultExpiryDate();
+          const daysUntil = Math.ceil((new Date(expiryDate).getTime() - Date.now()) / (1000 * 3600 * 24));
+          
+          return {
+            hasSubscription: true,
+            subscriptionId: profileData.subscription_id || 'manual_premium',
+            status: profileData.subscription_status || 'active',
+            currentPeriodEnd: expiryDate,
+            daysUntilRenewal: Math.max(0, daysUntil),
+            cancelAtPeriodEnd: false,
+            portalUrl: null,
+            plan: 'Pro',
+            trialEnd: null,
+            isTrial: false
+          } as SubscriptionDetails;
+        }
+        
         // Get standard subscription details
         const subscriptionData = await getSubscriptionDetails(user.id);
         
         if (!subscriptionData) {
           console.log('[SubscriptionModal] No subscription data returned from API');
-          
-          // If no data returned but user is premium according to DB, create fallback data
-          if (profileData && profileData.is_premium === true) {
-            console.log('[SubscriptionModal] Creating fallback data from profile');
-            
-            // Get expiry date from profile
-            const expiryDate = profileData.subscription_expiry || getDefaultExpiryDate();
-            const daysUntil = Math.ceil((new Date(expiryDate).getTime() - Date.now()) / (1000 * 3600 * 24));
-            
-            return {
-              hasSubscription: true,
-              subscriptionId: profileData.subscription_id || 'manual_premium',
-              status: profileData.subscription_status || 'active',
-              currentPeriodEnd: expiryDate,
-              daysUntilRenewal: Math.max(0, daysUntil),
-              cancelAtPeriodEnd: false,
-              portalUrl: null,
-              plan: 'Pro',
-              trialEnd: null,
-              isTrial: false
-            } as SubscriptionDetails;
-          }
-          
           throw new Error('Nie udało się pobrać danych subskrypcji');
         }
         
@@ -206,43 +254,10 @@ export const useSubscriptionModal = (open: boolean) => {
       }
     },
     enabled: !!user?.id && open,
-    retry: timeoutErrored ? 0 : 2,
+    retry: timeoutErrored ? 0 : 1,
     retryDelay: 1000,
     staleTime: 1000 * 60 * 2,
   });
-
-  // Helper function to get default expiry date (30 days from now)
-  const getDefaultExpiryDate = () => {
-    const expiryDate = new Date();
-    expiryDate.setDate(expiryDate.getDate() + 30);
-    return expiryDate.toISOString();
-  };
-  
-  // Helper function to calculate days until renewal
-  const calculateDaysUntilRenewal = (dateString: string) => {
-    try {
-      return Math.ceil((new Date(dateString).getTime() - Date.now()) / (1000 * 3600 * 24));
-    } catch (e) {
-      return 30; // Default to 30 days if calculation fails
-    }
-  };
-  
-  // Get fallback subscription data
-  const getFallbackSubscriptionData = (): SubscriptionDetails => {
-    const expiryDate = getDefaultExpiryDate();
-    return {
-      hasSubscription: true,
-      subscriptionId: 'manual_premium',
-      status: 'active',
-      plan: 'Pro',
-      daysUntilRenewal: 30,
-      currentPeriodEnd: expiryDate,
-      portalUrl: null,
-      trialEnd: null,
-      isTrial: false,
-      cancelAtPeriodEnd: false
-    };
-  };
 
   // Refresh data when modal is opened
   useEffect(() => {

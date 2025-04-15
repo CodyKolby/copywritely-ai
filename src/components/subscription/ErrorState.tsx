@@ -21,7 +21,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({
   onRetry
 }) => {
   const navigate = useNavigate();
-  const isTimeout = error?.message?.includes('czas oczekiwania') || false;
+  const isTimeout = error?.message?.includes('czas oczekiwania') || error?.message?.includes('timeout') || false;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -44,6 +44,9 @@ const ErrorState: React.FC<ErrorStateProps> = ({
                   ? "Przekroczono czas oczekiwania na dane subskrypcji."
                   : "Możesz nadal korzystać z funkcji Premium, ale nie możemy wyświetlić szczegółów subskrypcji."}
               </p>
+              <p className="text-xs text-gray-500">
+                Kod błędu: {error?.message || "nieznany"}
+              </p>
             </>
           ) : (
             <>
@@ -51,6 +54,9 @@ const ErrorState: React.FC<ErrorStateProps> = ({
                 {isTimeout 
                   ? "Przekroczono czas oczekiwania na dane subskrypcji."
                   : error?.message || "Nie udało się pobrać danych subskrypcji."}
+              </p>
+              <p className="text-xs text-gray-500">
+                Kod błędu: {error?.message || "nieznany"}
               </p>
             </>
           )}
