@@ -265,9 +265,7 @@ export const useAuthProvider = () => {
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 5000);
           
-          const { data, error } = await supabase.auth.getSession({
-            abortSignal: controller.signal
-          });
+          const { data, error } = await supabase.auth.getSession();
           
           clearTimeout(timeoutId);
           

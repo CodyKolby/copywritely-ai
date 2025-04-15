@@ -118,9 +118,7 @@ export const generateScript = async (
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
       
-      const { data } = await supabase.auth.getSession({
-        abortSignal: controller.signal
-      });
+      const { data } = await supabase.auth.getSession();
       
       clearTimeout(timeoutId);
       const accessToken = data?.session?.access_token || '';
