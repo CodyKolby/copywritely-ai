@@ -116,7 +116,7 @@ exports.handler = async (event, context) => {
           }
         }
       },
-      payment_method_collection: 'if_required',
+      payment_method_collection: 'always', // Change to always require payment method
       locale: 'pl'
     };
     

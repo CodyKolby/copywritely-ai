@@ -41,7 +41,7 @@ serve(async (req) => {
       apiVersion: '2023-10-16',
     });
 
-    // Create checkout session with configurations to prevent trial abuse
+    // Create checkout session with configurations requiring payment method
     const sessionParams = {
       mode: 'subscription',
       line_items: [
@@ -60,7 +60,7 @@ serve(async (req) => {
           }
         }
       },
-      payment_method_collection: 'if_required',
+      payment_method_collection: 'always', // Change to always require payment method
       allow_promotion_codes: true,
       payment_method_types: ['card'],
       billing_address_collection: 'auto',
