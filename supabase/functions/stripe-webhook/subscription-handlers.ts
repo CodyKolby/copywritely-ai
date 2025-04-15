@@ -1,4 +1,3 @@
-
 import { DatabaseOperations } from './types.ts';
 import Stripe from 'https://esm.sh/stripe@12.1.1';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7';
@@ -40,7 +39,18 @@ export async function handleSubscriptionEvent(
     : null;
 
   if (event.type === 'customer.subscription.deleted') {
-    await handleSubscriptionDeletion(subscription, db);
+    console.log('Handling subscription deletion with details:', {
+      status: subscription.status,
+      cancelAt: subscription.cancel_at,
+      cancelAtPeriodEnd: subscription.cancel_at_period_end
+    });
+    
+    if (!subscription.cancel_at_period_end) {
+      expiryDate = new Date().toISOString();
+      console.log(`Immediate cancellation detected, setting expiry to current time: ${expiryDate}`);
+    }
+    
+    await handleSubscriptionDeletion(subscription, db, expiryDate);
     return;
   }
 
@@ -100,7 +110,8 @@ async function handlePaidSessionWithEmail(
 
 async function handleSubscriptionDeletion(
   subscription: Stripe.Subscription,
-  db: DatabaseOperations
+  db: DatabaseOperations,
+  expiryDate: string | null
 ) {
   const { data: profile } = await findProfileBySubscriptionId(subscription.id, db);
   if (!profile) {
@@ -108,13 +119,17 @@ async function handleSubscriptionDeletion(
     return;
   }
 
-  const cancellationTime = new Date().toISOString();
+  const cancellationTime = expiryDate || new Date().toISOString();
+  console.log(`Setting subscription_expiry for user ${profile.id} to: ${cancellationTime}`);
+  
   await db.updateProfile(profile.id, {
     is_premium: false,
     subscription_status: 'canceled',
     subscription_expiry: cancellationTime,
-    updated_at: cancellationTime
+    updated_at: new Date().toISOString()
   });
+  
+  console.log(`Successfully updated user ${profile.id} as canceled with expiry: ${cancellationTime}`);
 }
 
 async function handleSubscriptionWithoutProfile(
@@ -124,7 +139,6 @@ async function handleSubscriptionWithoutProfile(
   eventType: string
 ) {
   try {
-    // Try to find customer associated with this subscription
     console.log(`Trying to find profile for subscription ${subscription.id}`);
     
     const supabase = createClient(
@@ -138,7 +152,6 @@ async function handleSubscriptionWithoutProfile(
         ? subscription.customer 
         : subscription.customer.id;
       
-      // Find payments with this customer ID
       const { data: logs } = await supabase
         .from('payment_logs')
         .select('user_id, customer_email')
@@ -150,7 +163,6 @@ async function handleSubscriptionWithoutProfile(
         console.log(`Found user_id ${logs[0].user_id} in payment logs for customer ${customerId}`);
         const userId = logs[0].user_id;
         
-        // Update the user's profile with subscription info
         await db.updateProfile(userId, {
           is_premium: subscription.status === 'active' || subscription.status === 'trialing',
           subscription_id: subscription.id,
@@ -223,7 +235,6 @@ async function updateUserProfile(
 ) {
   console.log(`Updating profile for user ${userId} with subscription ${subscriptionId} and expiry ${expiryDate}`);
   
-  // Add more detailed logging
   const updateData = {
     is_premium: true,
     subscription_id: subscriptionId ?? undefined,
