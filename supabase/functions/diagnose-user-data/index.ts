@@ -67,6 +67,7 @@ async function runUserDiagnostics(supabaseAdmin: any, userId: string) {
   console.log('Running diagnostics for user:', userId);
   
   const problems: string[] = [];
+  const details: Record<string, any> = {};
   
   try {
     // Check 1: Verify auth user exists
@@ -81,6 +82,11 @@ async function runUserDiagnostics(supabaseAdmin: any, userId: string) {
         problems.push('User not found in auth.users');
       } else {
         console.log('User found in auth.users:', authUser.user.email);
+        details.authUser = {
+          email: authUser.user.email,
+          lastSignIn: authUser.user.last_sign_in_at,
+          createdAt: authUser.user.created_at
+        };
       }
     } catch (authCheckError) {
       console.error('Error checking auth user:', authCheckError);
@@ -102,6 +108,7 @@ async function runUserDiagnostics(supabaseAdmin: any, userId: string) {
       problems.push('Profile not found in profiles table');
     } else {
       console.log('Profile found:', profileData);
+      details.profile = profileData;
       
       // Check profile data consistency
       if (profileData.is_premium === true) {
@@ -120,10 +127,38 @@ async function runUserDiagnostics(supabaseAdmin: any, userId: string) {
             problems.push('Subscription has expired');
           }
         }
+        
+        if (!profileData.subscription_status) {
+          problems.push('Profile has premium but no subscription_status');
+        } else if (profileData.subscription_status === 'canceled' || 
+                  profileData.subscription_status === 'inactive') {
+          problems.push(`Profile has premium but subscription_status is ${profileData.subscription_status}`);
+        }
       }
     }
     
-    // Check 3: Verify projects
+    // Check 3: Check payment logs
+    const { data: paymentLogs, error: paymentError } = await supabaseAdmin
+      .from('payment_logs')
+      .select('*')
+      .eq('user_id', userId);
+      
+    if (paymentError) {
+      console.error('Error checking payment logs:', paymentError);
+      problems.push('Error checking payment logs');
+    } else {
+      console.log(`User has ${paymentLogs?.length || 0} payment logs`);
+      details.paymentLogs = paymentLogs;
+      
+      if (!paymentLogs || paymentLogs.length === 0) {
+        // Only add as a problem if the user is marked as premium
+        if (profileData?.is_premium) {
+          problems.push('User is marked as premium but has no payment logs');
+        }
+      }
+    }
+    
+    // Check 4: Verify projects
     const { data: projectsData, error: projectsError } = await supabaseAdmin
       .from('projects')
       .select('id, title, created_at')
@@ -134,6 +169,10 @@ async function runUserDiagnostics(supabaseAdmin: any, userId: string) {
       problems.push('Error checking projects');
     } else {
       console.log(`User has ${projectsData?.length || 0} projects`);
+      details.projects = {
+        count: projectsData?.length || 0,
+        ids: projectsData?.map(p => p.id) || []
+      };
       
       if (!projectsData || projectsData.length === 0) {
         problems.push('User has no projects');
@@ -143,6 +182,7 @@ async function runUserDiagnostics(supabaseAdmin: any, userId: string) {
     return {
       success: problems.length === 0,
       problems,
+      details,
       profile: profileData || null,
       projectCount: projectsData?.length || 0,
       userId
@@ -170,7 +210,7 @@ async function fixUserDataIssues(supabaseAdmin: any, userId: string) {
     // Fix 1: Ensure profile exists
     const { data: existingProfile } = await supabaseAdmin
       .from('profiles')
-      .select('id')
+      .select('id, is_premium, subscription_status, subscription_expiry')
       .eq('id', userId)
       .maybeSingle();
       
@@ -194,33 +234,67 @@ async function fixUserDataIssues(supabaseAdmin: any, userId: string) {
       }
     }
     
-    // Fix 2: Ensure premium users have expiry date
-    const { data: profile } = await supabaseAdmin
-      .from('profiles')
-      .select('is_premium, subscription_expiry, subscription_status')
-      .eq('id', userId)
-      .maybeSingle();
-      
-    if (profile && profile.is_premium === true && !profile.subscription_expiry) {
-      console.log('Adding expiry date for premium user');
-      
-      // Set expiry to 30 days from now
-      const expiryDate = new Date();
-      expiryDate.setDate(expiryDate.getDate() + 30);
-      
-      const { error: updateError } = await supabaseAdmin
-        .from('profiles')
-        .update({
-          subscription_expiry: expiryDate.toISOString(),
-          subscription_status: profile.subscription_status || 'active'
-        })
-        .eq('id', userId);
+    // Fix 2: Fix inconsistent premium state
+    if (existingProfile && existingProfile.is_premium === true) {
+      // Check if there are payment logs
+      const { data: paymentLogs } = await supabaseAdmin
+        .from('payment_logs')
+        .select('subscription_id, session_id')
+        .eq('user_id', userId);
         
-      if (updateError) {
-        console.error('Error updating subscription expiry:', updateError);
-        fixes.push('Failed to update subscription expiry: ' + updateError.message);
-      } else {
-        fixes.push('Added subscription expiry date');
+      const hasPaymentLogs = paymentLogs && paymentLogs.length > 0;
+      
+      // If premium but missing subscription data, check payment logs
+      if (!existingProfile.subscription_id || !existingProfile.subscription_expiry) {
+        console.log('Fixing missing subscription data for premium user');
+        
+        const subscriptionId = hasPaymentLogs ? paymentLogs[0].subscription_id : null;
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + 30);
+        
+        const { error: updateError } = await supabaseAdmin
+          .from('profiles')
+          .update({
+            subscription_id: subscriptionId,
+            subscription_status: 'active',
+            subscription_expiry: expiryDate.toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', userId);
+          
+        if (updateError) {
+          console.error('Error updating subscription data:', updateError);
+          fixes.push('Failed to update subscription data: ' + updateError.message);
+        } else {
+          fixes.push('Added missing subscription data');
+        }
+      }
+      
+      // Check if subscription has expired
+      if (existingProfile.subscription_expiry) {
+        const expiryDate = new Date(existingProfile.subscription_expiry);
+        const now = new Date();
+        
+        if (expiryDate < now) {
+          console.log('Fixing expired subscription');
+          
+          // If expired but still marked as premium, update status
+          const { error: updateError } = await supabaseAdmin
+            .from('profiles')
+            .update({
+              is_premium: false,
+              subscription_status: 'expired',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', userId);
+            
+          if (updateError) {
+            console.error('Error updating expired subscription:', updateError);
+            fixes.push('Failed to update expired subscription: ' + updateError.message);
+          } else {
+            fixes.push('Updated expired subscription status');
+          }
+        }
       }
     }
     
@@ -255,7 +329,7 @@ async function fixUserDataIssues(supabaseAdmin: any, userId: string) {
     }
     
     return {
-      success: true,
+      success: fixes.length > 0,
       fixes,
       userId
     };

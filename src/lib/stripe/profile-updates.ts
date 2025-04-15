@@ -14,16 +14,24 @@ export const updateProfilePremiumStatus = async (
 ): Promise<boolean> => {
   try {
     console.log(`[PROFILE-UPDATE] Updating profile premium status for user: ${userId}`);
+    console.log(`[PROFILE-UPDATE] isPremium: ${isPremium}, subscriptionId: ${subscriptionId}, status: ${subscriptionStatus}`);
     
     // First check if the profile exists
     const { data: existingProfile, error: checkError } = await supabase
       .from('profiles')
-      .select('id')
+      .select('id, is_premium, subscription_id, subscription_status, subscription_expiry')
       .eq('id', userId)
       .maybeSingle();
       
     if (checkError) {
       console.error('[PROFILE-UPDATE] Error checking if profile exists:', checkError);
+    }
+    
+    // Log the current state of the profile
+    if (existingProfile) {
+      console.log('[PROFILE-UPDATE] Existing profile state:', existingProfile);
+    } else {
+      console.log('[PROFILE-UPDATE] Profile does not exist, will create it');
     }
     
     // If profile doesn't exist, create it first
@@ -36,7 +44,8 @@ export const updateProfilePremiumStatus = async (
           .insert({
             id: userId,
             created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
+            is_premium: isPremium
           });
           
         if (createError) {
@@ -85,6 +94,19 @@ export const updateProfilePremiumStatus = async (
     if (error) {
       console.error('[PROFILE-UPDATE] Error updating profile:', error);
       return false;
+    }
+    
+    // Verify that the update was successful by fetching the profile again
+    const { data: verifiedProfile, error: verifyError } = await supabase
+      .from('profiles')
+      .select('id, is_premium, subscription_id, subscription_status, subscription_expiry')
+      .eq('id', userId)
+      .maybeSingle();
+      
+    if (verifyError) {
+      console.error('[PROFILE-UPDATE] Error verifying profile update:', verifyError);
+    } else {
+      console.log('[PROFILE-UPDATE] Verified profile after update:', verifiedProfile);
     }
     
     console.log('[PROFILE-UPDATE] Profile updated successfully');

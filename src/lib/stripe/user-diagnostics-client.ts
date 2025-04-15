@@ -18,6 +18,44 @@ export const diagnoseAndFixUserAccount = async (userId: string) => {
     console.log('[DIAGNOSTICS] Running diagnostics for user:', userId);
     toast.info('Uruchamianie diagnostyki konta...');
     
+    // First get the user profile directly to check its state
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .maybeSingle();
+      
+    if (profileError) {
+      console.error('[DIAGNOSTICS] Error fetching profile data:', profileError);
+    } else {
+      console.log('[DIAGNOSTICS] Current profile state:', profileData);
+    }
+    
+    // Check payment logs for this user
+    const { data: paymentLogs, error: paymentError } = await supabase
+      .from('payment_logs')
+      .select('*')
+      .eq('user_id', userId);
+      
+    if (paymentError) {
+      console.error('[DIAGNOSTICS] Error fetching payment logs:', paymentError);
+    } else {
+      console.log('[DIAGNOSTICS] Payment logs:', paymentLogs);
+    }
+    
+    // Check projects for this user
+    const { data: projects, error: projectsError } = await supabase
+      .from('projects')
+      .select('id, title, created_at, updated_at')
+      .eq('user_id', userId);
+      
+    if (projectsError) {
+      console.error('[DIAGNOSTICS] Error fetching projects:', projectsError);
+    } else {
+      console.log('[DIAGNOSTICS] Projects:', projects);
+    }
+    
+    // Now call the server function for more advanced diagnostics
     const { data, error } = await supabase.functions.invoke('diagnose-user-data', {
       body: { userId }
     });
@@ -31,7 +69,10 @@ export const diagnoseAndFixUserAccount = async (userId: string) => {
       return {
         success: false,
         message: 'Error invoking diagnostics',
-        error
+        error,
+        profile: profileData,
+        paymentLogs,
+        projects
       };
     }
     
@@ -54,7 +95,10 @@ export const diagnoseAndFixUserAccount = async (userId: string) => {
     
     return {
       success: true,
-      data
+      data,
+      profile: profileData,
+      paymentLogs,
+      projects
     };
   } catch (error) {
     console.error('[DIAGNOSTICS] Exception running diagnostics:', error);

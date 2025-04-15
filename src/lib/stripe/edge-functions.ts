@@ -67,6 +67,19 @@ export const verifyPaymentWithEdgeFunction = async (sessionId: string, userId: s
     console.log('[EDGE-FUNCTIONS] User ID:', userId);
     console.log('[EDGE-FUNCTIONS] Session ID:', sessionId);
     
+    // First check if the profile exists
+    const { data: existingProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, is_premium, subscription_id, subscription_status, subscription_expiry')
+      .eq('id', userId)
+      .maybeSingle();
+      
+    if (profileError) {
+      console.error('[EDGE-FUNCTIONS] Error checking profile:', profileError);
+    } else {
+      console.log('[EDGE-FUNCTIONS] Current profile state before verification:', existingProfile);
+    }
+    
     // Set a timeout for the edge function call
     const functionPromise = supabase.functions.invoke('verify-payment-session', {
       body: { sessionId, userId }
@@ -156,6 +169,20 @@ export const verifyPaymentWithEdgeFunction = async (sessionId: string, userId: s
     }
     
     console.log('[EDGE-FUNCTIONS] verify-payment-session response:', data);
+    
+    // Verify that the profile was updated correctly
+    const { data: verifiedProfile, error: verifyError } = await supabase
+      .from('profiles')
+      .select('id, is_premium, subscription_id, subscription_status, subscription_expiry')
+      .eq('id', userId)
+      .maybeSingle();
+      
+    if (verifyError) {
+      console.error('[EDGE-FUNCTIONS] Error verifying profile after update:', verifyError);
+    } else {
+      console.log('[EDGE-FUNCTIONS] Verified profile after payment verification:', verifiedProfile);
+    }
+    
     return data?.success || false;
   } catch (error) {
     console.error('[EDGE-FUNCTIONS] Error invoking verify-payment-session:', error);
