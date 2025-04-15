@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { 
   corsHeaders, 
@@ -20,7 +19,10 @@ import {
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { 
+      status: 204,
+      headers: corsHeaders 
+    });
   }
 
   try {
@@ -186,7 +188,7 @@ serve(async (req) => {
     console.log(`Final premium status for user ${userId}: ${isPremium}`);
 
     return new Response(
-      JSON.stringify({ isPremium }),
+      JSON.stringify({ isPremium: profile.is_premium || false }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {

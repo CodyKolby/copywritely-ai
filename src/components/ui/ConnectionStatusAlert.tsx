@@ -9,52 +9,63 @@ type ConnectionStatusAlertProps = {
   onRetry?: () => void;
   isChecking?: boolean;
   className?: string;
+  showOnlineStatus?: boolean;
 };
 
 export const ConnectionStatusAlert: React.FC<ConnectionStatusAlertProps> = ({ 
   onRetry,
   isChecking = false,
-  className
+  className,
+  showOnlineStatus = false
 }) => {
+  // Only check navigator.onLine once during render
   const isOnline = navigator.onLine;
   
   // Only show alert for offline state to reduce noise
-  if (isOnline) {
+  if (isOnline && !showOnlineStatus) {
     return null;
   }
   
   return (
     <Alert 
-      variant="destructive" 
+      variant={isOnline ? "default" : "destructive"}
       className={cn("mb-4", className)}
     >
       <div className="flex items-start">
         <div className="mr-2">
-          <WifiOff className="h-5 w-5" />
+          {isOnline ? 
+            <AlertCircle className="h-5 w-5" /> :
+            <WifiOff className="h-5 w-5" />
+          }
         </div>
         <div className="flex-1">
           <AlertTitle>
-            Brak połączenia z internetem
+            {isOnline ? 'Status połączenia' : 'Brak połączenia z internetem'}
           </AlertTitle>
           <AlertDescription>
-            Sprawdź swoje połączenie z internetem i spróbuj ponownie.
+            {isOnline ? 
+              'Połączenie z internetem jest aktywne.' :
+              'Sprawdź swoje połączenie z internetem i spróbuj ponownie.'
+            }
           </AlertDescription>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onRetry}
-            disabled={isChecking}
-            className="mt-2"
-          >
-            {isChecking ? (
-              <>
-                <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
-                Sprawdzanie...
-              </>
-            ) : (
-              "Spróbuj ponownie"
-            )}
-          </Button>
+          {onRetry && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onRetry}
+              disabled={isChecking}
+              className="mt-2"
+            >
+              {isChecking ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
+                  Sprawdzanie...
+                </>
+              ) : (
+                "Spróbuj ponownie"
+              )}
+            </Button>
+          )}
         </div>
       </div>
     </Alert>

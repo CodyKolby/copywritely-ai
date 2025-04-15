@@ -14,6 +14,7 @@ export const useSessionManagement = (
   const refreshInProgress = useRef(false);
   const authErrorCount = useRef(0);
   const lastRefreshAttempt = useRef<number>(0);
+  const profileFetchInProgress = useRef(false);
 
   // Reset error count periodically
   useEffect(() => {
@@ -28,9 +29,9 @@ export const useSessionManagement = (
   }, []);
 
   const refreshSession = useCallback(async () => {
-    // Prevent refreshing too frequently (minimum 2 seconds between refreshes)
+    // Prevent refreshing too frequently (minimum 3 seconds between refreshes)
     const now = Date.now();
-    if (now - lastRefreshAttempt.current < 2000) {
+    if (now - lastRefreshAttempt.current < 3000) {
       console.log('[SESSION] Refresh attempted too soon, skipping');
       return false;
     }
@@ -81,15 +82,6 @@ export const useSessionManagement = (
         setUser(data.session.user);
         authErrorCount.current = 0;
         
-        if (data.session.user) {
-          // Use setTimeout to prevent potential auth deadlocks
-          setTimeout(() => {
-            handleUserAuthenticated(data.session.user.id).catch(err => {
-              console.error('[SESSION] Error in handleUserAuthenticated:', err);
-            });
-          }, 0);
-        }
-        
         return true;
       }
       
@@ -104,7 +96,7 @@ export const useSessionManagement = (
         refreshInProgress.current = false;
       }, 1000);
     }
-  }, [handleUserAuthenticated]);
+  }, []);
 
   return {
     user,
@@ -115,6 +107,7 @@ export const useSessionManagement = (
     setLoading,
     authInitialized,
     setAuthInitialized,
-    refreshSession
+    refreshSession,
+    profileFetchInProgress
   };
 };

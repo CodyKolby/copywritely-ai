@@ -1,4 +1,3 @@
-
 import { BrowserRouter as Router } from 'react-router-dom';
 import { AuthProvider } from './contexts/auth/AuthContext';
 import { Toaster } from '@/components/ui/toaster';

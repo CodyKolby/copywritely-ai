@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Profile } from './types';
 import { fetchProfile } from './profile-utils';
@@ -20,6 +21,12 @@ export const useAuthProvider = () => {
     supabaseConnected: true,
     lastChecked: 0
   });
+  
+  // Use to prevent concurrent profile fetch operations
+  const fetchingProfile = useRef(false);
+
+  // Limiting connection checks
+  const connectionCheckTimeout = useRef<number | null>(null);
   
   const { 
     testUser, 
@@ -45,14 +52,20 @@ export const useAuthProvider = () => {
     setLoading,
     authInitialized,
     setAuthInitialized,
-    refreshSession
+    refreshSession,
+    profileFetchInProgress
   } = useSessionManagement(handleUserAuthenticated);
 
   const checkConnection = useCallback(async (force = false) => {
     const now = Date.now();
     
-    if (!force && now - connectionStatus.lastChecked < 60000) {
+    // Limit connection checks to once every 2 minutes unless forced
+    if (!force && now - connectionStatus.lastChecked < 120000) {
       return connectionStatus;
+    }
+    
+    if (connectionCheckTimeout.current) {
+      clearTimeout(connectionCheckTimeout.current);
     }
     
     try {
@@ -64,12 +77,9 @@ export const useAuthProvider = () => {
       
       if (isOnline) {
         try {
+          // Simple OPTIONS request to check if Supabase is reachable
           const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL || "https://jorbqjareswzdrsmepbv.supabase.co"}/rest/v1/`, {
-            method: 'OPTIONS',
-            headers: {
-              'Content-Type': 'application/json',
-              'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpvcmJxamFyZXN3emRyc21lcGJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI1NTcyNjMsImV4cCI6MjA1ODEzMzI2M30.WtGgnQKLVD2ZuOq4qNrIfcmFc98U3Q6YLrCCRG_mrH4"
-            },
+            method: 'HEAD',
             mode: 'cors'
           });
           
@@ -99,10 +109,23 @@ export const useAuthProvider = () => {
       
       setConnectionStatus(newStatus);
       return newStatus;
+    } finally {
+      // Schedule next connection check in 2 minutes
+      connectionCheckTimeout.current = window.setTimeout(() => {
+        checkConnection(true);
+      }, 120000);
     }
   }, [connectionStatus.lastChecked, connectionStatus.supabaseConnected]);
 
-  const fetchAndSetProfile = async (userId: string) => {
+  const fetchAndSetProfile = useCallback(async (userId: string) => {
+    // Prevent concurrent fetches
+    if (fetchingProfile.current) {
+      console.log('[AUTH] Profile fetch already in progress, skipping');
+      return null;
+    }
+    
+    fetchingProfile.current = true;
+    
     try {
       if (!navigator.onLine) {
         console.log('[AUTH] Device is offline, skipping profile fetch');
@@ -157,11 +180,14 @@ export const useAuthProvider = () => {
       }
     } catch (profileError) {
       console.error('[AUTH] Error in fetchAndSetProfile:', profileError);
+    } finally {
+      fetchingProfile.current = false;
     }
     
     return null;
-  };
+  }, []);
 
+  // Network status event handlers
   useEffect(() => {
     const handleOnline = () => {
       console.log('[AUTH] Device went online');
@@ -186,43 +212,69 @@ export const useAuthProvider = () => {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     
+    // Initial connection check
     checkConnection(true);
     
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      
+      if (connectionCheckTimeout.current) {
+        clearTimeout(connectionCheckTimeout.current);
+      }
     };
   }, [checkConnection]);
 
+  // Auth state listener setup
   useEffect(() => {
+    if (testUser) {
+      // Skip auth subscription for test users
+      setAuthInitialized(true);
+      setLoading(false);
+      return () => {};
+    }
+    
     console.log("[AUTH] Setting up auth state listener");
     
+    let profileFetchCompleted = false;
+    
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-      if (!testUser) {
-        setSession(newSession);
-        setUser(newSession?.user ?? null);
-        
-        if (newSession?.user) {
-          if (newSession.user.email) {
-            localStorage.setItem('userEmail', newSession.user.email);
-          }
-          
-          try {
-            const userProfile = await fetchAndSetProfile(newSession.user.id);
-            
-            if (userProfile) {
-              setTimeout(() => {
-                handleUserAuthenticated(newSession.user.id);
-              }, 0);
-            }
-          } catch (profileError) {
-            console.error(`[AUTH] Error fetching profile:`, profileError);
-          }
-        } else {
-          setIsPremium(false);
-          setProfile(null);
-          clearPremiumFromLocalStorage();
+      console.log("[AUTH] Auth state changed:", event);
+      
+      setSession(newSession);
+      setUser(newSession?.user ?? null);
+      
+      if (newSession?.user) {
+        if (newSession.user.email) {
+          localStorage.setItem('userEmail', newSession.user.email);
         }
+        
+        if (!profileFetchCompleted) {
+          profileFetchCompleted = true;
+          
+          // Use setTimeout to avoid potential auth deadlocks
+          setTimeout(async () => {
+            try {
+              const userProfile = await fetchAndSetProfile(newSession.user.id);
+              
+              if (userProfile) {
+                // Use another setTimeout to ensure we don't cause a deadlock
+                setTimeout(() => {
+                  handleUserAuthenticated(newSession.user.id)
+                    .catch(err => console.error(`[AUTH] Error in handleUserAuthenticated:`, err));
+                }, 0);
+              }
+            } catch (profileError) {
+              console.error(`[AUTH] Error fetching profile:`, profileError);
+            } finally {
+              profileFetchCompleted = false;
+            }
+          }, 0);
+        }
+      } else {
+        setIsPremium(false);
+        setProfile(null);
+        clearPremiumFromLocalStorage();
       }
     });
 
@@ -260,16 +312,28 @@ export const useAuthProvider = () => {
             setSession(currentSession);
             setUser(currentSession.user);
             
-            try {
-              const userProfile = await fetchAndSetProfile(currentSession.user.id);
+            if (!profileFetchCompleted) {
+              profileFetchCompleted = true;
               
-              if (userProfile) {
-                setTimeout(async () => {
-                  await handleUserAuthenticated(currentSession.user.id);
-                }, 0);
+              try {
+                const userProfile = await fetchAndSetProfile(currentSession.user.id);
+                
+                if (userProfile) {
+                  // Use setTimeout to prevent auth deadlocks
+                  setTimeout(async () => {
+                    try {
+                      await handleUserAuthenticated(currentSession.user.id);
+                    } catch (err) {
+                      console.error(`[AUTH] Error in handleUserAuthenticated:`, err);
+                    } finally {
+                      profileFetchCompleted = false;
+                    }
+                  }, 0);
+                }
+              } catch (profileError) {
+                console.error(`[AUTH] Error fetching profile during init:`, profileError);
+                profileFetchCompleted = false;
               }
-            } catch (profileError) {
-              console.error(`[AUTH] Error fetching profile during init:`, profileError);
             }
           } else {
             console.log('[AUTH] No active session found');
@@ -286,10 +350,10 @@ export const useAuthProvider = () => {
         }
       } catch (error) {
         console.error('[AUTH] Error initializing auth:', error);
+      } finally {
+        setAuthInitialized(true);
+        setLoading(false);
       }
-      
-      setAuthInitialized(true);
-      setLoading(false);
     };
 
     initializeAuth();
@@ -298,7 +362,7 @@ export const useAuthProvider = () => {
       console.log("[AUTH] Cleaning up auth subscription");
       subscription.unsubscribe();
     };
-  }, [testUser, testSession, testIsPremium, testProfile, handleUserAuthenticated, setIsPremium, setUser, setSession, checkConnection]);
+  }, [testUser, testSession, testIsPremium, testProfile, handleUserAuthenticated, setIsPremium, setUser, setSession, fetchAndSetProfile]);
 
   return {
     user: testUser || user, 
