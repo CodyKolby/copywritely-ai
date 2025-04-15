@@ -1,4 +1,3 @@
-
 import type { SocialMediaPlatform } from '../../SocialMediaPlatformDialog';
 import { ScriptGenerationResult } from '../types';
 import { supabase } from "@/integrations/supabase/client";
@@ -46,8 +45,7 @@ export const generateScript = async (
           .from('target_audiences')
           .select('*')
           .eq('id', targetAudienceId)
-          .single()
-          .timeout(10000); // 10 second timeout
+          .single();
           
         if (error) {
           console.error(`Error fetching target audience (attempt ${attempt}/3):`, error);

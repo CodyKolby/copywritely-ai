@@ -4,7 +4,7 @@ import { AuthContextType } from './types';
 import { useAuthProvider } from './useAuthProvider';
 
 // Create the auth context with undefined as default value
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Auth Provider component
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
