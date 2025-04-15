@@ -57,16 +57,24 @@ export const fetchProfile = async (userId: string, signal?: AbortSignal): Promis
           .from('profiles')
           .select('*')
           .eq('id', userId)
-          .maybeSingle()
-          .abortSignal(signal); // This will properly handle the abort signal
+          .maybeSingle();
         
-        // Either wait for the query or for an abort signal
-        const { data, error } = await queryPromise;
+        // If we have an abort signal, create a race between the query and the abort
+        let result;
+        if (signal) {
+          const raceResult = await Promise.race([
+            queryPromise,
+            abortPromise
+          ]);
+          result = raceResult;
+        } else {
+          result = await queryPromise;
+        }
         
         // Check for errors from Supabase
-        if (error) {
-          console.error(`[PROFILE-UTILS] Error fetching profile (attempt ${2-retries}/2):`, error);
-          lastError = error;
+        if (result.error) {
+          console.error(`[PROFILE-UTILS] Error fetching profile (attempt ${2-retries}/2):`, result.error);
+          lastError = result.error;
           retries--;
           
           if (retries >= 0) {
@@ -77,8 +85,8 @@ export const fetchProfile = async (userId: string, signal?: AbortSignal): Promis
           return null;
         }
         
-        console.log('[PROFILE-UTILS] Profile fetch result:', data ? 'Found' : 'Not found');
-        return data as Profile;
+        console.log('[PROFILE-UTILS] Profile fetch result:', result.data ? 'Found' : 'Not found');
+        return result.data as Profile;
       } catch (error) {
         if (error.name === 'AbortError') {
           console.log('[PROFILE-UTILS] Fetch aborted by caller');

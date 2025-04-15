@@ -22,10 +22,10 @@ const enhancedFetch = (url: RequestInfo | URL, options?: RequestInit) => {
   }
   
   // Set up new options with our signal and CORS mode
-  const fetchOptions = {
+  const fetchOptions: RequestInit = {
     ...options,
     signal: controller.signal,
-    mode: 'cors', // Explicitly set CORS mode
+    mode: 'cors' as RequestMode, // Explicitly typed as RequestMode
     credentials: 'include' as RequestCredentials // Include credentials if needed
   };
   
