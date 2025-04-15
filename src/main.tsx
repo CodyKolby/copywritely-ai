@@ -1,5 +1,15 @@
+
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
+import { PostHogProvider } from 'posthog-js/react'
+import { initPostHog } from './lib/posthog'
 
-createRoot(document.getElementById("root")!).render(<App />);
+// Initialize PostHog
+initPostHog();
+
+createRoot(document.getElementById("root")!).render(
+  <PostHogProvider>
+    <App />
+  </PostHogProvider>
+);

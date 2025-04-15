@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
@@ -6,28 +5,22 @@ import { ExclamationTriangleIcon } from '@radix-ui/react-icons';
 import { useAuth } from '@/contexts/auth/AuthContext';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-
-// Import hooks
 import { usePremiumVerification } from '@/hooks/usePremiumVerification';
 import { useTemplateSelection } from '@/components/scripts/hooks/useTemplateSelection';
-
-// Import components
 import ScriptTemplateGrid from '@/components/scripts/ScriptTemplateGrid';
 import TargetAudienceDialog from '@/components/scripts/TargetAudienceDialog';
-
-// Types and templates
 import { scriptTemplates } from '@/data/scriptTemplates';
+import { useAnalytics } from '@/hooks/useAnalytics';
 
 const ScriptGenerator = () => {
   const { user, isPremium, refreshSession } = useAuth();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [directPremiumCheck, setDirectPremiumCheck] = useState<boolean | null>(null);
-  
-  // Use custom hooks
+  const { track } = useAnalytics();
+
   const premiumVerification = usePremiumVerification();
   const templateSelection = useTemplateSelection(checkPremiumStatus);
 
-  // Direct check for premium status
   const checkPremiumDirectly = useCallback(async (userId: string): Promise<boolean> => {
     try {
       console.log(`[ScriptGenerator] Checking premium status directly for: ${userId}`);
@@ -44,7 +37,6 @@ const ScriptGenerator = () => {
       }
       
       if (profile && profile.is_premium === true) {
-        // Check expiry date if available
         if (profile.subscription_expiry) {
           const now = new Date();
           const expiry = new Date(profile.subscription_expiry);
@@ -65,7 +57,6 @@ const ScriptGenerator = () => {
     }
   }, []);
 
-  // Consolidated function to check premium status
   async function checkPremiumStatus(): Promise<boolean> {
     if (!user?.id) {
       toast.error('Wymagane jest zalogowanie', {
@@ -75,7 +66,6 @@ const ScriptGenerator = () => {
     }
     
     try {
-      // Try direct database check first (most reliable)
       const directCheck = await checkPremiumDirectly(user.id);
       if (directCheck) {
         console.log('[ScriptGenerator] Direct DB check confirms premium status');
@@ -83,7 +73,6 @@ const ScriptGenerator = () => {
         return true;
       }
       
-      // Fall back to verification hook
       const verificationResult = await premiumVerification.validatePremiumStatus();
       
       if (verificationResult) {
@@ -102,18 +91,15 @@ const ScriptGenerator = () => {
     }
   }
 
-  // On mount, scroll to top and refresh auth if needed
   useEffect(() => {
     window.scrollTo(0, 0);
     
-    // Try to refresh session once when page loads to ensure latest auth state
     const attemptRefresh = async () => {
       if (user?.id) {
         console.log("Script generator - attempting session refresh");
         setIsRefreshing(true);
         try {
           await refreshSession();
-          // After refreshing, verify premium status
           if (user.id) {
             await checkPremiumStatus();
           }
@@ -128,7 +114,6 @@ const ScriptGenerator = () => {
     attemptRefresh();
   }, [user?.id, refreshSession]);
   
-  // Check premium status directly when user changes
   useEffect(() => {
     const verifyPremium = async () => {
       if (user?.id) {
@@ -146,7 +131,6 @@ const ScriptGenerator = () => {
     verifyPremium();
   }, [user?.id, checkPremiumDirectly]);
   
-  // Log state for debugging
   useEffect(() => {
     console.log("Script generator page state:", {
       userAuth: !!user,
@@ -166,7 +150,6 @@ const ScriptGenerator = () => {
     templateSelection.targetAudienceDialogOpen
   ]);
   
-  // Handle dialog closed - recheck premium status and reset templateId if needed
   const handleDialogOpenChange = (open: boolean) => {
     console.log(`Dialog ${open ? 'opening' : 'closing'} - handling change`, {
       currentDialogState: templateSelection.targetAudienceDialogOpen,
@@ -175,9 +158,11 @@ const ScriptGenerator = () => {
     
     templateSelection.handleDialogOpenChange(open);
     
-    // When dialog is closed, perform cleanup
     if (!open) {
-      // Revalidate premium after dialog closes
+      track('script_dialog_closed', {
+        templateId: templateSelection.currentTemplateId
+      });
+      
       if (user?.id) {
         console.log("Revalidating premium status after dialog close");
         checkPremiumStatus();
@@ -185,7 +170,6 @@ const ScriptGenerator = () => {
     }
   };
   
-  // Create a handler for template selection that logs details
   const handleTemplateSelect = (templateId: string) => {
     if (!user) {
       toast.error('Wymagane jest zalogowanie', {
@@ -194,17 +178,15 @@ const ScriptGenerator = () => {
       return;
     }
     
-    console.log(`Template ${templateId} selected, current state:`, {
-      userId: user?.id,
-      isPremium: premiumVerification.isPremium,
-      directPremiumCheck,
-      isCheckingPremium: premiumVerification.isCheckingPremium
+    track('template_selected', {
+      templateId,
+      userId: user.id,
+      isPremium: premiumVerification.isPremium
     });
     
     templateSelection.handleTemplateSelect(templateId);
   };
 
-  // Determine if we should show the premium feature alert
   const shouldShowPremiumAlert = !directPremiumCheck && 
                                 !isPremium && 
                                 !premiumVerification.isPremium && 
