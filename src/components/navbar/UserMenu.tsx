@@ -175,6 +175,7 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
       
       console.log('[DIAGNOSTICS] Full diagnostic results:', results);
       
+      // Type checking for results.summary
       if (results.summary && typeof results.summary === 'object') {
         // Safely access properties with proper type checking
         const summary = results.summary as { 

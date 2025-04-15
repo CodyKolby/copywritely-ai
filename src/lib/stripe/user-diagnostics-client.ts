@@ -66,8 +66,11 @@ export const diagnoseAndFixUserAccount = async (userId: string) => {
         )
       ]);
       
-      if ('error' in response) {
-        console.error('[DIAGNOSTICS] Error invoking diagnostics:', response.error);
+      // Fixed TypeScript error: Type assertion for the response
+      const responseData = response as { data?: any, error?: string };
+      
+      if (responseData.error || !responseData.data) {
+        console.error('[DIAGNOSTICS] Error invoking diagnostics:', responseData.error || 'No data returned');
         toast.error('Błąd podczas diagnostyki konta', { 
           description: 'Spróbuj ponownie później lub skontaktuj się z obsługą' 
         });
@@ -75,14 +78,14 @@ export const diagnoseAndFixUserAccount = async (userId: string) => {
         return {
           success: false,
           message: 'Error invoking diagnostics',
-          error: response.error,
+          error: responseData.error || 'No data returned',
           profile: profileData,
           paymentLogs,
           projects
         };
       }
       
-      const data = response.data;
+      const data = responseData.data;
       console.log('[DIAGNOSTICS] Diagnostics results:', data);
       
       // Show results to user
@@ -229,28 +232,31 @@ export const testCriticalFunctions = async (userId: string) => {
       try {
         const start = Date.now();
         
-        const { data, error } = await supabase.functions.invoke(
+        const response = await supabase.functions.invoke(
           'check-subscription-status',
           {
             body: { userId }
           }
         );
         
+        // Type assertion for the response
+        const responseData = response as { data?: any, error?: any };
+        
         const duration = Date.now() - start;
         
-        if (error) {
-          console.error('[CRITICAL-TEST] Subscription status error:', error);
+        if (responseData.error) {
+          console.error('[CRITICAL-TEST] Subscription status error:', responseData.error);
           return { 
             success: false, 
-            error,
+            error: responseData.error,
             duration
           };
         }
         
-        console.log('[CRITICAL-TEST] Subscription status result:', data);
+        console.log('[CRITICAL-TEST] Subscription status result:', responseData.data);
         return { 
           success: true, 
-          data, 
+          data: responseData.data, 
           duration
         };
       } catch (e) {
@@ -273,7 +279,7 @@ export const testCriticalFunctions = async (userId: string) => {
         const successUrl = `${origin}/success?session_id={CHECKOUT_SESSION_ID}`;
         const cancelUrl = `${origin}/pricing?canceled=true`;
         
-        const { data, error } = await supabase.functions.invoke(
+        const response = await supabase.functions.invoke(
           'stripe-checkout',
           {
             body: {
@@ -286,22 +292,25 @@ export const testCriticalFunctions = async (userId: string) => {
           }
         );
         
+        // Type assertion for the response
+        const responseData = response as { data?: any, error?: any };
+        
         const duration = Date.now() - start;
         
-        if (error) {
-          console.error('[CRITICAL-TEST] Checkout error:', error);
+        if (responseData.error) {
+          console.error('[CRITICAL-TEST] Checkout error:', responseData.error);
           return { 
             success: false, 
-            error,
+            error: responseData.error,
             duration
           };
         }
         
-        console.log('[CRITICAL-TEST] Checkout result:', data);
+        console.log('[CRITICAL-TEST] Checkout result:', responseData.data);
         return { 
           success: true, 
-          hasUrl: !!data?.url,
-          data,
+          hasUrl: !!responseData.data?.url,
+          data: responseData.data,
           duration
         };
       } catch (e) {
@@ -554,13 +563,16 @@ const applyEmergencyFixes = async (userId: string, testResults: Record<string, a
     try {
       // Call edge function directly to fix premium status with timeout
       const fixResult = await runWithTimeout(async () => {
-        return await supabase.functions.invoke('diagnose-user-data', {
+        const response = await supabase.functions.invoke('diagnose-user-data', {
           body: { userId, forceFixPremium: true }
         });
+        
+        // Type assertion for the response
+        return response as { data?: any, error?: any };
       }, 8000, 'Fix premium status timeout');
       
-      if ('error' in fixResult) {
-        console.error('[EMERGENCY-FIX] Error fixing premium status:', fixResult.error);
+      if (fixResult.error || !fixResult.data) {
+        console.error('[EMERGENCY-FIX] Error fixing premium status:', fixResult.error || 'No data returned');
       } else {
         console.log('[EMERGENCY-FIX] Premium status fixed:', fixResult.data);
         if (fixResult.data?.fixes?.success) {
