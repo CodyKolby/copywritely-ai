@@ -24,6 +24,12 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8000);
       
+      // Combine the signal from options with our timeout signal
+      const originalSignal = options?.signal;
+      if (originalSignal) {
+        originalSignal.addEventListener('abort', () => controller.abort());
+      }
+      
       const fetchPromise = fetch(url, {
         ...options,
         signal: controller.signal
