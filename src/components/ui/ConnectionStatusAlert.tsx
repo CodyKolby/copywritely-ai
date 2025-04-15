@@ -1,10 +1,11 @@
 
-import React, { useEffect, useState } from 'react';
-import { AlertCircle, WifiOff, RefreshCw } from 'lucide-react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { AlertCircle, WifiOff, RefreshCw, CheckCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { checkConnectionHealth } from '@/integrations/supabase/client';
+import { checkConnectionHealth, diagnoseConnectionIssues } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 type ConnectionStatusAlertProps = {
   onRetry?: () => void;
@@ -22,17 +23,39 @@ export const ConnectionStatusAlert: React.FC<ConnectionStatusAlertProps> = ({
   const [visible, setVisible] = useState(false);
   const [checkInProgress, setCheckInProgress] = useState(false);
   const [lastCheckTimestamp, setLastCheckTimestamp] = useState(0);
+  const [retryCount, setRetryCount] = useState(0);
+  const [diagnosticInfo, setDiagnosticInfo] = useState<{
+    canReachSupabaseUrl?: boolean;
+    canMakeApiCall?: boolean;
+    message?: string;
+  } | null>(null);
 
-  // Check connection status
-  const checkStatus = async () => {
+  // Check connection status with better error handling
+  const checkStatus = useCallback(async () => {
     if (checkInProgress) return;
     
     setCheckInProgress(true);
     try {
       console.log('[CONNECTION-ALERT] Checking connection status');
+      
+      // First check basic connection
       const status = await checkConnectionHealth();
       setIsOnline(status.online);
       setSupabaseConnected(status.supabaseConnected);
+      
+      // If there are issues, run more detailed diagnostics
+      if (!status.online || !status.supabaseConnected) {
+        console.log('[CONNECTION-ALERT] Connection issues detected, running detailed diagnostics');
+        const diagnostics = await diagnoseConnectionIssues();
+        setDiagnosticInfo({
+          canReachSupabaseUrl: diagnostics.canReachSupabaseUrl,
+          canMakeApiCall: diagnostics.canMakeApiCall,
+          message: diagnostics.message
+        });
+      } else {
+        setDiagnosticInfo(null);
+      }
+      
       setVisible(!status.online || !status.supabaseConnected);
       setLastCheckTimestamp(Date.now());
       
@@ -41,14 +64,27 @@ export const ConnectionStatusAlert: React.FC<ConnectionStatusAlertProps> = ({
         supabaseConnected: status.supabaseConnected,
         message: status.message
       });
+      
+      // If connection is restored after previously being down, show a success toast
+      if (visible && status.online && status.supabaseConnected) {
+        toast.success('Połączenie przywrócone', {
+          description: 'Aplikacja powinna teraz działać poprawnie'
+        });
+      }
+      
+      return status;
     } catch (e) {
       console.error('[CONNECTION-ALERT] Error checking connection:', e);
       setVisible(true);
       setSupabaseConnected(false);
+      setDiagnosticInfo({
+        message: 'Wystąpił błąd podczas sprawdzania połączenia'
+      });
+      return null;
     } finally {
       setCheckInProgress(false);
     }
-  };
+  }, [checkInProgress, visible]);
 
   // Handle online/offline events
   useEffect(() => {
@@ -71,10 +107,11 @@ export const ConnectionStatusAlert: React.FC<ConnectionStatusAlertProps> = ({
     // Initial check
     checkStatus();
     
-    // Set up periodic check (every 15 seconds)
+    // Set up periodic check 
     const intervalId = setInterval(() => {
-      if (!visible && !checkInProgress) { 
-        // Only do periodic checks if we think we're connected and not already checking
+      // If we're visible (have an error), check more frequently
+      const checkInterval = visible ? 15000 : 30000;
+      if (Date.now() - lastCheckTimestamp > checkInterval && !checkInProgress) { 
         checkStatus();
       }
     }, 15000);
@@ -84,14 +121,16 @@ export const ConnectionStatusAlert: React.FC<ConnectionStatusAlertProps> = ({
       window.removeEventListener('offline', handleOffline);
       clearInterval(intervalId);
     };
-  }, [visible, lastCheckTimestamp, checkInProgress]);
+  }, [visible, lastCheckTimestamp, checkInProgress, checkStatus]);
 
   // Hide if everything is connected
   if (!visible) {
     return null;
   }
 
+  // Handle user retry
   const handleRetry = () => {
+    setRetryCount(prev => prev + 1);
     checkStatus();
     if (onRetry) {
       onRetry();
@@ -120,7 +159,35 @@ export const ConnectionStatusAlert: React.FC<ConnectionStatusAlertProps> = ({
           <AlertDescription className="mt-2">
             {!isOnline 
               ? "Sprawdź swoje połączenie z internetem i spróbuj ponownie." 
-              : "Wystąpił problem z połączeniem do serwera. Spróbujemy ponownie automatycznie, lub możesz kliknąć przycisk poniżej."}
+              : diagnosticInfo?.message || "Wystąpił problem z połączeniem do serwera."}
+            
+            {diagnosticInfo && (
+              <div className="mt-2 text-sm">
+                <ul className="list-none space-y-1">
+                  <li className="flex items-center">
+                    <span className={cn("w-4 h-4 inline-block mr-2", 
+                      isOnline ? "text-green-500" : "text-red-500")}>
+                      {isOnline ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+                    </span>
+                    Połączenie z internetem
+                  </li>
+                  <li className="flex items-center">
+                    <span className={cn("w-4 h-4 inline-block mr-2", 
+                      diagnosticInfo.canReachSupabaseUrl ? "text-green-500" : "text-red-500")}>
+                      {diagnosticInfo.canReachSupabaseUrl ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+                    </span>
+                    Dostęp do serwera Supabase
+                  </li>
+                  <li className="flex items-center">
+                    <span className={cn("w-4 h-4 inline-block mr-2", 
+                      diagnosticInfo.canMakeApiCall ? "text-green-500" : "text-red-500")}>
+                      {diagnosticInfo.canMakeApiCall ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+                    </span>
+                    Możliwość wykonania zapytania API
+                  </li>
+                </ul>
+              </div>
+            )}
             
             <div className="mt-3 text-sm">
               <strong>Możliwe rozwiązania:</strong>

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase, checkConnectionHealth } from '@/integrations/supabase/client';
 import { Profile } from './types';
@@ -51,36 +52,45 @@ export const useAuthProvider = () => {
   const checkConnection = useCallback(async (force = false) => {
     const now = Date.now();
     
-    if (!force && now - connectionStatus.lastChecked < 10000) {
+    // Don't check too frequently unless forced
+    if (!force && now - connectionStatus.lastChecked < 15000) {
       return connectionStatus;
     }
     
     try {
       console.log('[AUTH] Checking connection health');
+      setConnectionStatus(prev => ({...prev, lastChecked: now}));
+      
       const status = await checkConnectionHealth();
       
-      setConnectionStatus({
+      const newStatus = {
         online: status.online,
         supabaseConnected: status.supabaseConnected,
         lastChecked: now
-      });
+      };
       
-      return status;
+      setConnectionStatus(newStatus);
+      
+      // If connection was previously down but is now up, trigger session refresh
+      if (!connectionStatus.supabaseConnected && status.supabaseConnected && user) {
+        console.log('[AUTH] Connection restored, refreshing session');
+        setTimeout(() => refreshSession(), 1000);
+      }
+      
+      return newStatus;
     } catch (e) {
       console.error('[AUTH] Error checking connection health:', e);
       
-      setConnectionStatus({
+      const newStatus = {
         online: navigator.onLine,
         supabaseConnected: false,
         lastChecked: now
-      });
-      
-      return {
-        online: navigator.onLine,
-        supabaseConnected: false
       };
+      
+      setConnectionStatus(newStatus);
+      return newStatus;
     }
-  }, [connectionStatus.lastChecked]);
+  }, [connectionStatus.lastChecked, connectionStatus.supabaseConnected, refreshSession, user]);
 
   const fetchAndSetProfile = async (userId: string) => {
     try {
@@ -97,10 +107,10 @@ export const useAuthProvider = () => {
       
       console.log('[AUTH] Fetching profile for user:', userId);
       
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-      
       try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000); // Increased timeout
+        
         const userProfile = await fetchProfile(userId, controller.signal);
         clearTimeout(timeoutId);
         
@@ -112,35 +122,68 @@ export const useAuthProvider = () => {
           console.warn('[AUTH] No profile found for user:', userId);
           
           if (connStatus.supabaseConnected) {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            console.log('[AUTH] Creating new profile for user');
+            const createController = new AbortController();
+            const createTimeoutId = setTimeout(() => createController.abort(), 8000);
             
-            const { data: createData, error: createError } = await supabase
-              .from('profiles')
-              .upsert({
-                id: userId,
-                is_premium: false,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              })
-              .select()
-              .maybeSingle();
+            try {
+              const { data: createData, error: createError } = await supabase
+                .from('profiles')
+                .upsert({
+                  id: userId,
+                  is_premium: false,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
+                })
+                .select()
+                .single();
+                
+              clearTimeout(createTimeoutId);
               
-            clearTimeout(timeoutId);
-            
-            if (!createError && createData) {
-              console.log('[AUTH] Profile created successfully');
-              setProfile(createData as Profile);
-              return createData as Profile;
-            } else {
-              console.error('[AUTH] Error creating profile:', createError);
+              if (!createError && createData) {
+                console.log('[AUTH] Profile created successfully');
+                setProfile(createData as Profile);
+                return createData as Profile;
+              } else {
+                console.error('[AUTH] Error creating profile:', createError);
+                
+                // Try one more time with basic insert if upsert failed
+                if (createError) {
+                  try {
+                    const { data: insertData, error: insertError } = await supabase
+                      .from('profiles')
+                      .insert({
+                        id: userId,
+                        is_premium: false,
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                      })
+                      .select()
+                      .single();
+                      
+                    if (!insertError && insertData) {
+                      console.log('[AUTH] Profile inserted successfully on second attempt');
+                      setProfile(insertData as Profile);
+                      return insertData as Profile;
+                    }
+                  } catch (secondAttemptError) {
+                    console.error('[AUTH] Error on second profile creation attempt:', secondAttemptError);
+                  }
+                }
+              }
+            } catch (createAbortError) {
+              clearTimeout(createTimeoutId);
+              if (createAbortError.name === 'AbortError') {
+                console.error('[AUTH] Profile creation timed out');
+              } else {
+                console.error('[AUTH] Error during profile creation:', createAbortError);
+              }
             }
           } else {
             console.log('[AUTH] Skipping profile creation due to connection issues');
           }
         }
       } catch (abortError) {
-        clearTimeout(timeoutId);
         if (abortError.name === 'AbortError') {
           console.error('[AUTH] Profile fetch timed out');
         } else {
@@ -163,9 +206,14 @@ export const useAuthProvider = () => {
         lastChecked: 0
       }));
       
-      if (user) {
-        refreshSession();
-      }
+      // When going online, check connection and refresh if needed
+      setTimeout(async () => {
+        const status = await checkConnection(true);
+        if (status.supabaseConnected && user) {
+          console.log('[AUTH] Connection restored, refreshing session');
+          refreshSession();
+        }
+      }, 1500);
     };
     
     const handleOffline = () => {
@@ -174,13 +222,20 @@ export const useAuthProvider = () => {
         ...prev,
         online: false
       }));
+      
+      // Show a toast when going offline
+      toast.error('Brak połączenia z internetem', {
+        description: 'Niektóre funkcje mogą być niedostępne'
+      });
     };
     
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     
-    checkConnection();
+    // Check connection initially
+    checkConnection(true);
     
+    // Set up periodic connection checking
     const intervalId = setInterval(() => {
       checkConnection();
     }, 30000);
@@ -219,7 +274,7 @@ export const useAuthProvider = () => {
             retries--;
             if (retries >= 0) {
               console.log(`[AUTH] Retrying profile fetch, ${retries+1} attempts remaining`);
-              await new Promise(resolve => setTimeout(resolve, 1000));
+              await new Promise(resolve => setTimeout(resolve, 2000)); // Increased backoff time
             }
           }
           
@@ -248,6 +303,7 @@ export const useAuthProvider = () => {
           return;
         }
 
+        // Check connection status first
         const connStatus = await checkConnection(true);
         
         if (!connStatus.supabaseConnected) {
@@ -262,15 +318,16 @@ export const useAuthProvider = () => {
         }
 
         try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 5000);
-          
           const { data, error } = await supabase.auth.getSession();
-          
-          clearTimeout(timeoutId);
           
           if (error) {
             console.error('[AUTH] Error getting session:', error);
+            // Show a specific error message for this common issue
+            if (error.message?.includes('failed to get session from storage')) {
+              toast.error('Problem z danymi sesji', {
+                description: 'Spróbuj wyczyścić pamięć podręczną przeglądarki'
+              });
+            }
             throw error;
           }
           
@@ -297,7 +354,7 @@ export const useAuthProvider = () => {
                 console.error(`[AUTH] Error fetching profile during init (try ${1-retries}/1):`, profileError);
               }
               retries--;
-              if (retries >= 0) await new Promise(resolve => setTimeout(resolve, 1000));
+              if (retries >= 0) await new Promise(resolve => setTimeout(resolve, 2000));
             }
             
             setTimeout(async () => {
@@ -339,6 +396,7 @@ export const useAuthProvider = () => {
     };
   }, [testUser, testSession, testIsPremium, testProfile, handleUserAuthenticated, setIsPremium, setUser, setSession, checkConnection]);
 
+  // Return all needed values
   return {
     user: testUser || user, 
     session: testSession || session, 

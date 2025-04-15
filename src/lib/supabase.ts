@@ -1,3 +1,4 @@
+
 import { supabase, validateSupabaseConnection, checkConnectionHealth } from '@/integrations/supabase/client';
 
 // Re-export the Supabase client and util functions for easier imports
@@ -70,30 +71,49 @@ export const diagnoseConnectionIssues = async (): Promise<{
     return result;
   }
   
-  // Check if we can reach the Supabase URL
+  // Check if we can reach the Supabase URL with timeout handling
   try {
-    const pingResponse = await fetch('https://jorbqjareswzdrsmepbv.supabase.co/ping', { 
-      method: 'GET',
-      mode: 'cors',
-      cache: 'no-cache',
-      signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : undefined
-    });
+    const controller = new AbortController();
+    // Use setTimeout with AbortController for browsers that support it
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
     
-    result.canReachSupabaseUrl = pingResponse.ok;
+    try {
+      const pingResponse = await fetch('https://jorbqjareswzdrsmepbv.supabase.co/ping', { 
+        method: 'GET',
+        mode: 'cors',
+        cache: 'no-cache',
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      result.canReachSupabaseUrl = pingResponse.ok;
+    } catch (e) {
+      clearTimeout(timeoutId);
+      console.error('[SUPABASE-DIAGNOSE] Error pinging Supabase URL:', e);
+    }
   } catch (e) {
-    console.error('[SUPABASE-DIAGNOSE] Error pinging Supabase URL:', e);
+    console.error('[SUPABASE-DIAGNOSE] Error setting up ping request:', e);
   }
   
   // Try to make a simple API call
   try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('count')
-      .limit(1);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
     
-    result.canMakeApiCall = !error;
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('count')
+        .limit(1);
+      
+      clearTimeout(timeoutId);
+      result.canMakeApiCall = !error;
+    } catch (e) {
+      clearTimeout(timeoutId);
+      console.error('[SUPABASE-DIAGNOSE] Error making API call:', e);
+    }
   } catch (e) {
-    console.error('[SUPABASE-DIAGNOSE] Error making API call:', e);
+    console.error('[SUPABASE-DIAGNOSE] Error setting up API call:', e);
   }
   
   // Set appropriate message

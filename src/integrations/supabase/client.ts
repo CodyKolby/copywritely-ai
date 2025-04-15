@@ -9,7 +9,45 @@ const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJh
 // Log initialization parameters to help with debugging
 console.log('[SUPABASE] Initializing client with:', { url: SUPABASE_URL, keyLength: SUPABASE_PUBLISHABLE_KEY?.length || 0 });
 
-// Create a singleton instance with more aggressive timeout settings
+// Improved fetch function with better timeout and retry handling
+const enhancedFetch = (url: RequestInfo | URL, options?: RequestInit) => {
+  // Create a new controller for timeout
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 12000); // Increased timeout to 12 seconds
+  
+  // Combine the signal from options with our timeout signal
+  const originalSignal = options?.signal;
+  if (originalSignal) {
+    originalSignal.addEventListener('abort', () => controller.abort());
+  }
+  
+  // Use our controller's signal
+  const fetchOptions = {
+    ...options,
+    signal: controller.signal
+  };
+  
+  // The fetch promise with improved error handling
+  const fetchPromise = fetch(url, fetchOptions)
+    .catch(error => {
+      if (error.name === 'AbortError') {
+        console.warn(`[SUPABASE-FETCH] Request to ${url.toString()} aborted due to timeout or manual abort`);
+        // Throw a more informative abort error
+        throw new Error(`Request timed out or was aborted: ${url.toString()}`);
+      }
+      // For network errors, provide more diagnostic information
+      if (error.message === 'Failed to fetch') {
+        console.error(`[SUPABASE-FETCH] Network error with ${url.toString()}: ${navigator.onLine ? 'Online but connection failed' : 'Device is offline'}`);
+        throw new Error(`Network error: ${navigator.onLine ? 'Connection failed' : 'Device is offline'}`);
+      }
+      throw error;
+    })
+    .finally(() => clearTimeout(timeoutId));
+  
+  return fetchPromise;
+};
+
+// Create a singleton instance with improved settings
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     persistSession: true,
@@ -19,36 +57,15 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
   },
   global: {
     headers: { 'x-application-name': 'scriptcreator' },
-    // Custom fetch with shorter timeout to fail faster
-    fetch: (url, options) => {
-      // Create a new controller for timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
-      
-      // Combine the signal from options with our timeout signal
-      if (options?.signal) {
-        options.signal.addEventListener('abort', () => controller.abort());
-      }
-      
-      // Use our controller's signal
-      const fetchPromise = fetch(url, {
-        ...options,
-        signal: controller.signal
-      });
-      
-      // Clean up the timeout when the fetch completes
-      fetchPromise.finally(() => clearTimeout(timeoutId));
-      
-      return fetchPromise;
-    }
+    fetch: enhancedFetch
   },
   // Reduced realtime timeout
   realtime: {
-    timeout: 5000 // 5 seconds for realtime connections
+    timeout: 8000 // Increased from 5 seconds to 8 seconds for realtime connections
   }
 });
 
-// Add connection validation function with retry logic
+// Add connection validation function with improved retry logic
 export const validateSupabaseConnection = async (maxRetries = 2): Promise<boolean> => {
   let attempts = 0;
   
@@ -57,17 +74,12 @@ export const validateSupabaseConnection = async (maxRetries = 2): Promise<boolea
       console.log(`[SUPABASE] Validating connection to ${SUPABASE_URL} (attempt ${attempts + 1}/${maxRetries})`);
       const startTime = Date.now();
       
-      // Use a simple query to check connectivity with shorter timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-      
+      // Use a simple query to check connectivity
       const { data, error } = await supabase
         .from('profiles')
         .select('count')
-        .limit(1)
-        .abortSignal(controller.signal);
+        .limit(1);
       
-      clearTimeout(timeoutId);
       const duration = Date.now() - startTime;
       
       if (error) {
@@ -75,9 +87,10 @@ export const validateSupabaseConnection = async (maxRetries = 2): Promise<boolea
         attempts++;
         
         if (attempts < maxRetries) {
-          // Short backoff: 1s between attempts
-          console.log(`[SUPABASE] Retrying in 1000ms...`);
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          // Exponential backoff between retries
+          const backoffTime = Math.min(1000 * Math.pow(2, attempts), 4000);
+          console.log(`[SUPABASE] Retrying in ${backoffTime}ms...`);
+          await new Promise(resolve => setTimeout(resolve, backoffTime));
           continue;
         }
         return false;
@@ -90,8 +103,9 @@ export const validateSupabaseConnection = async (maxRetries = 2): Promise<boolea
       attempts++;
       
       if (attempts < maxRetries) {
-        // Short backoff
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Exponential backoff
+        const backoffTime = Math.min(1000 * Math.pow(2, attempts), 4000);
+        await new Promise(resolve => setTimeout(resolve, backoffTime));
       } else {
         return false;
       }
@@ -117,56 +131,71 @@ export const checkConnectionHealth = async (): Promise<{
       };
     }
     
-    // Try a direct ping request to Supabase with a short timeout
+    // Try a ping to the Supabase host first to see if it's reachable
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      const pingController = new AbortController();
+      const pingTimeoutId = setTimeout(() => pingController.abort(), 5000);
       
-      const response = await fetch(`${SUPABASE_URL}/rest/v1/`, {
-        method: 'HEAD',
-        headers: { 'apikey': SUPABASE_PUBLISHABLE_KEY },
-        signal: controller.signal
+      const response = await fetch(`${SUPABASE_URL}/ping`, {
+        method: 'GET',
+        headers: { 'Cache-Control': 'no-cache' },
+        signal: pingController.signal
       });
       
-      clearTimeout(timeoutId);
+      clearTimeout(pingTimeoutId);
       
       if (!response.ok) {
-        return {
-          online: true,
-          supabaseConnected: false,
-          message: 'Serwer Supabase jest niedostępny'
-        };
+        console.warn('[CONNECTION-CHECK] Ping to Supabase failed with status:', response.status);
+      } else {
+        console.log('[CONNECTION-CHECK] Ping to Supabase succeeded');
       }
-    } catch (e) {
-      console.warn('[CONNECTION-CHECK] Ping to Supabase failed:', e);
-      // Continue anyway to try the query method
+    } catch (pingError) {
+      console.warn('[CONNECTION-CHECK] Ping to Supabase failed:', pingError);
+      // Continue anyway - the ping might fail but the API might still work
     }
     
     // Then try a simple query with short timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000);
-    
-    const { error } = await supabase
-      .from('profiles')
-      .select('count')
-      .limit(1)
-      .abortSignal(controller.signal);
+    try {
+      const queryController = new AbortController();
+      const queryTimeoutId = setTimeout(() => queryController.abort(), 6000); // Increased to 6 seconds
       
-    clearTimeout(timeoutId);
-    
-    if (error) {
-      console.error('[CONNECTION-CHECK] Supabase query failed:', error);
+      const { error } = await supabase
+        .from('profiles')
+        .select('count')
+        .limit(1);
+        
+      clearTimeout(queryTimeoutId);
+      
+      if (error) {
+        console.error('[CONNECTION-CHECK] Supabase query failed:', error);
+        return {
+          online: true,
+          supabaseConnected: false,
+          message: 'Problem z połączeniem do bazy danych'
+        };
+      }
+      
+      return {
+        online: true,
+        supabaseConnected: true
+      };
+    } catch (queryError) {
+      if (queryError.name === 'AbortError') {
+        console.error('[CONNECTION-CHECK] Supabase query timed out');
+        return {
+          online: true,
+          supabaseConnected: false,
+          message: 'Zbyt długi czas odpowiedzi serwera'
+        };
+      }
+      
+      console.error('[CONNECTION-CHECK] Exception during Supabase query:', queryError);
       return {
         online: true,
         supabaseConnected: false,
-        message: 'Problem z połączeniem do bazy danych'
+        message: 'Błąd podczas sprawdzania połączenia z bazą danych'
       };
     }
-    
-    return {
-      online: true,
-      supabaseConnected: true
-    };
   } catch (e) {
     console.error('[CONNECTION-CHECK] Exception during connection check:', e);
     return {
@@ -177,14 +206,19 @@ export const checkConnectionHealth = async (): Promise<{
   }
 };
 
-// Run a short connection test on module load
+// Run a connection test on module load with improved error handling
 setTimeout(() => {
   validateSupabaseConnection(1)
     .then(isConnected => {
       console.log(`[SUPABASE] Initial connection test: ${isConnected ? 'SUCCESS' : 'FAILED'}`);
       if (!isConnected) {
         console.warn('[SUPABASE] Connection failed, app functionality may be limited');
+        // Adding network diagnostic info to help with debugging
+        console.log('[SUPABASE] Network diagnostics:', { 
+          online: navigator.onLine,
+          connectionType: (navigator as any).connection ? (navigator as any).connection.effectiveType : 'unknown'
+        });
       }
     })
     .catch(err => console.error('[SUPABASE] Initial connection test error:', err));
-}, 500);
+}, 1000); // Slight delay to ensure other modules are loaded
