@@ -5,7 +5,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { AppLayout } from './components/layout/AppLayout';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Routes } from './routes';
-import { Toaster as SonnerToaster, toast } from 'sonner'; // Import toast directly here
+import { Toaster as SonnerToaster, toast } from 'sonner'; // Import toast directly
 import React, { useState, useEffect } from 'react';
 import { supabase } from './integrations/supabase/client';
 import { ConnectionStatusAlert } from './components/ui/ConnectionStatusAlert';
@@ -29,10 +29,29 @@ const queryClient = new QueryClient({
 function App() {
   const [supabaseConnected, setSupabaseConnected] = useState(true);
   const [isCheckingConnection, setIsCheckingConnection] = useState(false);
-  const [corsIssueDetected, setCorsIssueDetected] = useState(false);
   const [lastCheckTime, setLastCheckTime] = useState(0);
 
-  // Verify Supabase connection on app start - with reduced frequency
+  // Check for auth callback parameters in URL
+  useEffect(() => {
+    const handleAuthCallback = async () => {
+      try {
+        const url = new URL(window.location.href);
+        const hashParams = new URLSearchParams(url.hash.substring(1));
+        const queryParams = new URLSearchParams(url.search);
+        
+        // Check for auth provider callbacks
+        if ((hashParams.has('access_token') || queryParams.has('code'))) {
+          console.log('[APP] Auth callback detected in URL');
+        }
+      } catch (err) {
+        console.error('[APP] Error handling auth callback:', err);
+      }
+    };
+    
+    handleAuthCallback();
+  }, []);
+
+  // Verify Supabase connection on app start - only once
   useEffect(() => {
     // Only check connection once at startup to avoid infinite loops
     const checkConnection = async () => {
@@ -52,28 +71,15 @@ function App() {
           return;
         }
         
-        try {
-          // Simple preflight check - just once
-          const corsResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL || "https://jorbqjareswzdrsmepbv.supabase.co"}/rest/v1/`, {
-            method: 'OPTIONS',
-            headers: {
-              'Content-Type': 'application/json',
-              'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpvcmJxamFyZXN3emRyc21lcGJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI1NTcyNjMsImV4cCI6MjA1ODEzMzI2M30.WtGgnQKLVD2ZuOq4qNrIfcmFc98U3Q6YLrCCRG_mrH4"
-            },
-            mode: 'cors'
-          });
-          
-          if (!corsResponse.ok) {
-            setCorsIssueDetected(true);
-            setSupabaseConnected(false);
-          } else {
-            setCorsIssueDetected(false);
-            setSupabaseConnected(true);
-          }
-        } catch (error) {
-          console.error('[APP] Error during CORS check:', error);
-          setCorsIssueDetected(true);
+        // Simple connection check - no CORS checks to avoid triggering errors
+        const { data, error } = await supabase.from('profiles').select('count').limit(1);
+        
+        if (error) {
+          console.log('[APP] Connection check error:', error.message);
           setSupabaseConnected(false);
+        } else {
+          console.log('[APP] Connection check successful');
+          setSupabaseConnected(true);
         }
       } catch (error) {
         console.error('[APP] Error verifying Supabase connection:', error);
@@ -83,6 +89,7 @@ function App() {
       }
     };
     
+    // Check once at startup
     checkConnection();
     
     // Set up event listeners for online/offline status
@@ -97,8 +104,6 @@ function App() {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     
-    // Do NOT set periodic check to avoid spamming
-    
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
@@ -110,40 +115,17 @@ function App() {
       <Router>
         <AuthProvider>
           <AppLayout>
-            {/* Only show connection status alert if there's an issue */}
-            {(!supabaseConnected || corsIssueDetected) && (
+            {/* Only show connection status alert if there's an issue and we're not online */}
+            {!supabaseConnected && !navigator.onLine && (
               <ConnectionStatusAlert 
                 onRetry={async () => {
+                  // Simplified retry logic
                   if (Date.now() - lastCheckTime < 10000) {
                     toast.info('Proszę poczekaj chwilę przed ponowną próbą');
                     return;
                   }
                   
-                  try {
-                    setIsCheckingConnection(true);
-                    
-                    // Simple check
-                    const corsResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL || "https://jorbqjareswzdrsmepbv.supabase.co"}/rest/v1/`, {
-                      method: 'OPTIONS',
-                      headers: {
-                        'Content-Type': 'application/json',
-                        'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpvcmJxamFyZXN3emRyc21lcGJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI1NTcyNjMsImV4cCI6MjA1ODEzMzI2M30.WtGgnQKLVD2ZuOq4qNrIfcmFc98U3Q6YLrCCRG_mrH4"
-                      },
-                      mode: 'cors'
-                    });
-                    
-                    if (corsResponse.ok) {
-                      setCorsIssueDetected(false);
-                      setSupabaseConnected(true);
-                      setLastCheckTime(Date.now());
-                    } else {
-                      setCorsIssueDetected(true);
-                      setSupabaseConnected(false);
-                      setLastCheckTime(Date.now());
-                    }
-                  } finally {
-                    setIsCheckingConnection(false);
-                  }
+                  window.location.reload();
                 }}
                 isChecking={isCheckingConnection}
               />

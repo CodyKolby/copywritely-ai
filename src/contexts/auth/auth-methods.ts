@@ -7,10 +7,19 @@ export const signInWithGoogle = async () => {
   try {
     console.log('[AUTH] Attempting Google sign in');
     
+    // Force clean any potential stale auth state
+    localStorage.removeItem('supabase.auth.token');
+    
+    // Use the full URL to ensure proper redirect handling
+    const origin = window.location.origin;
+    const redirectUrl = `${origin}/login`;
+    
+    console.log(`[AUTH] Setting redirectTo to: ${redirectUrl}`);
+    
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/login`,
+        redirectTo: redirectUrl,
         queryParams: {
           access_type: 'offline',
           prompt: 'consent',

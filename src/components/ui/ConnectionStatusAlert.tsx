@@ -37,38 +37,28 @@ export const ConnectionStatusAlert: React.FC<ConnectionStatusAlertProps> = ({
               ? "Brak połączenia z internetem" 
               : "Problem z połączeniem do serwera"}
           </AlertTitle>
-          <AlertDescription className="mt-2">
+          <AlertDescription>
             {!isOnline 
               ? "Sprawdź swoje połączenie z internetem i spróbuj ponownie." 
-              : "Występuje problem z połączeniem do serwera Supabase. Upewnij się, że domena jest skonfigurowana w ustawieniach Supabase."}
-            
-            <div className="mt-3 text-sm">
-              <strong>Możliwe rozwiązania:</strong>
-              <ul className="list-disc pl-5 mt-1">
-                <li>Dodaj domenę aplikacji do dozwolonych źródeł w ustawieniach CORS w Supabase</li>
-                <li>Odśwież stronę</li>
-                <li>Sprawdź połączenie internetowe</li>
-                <li>Wyczyść pamięć podręczną przeglądarki</li>
-              </ul>
-            </div>
+              : "Występuje problem z połączeniem do serwera. Upewnij się, że domena jest skonfigurowana w ustawieniach Supabase."}
           </AlertDescription>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onRetry}
+            disabled={isChecking}
+            className="mt-2"
+          >
+            {isChecking ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
+                Sprawdzanie...
+              </>
+            ) : (
+              "Spróbuj ponownie"
+            )}
+          </Button>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onRetry}
-          disabled={isChecking}
-          className="ml-2 whitespace-nowrap"
-        >
-          {isChecking ? (
-            <>
-              <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
-              Sprawdzanie...
-            </>
-          ) : (
-            "Spróbuj ponownie"
-          )}
-        </Button>
       </div>
     </Alert>
   );

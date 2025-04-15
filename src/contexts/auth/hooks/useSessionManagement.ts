@@ -47,6 +47,20 @@ export const useSessionManagement = (
       refreshInProgress.current = true;
       console.log('[SESSION] Manually refreshing session');
       
+      // First check if session exists at all
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error('[SESSION] Error getting session:', sessionError);
+        return false;
+      }
+      
+      if (!sessionData.session) {
+        console.log('[SESSION] No session found during refresh');
+        return false;
+      }
+      
+      // Now try to refresh token if needed
       const { data, error } = await supabase.auth.refreshSession();
       
       if (error) {

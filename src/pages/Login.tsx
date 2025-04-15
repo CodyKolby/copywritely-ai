@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 const Login = () => {
   const [loading, setLoading] = useState(false);
   const [configError, setConfigError] = useState(false);
+  const [initializing, setInitializing] = useState(true);
   const { user, signInWithGoogle, refreshSession } = useAuth();
   const navigate = useNavigate();
 
@@ -28,20 +29,23 @@ const Login = () => {
       } catch (err) {
         setConfigError(true);
         console.error('Error checking Supabase configuration:', err);
+      } finally {
+        setInitializing(false);
       }
     };
     
     checkSupabaseConfig();
+  }, []);
     
-    // Check auth callback parameters
+  // Handle auth callback parameters
+  useEffect(() => {
     const handleAuthCallback = async () => {
       const url = new URL(window.location.href);
       const hashParams = new URLSearchParams(url.hash.substring(1));
       const queryParams = new URLSearchParams(url.search);
       
       // Check for auth provider callbacks
-      if ((hashParams.has('access_token') || queryParams.has('code')) && !window.authCallbackProcessed) {
-        window.authCallbackProcessed = true;
+      if ((hashParams.has('access_token') || queryParams.has('code'))) {
         console.log('[LOGIN] Auth callback detected, setting loading state');
         setLoading(true);
         
@@ -60,11 +64,11 @@ const Login = () => {
               metadata: data.session.user.user_metadata
             });
             
-            // Force a session refresh to make sure profile is properly created
             setTimeout(async () => {
               try {
                 await refreshSession();
                 toast.success('Successfully authenticated! Redirecting...');
+                navigate('/');
               } catch (err) {
                 console.error('[LOGIN] Error refreshing session:', err);
               }
@@ -80,8 +84,10 @@ const Login = () => {
       }
     };
     
-    handleAuthCallback();
-  }, [refreshSession]);
+    if (!initializing) {
+      handleAuthCallback();
+    }
+  }, [initializing, refreshSession, navigate]);
 
   useEffect(() => {
     // If user is already logged in, redirect to home
@@ -94,7 +100,7 @@ const Login = () => {
   const handleGoogleSignIn = async () => {
     setLoading(true);
     await signInWithGoogle();
-    setLoading(false);
+    // Don't set loading to false, as we're being redirected
   };
 
   if (configError) {
@@ -105,11 +111,7 @@ const Login = () => {
             <AlertTriangle className="h-5 w-5" />
             <AlertDescription>
               <h3 className="font-bold mb-2">Supabase Configuration Error</h3>
-              <p>The application could not connect to Supabase. Please make sure your environment variables are set correctly:</p>
-              <ul className="list-disc pl-5 mt-2 space-y-1">
-                <li>VITE_SUPABASE_URL</li>
-                <li>VITE_SUPABASE_ANON_KEY</li>
-              </ul>
+              <p>The application could not connect to Supabase. Please make sure your environment variables are set correctly.</p>
               <p className="mt-2">Check the browser console for more details.</p>
             </AlertDescription>
           </Alert>
@@ -163,6 +165,12 @@ const Login = () => {
                 </>
               )}
             </Button>
+            
+            {loading && (
+              <p className="text-sm text-gray-500 mt-4 text-center">
+                Trwa logowanie, proszę czekać...
+              </p>
+            )}
           </motion.div>
           
           {/* Right Section - Image */}
