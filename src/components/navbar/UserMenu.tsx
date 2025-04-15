@@ -171,72 +171,59 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
     try {
       console.log('[DIAGNOSTICS] Starting full diagnostics for user:', user.id);
       
-      toast.loading('Diagnostyka w toku...', {
-        id: 'diagnostics-running',
-        duration: 10000
-      });
-      
       const results = await testCriticalFunctions(user.id);
+      
       console.log('[DIAGNOSTICS] Full diagnostic results:', results);
       
-      // Properly type the results to access summary properties
-      const summary = results.summary as { 
-        criticalIssuesCount?: number; 
-        warningsCount?: number;
-        mainIssue?: string;
-      } | undefined;
-      
-      // Use optional chaining to safely access properties
-      if (summary?.criticalIssuesCount && summary.criticalIssuesCount > 0) {
-        toast.error(`Wykryto ${summary.criticalIssuesCount} krytyczne problemy`, {
-          description: summary.mainIssue,
-          duration: 8000
-        });
-      } else if (summary?.warningsCount && summary.warningsCount > 0) {
-        toast.warning(`Wykryto ${summary.warningsCount} ostrzeżenia`, {
-          description: summary.mainIssue,
-          duration: 8000
-        });
-      } else {
-        toast.success('Diagnostyka zakończona - wszystko działa poprawnie', {
-          duration: 5000
-        });
+      if (results.summary && typeof results.summary === 'object') {
+        // Safely access properties with proper type checking
+        const summary = results.summary as { 
+          criticalIssuesCount?: number; 
+          warningsCount?: number;
+          mainIssue?: string;
+        };
+        
+        if (summary.criticalIssuesCount && summary.criticalIssuesCount > 0) {
+          toast.error(`Wykryto ${summary.criticalIssuesCount} krytyczne problemy`, {
+            description: summary.mainIssue || 'Szczegóły w konsoli',
+            duration: 8000
+          });
+        } else if (summary.warningsCount && summary.warningsCount > 0) {
+          toast.warning(`Wykryto ${summary.warningsCount} ostrzeżenia`, {
+            description: summary.mainIssue || 'Szczegóły w konsoli',
+            duration: 8000
+          });
+        }
       }
       
-      // Properly type the tests part of the results
-      const tests = results.tests as Record<string, { 
-        success: boolean; 
-        error?: unknown;
-      }>;
-      
-      if (tests) {
-        for (const [testName, result] of Object.entries(tests)) {
-          if (result.success === false) {
-            const errorMessage = result.error instanceof Error 
-              ? result.error.message 
-              : typeof result.error === 'string' 
-                ? result.error 
-                : 'Szczegóły w konsoli';
+      // Safe type assertion for tests results
+      if (results.tests && typeof results.tests === 'object') {
+        const tests = results.tests as Record<string, { 
+          success: boolean; 
+          error?: unknown;
+        }>;
+        
+        Object.entries(tests).forEach(([testName, result]) => {
+          if (result && result.success === false) {
+            const errorMessage = typeof result.error === 'string' 
+              ? result.error 
+              : 'Szczegóły w konsoli';
                 
             console.error(`[DIAGNOSTICS] Test '${testName}' failed:`, result.error);
             toast.error(`Test '${testName}' nie powiódł się`, {
               description: errorMessage,
               duration: 5000
             });
-          } else {
-            console.log(`[DIAGNOSTICS] Test '${testName}' completed:`, result);
           }
-        }
+        });
       }
       
-      toast.dismiss('diagnostics-running');
     } catch (error) {
       console.error('[DIAGNOSTICS] Error running diagnostics:', error);
       toast.error('Błąd podczas diagnostyki', {
         description: error instanceof Error ? error.message : 'Nieznany błąd',
         duration: 8000
       });
-      toast.dismiss('diagnostics-running');
     } finally {
       setIsDiagnosing(false);
     }
