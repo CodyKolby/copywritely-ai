@@ -41,10 +41,9 @@ serve(async (req) => {
       apiVersion: '2023-10-16',
     });
 
-    // Create checkout session with trial_settings to limit trial abuse
+    // Create checkout session with configurations to prevent trial abuse
     const sessionParams = {
       mode: 'subscription',
-      customer_email: customerEmail,
       line_items: [
         {
           price: priceId,
@@ -61,16 +60,20 @@ serve(async (req) => {
           }
         }
       },
-      payment_method_collection: 'always',
+      payment_method_collection: 'if_required',
       allow_promotion_codes: true,
       payment_intent_data: {
         setup_future_usage: 'off_session',
       },
-      customer_creation: 'always',
       payment_method_types: ['card'],
       billing_address_collection: 'auto',
       locale: 'pl',
     };
+
+    // Add customer email if provided
+    if (customerEmail) {
+      sessionParams.customer_email = customerEmail;
+    }
     
     console.log('Creating Stripe checkout session...');
     const session = await stripe.checkout.sessions.create(sessionParams);

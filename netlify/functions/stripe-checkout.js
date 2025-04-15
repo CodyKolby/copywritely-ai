@@ -94,7 +94,7 @@ exports.handler = async (event, context) => {
     console.log('Netlify function: Using priceId:', priceId);
     console.log('Netlify function: Stripe API key available:', !!process.env.STRIPE_SECRET_KEY);
 
-    // Create session parameters - use correct Stripe format
+    // Create session parameters with similar configuration as the edge function
     const sessionParams = {
       payment_method_types: ['card'],
       mode: 'subscription',
@@ -109,8 +109,14 @@ exports.handler = async (event, context) => {
       allow_promotion_codes: true,
       billing_address_collection: 'auto',
       subscription_data: {
-        trial_period_days: 3
-      }
+        trial_period_days: 3,
+        trial_settings: {
+          end_behavior: {
+            missing_payment_method: 'cancel'
+          }
+        }
+      },
+      payment_method_collection: 'if_required'
     };
     
     // Add customer email if provided

@@ -72,7 +72,7 @@ export const createCheckoutSession = async (priceId: string) => {
       console.error('[CHECKOUT] Edge function failed, trying Netlify fallback:', edgeFunctionError);
       
       // Try Netlify fallback
-      const netlifyUrl = `https://copywrite-assist.com/.netlify/functions/stripe-checkout`;
+      const netlifyUrl = `${window.location.protocol}//${window.location.host}/.netlify/functions/stripe-checkout`;
       
       console.log('[CHECKOUT] Calling Netlify function at:', netlifyUrl);
       
@@ -91,8 +91,9 @@ export const createCheckoutSession = async (priceId: string) => {
       });
       
       if (!response.ok) {
-        console.error('[CHECKOUT] Netlify function error:', await response.text());
-        throw new Error('Błąd podczas tworzenia sesji w fallback');
+        const errorText = await response.text();
+        console.error('[CHECKOUT] Netlify function error:', errorText);
+        throw new Error(`Błąd podczas tworzenia sesji w fallback: ${response.status} ${errorText}`);
       }
       
       const netlifyData = await response.json();
