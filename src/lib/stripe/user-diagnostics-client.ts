@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -224,7 +225,7 @@ export const testCriticalFunctions = async (userId: string) => {
     });
     
     // Race them
-    const connectResult = await Promise.race([connectTest, connectTimeout]);
+    const connectResult = await Promise.race([connectTest, connectTimeout]) as Response;
     const connectDuration = Date.now() - connectStart;
     
     results.tests.connectivity = {
