@@ -261,15 +261,15 @@ export const testCriticalFunctions = async (userId: string) => {
       // We'll use Promise.race with the first successful promise
       const raceWithSuccess = async () => {
         // Keep track of errors to throw if all fail
-        const errors = [];
+        const errors: Error[] = [];
         
         // Create promises that either resolve with the actual response or reject if errored
         const wrappedPromises = connectPromises.map(p => 
-          p.then(response => ({ success: true, response }))
+          p.then(response => ({ success: true as const, response }))
            .catch(error => {
-             errors.push(error);
+             errors.push(error instanceof Error ? error : new Error(String(error)));
              // Don't reject here, just return a "no success" result
-             return { success: false, error };
+             return { success: false as const, error };
            })
         );
         
@@ -280,12 +280,13 @@ export const testCriticalFunctions = async (userId: string) => {
         const firstSuccess = results.find(result => result.success);
         
         // If any succeeded, return that one
-        if (firstSuccess) {
+        if (firstSuccess && firstSuccess.success) {
+          // TypeScript now knows that firstSuccess has the 'response' property
           return firstSuccess.response;
         }
         
-        // Otherwise, throw the collected errors
-        throw new AggregateError(errors, 'All connectivity tests failed');
+        // Otherwise, throw an error with all the collected errors
+        throw new Error(`All connectivity tests failed: ${errors.map(e => e.message).join(', ')}`);
       };
       
       // Race against timeout, but with success checking
