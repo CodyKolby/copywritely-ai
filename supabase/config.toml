@@ -21,4 +21,3 @@ verify_jwt = true
 
 [functions.diagnose-user-data]
 verify_jwt = true
-

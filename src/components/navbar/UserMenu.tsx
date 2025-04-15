@@ -1,8 +1,7 @@
-
 import { User } from '@supabase/supabase-js';
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { LogOut, FolderOpen, CreditCard, Shield, RefreshCw } from 'lucide-react';
+import { LogOut, FolderOpen, CreditCard, Shield, RefreshCw, AlertCircle } from 'lucide-react';
 import { Profile } from '@/contexts/auth/types';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -18,6 +17,7 @@ import SubscriptionModal from '../subscription/SubscriptionModal';
 import { clearPremiumFromLocalStorage } from '@/contexts/auth/local-storage-utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { testCriticalFunctions } from '@/lib/stripe/user-diagnostics-client';
 
 interface UserMenuProps {
   user: User;
@@ -31,6 +31,7 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
   const [subscriptionModalOpen, setSubscriptionModalOpen] = useState(false);
   const [effectivePremium, setEffectivePremium] = useState(isPremium || localPremium);
   const [isCheckingPremium, setIsCheckingPremium] = useState(false);
+  const [isDiagnosing, setIsDiagnosing] = useState(false);
 
   const getInitials = () => {
     if (!user?.email) return 'U';
@@ -165,6 +166,46 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
     }
   };
 
+  const runDiagnostics = async () => {
+    if (!user?.id) {
+      toast.error('Brak ID użytkownika');
+      return;
+    }
+    
+    setIsDiagnosing(true);
+    try {
+      toast.info('Uruchamianie pełnej diagnostyki...');
+      console.log('[DIAGNOSTICS] Starting full diagnostics for user:', user.id);
+      
+      const results = await testCriticalFunctions(user.id);
+      console.log('[DIAGNOSTICS] Full diagnostic results:', results);
+      
+      // Display summary in toast
+      if (results.summary?.criticalIssuesCount > 0) {
+        toast.error(`Wykryto ${results.summary.criticalIssuesCount} krytyczne problemy`, {
+          description: results.summary.mainIssue,
+          duration: 8000
+        });
+      } else if (results.summary?.warningsCount > 0) {
+        toast.warning(`Wykryto ${results.summary.warningsCount} ostrzeżenia`, {
+          description: results.summary.mainIssue,
+          duration: 8000
+        });
+      } else {
+        toast.success('Diagnostyka zakończona - wszystko działa poprawnie', {
+          duration: 5000
+        });
+      }
+    } catch (error) {
+      console.error('[DIAGNOSTICS] Error running diagnostics:', error);
+      toast.error('Błąd podczas diagnostyki', {
+        description: error instanceof Error ? error.message : 'Nieznany błąd'
+      });
+    } finally {
+      setIsDiagnosing(false);
+    }
+  };
+
   return (
     <>
       <DropdownMenu>
@@ -213,6 +254,14 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
           <DropdownMenuItem onClick={() => setSubscriptionModalOpen(true)} className="gap-2">
             <CreditCard size={16} /> 
             <span>Subskrypcja</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem 
+            onClick={runDiagnostics} 
+            className="gap-2 text-amber-600"
+            disabled={isDiagnosing}
+          >
+            <AlertCircle size={16} /> 
+            <span>{isDiagnosing ? 'Diagnostyka...' : 'Diagnostyka konta'}</span>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem 
