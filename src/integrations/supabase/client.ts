@@ -2,8 +2,12 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = "https://jorbqjareswzdrsmepbv.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpvcmJxamFyZXN3emRyc21lcGJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI1NTcyNjMsImV4cCI6MjA1ODEzMzI2M30.WtGgnQKLVD2ZuOq4qNrIfcmFc98U3Q6YLrCCRG_mrH4";
+// Use environment variables from .env file
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://jorbqjareswzdrsmepbv.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpvcmJxamFyZXN3emRyc21lcGJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI1NTcyNjMsImV4cCI6MjA1ODEzMzI2M30.WtGgnQKLVD2ZuOq4qNrIfcmFc98U3Q6YLrCCRG_mrH4";
+
+// Log initialization parameters to help with debugging
+console.log('[SUPABASE] Initializing client with:', { url: SUPABASE_URL, keyLength: SUPABASE_PUBLISHABLE_KEY?.length || 0 });
 
 // Create a singleton instance with explicit auth configuration
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
@@ -14,32 +18,6 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storageKey: 'sb-jorbqjareswzdrsmepbv-auth-token',
     detectSessionInUrl: true,
     flowType: 'implicit'
-  },
-  global: {
-    fetch: (...args) => {
-      const [url, options] = args;
-      const headers = options?.headers || {};
-      
-      // Add cache control headers to prevent caching
-      const newHeaders = {
-        ...headers,
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-      };
-      
-      return fetch(url, {
-        ...options,
-        headers: newHeaders
-      });
-    }
-  },
-  realtime: {
-    headers: {
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0'
-    }
   }
 });
 
@@ -49,7 +27,7 @@ export const validateSupabaseConnection = async () => {
     console.log('[SUPABASE] Validating connection to:', SUPABASE_URL);
     const startTime = Date.now();
     
-    // Instead of using rpc('version'), let's use a simple query to check connectivity
+    // Use a simple query to check connectivity
     const { data, error } = await supabase
       .from('profiles')
       .select('count')

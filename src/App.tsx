@@ -23,6 +23,7 @@ import Success from './pages/Success';
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import { checkSupabaseConnection } from "./lib/supabase";
+import { toast } from "sonner";
 import { useEffect } from "react";
 
 // Configure query client with better error handling
@@ -45,10 +46,18 @@ const App = () => {
           console.log('[APP] Supabase connection verified successfully');
         } else {
           console.error('[APP] Failed to connect to Supabase');
+          toast.error('Problem z połączeniem do bazy danych', {
+            description: 'Spróbuj odświeżyć stronę lub spróbuj później',
+            duration: 5000,
+          });
         }
       })
       .catch(error => {
         console.error('[APP] Error checking Supabase connection:', error);
+        toast.error('Problem z połączeniem do bazy danych', {
+          description: 'Spróbuj odświeżyć stronę lub spróbuj później',
+          duration: 5000,
+        });
       });
   }, []);
 

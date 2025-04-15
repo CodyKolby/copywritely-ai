@@ -7,6 +7,7 @@ export { supabase };
 // Export a function to check connection health
 export const checkSupabaseConnection = async () => {
   try {
+    console.log('[SUPABASE-CHECK] Attempting connection check...');
     const { data, error } = await supabase.from('profiles').select('count').limit(1);
     
     if (error) {
