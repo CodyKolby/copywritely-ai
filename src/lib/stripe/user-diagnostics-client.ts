@@ -208,7 +208,7 @@ export const testCriticalFunctions = async (userId: string) => {
     };
   }
   
-  // Test 4: Connectivity Test - Can we reach supabase.io?
+  // Test 4: Connectivity Test - Replace supabase.io with a more reliable endpoint
   console.log('[CRITICAL-TEST] Test 4: Testing general internet connectivity');
   try {
     const connectStart = Date.now();
@@ -218,22 +218,33 @@ export const testCriticalFunctions = async (userId: string) => {
       setTimeout(() => reject(new Error('Connectivity test timeout')), 3000);
     });
     
-    // Test connectivity to a reliable site
-    const connectTest = fetch('https://www.supabase.io/ping', { 
+    // Use a more reliable endpoint that supports CORS
+    // Google's homepage is generally reliable and supports CORS
+    const connectTest = fetch('https://www.google.com', { 
       method: 'HEAD',
+      mode: 'no-cors', // Important: Use no-cors mode to prevent CORS errors
       signal: controller.signal 
     });
     
-    // Race them
-    const connectResult = await Promise.race([connectTest, connectTimeout]) as Response;
-    const connectDuration = Date.now() - connectStart;
-    
-    results.tests.connectivity = {
-      success: true,
-      status: connectResult.status,
-      ok: connectResult.ok,
-      duration: connectDuration
-    };
+    try {
+      // Race them - note that with no-cors we can't check status or ok
+      await Promise.race([connectTest, connectTimeout]);
+      const connectDuration = Date.now() - connectStart;
+      
+      // If we get here without error, the connection worked
+      results.tests.connectivity = {
+        success: true,
+        info: 'Connection test successful',
+        duration: connectDuration
+      };
+    } catch (error) {
+      const connectDuration = Date.now() - connectStart;
+      results.tests.connectivity = {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown connectivity error',
+        duration: connectDuration
+      };
+    }
   } catch (e) {
     results.tests.connectivity = {
       success: false,
