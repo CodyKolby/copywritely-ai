@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -122,7 +123,7 @@ export const testCriticalFunctions = async (userId: string) => {
     };
   }
   
-  // Test 2: Direct Call to Edge Function
+  // Test 2: Direct Call to Edge Function - increased timeout to 15 seconds
   console.log('[CRITICAL-TEST] Test 2: Testing diagnose-user-data edge function');
   try {
     const edgeStart = Date.now();
@@ -130,7 +131,7 @@ export const testCriticalFunctions = async (userId: string) => {
     const diagnosticResponse = await safeEdgeInvoke(
       'diagnose-user-data',
       { userId },
-      10000 // 10 seconds timeout
+      15000 // 15 seconds timeout (increased from 10)
     );
     
     const edgeDuration = Date.now() - edgeStart;
@@ -142,6 +143,26 @@ export const testCriticalFunctions = async (userId: string) => {
         timedOut: !!diagnosticResponse.timedOut,
         duration: edgeDuration
       };
+      
+      // Provide fallback diagnostic data when edge function times out
+      if (diagnosticResponse.timedOut) {
+        results.edgeDiagnostics = {
+          timestamp: new Date().toISOString(),
+          userId,
+          services: {
+            auth: { success: false, error: 'Edge function timeout' },
+            profile: { success: false, error: 'Edge function timeout' }
+          },
+          problems: ['Edge function timeout - consider retrying later'],
+          summary: {
+            servicesChecked: 0,
+            servicesFailed: 0,
+            problemsFound: 1,
+            fixesApplied: 0,
+            overallStatus: 'unknown'
+          }
+        };
+      }
     } else {
       results.tests.edgeFunction = {
         success: true,
@@ -159,14 +180,14 @@ export const testCriticalFunctions = async (userId: string) => {
     };
   }
   
-  // Test 3: Direct Supabase Check (with timeout)
+  // Test 3: Direct Supabase Check (with increased timeout to 5 seconds)
   console.log('[CRITICAL-TEST] Test 3: Testing direct database connection');
   try {
     const start = Date.now();
     
     // Create a promise that times out
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Direct supabase query timeout')), 3000);
+      setTimeout(() => reject(new Error('Direct supabase query timeout')), 5000); // Increased from 3 seconds
     });
     
     // Create the actual query promise
@@ -208,27 +229,42 @@ export const testCriticalFunctions = async (userId: string) => {
     };
   }
   
-  // Test 4: Connectivity Test - Replace supabase.io with a more reliable endpoint
+  // Test 4: Connectivity Test with more reliable endpoint
   console.log('[CRITICAL-TEST] Test 4: Testing general internet connectivity');
   try {
     const connectStart = Date.now();
     
-    // Create a timeout promise
+    // Create a timeout promise with increased timeout
     const connectTimeout = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Connectivity test timeout')), 3000);
+      setTimeout(() => reject(new Error('Connectivity test timeout')), 5000); // Increased from 3 seconds
     });
     
-    // Use a more reliable endpoint that supports CORS
-    // Google's homepage is generally reliable and supports CORS
-    const connectTest = fetch('https://www.google.com', { 
-      method: 'HEAD',
-      mode: 'no-cors', // Important: Use no-cors mode to prevent CORS errors
-      signal: controller.signal 
-    });
+    // Use multiple reliable endpoints for better chance of success
+    const connectPromises = [
+      fetch('https://www.google.com', { 
+        method: 'HEAD',
+        mode: 'no-cors',
+        signal: controller.signal 
+      }),
+      fetch('https://www.cloudflare.com', { 
+        method: 'HEAD',
+        mode: 'no-cors',
+        signal: controller.signal 
+      }),
+      fetch('https://www.microsoft.com', { 
+        method: 'HEAD',
+        mode: 'no-cors',
+        signal: controller.signal 
+      })
+    ];
     
     try {
-      // Race them - note that with no-cors we can't check status or ok
-      await Promise.race([connectTest, connectTimeout]);
+      // Race against timeout, but any successful connection means success
+      await Promise.race([
+        Promise.any(connectPromises),
+        connectTimeout
+      ]);
+      
       const connectDuration = Date.now() - connectStart;
       
       // If we get here without error, the connection worked
@@ -288,11 +324,37 @@ const analyzeTestResults = (results: Record<string, any>) => {
     suggestedFixes: [] as string[]
   };
   
+  // First check if all tests are successful
+  const allTestsSuccessful = 
+    results.tests.connectivity?.success && 
+    results.tests.localSession?.success &&
+    (results.tests.directDbQuery?.success || results.tests.edgeFunction?.success);
+  
+  if (allTestsSuccessful) {
+    summary.mainIssue = 'Wszystkie podstawowe testy zakończone pomyślnie';
+    return summary;
+  }
+  
   // Add network connectivity issues first if they exist
   if (!results.tests.connectivity?.success) {
     summary.criticalIssuesCount++;
     summary.issues.push('Problem z połączeniem internetowym');
     summary.suggestedFixes.push('Sprawdź połączenie internetowe i stabilność sieci');
+  } else {
+    // If connectivity is good but other services failed, it's likely a backend issue
+    if (!results.tests.edgeFunction?.success || !results.tests.directDbQuery?.success) {
+      if (results.tests.edgeFunction?.timedOut) {
+        summary.criticalIssuesCount++;
+        summary.issues.push('Połączenie z serwerem przekroczyło limit czasu');
+        summary.suggestedFixes.push('Problem z dostępnością serwera - spróbuj ponownie później');
+      }
+      
+      if (!results.tests.directDbQuery?.success) {
+        summary.criticalIssuesCount++;
+        summary.issues.push('Błąd połączenia z bazą danych');
+        summary.suggestedFixes.push('Problem z połączeniem do bazy danych - spróbuj ponownie później');
+      }
+    }
   }
   
   // Check local session issues
@@ -302,58 +364,25 @@ const analyzeTestResults = (results: Record<string, any>) => {
     summary.suggestedFixes.push('Wyloguj i zaloguj się ponownie');
   }
   
-  // Check edge function connectivity
-  if (!results.tests.edgeFunction?.success) {
-    if (results.tests.edgeFunction?.timedOut) {
-      summary.criticalIssuesCount++;
-      summary.issues.push('Połączenie z serwerem przekroczyło limit czasu');
-      
-      if (results.tests.connectivity?.success) {
-        summary.suggestedFixes.push('Problem z dostępnością serwera - spróbuj ponownie później');
-      } else {
-        summary.suggestedFixes.push('Sprawdź połączenie internetowe lub spróbuj ponownie później');
-      }
-    } else {
-      summary.criticalIssuesCount++;
-      summary.issues.push('Błąd połączenia z funkcją diagnostyczną');
-    }
-  }
-  
-  // Check database connectivity
-  if (!results.tests.directDbQuery?.success) {
-    summary.criticalIssuesCount++;
-    summary.issues.push('Błąd połączenia z bazą danych');
-    
-    if (results.tests.connectivity?.success) {
-      summary.suggestedFixes.push('Problem z połączeniem do bazy danych - spróbuj ponownie później');
-    } else {
-      summary.suggestedFixes.push('Sprawdź połączenie internetowe');
-    }
-  } else if (results.tests.directDbQuery?.success && !results.tests.directDbQuery?.profileFound) {
-    summary.criticalIssuesCount++;
-    summary.issues.push('Brak profilu użytkownika w bazie danych');
-    summary.suggestedFixes.push('Utwórz nowy profil użytkownika');
-  }
-  
-  // Check edge diagnostics specific issues if available
-  if (results.edgeDiagnostics) {
-    if (results.edgeDiagnostics.problems && results.edgeDiagnostics.problems.length > 0) {
-      results.edgeDiagnostics.problems.forEach((problem: string) => {
-        if (problem.includes('premium') || problem.includes('Premium')) {
-          summary.warningsCount++;
+  // Add any other issues from the edge diagnostics
+  if (results.edgeDiagnostics?.problems && results.edgeDiagnostics.problems.length > 0) {
+    results.edgeDiagnostics.problems.forEach((problem: string) => {
+      if (problem.includes('premium') || problem.includes('Premium')) {
+        summary.warningsCount++;
+        if (!summary.issues.includes(problem)) {
           summary.issues.push(problem);
         }
-      });
-    }
-    
-    // Add any fixes from the edge function
-    if (results.edgeDiagnostics.fixes?.fixes?.length > 0) {
-      results.edgeDiagnostics.fixes.fixes.forEach((fix: string) => {
-        if (!summary.suggestedFixes.includes(fix)) {
-          summary.suggestedFixes.push(fix);
-        }
-      });
-    }
+      }
+    });
+  }
+  
+  // Add any suggested fixes from edge diagnostics
+  if (results.edgeDiagnostics?.fixes?.fixes?.length > 0) {
+    results.edgeDiagnostics.fixes.fixes.forEach((fix: string) => {
+      if (!summary.suggestedFixes.includes(fix)) {
+        summary.suggestedFixes.push(fix);
+      }
+    });
   }
   
   // Remove duplicate fixes
@@ -364,6 +393,11 @@ const analyzeTestResults = (results: Record<string, any>) => {
     summary.mainIssue = summary.issues[0];
   } else {
     summary.mainIssue = 'Nie wykryto żadnych problemów';
+  }
+  
+  // Add offline mode suggestion if connectivity issues
+  if (!results.tests.connectivity?.success) {
+    summary.suggestedFixes.push('Sprawdź czy nie jesteś w trybie offline');
   }
   
   return summary;
@@ -451,6 +485,29 @@ export const diagnoseAndFixUserAccount = async (userId: string) => {
       title: 'Informacja',
       description: 'Uruchamianie diagnostyki konta...'
     });
+    
+    // Run basic connectivity test first before proceeding with full diagnostics
+    try {
+      // Simple connectivity check - if this fails, we know the issue is connectivity
+      await fetch('https://www.google.com', { 
+        method: 'HEAD',
+        mode: 'no-cors',
+        timeout: 5000
+      });
+    } catch (connectError) {
+      console.error('[DIAGNOSTICS] Basic connectivity test failed:', connectError);
+      toast({
+        variant: "destructive",
+        title: 'Problem z połączeniem internetowym',
+        description: 'Sprawdź swoje połączenie internetowe'
+      });
+      
+      return {
+        success: false,
+        message: 'Connectivity test failed',
+        error: connectError
+      };
+    }
     
     // Run comprehensive diagnostics
     const results = await testCriticalFunctions(userId);
