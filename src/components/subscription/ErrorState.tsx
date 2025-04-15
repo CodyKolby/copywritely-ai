@@ -10,9 +10,16 @@ interface ErrorStateProps {
   onOpenChange: (open: boolean) => void;
   isPremium?: boolean;
   error: Error | null;
+  onRetry?: () => void;
 }
 
-const ErrorState: React.FC<ErrorStateProps> = ({ open, onOpenChange, isPremium, error }) => {
+const ErrorState: React.FC<ErrorStateProps> = ({ 
+  open, 
+  onOpenChange, 
+  isPremium, 
+  error,
+  onRetry
+}) => {
   const navigate = useNavigate();
   const isTimeout = error?.message?.includes('czas oczekiwania') || false;
 
@@ -55,14 +62,18 @@ const ErrorState: React.FC<ErrorStateProps> = ({ open, onOpenChange, isPremium, 
           </Button>
           <Button 
             onClick={() => {
-              onOpenChange(false);
-              navigate(0); // Force refresh page
+              if (onRetry) {
+                onRetry();
+              } else {
+                onOpenChange(false);
+                navigate(0); // Force refresh page
+              }
             }} 
             variant="default" 
             className="gap-2"
           >
             <RefreshCw className="h-4 w-4" />
-            Odśwież stronę
+            {onRetry ? 'Spróbuj ponownie' : 'Odśwież stronę'}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -24,7 +24,7 @@ export function usePaymentFlags() {
     }
     
     // Clear any pending timeout
-    if (timeoutRef.current) {
+    if (timeoutRef.current !== null) {
       try {
         window.clearTimeout(timeoutRef.current);
         timeoutRef.current = null;

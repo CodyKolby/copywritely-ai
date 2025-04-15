@@ -1,9 +1,10 @@
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { ExclamationTriangleIcon } from '@radix-ui/react-icons';
 import { useAuth } from '@/contexts/auth/AuthContext';
+import { toast } from 'sonner';
 
 // Import hooks
 import { usePremiumVerification } from '@/hooks/usePremiumVerification';
@@ -17,24 +18,56 @@ import TargetAudienceDialog from '@/components/scripts/TargetAudienceDialog';
 import { scriptTemplates } from '@/data/scriptTemplates';
 
 const ScriptGenerator = () => {
-  const { user } = useAuth();
+  const { user, isPremium, refreshSession } = useAuth();
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   // Use custom hooks
   const premiumVerification = usePremiumVerification();
   const templateSelection = useTemplateSelection(premiumVerification.validatePremiumStatus);
 
-  // On mount, scroll to top
+  // On mount, scroll to top and refresh auth if needed
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, []);
+    
+    // Try to refresh session once when page loads to ensure latest auth state
+    const attemptRefresh = async () => {
+      if (user?.id) {
+        console.log("Script generator - attempting session refresh");
+        setIsRefreshing(true);
+        try {
+          await refreshSession();
+          // After refreshing, verify premium status
+          if (user.id) {
+            await premiumVerification.validatePremiumStatus();
+          }
+        } catch (e) {
+          console.error("Error refreshing session:", e);
+        } finally {
+          setIsRefreshing(false);
+        }
+      }
+    };
+    
+    attemptRefresh();
+  }, [user?.id, refreshSession, premiumVerification]);
   
-  // Ensure targetAudienceDialogOpen is properly set 
+  // Log state for debugging
   useEffect(() => {
-    console.log("Script generator page loaded", {
+    console.log("Script generator page state:", {
+      userAuth: !!user,
+      userId: user?.id,
+      isPremium: premiumVerification.isPremium,
+      isCheckingPremium: premiumVerification.isCheckingPremium,
       currentTemplateId: templateSelection.currentTemplateId,
       dialogOpen: templateSelection.targetAudienceDialogOpen
     });
-  }, [templateSelection.currentTemplateId, templateSelection.targetAudienceDialogOpen]);
+  }, [
+    user, 
+    premiumVerification.isPremium, 
+    premiumVerification.isCheckingPremium, 
+    templateSelection.currentTemplateId, 
+    templateSelection.targetAudienceDialogOpen
+  ]);
   
   // Handle dialog closed - recheck premium status and reset templateId if needed
   const handleDialogOpenChange = (open: boolean) => {
@@ -57,15 +90,26 @@ const ScriptGenerator = () => {
   
   // Create a handler for template selection that logs details
   const handleTemplateSelect = (templateId: string) => {
+    if (!user) {
+      toast.error('Wymagane jest zalogowanie', {
+        description: 'Zaloguj się, aby kontynuować.',
+      });
+      return;
+    }
+    
     console.log(`Template ${templateId} selected, current state:`, {
+      userId: user?.id,
       isPremium: premiumVerification.isPremium,
       isCheckingPremium: premiumVerification.isCheckingPremium
     });
+    
     templateSelection.handleTemplateSelect(templateId);
   };
 
   // Determine if we should show the premium feature alert
-  const shouldShowPremiumAlert = !premiumVerification.isPremium && !premiumVerification.isCheckingPremium;
+  const shouldShowPremiumAlert = !premiumVerification.isPremium && 
+                                !premiumVerification.isCheckingPremium && 
+                                !isRefreshing;
 
   return (
     <div className="pt-24 pb-16 px-6">
@@ -106,13 +150,13 @@ const ScriptGenerator = () => {
           onSelectTemplate={handleTemplateSelect}
         />
 
-        {!premiumVerification.isCheckingPremium && (
+        {!premiumVerification.isCheckingPremium && user?.id && (
           <TargetAudienceDialog
             key={`dialog-${templateSelection.currentTemplateId || 'default'}`}
             open={templateSelection.targetAudienceDialogOpen}
             onOpenChange={handleDialogOpenChange}
             templateId={templateSelection.currentTemplateId}
-            userId={user?.id || ''}
+            userId={user?.id}
             isPremium={premiumVerification.isPremium}
           />
         )}

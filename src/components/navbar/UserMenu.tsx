@@ -2,7 +2,7 @@
 import { User } from '@supabase/supabase-js';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { LogOut, FolderOpen, CreditCard, Shield } from 'lucide-react';
+import { LogOut, FolderOpen, CreditCard, Shield, RefreshCw } from 'lucide-react';
 import { Profile } from '@/contexts/auth/types';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import {
 import SubscriptionModal from '../subscription/SubscriptionModal';
 import { clearPremiumFromLocalStorage } from '@/contexts/auth/local-storage-utils';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface UserMenuProps {
   user: User;
@@ -29,15 +30,67 @@ interface UserMenuProps {
 export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: UserMenuProps) => {
   const [subscriptionModalOpen, setSubscriptionModalOpen] = useState(false);
   const [effectivePremium, setEffectivePremium] = useState(false);
+  const [isCheckingPremium, setIsCheckingPremium] = useState(false);
 
   const getInitials = () => {
     if (!user?.email) return 'U';
     return user.email.charAt(0).toUpperCase();
   };
 
+  // Force direct database check for premium status
+  const verifyPremiumDirectly = async () => {
+    setIsCheckingPremium(true);
+    try {
+      console.log('[UserMenu] Directly checking premium status for user:', user.id);
+      const { data: dbProfile, error } = await supabase
+        .from('profiles')
+        .select('id, is_premium, subscription_status, subscription_expiry')
+        .eq('id', user.id)
+        .single();
+      
+      if (error) {
+        console.error('[UserMenu] Error fetching profile:', error);
+        return false;
+      }
+      
+      if (dbProfile) {
+        console.log('[UserMenu] Direct DB check result:', dbProfile);
+        
+        // Check expiry
+        const isExpired = dbProfile.subscription_expiry ? 
+          new Date(dbProfile.subscription_expiry) < new Date() : false;
+        
+        if (isExpired) {
+          console.log('[UserMenu] Subscription expired according to date');
+          return false;
+        }
+        
+        // Premium is valid if explicitly true and not expired
+        if (dbProfile.is_premium === true) {
+          console.log('[UserMenu] User has valid premium status');
+          return true;
+        }
+      }
+      
+      return false;
+    } catch (e) {
+      console.error('[UserMenu] Error in direct premium check:', e);
+      return false;
+    } finally {
+      setIsCheckingPremium(false);
+    }
+  };
+
   // Check all premium indicators and update local state
   useEffect(() => {
     const verifyPremiumStatus = async () => {
+      console.log('[UserMenu] Verifying premium status with inputs:', {
+        contextIsPremium: isPremium,
+        localPremium,
+        profileIsPremium: profile?.is_premium,
+        userId: user.id
+      });
+      
       // Start with context-provided premium status
       let isPremiumUser = isPremium;
       
@@ -49,6 +102,8 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
           if (isExpired) {
             console.log('[UserMenu] Premium expired according to expiry date');
             isPremiumUser = false;
+          } else {
+            console.log('[UserMenu] Subscription not expired, expiry date:', profile.subscription_expiry);
           }
         }
         
@@ -62,54 +117,48 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
         if (profile.is_premium === true) {
           console.log('[UserMenu] Profile explicitly has is_premium=true');
           isPremiumUser = true;
+        } else if (profile.is_premium === false) {
+          console.log('[UserMenu] Profile explicitly has is_premium=false');
+          isPremiumUser = false;
         }
       }
       
-      // Double check with database directly as last resort
-      try {
-        const { data: dbProfile } = await supabase
-          .from('profiles')
-          .select('is_premium, subscription_status, subscription_expiry')
-          .eq('id', user.id)
-          .single();
-          
-        if (dbProfile) {
-          // If database explicitly says premium, trust that
-          if (dbProfile.is_premium === true) {
-            console.log('[UserMenu] Database confirms premium status');
-            isPremiumUser = true;
-          }
-          
-          // Check subscription status
-          if (dbProfile.subscription_status === 'active') {
-            console.log('[UserMenu] Database shows active subscription');
-            isPremiumUser = true;
-          }
-          
-          // Check expiry date
-          if (dbProfile.subscription_expiry) {
-            const isExpired = new Date(dbProfile.subscription_expiry) < new Date();
-            if (isExpired) {
-              console.log('[UserMenu] Premium expired according to database');
-              isPremiumUser = false;
-            }
-          }
+      // If we're still uncertain, double check with database directly
+      if (!isPremiumUser) {
+        const directCheck = await verifyPremiumDirectly();
+        if (directCheck) {
+          console.log('[UserMenu] Direct DB check confirms premium status');
+          isPremiumUser = true;
         }
-      } catch (e) {
-        console.error('[UserMenu] Error checking database for premium status:', e);
       }
       
       // Update local state based on all checks
+      console.log('[UserMenu] Final premium determination:', isPremiumUser);
       setEffectivePremium(isPremiumUser);
     };
     
     verifyPremiumStatus();
-  }, [user, isPremium, profile, localPremium]);
+  }, [user.id, isPremium, profile, localPremium]);
 
   const handleSignOut = () => {
     // Clear localStorage premium backup on logout
     clearPremiumFromLocalStorage();
     signOut();
+  };
+
+  const handleRefreshPremium = async () => {
+    setIsCheckingPremium(true);
+    try {
+      const directCheck = await verifyPremiumDirectly();
+      if (directCheck) {
+        setEffectivePremium(true);
+        toast.success('Status premium potwierdzony');
+      } else {
+        toast.info('Status premium nie został potwierdzony');
+      }
+    } finally {
+      setIsCheckingPremium(false);
+    }
   };
 
   return (
@@ -134,9 +183,20 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
           <DropdownMenuLabel className="font-normal">
             <div className="flex flex-col space-y-1">
               <p className="text-sm font-medium leading-none">{user.email}</p>
-              <p className="text-xs leading-none text-muted-foreground">
-                {effectivePremium ? 'Konto Premium' : 'Konto Free'}
-              </p>
+              <div className="flex items-center gap-1">
+                <p className="text-xs leading-none text-muted-foreground">
+                  {effectivePremium ? 'Konto Premium' : 'Konto Free'}
+                </p>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-4 w-4 p-0 text-muted-foreground hover:text-copywrite-teal"
+                  onClick={handleRefreshPremium}
+                  disabled={isCheckingPremium}
+                >
+                  <RefreshCw className={`h-3 w-3 ${isCheckingPremium ? 'animate-spin' : ''}`} />
+                </Button>
+              </div>
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
