@@ -98,50 +98,53 @@ export const signUpWithEmail = async (email: string, password: string) => {
     
     console.log('[AUTH] Email sign up success:', data);
     
-    // After successful signup, try to create the profile directly
-    // This is a backup in case the RLS policies or triggers fail
+    // After successful signup, create the profile via our edge function
     if (data.user) {
       try {
-        console.log('[AUTH] Attempting direct profile creation after signup');
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .upsert({
-            id: data.user.id,
-            email: data.user.email,
-            full_name: username,
-            avatar_url: null,
-            is_premium: false,
-            updated_at: new Date().toISOString()
-          })
-          
-        if (profileError) {
-          console.error('[AUTH] Error creating profile after signup:', profileError);
-          
-          // Try with create-profile edge function as a fallback
-          try {
-            console.log('[AUTH] Attempting profile creation with edge function');
-            
-            const response = await fetch('https://jorbqjareswzdrsmepbv.functions.supabase.co/create-profile', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ userId: data.user.id }),
-            });
-            
-            if (response.ok) {
-              console.log('[AUTH] Edge function profile creation successful');
-            } else {
-              console.error('[AUTH] Edge function profile creation failed:', await response.text());
-            }
-          } catch (edgeFunctionError) {
-            console.error('[AUTH] Error calling create-profile edge function:', edgeFunctionError);
-          }
+        console.log('[AUTH] Calling create-profile edge function with user ID:', data.user.id);
+        
+        const response = await fetch('https://jorbqjareswzdrsmepbv.functions.supabase.co/create-profile', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${data.session?.access_token || ''}`
+          },
+          body: JSON.stringify({ userId: data.user.id }),
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+          console.log('[AUTH] Profile creation successful:', result);
         } else {
-          console.log('[AUTH] Profile created successfully after signup');
+          console.error('[AUTH] Profile creation failed:', result);
+          
+          // Fall back to direct insertion if edge function fails
+          try {
+            console.log('[AUTH] Falling back to direct profile creation');
+            const { error: insertError } = await supabase
+              .from('profiles')
+              .upsert({
+                id: data.user.id,
+                email: email,
+                full_name: username,
+                avatar_url: null,
+                is_premium: false,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              });
+              
+            if (insertError) {
+              console.error('[AUTH] Direct profile creation failed:', insertError);
+            } else {
+              console.log('[AUTH] Direct profile creation successful');
+            }
+          } catch (directError) {
+            console.error('[AUTH] Error in direct profile creation:', directError);
+          }
         }
-      } catch (profileErr) {
-        console.error('[AUTH] Exception creating profile after signup:', profileErr);
+      } catch (profileError) {
+        console.error('[AUTH] Error calling create-profile edge function:', profileError);
       }
     }
     

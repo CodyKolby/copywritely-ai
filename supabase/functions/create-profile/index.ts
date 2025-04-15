@@ -1,17 +1,12 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.23.0'
-
-// CORS headers for the function
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { corsHeaders } from '../shared/cors.ts'
 
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders })
   }
 
   try {
@@ -36,11 +31,13 @@ serve(async (req) => {
       )
     }
 
+    console.log(`[create-profile] Creating/updating profile for user ${userId}`);
+
     // Get user data from auth.users
     const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(userId)
     
     if (userError) {
-      console.error('Error fetching user:', userError)
+      console.error('[create-profile] Error fetching user:', userError);
       return new Response(
         JSON.stringify({
           error: 'Could not fetch user data',
@@ -54,6 +51,7 @@ serve(async (req) => {
     }
     
     if (!userData?.user) {
+      console.error('[create-profile] User not found');
       return new Response(
         JSON.stringify({
           error: 'User not found',
@@ -69,11 +67,11 @@ serve(async (req) => {
     const email = user.email
     const metadata = user.user_metadata || {}
     
-    console.log('Create profile function - user data:', {
+    console.log('[create-profile] User data:', {
       id: userId,
       email: email,
-      metadata: metadata
-    })
+      metadata
+    });
     
     // Generate a default name from email if no name is available
     const defaultName = email ? email.split('@')[0] : `User-${userId.substring(0, 8)}`
@@ -82,14 +80,16 @@ serve(async (req) => {
     // Check if profile already exists
     const { data: existingProfile } = await supabaseAdmin
       .from('profiles')
-      .select('id')
+      .select('id, email, full_name, avatar_url')
       .eq('id', userId)
       .maybeSingle()
+    
+    console.log('[create-profile] Existing profile:', existingProfile);
 
     // Insert or update the profile
     let operation
     if (existingProfile) {
-      console.log(`Profile exists for user ${userId}, updating it`)
+      console.log(`[create-profile] Profile exists for user ${userId}, updating it`);
       operation = supabaseAdmin
         .from('profiles')
         .update({
@@ -100,7 +100,7 @@ serve(async (req) => {
         })
         .eq('id', userId)
     } else {
-      console.log(`Creating new profile for user ${userId}`)
+      console.log(`[create-profile] Creating new profile for user ${userId}`);
       operation = supabaseAdmin
         .from('profiles')
         .insert({
@@ -117,7 +117,7 @@ serve(async (req) => {
     const { data: profile, error: profileError } = await operation.select().single()
 
     if (profileError) {
-      console.error('Error creating/updating profile:', profileError)
+      console.error('[create-profile] Error creating/updating profile:', profileError);
       return new Response(
         JSON.stringify({
           error: 'Failed to create/update profile',
@@ -130,6 +130,7 @@ serve(async (req) => {
       )
     }
 
+    console.log('[create-profile] Profile created/updated successfully:', profile);
     return new Response(
       JSON.stringify({
         success: true,
@@ -141,7 +142,7 @@ serve(async (req) => {
       }
     )
   } catch (error) {
-    console.error('Exception:', error)
+    console.error('[create-profile] Exception:', error);
     return new Response(
       JSON.stringify({
         error: 'Internal server error',

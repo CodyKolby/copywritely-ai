@@ -30,8 +30,12 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
   const effectivePremium = isPremium || localPremium;
 
   const getInitials = () => {
-    if (!user?.email) return 'U';
-    return user.email.charAt(0).toUpperCase();
+    const name = profile?.full_name || user?.email || 'U';
+    return name.charAt(0).toUpperCase();
+  };
+
+  const displayName = () => {
+    return profile?.full_name || user?.email || 'User';
   };
 
   const handleSignOut = () => {
@@ -45,7 +49,7 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="relative h-10 w-10 rounded-full">
             <Avatar>
-              <AvatarImage src={user.user_metadata?.avatar_url} alt="Profile" />
+              <AvatarImage src={profile?.avatar_url || user.user_metadata?.avatar_url} alt="Profile" />
               <AvatarFallback className="bg-copywrite-teal text-white">
                 {getInitials()}
               </AvatarFallback>
@@ -60,7 +64,10 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel className="font-normal">
             <div className="flex flex-col space-y-1">
-              <p className="text-sm font-medium leading-none">{user.email}</p>
+              <p className="text-sm font-medium leading-none">{displayName()}</p>
+              <p className="text-xs leading-none text-muted-foreground">
+                {user.email}
+              </p>
               <p className="text-xs leading-none text-muted-foreground">
                 {effectivePremium ? 'Konto Premium' : 'Konto Free'}
               </p>
