@@ -117,7 +117,7 @@ exports.handler = async (event, context) => {
         }
       },
       payment_method_collection: 'if_required',
-      customer_creation: 'always'
+      locale: 'pl'
     };
     
     // Add customer email if provided

@@ -64,8 +64,7 @@ serve(async (req) => {
       allow_promotion_codes: true,
       payment_method_types: ['card'],
       billing_address_collection: 'auto',
-      locale: 'pl',
-      customer_creation: 'always'
+      locale: 'pl'
     };
 
     // Add customer email if provided
