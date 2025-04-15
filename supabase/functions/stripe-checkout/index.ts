@@ -62,12 +62,10 @@ serve(async (req) => {
       },
       payment_method_collection: 'if_required',
       allow_promotion_codes: true,
-      payment_intent_data: {
-        setup_future_usage: 'off_session',
-      },
       payment_method_types: ['card'],
       billing_address_collection: 'auto',
       locale: 'pl',
+      customer_creation: 'always'
     };
 
     // Add customer email if provided

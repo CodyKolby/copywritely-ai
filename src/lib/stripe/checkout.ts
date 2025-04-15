@@ -71,8 +71,12 @@ export const createCheckoutSession = async (priceId: string) => {
       // If edge function fails, try with Netlify function as fallback
       console.error('[CHECKOUT] Edge function failed, trying Netlify fallback:', edgeFunctionError);
       
+      // Use the current protocol and hostname for the Netlify function URL
+      const currentUrl = window.location.href;
+      console.log('[CHECKOUT] Current URL:', currentUrl);
+      
       // Try Netlify fallback
-      const netlifyUrl = `${window.location.protocol}//${window.location.host}/.netlify/functions/stripe-checkout`;
+      const netlifyUrl = `${window.location.origin}/.netlify/functions/stripe-checkout`;
       
       console.log('[CHECKOUT] Calling Netlify function at:', netlifyUrl);
       
