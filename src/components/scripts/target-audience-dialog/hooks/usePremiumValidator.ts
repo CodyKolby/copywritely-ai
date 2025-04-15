@@ -27,7 +27,7 @@ export const usePremiumValidator = (
         const isExpired = profile.subscription_expiry ? 
           new Date(profile.subscription_expiry) < new Date() : false;
         
-        // If is_premium is false or subscription is canceled/expired, user is not premium
+        // If is_premium is false, subscription is canceled or expired, user is not premium
         if (!profile.is_premium || profile.subscription_status === 'canceled' || isExpired) {
           console.log('[PREMIUM-VALIDATOR] User does not have valid premium status');
           return false;

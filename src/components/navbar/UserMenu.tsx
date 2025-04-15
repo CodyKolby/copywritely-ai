@@ -33,9 +33,28 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
     return user.email.charAt(0).toUpperCase();
   };
 
-  // User has premium only if isPremium is true (from main auth context) or profile.is_premium is true
-  // We've removed localPremium and storagePremium as they may be out of sync
-  const userHasPremium = isPremium || (profile?.is_premium === true);
+  // Check all conditions that would make a user premium
+  const userHasPremium = (() => {
+    // If profile exists and has subscription data, check that first
+    if (profile) {
+      // Check expiry date if it exists
+      const isExpired = profile.subscription_expiry ? 
+        new Date(profile.subscription_expiry) < new Date() : false;
+      
+      // If status is canceled or expired, user is not premium
+      if (profile.subscription_status === 'canceled' || isExpired) {
+        return false;
+      }
+      
+      // If profile explicitly says is_premium=true, trust that
+      if (profile.is_premium === true) {
+        return true;
+      }
+    }
+    
+    // Fall back to context isPremium state only if all profile checks passed
+    return isPremium;
+  })();
 
   const handleSignOut = () => {
     // Clear localStorage premium backup on logout

@@ -32,7 +32,7 @@ export const useNavbar = (): UseNavbarReturn => {
   useEffect(() => {
     async function verifyPremium() {
       // Use the most reliable source of truth - profile.is_premium
-      if (profile?.is_premium === true) {
+      if (profile) {
         // Check for expired subscription
         if (profile.subscription_expiry) {
           const isExpired = new Date(profile.subscription_expiry) < new Date();
@@ -65,31 +65,27 @@ export const useNavbar = (): UseNavbarReturn => {
           return;
         }
         
-        setLocalPremium(true);
-      } else {
         // If profile.is_premium is explicitly false, respect that
-        if (profile && profile.is_premium === false) {
+        if (profile.is_premium === false) {
+          console.log('[NAVBAR] Profile explicitly has is_premium=false');
           setLocalPremium(false);
           clearPremiumFromLocalStorage();
-        } else if (isPremium) {
-          // Fall back to context state if profile not available
+          return;
+        }
+        
+        // If we've passed all checks and profile.is_premium is true, user is premium
+        if (profile.is_premium === true) {
+          console.log('[NAVBAR] User has valid premium status according to profile');
           setLocalPremium(true);
-        } else {
-          setLocalPremium(false);
+          return;
         }
       }
+      
+      // Fall back to context state if profile doesn't have conclusive data
+      setLocalPremium(isPremium);
     }
     
     verifyPremium();
-  }, [user, isPremium, profile, checkPremiumStatus]);
-
-  // If user is logged in but we don't have premium status or profile yet,
-  // verify with server
-  useEffect(() => {
-    if (user?.id && !isPremium && !profile?.is_premium) {
-      console.log('[NAVBAR] User logged in but no premium status, checking with server');
-      checkPremiumStatus(user.id);
-    }
   }, [user, isPremium, profile, checkPremiumStatus]);
 
   // Check subscription expiry periodically
@@ -128,19 +124,6 @@ export const useNavbar = (): UseNavbarReturn => {
     const interval = setInterval(checkExpiry, 60000);
     return () => clearInterval(interval);
   }, [user, profile, localPremium, checkPremiumStatus]);
-
-  // Log current premium status indicators
-  useEffect(() => {
-    console.log('Navbar premium status:', {
-      isPremium,
-      profileIsPremium: profile?.is_premium,
-      subscriptionId: profile?.subscription_id,
-      subscriptionStatus: profile?.subscription_status,
-      subscriptionExpiry: profile?.subscription_expiry,
-      localPremium,
-      now: new Date().toISOString()
-    });
-  }, [isPremium, profile, localPremium]);
 
   const navItems = [
     { path: '/', label: 'Główna' },
