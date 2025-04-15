@@ -14,7 +14,7 @@ export const fetchProfile = async (userId: string): Promise<Profile | null> => {
   try {
     console.log(`[PROFILE-UTILS] Fetching profile for user: ${userId}`);
     
-    // First, try to find an existing profile
+    // First, try to find an existing profile with standard query
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
@@ -26,6 +26,26 @@ export const fetchProfile = async (userId: string): Promise<Profile | null> => {
     } else if (data) {
       console.log('[PROFILE-UTILS] Profile fetched successfully:', data);
       return data as Profile;
+    }
+    
+    // If we get here, either no profile found or error occurred
+    // Explicitly try again with a simplified query to avoid possible 406 errors
+    try {
+      console.log('[PROFILE-UTILS] Trying simplified query');
+      const { data: simpleData, error: simpleError } = await supabase
+        .from('profiles')
+        .select('id, email, full_name, is_premium, avatar_url, created_at, updated_at')
+        .eq('id', userId)
+        .maybeSingle();
+        
+      if (simpleError) {
+        console.error('[PROFILE-UTILS] Error with simplified query:', simpleError);
+      } else if (simpleData) {
+        console.log('[PROFILE-UTILS] Profile fetched with simplified query:', simpleData);
+        return simpleData as Profile;
+      }
+    } catch (simpleQueryError) {
+      console.error('[PROFILE-UTILS] Exception in simplified query:', simpleQueryError);
     }
     
     // If no profile or error, try to create one
@@ -49,7 +69,7 @@ export const createProfile = async (userId: string): Promise<Profile | null> => 
   try {
     console.log(`[PROFILE-UTILS] Creating profile for user: ${userId}`);
     
-    // Get current session for user data
+    // Get current session for user data - use explicit headers to prevent 406 errors
     const { data: sessionData } = await supabase.auth.getSession();
     const user = sessionData?.session?.user;
     
@@ -83,7 +103,7 @@ export const createProfile = async (userId: string): Promise<Profile | null> => 
         is_premium: false,
         updated_at: new Date().toISOString()
       })
-      .select()
+      .select('id, email, full_name, avatar_url, is_premium') // Explicitly select only needed fields
       .maybeSingle();
       
     if (error) {
@@ -101,7 +121,7 @@ export const createProfile = async (userId: string): Promise<Profile | null> => 
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           })
-          .select()
+          .select('id, email, full_name, is_premium')
           .maybeSingle();
         
         if (insertError) {

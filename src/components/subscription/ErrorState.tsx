@@ -21,7 +21,21 @@ const ErrorState: React.FC<ErrorStateProps> = ({
   onRetry
 }) => {
   const navigate = useNavigate();
-  const isTimeout = error?.message?.includes('czas oczekiwania') || error?.message?.includes('timeout') || false;
+  const isTimeout = error?.message?.includes('czas oczekiwania') || 
+                   error?.message?.includes('timeout') || 
+                   error?.message?.includes('time') || 
+                   false;
+
+  const handleRetry = () => {
+    if (onRetry) {
+      console.log('[ERROR-STATE] Using provided retry handler');
+      onRetry();
+    } else {
+      console.log('[ERROR-STATE] No retry handler provided, refreshing page');
+      onOpenChange(false);
+      navigate(0); // Force refresh page
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -67,14 +81,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({
             Zamknij
           </Button>
           <Button 
-            onClick={() => {
-              if (onRetry) {
-                onRetry();
-              } else {
-                onOpenChange(false);
-                navigate(0); // Force refresh page
-              }
-            }} 
+            onClick={handleRetry} 
             variant="default" 
             className="gap-2"
           >

@@ -26,7 +26,8 @@ export function usePaymentProcess(
     console.log('Explicitly clearing payment flags');
     
     // Collect debug info
-    collectDebugInfo(user);
+    const debugInfo = collectDebugInfo(user);
+    console.log('[PAYMENT-PROCESS] Debug info:', debugInfo);
     
     // Prevent multiple clicks while already loading
     if (isLoading) {
@@ -76,23 +77,35 @@ export function usePaymentProcess(
         console.log('Checkout process timeout reached, resetting state');
         clearPaymentFlags();
         setIsLoading(false);
+        
         toast.error('Proces płatności trwa zbyt długo', {
           description: 'Spróbuj ponownie za chwilę lub skontaktuj się z obsługą',
           action: {
             label: 'Spróbuj ponownie',
-            onClick: () => window.location.reload()
+            onClick: () => handleSubscribe(billingCycle)
           }
         });
-      }, 60000); // Zwiększ timeout do 60 sekund
+      }, 30000); // Zmniejsz timeout do 30 sekund
       
       // Log environment details for debugging
       console.log('Browser details:', navigator.userAgent);
       console.log('Window location:', window.location.href);
       console.log('Window origin:', window.location.origin);
-      console.log('Stripe public key available:', !!import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
       
-      // Direct checkout with Stripe
-      const result = await createCheckoutSession(priceId);
+      // Add specific timeout handling for Stripe checkout
+      const checkoutPromise = createCheckoutSession(priceId);
+      const checkoutTimeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('Timeout during checkout creation'));
+        }, 15000); // 15 second timeout for checkout creation
+      });
+      
+      // Race between checkout and timeout
+      const result = await Promise.race([
+        checkoutPromise,
+        checkoutTimeoutPromise
+      ]);
+      
       console.log('createCheckoutSession result:', result);
       
       // If checkout function returns false, reset loading state
@@ -105,6 +118,14 @@ export function usePaymentProcess(
         setIsLoading(false);
         console.log('isLoading set to false after failed checkout');
         clearPaymentFlags(); // Clear flags again after failure
+        
+        // Show helpful error info
+        console.error('Checkout failure details:', {
+          userEmail: user.email ? 'Available' : 'Not available',
+          userId: user.id,
+          browser: navigator.userAgent,
+          time: new Date().toISOString()
+        });
       }
       // If successful, the page will redirect, so we don't need to do anything else here
       
@@ -119,14 +140,32 @@ export function usePaymentProcess(
       console.log('isLoading set to false after error');
       clearPaymentFlags();
       
-      // Show a more specific error message
-      toast.error('Wystąpił błąd podczas inicjowania płatności', {
-        description: 'Prosimy odświeżyć stronę i spróbować ponownie',
-        action: {
-          label: 'Odśwież',
-          onClick: () => window.location.reload()
-        }
-      });
+      // Try fallback with direct navigation if available
+      try {
+        toast.error('Wystąpił błąd podczas inicjowania płatności', {
+          description: 'Spróbujemy alternatywną metodę płatności',
+        });
+        
+        // Try netlifu fallback if available
+        const netlifyFallbackUrl = `https://copywrite-assist.com/.netlify/functions/stripe-checkout?priceId=${priceId}&customerEmail=${user.email || ''}`;
+        console.log('Trying fallback URL:', netlifyFallbackUrl);
+        
+        // Delay a bit before redirecting
+        window.setTimeout(() => {
+          window.location.href = netlifyFallbackUrl;
+        }, 2000);
+      } catch (fallbackError) {
+        console.error('Error with fallback:', fallbackError);
+        
+        // Show a more specific error message
+        toast.error('Wystąpił błąd podczas inicjowania płatności', {
+          description: 'Prosimy odświeżyć stronę i spróbować ponownie',
+          action: {
+            label: 'Odśwież',
+            onClick: () => window.location.reload()
+          }
+        });
+      }
     }
   };
 

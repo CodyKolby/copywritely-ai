@@ -13,6 +13,7 @@ export const useSessionManagement = (
   const [authInitialized, setAuthInitialized] = useState(false);
   const refreshInProgress = useRef(false);
   const authErrorCount = useRef(0);
+  const lastRefreshAttempt = useRef<number>(0);
 
   // Reset error count periodically
   useEffect(() => {
@@ -27,11 +28,20 @@ export const useSessionManagement = (
   }, []);
 
   const refreshSession = useCallback(async () => {
+    // Prevent refreshing too frequently (minimum 2 seconds between refreshes)
+    const now = Date.now();
+    if (now - lastRefreshAttempt.current < 2000) {
+      console.log('[SESSION] Refresh attempted too soon, skipping');
+      return false;
+    }
+    
     // Prevent concurrent refresh calls
     if (refreshInProgress.current) {
       console.log('[SESSION] Session refresh already in progress, skipping');
       return false;
     }
+    
+    lastRefreshAttempt.current = now;
     
     try {
       refreshInProgress.current = true;
@@ -75,7 +85,10 @@ export const useSessionManagement = (
       authErrorCount.current += 1;
       return false;
     } finally {
-      refreshInProgress.current = false;
+      // Add a small delay before allowing another refresh
+      setTimeout(() => {
+        refreshInProgress.current = false;
+      }, 1000);
     }
   }, [handleUserAuthenticated]);
 

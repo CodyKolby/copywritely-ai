@@ -13,6 +13,7 @@ export const useSubscriptionModal = (open: boolean) => {
   const [timeoutErrored, setTimeoutErrored] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const timeoutRef = useRef<number | null>(null);
+  const maxRetries = 2; // Limit retries
 
   // Clear timeout on unmount
   useEffect(() => {
@@ -52,7 +53,7 @@ export const useSubscriptionModal = (open: boolean) => {
       timeoutRef.current = window.setTimeout(() => {
         setTimeoutErrored(true);
         console.log('[SubscriptionModal] Subscription data fetch timeout reached');
-      }, 15000); // Increased timeout
+      }, 10000); // Reduced timeout to 10 seconds
     }
     
     return () => {
@@ -140,8 +141,12 @@ export const useSubscriptionModal = (open: boolean) => {
       try {
         console.log('[SubscriptionModal] Starting subscription data fetch for user:', user.id);
         
-        // If we hit the timeout error, throw early to avoid waiting
-        if (timeoutErrored) {
+        // If we hit the timeout error, use fallback immediately
+        if (timeoutErrored && retryCount >= maxRetries) {
+          console.log('[SubscriptionModal] Timeout reached after max retries, using fallback');
+          if (isPremium) {
+            return getFallbackSubscriptionData();
+          }
           throw new Error('Przekroczono czas oczekiwania na dane subskrypcji');
         }
 
@@ -169,11 +174,29 @@ export const useSubscriptionModal = (open: boolean) => {
           } as SubscriptionDetails;
         }
         
-        // Get standard subscription details
-        const subscriptionData = await getSubscriptionDetails(user.id);
+        // Set a quick timeout for edge function call
+        const subscriptionPromise = getSubscriptionDetails(user.id);
+        const timeoutPromise = new Promise<null>((_, reject) => {
+          setTimeout(() => {
+            reject(new Error('Przekroczono czas oczekiwania na dane subskrypcji'));
+          }, 5000); // 5 second timeout for the edge function
+        });
+        
+        // Race between subscription data fetch and timeout
+        const subscriptionData = await Promise.race([
+          subscriptionPromise,
+          timeoutPromise
+        ]);
         
         if (!subscriptionData) {
           console.log('[SubscriptionModal] No subscription data returned from API');
+          
+          // If timeout occurred but user has premium, use fallback data
+          if (isPremium) {
+            console.log('[SubscriptionModal] User has premium, using fallback data');
+            return getFallbackSubscriptionData();
+          }
+          
           throw new Error('Nie udało się pobrać danych subskrypcji');
         }
         
@@ -254,9 +277,8 @@ export const useSubscriptionModal = (open: boolean) => {
       }
     },
     enabled: !!user?.id && open,
-    retry: timeoutErrored ? 0 : 1,
-    retryDelay: 1000,
-    staleTime: 1000 * 60 * 2,
+    retry: false, // Disable auto retry, we handle our own retries
+    staleTime: 60000, // Cache data for 1 minute
   });
 
   // Refresh data when modal is opened
@@ -266,7 +288,7 @@ export const useSubscriptionModal = (open: boolean) => {
       setTimeoutErrored(false);
       setTimeout(() => {
         setManualRefetch(prev => !prev);
-      }, 300);
+      }, 100);
     }
   }, [open]);
 
@@ -303,11 +325,19 @@ export const useSubscriptionModal = (open: boolean) => {
 
   // Manual retry functionality
   const handleRetry = useCallback(() => {
+    if (retryCount >= maxRetries) {
+      console.log('[SubscriptionModal] Max retries reached, using fallback data');
+      if (isPremium) {
+        // Just close modal and use fallback data
+        return;
+      }
+    }
+    
     console.log('[SubscriptionModal] Manual retry triggered');
     setTimeoutErrored(false);
     setRetryCount(count => count + 1);
     refetch();
-  }, [refetch]);
+  }, [refetch, retryCount, isPremium, maxRetries]);
 
   // Check if we have premium but no data
   const isPremiumButNoData = isPremium && (!data || !data.hasSubscription);

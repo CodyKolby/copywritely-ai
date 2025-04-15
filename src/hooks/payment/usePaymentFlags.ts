@@ -21,7 +21,7 @@ export function usePaymentFlags() {
 
   // Clear all payment flags and timeouts
   const clearPaymentFlags = useCallback(() => {
-    console.log('Explicitly clearing payment flags');
+    console.log('[PAYMENT-FLAGS] Explicitly clearing payment flags');
     
     // Safely clear flags in session storage
     try {
@@ -30,7 +30,7 @@ export function usePaymentFlags() {
       sessionStorage.removeItem('stripeCheckoutInProgress');
       sessionStorage.removeItem('paymentProcessed'); // Also clear the payment processed flag
     } catch (e) {
-      console.error('Error clearing session storage:', e);
+      console.error('[PAYMENT-FLAGS] Error clearing session storage:', e);
     }
     
     // Clear any pending timeout
@@ -39,7 +39,7 @@ export function usePaymentFlags() {
         window.clearTimeout(timeoutRef.current);
         timeoutRef.current = null;
       } catch (e) {
-        console.error('Error clearing timeout:', e);
+        console.error('[PAYMENT-FLAGS] Error clearing timeout:', e);
       }
     }
     
