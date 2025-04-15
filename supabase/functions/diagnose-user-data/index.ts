@@ -28,7 +28,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
     
     // Get request data - add fallback for empty body
-    let requestData = {};
+    let requestData: { userId?: string; forceFixPremium?: boolean } = {};
     try {
       if (req.body) {
         requestData = await req.json();
@@ -56,7 +56,7 @@ serve(async (req) => {
     
     return new Response(
       JSON.stringify({
-        error: error.message || 'An unknown error occurred',
+        error: error instanceof Error ? error.message : 'An unknown error occurred',
         timestamp: new Date().toISOString()
       }),
       {

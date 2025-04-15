@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -202,11 +201,12 @@ export const testCriticalFunctions = async (userId: string) => {
       const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
       
       try {
+        // Remove the signal property as it's not supported in FunctionInvokeOptions
         const { data, error } = await supabase.functions.invoke(
           'check-subscription-status',
           {
-            body: { userId },
-            signal: controller.signal
+            body: { userId }
+            // signal property removed
           }
         );
         
@@ -236,7 +236,7 @@ export const testCriticalFunctions = async (userId: string) => {
         results.tests.subscriptionEdgeFunction = { 
           success: false, 
           error: e instanceof Error ? e.message : 'Unknown error',
-          timedOut: e.name === 'AbortError' 
+          timedOut: e instanceof Error && e.name === 'AbortError' 
         };
       }
     } catch (e) {
@@ -262,6 +262,7 @@ export const testCriticalFunctions = async (userId: string) => {
         const successUrl = `${origin}/success?session_id={CHECKOUT_SESSION_ID}`;
         const cancelUrl = `${origin}/pricing?canceled=true`;
         
+        // Remove the signal property as it's not supported
         const { data, error } = await supabase.functions.invoke(
           'stripe-checkout',
           {
@@ -271,8 +272,8 @@ export const testCriticalFunctions = async (userId: string) => {
               successUrl,
               cancelUrl,
               timestamp: new Date().toISOString()
-            },
-            signal: controller.signal
+            }
+            // signal property removed
           }
         );
         
@@ -303,7 +304,7 @@ export const testCriticalFunctions = async (userId: string) => {
         results.tests.checkoutSession = { 
           success: false, 
           error: e instanceof Error ? e.message : 'Unknown error',
-          timedOut: e.name === 'AbortError' 
+          timedOut: e instanceof Error && e.name === 'AbortError' 
         };
       }
     } catch (e) {
@@ -324,11 +325,18 @@ export const testCriticalFunctions = async (userId: string) => {
       const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
       
       try {
-        const { data: projects, error: projectsError } = await supabase
-          .from('projects')
-          .select('id, title, created_at, updated_at')
-          .eq('user_id', userId)
-          .abortSignal(controller.signal);
+        // Use our own timeout mechanism instead of the signal
+        const { data: projects, error: projectsError } = await Promise.race([
+          supabase
+            .from('projects')
+            .select('id, title, created_at, updated_at')
+            .eq('user_id', userId),
+          new Promise<any>((_, reject) => {
+            setTimeout(() => {
+              reject(new Error('Timeout fetching projects'));
+            }, 5000);
+          })
+        ]);
           
         clearTimeout(timeoutId);
         
@@ -357,7 +365,7 @@ export const testCriticalFunctions = async (userId: string) => {
         results.tests.projects = { 
           success: false, 
           error: e instanceof Error ? e.message : 'Unknown error',
-          timedOut: e.name === 'AbortError' 
+          timedOut: e instanceof Error && e.name === 'AbortError' 
         };
       }
     } catch (e) {

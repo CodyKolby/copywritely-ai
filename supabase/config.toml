@@ -1,6 +1,23 @@
 
 # Update this file to configure edge functions
 
+project_id = "jorbqjareswzdrsmepbv"
+
+[functions.stripe-webhook]
+verify_jwt = false
+
+[functions.postscript-agent]
+verify_jwt = false
+
+[functions.posthook-agent]
+verify_jwt = false
+
+[functions.social-hook-agent]
+verify_jwt = true
+
+[functions.social-content-agent]
+verify_jwt = true
+
 [functions.check-session-details]
 verify_jwt = true
 
