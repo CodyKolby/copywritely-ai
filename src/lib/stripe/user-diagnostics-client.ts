@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -17,8 +16,7 @@ export const testCriticalFunctions = async (userId: string) => {
   };
   
   // Show initial toast that will be updated or dismissed later
-  const toastId = 'diagnostics-running';
-  const initialToast = toast({
+  toast({
     title: 'Diagnostyka w toku...',
     description: 'Sprawdzanie połączenia z serwerem...',
     duration: 30000 // Set a long duration as we'll dismiss it manually
@@ -259,9 +257,40 @@ export const testCriticalFunctions = async (userId: string) => {
     ];
     
     try {
-      // Race against timeout, but any successful connection means success
+      // Fix: Replace Promise.any with a custom implementation
+      // We'll use Promise.race with the first successful promise
+      const raceWithSuccess = async () => {
+        // Keep track of errors to throw if all fail
+        const errors = [];
+        
+        // Create promises that either resolve with the actual response or reject if errored
+        const wrappedPromises = connectPromises.map(p => 
+          p.then(response => ({ success: true, response }))
+           .catch(error => {
+             errors.push(error);
+             // Don't reject here, just return a "no success" result
+             return { success: false, error };
+           })
+        );
+        
+        // Wait for all to complete
+        const results = await Promise.all(wrappedPromises);
+        
+        // Find the first success
+        const firstSuccess = results.find(result => result.success);
+        
+        // If any succeeded, return that one
+        if (firstSuccess) {
+          return firstSuccess.response;
+        }
+        
+        // Otherwise, throw the collected errors
+        throw new AggregateError(errors, 'All connectivity tests failed');
+      };
+      
+      // Race against timeout, but with success checking
       await Promise.race([
-        Promise.any(connectPromises),
+        raceWithSuccess(),
         connectTimeout
       ]);
       
@@ -492,7 +521,6 @@ export const diagnoseAndFixUserAccount = async (userId: string) => {
       await fetch('https://www.google.com', { 
         method: 'HEAD',
         mode: 'no-cors',
-        timeout: 5000
       });
     } catch (connectError) {
       console.error('[DIAGNOSTICS] Basic connectivity test failed:', connectError);
