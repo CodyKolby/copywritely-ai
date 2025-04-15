@@ -18,6 +18,11 @@ export const ConnectionStatusAlert: React.FC<ConnectionStatusAlertProps> = ({
 }) => {
   const isOnline = navigator.onLine;
   
+  // Only show alert for offline state to reduce noise
+  if (isOnline) {
+    return null;
+  }
+  
   return (
     <Alert 
       variant="destructive" 
@@ -25,22 +30,14 @@ export const ConnectionStatusAlert: React.FC<ConnectionStatusAlertProps> = ({
     >
       <div className="flex items-start">
         <div className="mr-2">
-          {!isOnline ? (
-            <WifiOff className="h-5 w-5" />
-          ) : (
-            <AlertCircle className="h-5 w-5" />
-          )}
+          <WifiOff className="h-5 w-5" />
         </div>
         <div className="flex-1">
           <AlertTitle>
-            {!isOnline 
-              ? "Brak połączenia z internetem" 
-              : "Problem z połączeniem do serwera"}
+            Brak połączenia z internetem
           </AlertTitle>
           <AlertDescription>
-            {!isOnline 
-              ? "Sprawdź swoje połączenie z internetem i spróbuj ponownie." 
-              : "Występuje problem z połączeniem do serwera. Upewnij się, że domena jest skonfigurowana w ustawieniach Supabase."}
+            Sprawdź swoje połączenie z internetem i spróbuj ponownie.
           </AlertDescription>
           <Button
             variant="outline"

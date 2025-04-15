@@ -34,34 +34,23 @@ export const createCheckoutSession = async (priceId: string) => {
       cancelUrl
     });
     
-    // Ustaw flagę, że proces checkout jest w toku
+    // Set flag that checkout process is in progress
     sessionStorage.setItem('stripeCheckoutInProgress', 'true');
     sessionStorage.setItem('redirectingToStripe', 'true');
     
-    // Spróbuj z funkcją edge
     try {
       console.log('[CHECKOUT] Invoking stripe-checkout edge function');
       
-      const timeoutPromise = new Promise<null>((_, reject) => {
-        setTimeout(() => {
-          reject(new Error('Timeout calling edge function'));
-        }, 5000);
+      // Call edge function with proper headers
+      const { data, error } = await supabase.functions.invoke('stripe-checkout', {
+        body: {
+          priceId,
+          customerEmail: userEmail || undefined,
+          successUrl,
+          cancelUrl,
+          timestamp: new Date().toISOString() // Add timestamp to prevent caching
+        }
       });
-      
-      // Call edge function with timeout
-      const { data, error } = await Promise.race([
-        supabase.functions.invoke('stripe-checkout', {
-          body: {
-            priceId,
-            customerEmail: userEmail || undefined,
-            userId: user.id,
-            successUrl,
-            cancelUrl,
-            timestamp: new Date().toISOString() // Dodaj timestamp, aby zapobiec cachowaniu
-          }
-        }),
-        timeoutPromise
-      ]);
       
       if (error) {
         console.error('[CHECKOUT] Stripe checkout error from edge function:', error);
@@ -71,7 +60,7 @@ export const createCheckoutSession = async (priceId: string) => {
       if (data?.url) {
         console.log('[CHECKOUT] Redirecting to Stripe checkout URL:', data.url);
         
-        // Przekieruj do URL sesji Stripe
+        // Redirect to Stripe session URL
         window.location.href = data.url;
         return true;
       } else {
@@ -79,7 +68,7 @@ export const createCheckoutSession = async (priceId: string) => {
         throw new Error('Nie otrzymano URL sesji checkout');
       }
     } catch (edgeFunctionError) {
-      // Jeśli funkcja edge zawiedzie, spróbuj z Netlify function jako fallback
+      // If edge function fails, try with Netlify function as fallback
       console.error('[CHECKOUT] Edge function failed, trying Netlify fallback:', edgeFunctionError);
       
       // Try Netlify fallback
@@ -119,7 +108,7 @@ export const createCheckoutSession = async (priceId: string) => {
   } catch (error) {
     console.error('[CHECKOUT] Stripe checkout error:', error);
     
-    // Wyczyść flagi sesji
+    // Clear session flags
     sessionStorage.removeItem('stripeCheckoutInProgress');
     sessionStorage.removeItem('redirectingToStripe');
     

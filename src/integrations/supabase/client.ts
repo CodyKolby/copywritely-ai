@@ -9,7 +9,7 @@ const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJh
 // Log initialization parameters to help with debugging
 console.log('[SUPABASE] Initializing client with:', { url: SUPABASE_URL, keyLength: SUPABASE_PUBLISHABLE_KEY?.length || 0 });
 
-// Create a singleton instance with simple settings - reduced complexity
+// Create a singleton instance with simple settings - REMOVED custom headers
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     persistSession: true,
@@ -18,9 +18,7 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     detectSessionInUrl: true
   },
   global: {
-    headers: { 
-      'x-application-name': 'scriptcreator'
-    }
+    // Removed the x-application-name header that was causing CORS issues
   },
   realtime: {
     timeout: 10000
