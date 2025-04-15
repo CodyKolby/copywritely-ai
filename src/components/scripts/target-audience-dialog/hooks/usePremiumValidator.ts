@@ -14,10 +14,7 @@ export const usePremiumValidator = (
   const validatePremiumStatus = async () => {
     if (!userId) return false;
     
-    // First check storage immediately
-    const storagePremium = checkAllPremiumStorages();
-    
-    // Check database directly for subscription status and expiry
+    // Check database directly for subscription status - this is the source of truth
     try {
       const { data: profile, error } = await supabase
         .from('profiles')
@@ -30,7 +27,8 @@ export const usePremiumValidator = (
         const isExpired = profile.subscription_expiry ? 
           new Date(profile.subscription_expiry) < new Date() : false;
         
-        if (isExpired || !profile.is_premium || profile.subscription_status === 'canceled') {
+        // If is_premium is false or subscription is canceled/expired, user is not premium
+        if (!profile.is_premium || profile.subscription_status === 'canceled' || isExpired) {
           console.log('[PREMIUM-VALIDATOR] User does not have valid premium status');
           return false;
         }
@@ -44,17 +42,7 @@ export const usePremiumValidator = (
       console.error('[PREMIUM-VALIDATOR] Error checking premium from database:', e);
     }
     
-    // If database check fails, fallback to other premium indicators
-    if (storagePremium) {
-      return true;
-    }
-    
-    // Otherwise use the verified status if available
-    if (verifiedPremium !== null) {
-      return verifiedPremium;
-    }
-    
-    // Otherwise return the original premium status
+    // If database check fails, fallback to context state
     return isPremium;
   };
 

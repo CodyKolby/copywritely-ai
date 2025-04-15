@@ -27,24 +27,15 @@ interface UserMenuProps {
 
 export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: UserMenuProps) => {
   const [subscriptionModalOpen, setSubscriptionModalOpen] = useState(false);
-  const [storagePremium, setStoragePremium] = useState(false);
-
-  // Update premium status indicators whenever props change
-  useEffect(() => {
-    if (isPremium || profile?.is_premium) {
-      setStoragePremium(true);
-    } else {
-      setStoragePremium(localPremium);
-    }
-  }, [isPremium, profile, localPremium]);
 
   const getInitials = () => {
     if (!user?.email) return 'U';
     return user.email.charAt(0).toUpperCase();
   };
 
-  // User has premium if any of the premium indicators are true
-  const userHasPremium = isPremium || profile?.is_premium || localPremium || storagePremium;
+  // User has premium only if isPremium is true (from main auth context) or profile.is_premium is true
+  // We've removed localPremium and storagePremium as they may be out of sync
+  const userHasPremium = isPremium || (profile?.is_premium === true);
 
   const handleSignOut = () => {
     // Clear localStorage premium backup on logout

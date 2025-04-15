@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth/AuthContext';
-import { validateLocalStoragePremium, clearPremiumFromLocalStorage } from '@/contexts/auth/local-storage-utils';
+import { clearPremiumFromLocalStorage } from '@/contexts/auth/local-storage-utils';
 import { supabase } from '@/integrations/supabase/client';
 
 interface UseNavbarReturn {
@@ -15,7 +15,6 @@ interface UseNavbarReturn {
 export const useNavbar = (): UseNavbarReturn => {
   const [scrolled, setScrolled] = useState(false);
   const [localPremium, setLocalPremium] = useState(false);
-  const [premiumChecked, setPremiumChecked] = useState(false);
   const [subscriptionModalOpen, setSubscriptionModalOpen] = useState(false);
   const { user, isPremium, profile, checkPremiumStatus } = useAuth();
 
@@ -32,12 +31,12 @@ export const useNavbar = (): UseNavbarReturn => {
   // Check for premium status whenever auth context changes
   useEffect(() => {
     async function verifyPremium() {
-      if (isPremium) {
-        setLocalPremium(true);
-      } else if (profile?.is_premium) {
-        // Verify expiry date
+      // Use the most reliable source of truth - profile.is_premium
+      if (profile?.is_premium === true) {
+        // Check for expired subscription
         if (profile.subscription_expiry) {
           const isExpired = new Date(profile.subscription_expiry) < new Date();
+          
           if (isExpired) {
             console.log('[NAVBAR] Subscription expired according to expiry date');
             setLocalPremium(false);
@@ -58,34 +57,40 @@ export const useNavbar = (): UseNavbarReturn => {
           }
         }
         
-        setLocalPremium(true);
-      } else if (!premiumChecked) {
-        // Only check localStorage once
-        const localStoragePremium = validateLocalStoragePremium();
-        if (localStoragePremium) {
-          console.log('[NAVBAR] Using backup premium status from localStorage');
-          setLocalPremium(true);
-          
-          // Verify with server if we have a user ID
-          if (user?.id) {
-            checkPremiumStatus(user.id);
-          }
+        // Also check for canceled status
+        if (profile.subscription_status === 'canceled') {
+          console.log('[NAVBAR] Subscription is canceled');
+          setLocalPremium(false);
+          clearPremiumFromLocalStorage();
+          return;
         }
-        setPremiumChecked(true);
+        
+        setLocalPremium(true);
+      } else {
+        // If profile.is_premium is explicitly false, respect that
+        if (profile && profile.is_premium === false) {
+          setLocalPremium(false);
+          clearPremiumFromLocalStorage();
+        } else if (isPremium) {
+          // Fall back to context state if profile not available
+          setLocalPremium(true);
+        } else {
+          setLocalPremium(false);
+        }
       }
     }
     
     verifyPremium();
-  }, [user, isPremium, profile, premiumChecked, checkPremiumStatus]);
+  }, [user, isPremium, profile, checkPremiumStatus]);
 
   // If user is logged in but we don't have premium status or profile yet,
   // verify with server
   useEffect(() => {
-    if (user?.id && !isPremium && !profile?.is_premium && premiumChecked) {
+    if (user?.id && !isPremium && !profile?.is_premium) {
       console.log('[NAVBAR] User logged in but no premium status, checking with server');
       checkPremiumStatus(user.id);
     }
-  }, [user, isPremium, profile, premiumChecked, checkPremiumStatus]);
+  }, [user, isPremium, profile, checkPremiumStatus]);
 
   // Check subscription expiry periodically
   useEffect(() => {
