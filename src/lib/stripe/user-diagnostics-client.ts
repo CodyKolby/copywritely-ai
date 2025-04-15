@@ -1,4 +1,4 @@
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
 import { toast } from '@/hooks/use-toast';
 
 /**
@@ -121,7 +121,7 @@ export const testCriticalFunctions = async (userId: string) => {
     };
   }
   
-  // Test 2: Direct Call to Edge Function - increased timeout to 15 seconds
+  // Test 2: Direct Call to Edge Function - increased timeout to 8 seconds
   console.log('[CRITICAL-TEST] Test 2: Testing diagnose-user-data edge function');
   try {
     const edgeStart = Date.now();
@@ -129,7 +129,7 @@ export const testCriticalFunctions = async (userId: string) => {
     const diagnosticResponse = await safeEdgeInvoke(
       'diagnose-user-data',
       { userId },
-      15000 // 15 seconds timeout (increased from 10)
+      8000 // 8 seconds timeout (reduced from 15)
     );
     
     const edgeDuration = Date.now() - edgeStart;
@@ -178,14 +178,14 @@ export const testCriticalFunctions = async (userId: string) => {
     };
   }
   
-  // Test 3: Direct Supabase Check (with increased timeout to 5 seconds)
+  // Test 3: Direct Supabase Check (with reduced timeout to 3 seconds)
   console.log('[CRITICAL-TEST] Test 3: Testing direct database connection');
   try {
     const start = Date.now();
     
     // Create a promise that times out
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Direct supabase query timeout')), 5000); // Increased from 3 seconds
+      setTimeout(() => reject(new Error('Direct supabase query timeout')), 3000); // Reduced from 5 seconds
     });
     
     // Create the actual query promise
@@ -227,14 +227,14 @@ export const testCriticalFunctions = async (userId: string) => {
     };
   }
   
-  // Test 4: Connectivity Test with more reliable endpoint
+  // Test 4: Connectivity Test with more reliable approach
   console.log('[CRITICAL-TEST] Test 4: Testing general internet connectivity');
   try {
     const connectStart = Date.now();
     
-    // Create a timeout promise with increased timeout
+    // Create a timeout promise
     const connectTimeout = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Connectivity test timeout')), 5000); // Increased from 3 seconds
+      setTimeout(() => reject(new Error('Connectivity test timeout')), 3000); // Reduced from 5 seconds
     });
     
     // Use multiple reliable endpoints for better chance of success
@@ -257,8 +257,7 @@ export const testCriticalFunctions = async (userId: string) => {
     ];
     
     try {
-      // Fix: Replace Promise.any with a custom implementation
-      // We'll use Promise.race with the first successful promise
+      // Custom implementation to handle first successful promise
       const raceWithSuccess = async () => {
         // Keep track of errors to throw if all fail
         const errors: Error[] = [];
@@ -354,44 +353,41 @@ const analyzeTestResults = (results: Record<string, any>) => {
     suggestedFixes: [] as string[]
   };
   
-  // First check if all tests are successful
-  const allTestsSuccessful = 
-    results.tests.connectivity?.success && 
-    results.tests.localSession?.success &&
-    (results.tests.directDbQuery?.success || results.tests.edgeFunction?.success);
-  
-  if (allTestsSuccessful) {
-    summary.mainIssue = 'Wszystkie podstawowe testy zakończone pomyślnie';
-    return summary;
-  }
-  
-  // Add network connectivity issues first if they exist
+  // Check connectivity first - if this fails, other tests will likely fail too
   if (!results.tests.connectivity?.success) {
     summary.criticalIssuesCount++;
     summary.issues.push('Problem z połączeniem internetowym');
     summary.suggestedFixes.push('Sprawdź połączenie internetowe i stabilność sieci');
-  } else {
-    // If connectivity is good but other services failed, it's likely a backend issue
-    if (!results.tests.edgeFunction?.success || !results.tests.directDbQuery?.success) {
-      if (results.tests.edgeFunction?.timedOut) {
-        summary.criticalIssuesCount++;
-        summary.issues.push('Połączenie z serwerem przekroczyło limit czasu');
-        summary.suggestedFixes.push('Problem z dostępnością serwera - spróbuj ponownie później');
-      }
-      
-      if (!results.tests.directDbQuery?.success) {
-        summary.criticalIssuesCount++;
-        summary.issues.push('Błąd połączenia z bazą danych');
-        summary.suggestedFixes.push('Problem z połączeniem do bazy danych - spróbuj ponownie później');
-      }
-    }
+    summary.mainIssue = 'Problem z połączeniem internetowym';
+    
+    return summary; // Return early as other tests are likely to fail
   }
   
-  // Check local session issues
+  // Check if local session is valid
   if (!results.tests.localSession?.success || !results.tests.localSession?.hasSession) {
     summary.criticalIssuesCount++;
     summary.issues.push('Sesja użytkownika jest nieprawidłowa lub wygasła');
     summary.suggestedFixes.push('Wyloguj i zaloguj się ponownie');
+  }
+  
+  // Check edge function
+  if (!results.tests.edgeFunction?.success) {
+    if (results.tests.edgeFunction?.timedOut) {
+      summary.criticalIssuesCount++;
+      summary.issues.push('Połączenie z serwerem przekroczyło limit czasu');
+      summary.suggestedFixes.push('Problem z dostępnością serwera - spróbuj ponownie później');
+    } else {
+      summary.criticalIssuesCount++;
+      summary.issues.push('Błąd komunikacji z serwerem');
+      summary.suggestedFixes.push('Problem z dostępnością serwera - spróbuj ponownie później');
+    }
+  }
+  
+  // Check direct DB query
+  if (!results.tests.directDbQuery?.success) {
+    summary.criticalIssuesCount++;
+    summary.issues.push('Błąd połączenia z bazą danych');
+    summary.suggestedFixes.push('Problem z połączeniem do bazy danych - spróbuj ponownie później');
   }
   
   // Add any other issues from the edge diagnostics
@@ -415,19 +411,26 @@ const analyzeTestResults = (results: Record<string, any>) => {
     });
   }
   
-  // Remove duplicate fixes
-  summary.suggestedFixes = Array.from(new Set(summary.suggestedFixes));
-  
-  // Set main issue
-  if (summary.issues.length > 0) {
+  // Set main issue if not already set
+  if (summary.issues.length > 0 && !summary.mainIssue) {
     summary.mainIssue = summary.issues[0];
-  } else {
+  } else if (!summary.mainIssue) {
     summary.mainIssue = 'Nie wykryto żadnych problemów';
   }
   
-  // Add offline mode suggestion if connectivity issues
-  if (!results.tests.connectivity?.success) {
-    summary.suggestedFixes.push('Sprawdź czy nie jesteś w trybie offline');
+  // Remove duplicate fixes
+  summary.suggestedFixes = Array.from(new Set(summary.suggestedFixes));
+  
+  // If no critical issues were found, check if all tests were successful
+  if (summary.criticalIssuesCount === 0 && summary.warningsCount === 0) {
+    const allTestsSuccessful = 
+      results.tests.connectivity?.success && 
+      results.tests.localSession?.success &&
+      (results.tests.directDbQuery?.success || results.tests.edgeFunction?.success);
+    
+    if (allTestsSuccessful) {
+      summary.mainIssue = 'Wszystkie podstawowe testy zakończone pomyślnie';
+    }
   }
   
   return summary;
@@ -443,8 +446,7 @@ const showDiagnosticResults = (results: Record<string, any>) => {
     toast({
       variant: "destructive",
       title: `Wykryto ${summary.criticalIssuesCount} krytyczne problemy`,
-      description: summary.mainIssue,
-      duration: 8000
+      description: summary.mainIssue
     });
     
     // If we have suggested fixes, show them
@@ -452,8 +454,7 @@ const showDiagnosticResults = (results: Record<string, any>) => {
       setTimeout(() => {
         toast({
           title: 'Sugerowane rozwiązania',
-          description: summary.suggestedFixes.join('; '),
-          duration: 10000
+          description: summary.suggestedFixes.join('; ')
         });
       }, 1000);
     }
@@ -461,8 +462,7 @@ const showDiagnosticResults = (results: Record<string, any>) => {
     toast({
       variant: "destructive",
       title: `Wykryto ${summary.warningsCount} ostrzeżenia`,
-      description: summary.mainIssue,
-      duration: 8000
+      description: summary.mainIssue
     });
   } else {
     toast({
@@ -480,13 +480,11 @@ const showDiagnosticResults = (results: Record<string, any>) => {
     if (servicesFailed > 0) {
       toast({
         variant: "destructive",
-        title: `${servicesFailed}/${servicesChecked} usług nie działa poprawnie`,
-        duration: 5000
+        title: `${servicesFailed}/${servicesChecked} usług nie działa poprawnie`
       });
     } else if (servicesChecked > 0) {
       toast({
-        title: `Wszystkie ${servicesChecked} usługi działają poprawnie`,
-        duration: 5000
+        title: `Wszystkie ${servicesChecked} usługi działają poprawnie`
       });
     }
   }
