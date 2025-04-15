@@ -20,7 +20,12 @@ const DialogManager = ({
   userId,
   isPremium,
 }: TargetAudienceDialogProps) => {
-  console.log("DialogManager rendering with templateId:", templateId);
+  // Only log on template ID changes or when open state changes, not on every render
+  useEffect(() => {
+    if (templateId || open) {
+      console.log("DialogManager rendering with templateId:", templateId);
+    }
+  }, [templateId, open]);
 
   const {
     isLoading,
@@ -71,7 +76,6 @@ const DialogManager = ({
       
       // Additional protection - reset after close animation
       const resetTimeout = setTimeout(() => {
-        console.log("Executing delayed state reset");
         resetState();
       }, 300);
       
@@ -79,25 +83,7 @@ const DialogManager = ({
     }
   }, [open, resetState]);
 
-  // Debug logging for dialog state
-  useEffect(() => {
-    console.log("Dialog state:", {
-      open,
-      showForm,
-      showGoalDialog,
-      showEmailStyleDialog, 
-      showSocialMediaPlatformDialog,
-      showScriptDialog,
-      showEmailDialog,
-      showSocialDialog,
-      isProcessing,
-      selectedAudienceId
-    });
-  }, [open, showForm, showGoalDialog, showEmailStyleDialog, showSocialMediaPlatformDialog, 
-      showScriptDialog, showEmailDialog, showSocialDialog, isProcessing, selectedAudienceId]);
-
   const handleDialogClose = () => {
-    console.log("handleDialogClose called - closing dialog");
     resetState(); // Reset all states
     onOpenChange(false);
   };
@@ -105,26 +91,19 @@ const DialogManager = ({
   // Hide the audience dialog when script/email dialog is shown
   const shouldShowAudienceDialog = open && !showScriptDialog && !showEmailDialog && !showSocialDialog;
   
-  // Improve this logic to ensure only one dialog is visible at a time
   // Using explicit mutual exclusion for each dialog to prevent flickering
-  
-  // Only show the main dialog when no other dialogs are active
   const showMainDialog = shouldShowAudienceDialog && !showForm && !showGoalDialog && 
                          !showEmailStyleDialog && !showSocialMediaPlatformDialog;
   
-  // Show form dialog only when showForm is true and no other secondary dialogs are active
   const showFormDialog = shouldShowAudienceDialog && showForm && 
                          !showGoalDialog && !showEmailStyleDialog && !showSocialMediaPlatformDialog;
                          
-  // Show goal dialog only when showGoalDialog is true and no other secondary dialogs are active
   const showGoalDialogUi = shouldShowAudienceDialog && showGoalDialog && 
                            !showForm && !showEmailStyleDialog && !showSocialMediaPlatformDialog;
                            
-  // Show email style dialog only when showEmailStyleDialog is true and no other secondary dialogs are active
   const showEmailStyleDialogUi = shouldShowAudienceDialog && showEmailStyleDialog && 
                                  !showForm && !showGoalDialog && !showSocialMediaPlatformDialog;
                                  
-  // Show social media dialog only when showSocialMediaPlatformDialog is true and no other secondary dialogs are active
   const showSocialMediaDialogUi = shouldShowAudienceDialog && showSocialMediaPlatformDialog && 
                                   !showForm && !showGoalDialog && !showEmailStyleDialog;
 

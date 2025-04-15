@@ -1,3 +1,4 @@
+
 import { BrowserRouter as Router } from 'react-router-dom';
 import { AuthProvider } from './contexts/auth/AuthContext';
 import { Toaster } from '@/components/ui/toaster';
@@ -5,7 +6,7 @@ import { AppLayout } from './components/layout/AppLayout';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Routes } from './routes';
 import { Toaster as SonnerToaster, toast } from 'sonner'; // Import toast directly
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from './integrations/supabase/client';
 import { ConnectionStatusAlert } from './components/ui/ConnectionStatusAlert';
 
@@ -29,6 +30,7 @@ function App() {
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [isCheckingConnection, setIsCheckingConnection] = useState(false);
   const [lastCheckTime, setLastCheckTime] = useState(0);
+  const offlineNotificationShown = useRef(false);
 
   // Check for auth callback parameters in URL
   useEffect(() => {
@@ -50,10 +52,23 @@ function App() {
     handleAuthCallback();
   }, []);
 
-  // Setup network status listeners
+  // Setup network status listeners with debounce to avoid excessive state updates
   useEffect(() => {
-    const handleOnline = () => setIsOffline(false);
-    const handleOffline = () => setIsOffline(true);
+    const handleOnline = () => {
+      offlineNotificationShown.current = false;
+      setIsOffline(false);
+    };
+    
+    const handleOffline = () => {
+      setIsOffline(true);
+      // Only show offline toast once per offline event
+      if (!offlineNotificationShown.current) {
+        offlineNotificationShown.current = true;
+        toast.error('Brak połączenia z internetem', {
+          description: 'Niektóre funkcje mogą być niedostępne'
+        });
+      }
+    };
     
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);

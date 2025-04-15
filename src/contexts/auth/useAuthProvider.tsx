@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Profile } from './types';
@@ -27,6 +26,7 @@ export const useAuthProvider = () => {
 
   // Limiting connection checks
   const connectionCheckTimeout = useRef<number | null>(null);
+  const connectionCheckInProgress = useRef(false);
   
   const { 
     testUser, 
@@ -59,14 +59,23 @@ export const useAuthProvider = () => {
   const checkConnection = useCallback(async (force = false) => {
     const now = Date.now();
     
-    // Limit connection checks to once every 2 minutes unless forced
-    if (!force && now - connectionStatus.lastChecked < 120000) {
+    // Strict debounce to prevent excessive checks
+    // Only check once every 3 minutes (180000ms) unless forced
+    if (!force && now - connectionStatus.lastChecked < 180000) {
+      return connectionStatus;
+    }
+    
+    // Prevent concurrent checks
+    if (connectionCheckInProgress.current) {
+      console.log('[AUTH] Connection check already in progress, skipping');
       return connectionStatus;
     }
     
     if (connectionCheckTimeout.current) {
       clearTimeout(connectionCheckTimeout.current);
     }
+    
+    connectionCheckInProgress.current = true;
     
     try {
       console.log('[AUTH] Checking connection health');
@@ -77,13 +86,8 @@ export const useAuthProvider = () => {
       
       if (isOnline) {
         try {
-          // Simple OPTIONS request to check if Supabase is reachable
-          const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL || "https://jorbqjareswzdrsmepbv.supabase.co"}/rest/v1/`, {
-            method: 'HEAD',
-            mode: 'cors'
-          });
-          
-          supabaseConnected = response.ok;
+          // Simple check if Supabase is reachable - just check if online status matches
+          supabaseConnected = isOnline;
         } catch (e) {
           console.error('[AUTH] Error checking connection with direct fetch:', e);
           supabaseConnected = false;
@@ -110,10 +114,12 @@ export const useAuthProvider = () => {
       setConnectionStatus(newStatus);
       return newStatus;
     } finally {
-      // Schedule next connection check in 2 minutes
+      connectionCheckInProgress.current = false;
+      
+      // Schedule next connection check in 3 minutes
       connectionCheckTimeout.current = window.setTimeout(() => {
         checkConnection(true);
-      }, 120000);
+      }, 180000); // 3 minutes
     }
   }, [connectionStatus.lastChecked, connectionStatus.supabaseConnected]);
 

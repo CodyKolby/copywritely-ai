@@ -6,6 +6,13 @@ export const usePremiumVerification = (userId: string | undefined, initialPremiu
   const [verifiedPremium, setVerifiedPremium] = useState<boolean | null>(null);
   const [isCheckingPremium, setIsCheckingPremium] = useState(false);
   const checkInProgress = useRef(false);
+  
+  // Cache verification results to prevent excessive re-checks
+  const lastVerification = useRef({
+    userId: '',
+    result: false,
+    timestamp: 0
+  });
 
   // Verify premium status on mount and when userId changes
   useEffect(() => {
@@ -21,6 +28,17 @@ export const usePremiumVerification = (userId: string | undefined, initialPremiu
       return initialPremium;
     }
     
+    // Use cached result if we checked within the last 5 minutes for this user
+    const now = Date.now();
+    if (
+      lastVerification.current.userId === userId && 
+      now - lastVerification.current.timestamp < 300000 // 5 minutes
+    ) {
+      console.log('[PremiumVerification] Using cached premium status:', lastVerification.current.result);
+      setVerifiedPremium(lastVerification.current.result);
+      return lastVerification.current.result;
+    }
+    
     checkInProgress.current = true;
     setIsCheckingPremium(true);
     
@@ -30,8 +48,23 @@ export const usePremiumVerification = (userId: string | undefined, initialPremiu
       
       if (storagePremium !== null) {
         setVerifiedPremium(storagePremium);
+        
+        // Update cache
+        lastVerification.current = {
+          userId,
+          result: storagePremium,
+          timestamp: now
+        };
+        
         return storagePremium;
       }
+      
+      // Update cache
+      lastVerification.current = {
+        userId,
+        result: initialPremium,
+        timestamp: now
+      };
       
       return initialPremium;
     } catch (error) {

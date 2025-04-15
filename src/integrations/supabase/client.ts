@@ -9,7 +9,7 @@ const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJh
 // Log initialization parameters to help with debugging
 console.log('[SUPABASE] Initializing client with:', { url: SUPABASE_URL, keyLength: SUPABASE_PUBLISHABLE_KEY?.length || 0 });
 
-// Create a singleton instance with simple settings - REMOVED custom headers
+// Create a singleton instance with simple settings - no custom headers to avoid CORS issues
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     persistSession: true,
@@ -17,44 +17,55 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: localStorage,
     detectSessionInUrl: true
   },
-  global: {
-    // Removed the x-application-name header that was causing CORS issues
-  },
   realtime: {
     timeout: 10000
   }
 });
 
-// Simplified connection validation function
+// Cache to prevent redundant connection tests
+let connectionTestCache = {
+  isConnected: null as boolean | null,
+  lastTested: 0
+};
+
+// Optimized connection validation function with caching
 export const validateSupabaseConnection = async (): Promise<boolean> => {
+  // Use cache if we tested within the last minute
+  const now = Date.now();
+  if (connectionTestCache.isConnected !== null && now - connectionTestCache.lastTested < 60000) {
+    console.log(`[SUPABASE] Using cached connection status: ${connectionTestCache.isConnected}`);
+    return connectionTestCache.isConnected;
+  }
+  
   try {
     console.log(`[SUPABASE] Validating connection to ${SUPABASE_URL}`);
     const startTime = Date.now();
     
-    // Basic connection test with standard fetch
-    const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-      method: 'GET',
-      headers: {
-        'apikey': SUPABASE_PUBLISHABLE_KEY,
-        'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      credentials: 'same-origin',
-      mode: 'cors'
-    });
+    // Use a simplified check that shouldn't trigger CORS issues
+    const { data, error } = await supabase.auth.getSession();
     
     const duration = Date.now() - startTime;
-    console.log(`[SUPABASE] Connection test completed in ${duration}ms with status: ${response.status}`);
+    const isConnected = !error;
     
-    // Any response means the server is reachable, even if it's a 401
-    return true;
+    console.log(`[SUPABASE] Connection test completed in ${duration}ms with result: ${isConnected}`);
+    
+    // Update cache
+    connectionTestCache.isConnected = isConnected;
+    connectionTestCache.lastTested = now;
+    
+    return isConnected;
   } catch (e) {
     console.error(`[SUPABASE] Connection validation exception:`, e);
+    
+    // Update cache
+    connectionTestCache.isConnected = false;
+    connectionTestCache.lastTested = now;
+    
     return false;
   }
 };
 
-// Simplified health check
+// Simplified health check with caching
 export const checkConnectionHealth = async (): Promise<{
   online: boolean;
   supabaseConnected: boolean;
@@ -71,17 +82,29 @@ export const checkConnectionHealth = async (): Promise<{
   }
   
   try {
+    // Use cached connection status if available
+    const now = Date.now();
+    if (connectionTestCache.isConnected !== null && now - connectionTestCache.lastTested < 60000) {
+      return {
+        online: true,
+        supabaseConnected: connectionTestCache.isConnected,
+        corsIssue: false
+      };
+    }
+    
     const isConnected = await validateSupabaseConnection();
+    
     return {
       online: true,
       supabaseConnected: isConnected,
       corsIssue: false
     };
   } catch (e) {
+    const errorStr = e.toString();
     return {
       online: true,
       supabaseConnected: false,
-      corsIssue: e.toString().includes('CORS'),
+      corsIssue: errorStr.includes('CORS'),
       message: 'Błąd podczas sprawdzania połączenia'
     };
   }

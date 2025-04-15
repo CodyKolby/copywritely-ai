@@ -12,7 +12,7 @@ type ConnectionStatusAlertProps = {
   showOnlineStatus?: boolean;
 };
 
-export const ConnectionStatusAlert: React.FC<ConnectionStatusAlertProps> = ({ 
+export const ConnectionStatusAlert: React.FC<ConnectionStatusAlertProps> = React.memo(({ 
   onRetry,
   isChecking = false,
   className,
@@ -70,4 +70,6 @@ export const ConnectionStatusAlert: React.FC<ConnectionStatusAlertProps> = ({
       </div>
     </Alert>
   );
-};
+});
+
+ConnectionStatusAlert.displayName = 'ConnectionStatusAlert';
