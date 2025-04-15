@@ -69,6 +69,12 @@ serve(async (req) => {
     const email = user.email
     const metadata = user.user_metadata || {}
     
+    console.log('Create profile function - user data:', {
+      id: userId,
+      email: email,
+      metadata: metadata
+    })
+    
     // Generate a default name from email if no name is available
     const defaultName = email ? email.split('@')[0] : `User-${userId.substring(0, 8)}`
     const fullName = metadata.full_name || metadata.name || defaultName
