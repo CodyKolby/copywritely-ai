@@ -16,6 +16,8 @@ export const initPostHog = () => {
       autocapture: true,
     }
   );
+  
+  return posthog;
 };
 
 // Utility function for tracking events
