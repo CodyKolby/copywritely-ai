@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Profile } from './types';
 
@@ -52,6 +53,29 @@ export const createProfile = async (userId: string): Promise<Profile | null> => 
     
     if (!user) {
       console.error('[PROFILE-UTILS] No user session available for profile creation');
+      
+      // Fallback: Fetch user directly from auth.admin (via edge function)
+      try {
+        const response = await fetch(`https://jorbqjareswzdrsmepbv.functions.supabase.co/create-profile`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionData?.session?.access_token || ''}`,
+          },
+          body: JSON.stringify({ userId }),
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          console.log('[PROFILE-UTILS] Profile created via edge function:', result);
+          return result.profile as Profile;
+        } else {
+          console.error('[PROFILE-UTILS] Edge function failed to create profile:', await response.text());
+        }
+      } catch (edgeFnError) {
+        console.error('[PROFILE-UTILS] Error calling create-profile edge function:', edgeFnError);
+      }
+      
       return null;
     }
     

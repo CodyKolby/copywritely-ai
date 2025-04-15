@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Profile } from './types';
@@ -41,7 +42,7 @@ export const useAuthProvider = () => {
   useEffect(() => {
     console.log("[AUTH] Setting up auth state listener");
     
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       console.log("[AUTH] Auth state changed", event, !!newSession?.user);
       
       if (!testUser) {
@@ -51,6 +52,17 @@ export const useAuthProvider = () => {
         if (newSession?.user) {
           if (newSession.user.email) {
             localStorage.setItem('userEmail', newSession.user.email);
+          }
+          
+          // Fetch profile info
+          try {
+            const userProfile = await fetchProfile(newSession.user.id);
+            if (userProfile) {
+              console.log('[AUTH] Profile fetched during auth change:', userProfile);
+              setProfile(userProfile);
+            }
+          } catch (profileError) {
+            console.error('[AUTH] Error fetching profile during auth change:', profileError);
           }
           
           setTimeout(() => {
@@ -93,6 +105,17 @@ export const useAuthProvider = () => {
           
           setSession(currentSession);
           setUser(currentSession.user);
+          
+          // Fetch profile info
+          try {
+            const userProfile = await fetchProfile(currentSession.user.id);
+            if (userProfile) {
+              console.log('[AUTH] Profile fetched during initialization:', userProfile);
+              setProfile(userProfile);
+            }
+          } catch (profileError) {
+            console.error('[AUTH] Error fetching profile during initialization:', profileError);
+          }
           
           await handleUserAuthenticated(currentSession.user.id);
         } else {
