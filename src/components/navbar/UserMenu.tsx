@@ -1,4 +1,3 @@
-
 import { User } from '@supabase/supabase-js';
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
@@ -162,6 +161,11 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
       return;
     }
     
+    if (isDiagnosing) {
+      toast.info('Diagnostyka już trwa, proszę czekać...');
+      return;
+    }
+    
     setIsDiagnosing(true);
     toast.info('Uruchamianie pełnej diagnostyki...', {
       id: 'diagnostics-start',
@@ -174,50 +178,6 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
       const results = await testCriticalFunctions(user.id);
       
       console.log('[DIAGNOSTICS] Full diagnostic results:', results);
-      
-      // Type checking for results.summary
-      if (results.summary && typeof results.summary === 'object') {
-        // Safely access properties with proper type checking
-        const summary = results.summary as { 
-          criticalIssuesCount?: number; 
-          warningsCount?: number;
-          mainIssue?: string;
-        };
-        
-        if (summary.criticalIssuesCount && summary.criticalIssuesCount > 0) {
-          toast.error(`Wykryto ${summary.criticalIssuesCount} krytyczne problemy`, {
-            description: summary.mainIssue || 'Szczegóły w konsoli',
-            duration: 8000
-          });
-        } else if (summary.warningsCount && summary.warningsCount > 0) {
-          toast.warning(`Wykryto ${summary.warningsCount} ostrzeżenia`, {
-            description: summary.mainIssue || 'Szczegóły w konsoli',
-            duration: 8000
-          });
-        }
-      }
-      
-      // Safe type assertion for tests results
-      if (results.tests && typeof results.tests === 'object') {
-        const tests = results.tests as Record<string, { 
-          success: boolean; 
-          error?: unknown;
-        }>;
-        
-        Object.entries(tests).forEach(([testName, result]) => {
-          if (result && result.success === false) {
-            const errorMessage = typeof result.error === 'string' 
-              ? result.error 
-              : 'Szczegóły w konsoli';
-                
-            console.error(`[DIAGNOSTICS] Test '${testName}' failed:`, result.error);
-            toast.error(`Test '${testName}' nie powiódł się`, {
-              description: errorMessage,
-              duration: 5000
-            });
-          }
-        });
-      }
       
     } catch (error) {
       console.error('[DIAGNOSTICS] Error running diagnostics:', error);

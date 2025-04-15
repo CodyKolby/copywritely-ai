@@ -1,149 +1,14 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 /**
- * Run diagnostics on a user account and try to fix any issues
- */
-export const diagnoseAndFixUserAccount = async (userId: string) => {
-  if (!userId) {
-    console.error('[DIAGNOSTICS] No user ID provided for diagnostics');
-    return {
-      success: false,
-      message: 'No user ID provided'
-    };
-  }
-  
-  try {
-    console.log('[DIAGNOSTICS] Running diagnostics for user:', userId);
-    toast.info('Uruchamianie diagnostyki konta...');
-    
-    // First get the user profile directly to check its state
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle();
-      
-    if (profileError) {
-      console.error('[DIAGNOSTICS] Error fetching profile data:', profileError);
-    } else {
-      console.log('[DIAGNOSTICS] Current profile state:', profileData);
-    }
-    
-    // Check payment logs for this user
-    const { data: paymentLogs, error: paymentError } = await supabase
-      .from('payment_logs')
-      .select('*')
-      .eq('user_id', userId);
-      
-    if (paymentError) {
-      console.error('[DIAGNOSTICS] Error fetching payment logs:', paymentError);
-    } else {
-      console.log('[DIAGNOSTICS] Payment logs:', paymentLogs);
-    }
-    
-    // Check projects for this user
-    const { data: projects, error: projectsError } = await supabase
-      .from('projects')
-      .select('id, title, created_at, updated_at')
-      .eq('user_id', userId);
-      
-    if (projectsError) {
-      console.error('[DIAGNOSTICS] Error fetching projects:', projectsError);
-    } else {
-      console.log('[DIAGNOSTICS] Projects:', projects);
-    }
-    
-    // Now call the server function for more advanced diagnostics with a timeout
-    try {
-      const response = await Promise.race([
-        supabase.functions.invoke('diagnose-user-data', {
-          body: { userId }
-        }),
-        new Promise<{error: string}>((_, reject) => 
-          setTimeout(() => reject(new Error("Edge function timeout")), 8000)
-        )
-      ]);
-      
-      // Fixed TypeScript error: Type assertion for the response
-      const responseData = response as { data?: any, error?: string };
-      
-      if (responseData.error || !responseData.data) {
-        console.error('[DIAGNOSTICS] Error invoking diagnostics:', responseData.error || 'No data returned');
-        toast.error('Błąd podczas diagnostyki konta', { 
-          description: 'Spróbuj ponownie później lub skontaktuj się z obsługą' 
-        });
-        
-        return {
-          success: false,
-          message: 'Error invoking diagnostics',
-          error: responseData.error || 'No data returned',
-          profile: profileData,
-          paymentLogs,
-          projects
-        };
-      }
-      
-      const data = responseData.data;
-      console.log('[DIAGNOSTICS] Diagnostics results:', data);
-      
-      // Show results to user
-      if (data.fixes && data.fixes.success) {
-        toast.success('Naprawiono problemy z kontem', {
-          description: `Zastosowano ${data.fixes.fixes.length} poprawek`
-        });
-      } else if (data.problems && data.problems.length > 0) {
-        toast.warning('Wykryto problemy z kontem', {
-          description: `Wykryto ${data.problems.length} problemów`
-        });
-      } else {
-        toast.success('Konto działa poprawnie', {
-          description: 'Nie wykryto żadnych problemów'
-        });
-      }
-      
-      return {
-        success: true,
-        data,
-        profile: profileData,
-        paymentLogs,
-        projects
-      };
-    } catch (timeoutError) {
-      console.error('[DIAGNOSTICS] Timeout error:', timeoutError);
-      toast.error('Timeout podczas diagnostyki konta', {
-        description: 'Funkcja diagnostyczna nie odpowiedziała w czasie'
-      });
-      
-      return {
-        success: false,
-        message: 'Timeout during diagnostics',
-        error: timeoutError instanceof Error ? timeoutError.message : 'Unknown error',
-        profile: profileData,
-        paymentLogs,
-        projects
-      };
-    }
-  } catch (error) {
-    console.error('[DIAGNOSTICS] Exception running diagnostics:', error);
-    toast.error('Wystąpił błąd podczas diagnostyki konta');
-    
-    return {
-      success: false,
-      message: 'Exception running diagnostics',
-      error
-    };
-  }
-};
-
-/**
- * Test critical user functions with comprehensive logging
+ * Test all critical user functions with fast, independent checks
  */
 export const testCriticalFunctions = async (userId: string) => {
   console.log('[CRITICAL-TEST] ===== BEGINNING CRITICAL FUNCTION TESTS =====');
   console.log('[CRITICAL-TEST] Testing for user ID:', userId);
   
+  // Results object to store all test outcomes
   const results: Record<string, any> = {
     userId,
     tests: {},
@@ -157,294 +22,248 @@ export const testCriticalFunctions = async (userId: string) => {
     duration: 30000 // Set a long duration as we'll dismiss it manually
   });
   
+  // Use an AbortController to cancel ongoing tests if needed
+  const controller = new AbortController();
+  
+  // Function to safely run an edge function with timeout
+  const safeEdgeInvoke = async <T>(
+    functionName: string, 
+    payload: any, 
+    timeoutMs: number
+  ): Promise<{ data?: T; error?: string; timedOut?: boolean }> => {
+    try {
+      // Set up a timeout that rejects the promise
+      const timeoutPromise = new Promise<{ data?: T; error: string; timedOut: true }>(
+        (_, reject) => {
+          setTimeout(() => {
+            reject({ error: `${functionName} timeout`, timedOut: true });
+          }, timeoutMs);
+        }
+      );
+      
+      // Make the actual request
+      const functionPromise = supabase.functions.invoke(functionName, {
+        body: payload
+      });
+      
+      // Race the request against the timeout
+      const result = await Promise.race([functionPromise, timeoutPromise]);
+      
+      // Type assertion for proper typing
+      const typedResult = result as { data?: T; error?: any };
+      
+      if (typedResult.error) {
+        return { 
+          error: typeof typedResult.error === 'string' 
+            ? typedResult.error 
+            : JSON.stringify(typedResult.error),
+          timedOut: false
+        };
+      }
+      
+      return { data: typedResult.data as T };
+    } catch (error) {
+      // If the error is our timeout rejection, return the timeout error
+      if (typeof error === 'object' && error !== null && 'timedOut' in error) {
+        return error as { error: string; timedOut: true };
+      }
+      
+      // Otherwise, return a generic error
+      return { 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timedOut: false
+      };
+    }
+  };
+  
+  // Test 1: Local Browser Session Test (independent of supabase.auth.getSession)
+  console.log('[CRITICAL-TEST] Test 1: Testing local browser session');
   try {
-    // Test 1: Check if user session is valid - with timeout protection
-    console.log('[CRITICAL-TEST] Test 1: Checking user session validity');
-    results.tests.session = await runWithTimeout(async () => {
+    const localSessionStart = Date.now();
+    const storedSession = localStorage.getItem('sb-jorbqjareswzdrsmepbv-auth-token');
+    const localSessionDuration = Date.now() - localSessionStart;
+    
+    if (storedSession) {
       try {
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        const parsedSession = JSON.parse(storedSession);
+        const expiresAt = parsedSession?.expires_at;
+        const currentUserId = parsedSession?.user?.id;
         
-        if (sessionError) {
-          console.error('[CRITICAL-TEST] Session error:', sessionError);
-          return { success: false, error: sessionError };
-        }
-        
-        console.log('[CRITICAL-TEST] Session data:', !!sessionData.session ? 'Session exists' : 'No session');
-        return { 
-          success: true, 
-          hasSession: !!sessionData.session,
-          userId: sessionData.session?.user?.id,
-          expiresAt: sessionData.session?.expires_at
+        results.tests.localSession = {
+          success: true,
+          hasSession: true,
+          userId: currentUserId,
+          matchesProvidedId: userId === currentUserId,
+          expiresAt: expiresAt,
+          expiresIn: expiresAt ? new Date(expiresAt * 1000).toISOString() : null,
+          duration: localSessionDuration
         };
-      } catch (e) {
-        console.error('[CRITICAL-TEST] Exception checking session:', e);
-        return { 
-          success: false, 
-          error: e instanceof Error ? e.message : 'Unknown error checking session'
+      } catch (parseError) {
+        results.tests.localSession = {
+          success: false,
+          hasSession: true,
+          error: 'Could not parse session data',
+          duration: localSessionDuration
         };
       }
-    }, 5000, 'Session check timeout');
-    
-    // Test 2: Check profile data - with timeout protection
-    console.log('[CRITICAL-TEST] Test 2: Checking profile data');
-    results.tests.profile = await runWithTimeout(async () => {
-      try {
-        const start = Date.now();
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .maybeSingle();
-          
-        const duration = Date.now() - start;
-        
-        if (profileError) {
-          console.error('[CRITICAL-TEST] Profile error:', profileError);
-          return { success: false, error: profileError, duration };
-        }
-        
-        console.log('[CRITICAL-TEST] Profile data:', profileData ? 'Found' : 'Not found');
-        if (profileData) {
-          console.log('[CRITICAL-TEST] Profile premium status:', profileData.is_premium);
-          console.log('[CRITICAL-TEST] Profile subscription status:', profileData.subscription_status);
-        }
-        
-        return { 
-          success: true, 
-          exists: !!profileData,
-          isPremium: profileData?.is_premium || false,
-          subscriptionStatus: profileData?.subscription_status,
-          subscriptionExpiry: profileData?.subscription_expiry,
-          duration
-        };
-      } catch (e) {
-        console.error('[CRITICAL-TEST] Exception checking profile:', e);
-        return { 
-          success: false, 
-          error: e instanceof Error ? e.message : 'Unknown error checking profile'
-        };
-      }
-    }, 5000, 'Profile check timeout');
-    
-    // Test 3: Check subscription via Edge Function - with timeout protection
-    console.log('[CRITICAL-TEST] Test 3: Testing check-subscription-status edge function');
-    results.tests.subscriptionEdgeFunction = await runWithTimeout(async () => {
-      try {
-        const start = Date.now();
-        
-        const response = await supabase.functions.invoke(
-          'check-subscription-status',
-          {
-            body: { userId }
-          }
-        );
-        
-        // Type assertion for the response
-        const responseData = response as { data?: any, error?: any };
-        
-        const duration = Date.now() - start;
-        
-        if (responseData.error) {
-          console.error('[CRITICAL-TEST] Subscription status error:', responseData.error);
-          return { 
-            success: false, 
-            error: responseData.error,
-            duration
-          };
-        }
-        
-        console.log('[CRITICAL-TEST] Subscription status result:', responseData.data);
-        return { 
-          success: true, 
-          data: responseData.data, 
-          duration
-        };
-      } catch (e) {
-        console.error('[CRITICAL-TEST] Exception in subscription check:', e);
-        return { 
-          success: false, 
-          error: e instanceof Error ? e.message : 'Unknown error checking subscription'
-        };
-      }
-    }, 8000, 'Subscription check timeout');
-    
-    // Test 4: Test checkout session creation - with timeout protection
-    console.log('[CRITICAL-TEST] Test 4: Testing stripe-checkout edge function');
-    results.tests.checkoutSession = await runWithTimeout(async () => {
-      try {
-        const start = Date.now();
-        
-        const priceId = 'price_1R5A8aAGO17NLUWtxzthF8lo';
-        const origin = window.location.origin;
-        const successUrl = `${origin}/success?session_id={CHECKOUT_SESSION_ID}`;
-        const cancelUrl = `${origin}/pricing?canceled=true`;
-        
-        const response = await supabase.functions.invoke(
-          'stripe-checkout',
-          {
-            body: {
-              priceId,
-              userId,
-              successUrl,
-              cancelUrl,
-              timestamp: new Date().toISOString()
-            }
-          }
-        );
-        
-        // Type assertion for the response
-        const responseData = response as { data?: any, error?: any };
-        
-        const duration = Date.now() - start;
-        
-        if (responseData.error) {
-          console.error('[CRITICAL-TEST] Checkout error:', responseData.error);
-          return { 
-            success: false, 
-            error: responseData.error,
-            duration
-          };
-        }
-        
-        console.log('[CRITICAL-TEST] Checkout result:', responseData.data);
-        return { 
-          success: true, 
-          hasUrl: !!responseData.data?.url,
-          data: responseData.data,
-          duration
-        };
-      } catch (e) {
-        console.error('[CRITICAL-TEST] Exception in checkout:', e);
-        return { 
-          success: false, 
-          error: e instanceof Error ? e.message : 'Unknown error in checkout session'
-        };
-      }
-    }, 8000, 'Checkout session timeout');
-    
-    // Test 5: Fetch projects - with timeout protection
-    console.log('[CRITICAL-TEST] Test 5: Testing projects fetch');
-    results.tests.projects = await runWithTimeout(async () => {
-      try {
-        const start = Date.now();
-        
-        const { data: projects, error: projectsError } = await supabase
-          .from('projects')
-          .select('id, title, created_at, updated_at')
-          .eq('user_id', userId);
-          
-        const duration = Date.now() - start;
-        
-        if (projectsError) {
-          console.error('[CRITICAL-TEST] Projects fetch error:', projectsError);
-          return { success: false, error: projectsError, duration };
-        }
-        
-        console.log('[CRITICAL-TEST] Projects count:', projects?.length || 0);
-        if (projects && projects.length > 0) {
-          console.log('[CRITICAL-TEST] First project:', projects[0]);
-        }
-        
-        return { 
-          success: true, 
-          count: projects?.length || 0,
-          projects,
-          duration
-        };
-      } catch (e) {
-        console.error('[CRITICAL-TEST] Exception fetching projects:', e);
-        return { 
-          success: false, 
-          error: e instanceof Error ? e.message : 'Unknown error fetching projects'
-        };
-      }
-    }, 5000, 'Projects fetch timeout');
-    
-    // Create comprehensive summary
-    results.summary = analyzeFunctionTestResults(results);
-    
-    console.log('[CRITICAL-TEST] All tests completed. Summary:', results.summary);
-    console.log('[CRITICAL-TEST] Full test results:', results);
-    
-    // Dismiss the loading toast
-    toast.dismiss(toastId);
-    
-    // Show results to user
-    if (results.summary.criticalIssuesCount > 0) {
-      toast.error(`Wykryto ${results.summary.criticalIssuesCount} krytyczne problemy`, {
-        description: results.summary.mainIssue,
-        duration: 8000
-      });
-    } else if (results.summary.warningsCount > 0) {
-      toast.warning(`Wykryto ${results.summary.warningsCount} ostrzeżenia`, {
-        description: results.summary.mainIssue,
-        duration: 8000
-      });
     } else {
-      toast.success('Wszystkie funkcje działają poprawnie', {
-        description: 'Nie wykryto żadnych problemów'
-      });
+      results.tests.localSession = {
+        success: false,
+        hasSession: false,
+        error: 'No local session found',
+        duration: localSessionDuration
+      };
     }
+  } catch (e) {
+    results.tests.localSession = {
+      success: false,
+      error: e instanceof Error ? e.message : 'Unknown error checking local session'
+    };
+  }
+  
+  // Test 2: Direct Call to Edge Function
+  console.log('[CRITICAL-TEST] Test 2: Testing diagnose-user-data edge function');
+  try {
+    const edgeStart = Date.now();
     
-    // Try to fix critical issues
-    if (results.summary.criticalIssuesCount > 0 || results.summary.warningsCount > 0) {
-      await applyEmergencyFixes(userId, results);
+    const diagnosticResponse = await safeEdgeInvoke(
+      'diagnose-user-data',
+      { userId },
+      10000 // 10 seconds timeout
+    );
+    
+    const edgeDuration = Date.now() - edgeStart;
+    
+    if (diagnosticResponse.error) {
+      results.tests.edgeFunction = {
+        success: false,
+        error: diagnosticResponse.error,
+        timedOut: !!diagnosticResponse.timedOut,
+        duration: edgeDuration
+      };
+    } else {
+      results.tests.edgeFunction = {
+        success: true,
+        data: diagnosticResponse.data,
+        duration: edgeDuration
+      };
+      
+      // Save edge function diagnostic data for later use
+      results.edgeDiagnostics = diagnosticResponse.data;
     }
+  } catch (e) {
+    results.tests.edgeFunction = {
+      success: false,
+      error: e instanceof Error ? e.message : 'Unknown error in edge function test'
+    };
+  }
+  
+  // Test 3: Direct Supabase Check (with timeout)
+  console.log('[CRITICAL-TEST] Test 3: Testing direct database connection');
+  try {
+    const start = Date.now();
     
-    return results;
-  } catch (error) {
-    console.error('[CRITICAL-TEST] Exception running tests:', error);
-    // Dismiss the loading toast
-    toast.dismiss(toastId);
-    
-    toast.error('Błąd podczas testowania funkcji', {
-      description: error instanceof Error ? error.message : 'Nieznany błąd'
+    // Create a promise that times out
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Direct supabase query timeout')), 3000);
     });
     
-    results.overallError = error instanceof Error ? error.message : 'Unknown error';
-    return results;
-  } finally {
-    console.log('[CRITICAL-TEST] ===== CRITICAL FUNCTION TESTS COMPLETE =====');
-  }
-};
-
-/**
- * Run a function with a timeout
- */
-const runWithTimeout = async <T>(
-  fn: () => Promise<T>, 
-  timeoutMs: number, 
-  timeoutMessage: string
-): Promise<T> => {
-  try {
-    const result = await Promise.race([
-      fn(),
-      new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
-      })
-    ]);
-    return result;
-  } catch (error) {
-    console.error(`Timeout error (${timeoutMs}ms):`, timeoutMessage, error);
-    if (error instanceof Error) {
-      return { 
-        success: false, 
-        error: error.message,
-        timedOut: true 
-      } as unknown as T;
+    // Create the actual query promise
+    const queryPromise = supabase
+      .from('profiles')
+      .select('id, is_premium, subscription_status')
+      .eq('id', userId)
+      .maybeSingle();
+    
+    // Race them
+    const result = await Promise.race([queryPromise, timeoutPromise]) as {
+      data: any;
+      error: any;
+    };
+    
+    const duration = Date.now() - start;
+    
+    if (result.error) {
+      results.tests.directDbQuery = {
+        success: false,
+        error: typeof result.error === 'string' 
+          ? result.error 
+          : (result.error?.message || JSON.stringify(result.error)),
+        duration
+      };
+    } else {
+      results.tests.directDbQuery = {
+        success: true,
+        profileFound: !!result.data,
+        isPremium: result.data?.is_premium || false,
+        subscriptionStatus: result.data?.subscription_status,
+        duration
+      };
     }
-    return { 
-      success: false, 
-      error: 'Unknown timeout error',
-      timedOut: true 
-    } as unknown as T;
+  } catch (e) {
+    results.tests.directDbQuery = {
+      success: false,
+      error: e instanceof Error ? e.message : 'Unknown error in direct DB test'
+    };
   }
+  
+  // Test 4: Connectivity Test - Can we reach supabase.io?
+  console.log('[CRITICAL-TEST] Test 4: Testing general internet connectivity');
+  try {
+    const connectStart = Date.now();
+    
+    // Create a timeout promise
+    const connectTimeout = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Connectivity test timeout')), 3000);
+    });
+    
+    // Test connectivity to a reliable site
+    const connectTest = fetch('https://www.supabase.io/ping', { 
+      method: 'HEAD',
+      signal: controller.signal 
+    });
+    
+    // Race them
+    const connectResult = await Promise.race([connectTest, connectTimeout]);
+    const connectDuration = Date.now() - connectStart;
+    
+    results.tests.connectivity = {
+      success: true,
+      status: connectResult.status,
+      ok: connectResult.ok,
+      duration: connectDuration
+    };
+  } catch (e) {
+    results.tests.connectivity = {
+      success: false,
+      error: e instanceof Error ? e.message : 'Unknown error in connectivity test'
+    };
+  }
+  
+  // Create comprehensive summary
+  results.summary = analyzeTestResults(results);
+  
+  console.log('[CRITICAL-TEST] All tests completed. Summary:', results.summary);
+  console.log('[CRITICAL-TEST] Full test results:', results);
+  
+  // Dismiss the loading toast
+  toast.dismiss(toastId);
+  
+  // Show results to user
+  showDiagnosticResults(results);
+  
+  // Abort any pending requests
+  controller.abort();
+  
+  console.log('[CRITICAL-TEST] ===== CRITICAL FUNCTION TESTS COMPLETE =====');
+  
+  return results;
 };
 
 /**
  * Analyze test results and create a summary
  */
-const analyzeFunctionTestResults = (results: Record<string, any>) => {
+const analyzeTestResults = (results: Record<string, any>) => {
   const summary: Record<string, any> = {
     criticalIssuesCount: 0,
     warningsCount: 0,
@@ -453,63 +272,60 @@ const analyzeFunctionTestResults = (results: Record<string, any>) => {
     suggestedFixes: [] as string[]
   };
   
-  // Check session issues
-  if (!results.tests.session?.success || !results.tests.session?.hasSession) {
+  // Check local session issues
+  if (!results.tests.localSession?.success || !results.tests.localSession?.hasSession) {
     summary.criticalIssuesCount++;
     summary.issues.push('Sesja użytkownika jest nieprawidłowa lub wygasła');
     summary.suggestedFixes.push('Wyloguj i zaloguj się ponownie');
   }
   
-  // Check profile issues
-  if (!results.tests.profile?.success) {
+  // Check edge function connectivity
+  if (!results.tests.edgeFunction?.success) {
+    if (results.tests.edgeFunction?.timedOut) {
+      summary.criticalIssuesCount++;
+      summary.issues.push('Połączenie z serwerem przekroczyło limit czasu');
+      summary.suggestedFixes.push('Sprawdź połączenie internetowe lub spróbuj ponownie później');
+    } else {
+      summary.criticalIssuesCount++;
+      summary.issues.push('Błąd połączenia z funkcją diagnostyczną');
+    }
+  }
+  
+  // Check database connectivity
+  if (!results.tests.directDbQuery?.success) {
     summary.criticalIssuesCount++;
-    summary.issues.push('Błąd sprawdzania profilu użytkownika');
-  } else if (!results.tests.profile?.exists) {
+    summary.issues.push('Błąd połączenia z bazą danych');
+    
+    if (results.tests.connectivity?.success) {
+      summary.suggestedFixes.push('Problem z połączeniem do bazy danych - spróbuj ponownie później');
+    } else {
+      summary.suggestedFixes.push('Sprawdź połączenie internetowe');
+    }
+  } else if (results.tests.directDbQuery?.success && !results.tests.directDbQuery?.profileFound) {
     summary.criticalIssuesCount++;
     summary.issues.push('Brak profilu użytkownika w bazie danych');
     summary.suggestedFixes.push('Utwórz nowy profil użytkownika');
-  } else if (results.tests.profile.duration > 1000) {
-    summary.warningsCount++;
-    summary.issues.push('Pobieranie profilu trwa zbyt długo');
   }
   
-  // Check subscription edge function issues
-  if (!results.tests.subscriptionEdgeFunction?.success) {
-    if (results.tests.subscriptionEdgeFunction?.timedOut) {
-      summary.criticalIssuesCount++;
-      summary.issues.push('Funkcja sprawdzania subskrypcji przekroczyła limit czasu');
-      summary.suggestedFixes.push('Sprawdź połączenie z internetem lub spróbuj ponownie później');
-    } else {
-      summary.criticalIssuesCount++;
-      summary.issues.push('Funkcja sprawdzania subskrypcji zwróciła błąd');
+  // Check edge diagnostics specific issues if available
+  if (results.edgeDiagnostics) {
+    if (results.edgeDiagnostics.problems && results.edgeDiagnostics.problems.length > 0) {
+      results.edgeDiagnostics.problems.forEach((problem: string) => {
+        if (problem.includes('premium') || problem.includes('Premium')) {
+          summary.warningsCount++;
+          summary.issues.push(problem);
+        }
+      });
     }
-  } else if (results.tests.subscriptionEdgeFunction.duration > 2000) {
-    summary.warningsCount++;
-    summary.issues.push('Sprawdzanie subskrypcji trwa zbyt długo');
-  }
-  
-  // Check checkout session issues
-  if (!results.tests.checkoutSession?.success) {
-    if (results.tests.checkoutSession?.timedOut) {
-      summary.criticalIssuesCount++;
-      summary.issues.push('Funkcja tworzenia sesji płatności przekroczyła limit czasu');
-      summary.suggestedFixes.push('Sprawdź połączenie z internetem lub spróbuj ponownie później');
-    } else {
-      summary.criticalIssuesCount++;
-      summary.issues.push('Funkcja tworzenia sesji płatności zwróciła błąd');
+    
+    // Add any fixes from the edge function
+    if (results.edgeDiagnostics.fixes?.fixes?.length > 0) {
+      results.edgeDiagnostics.fixes.fixes.forEach((fix: string) => {
+        if (!summary.suggestedFixes.includes(fix)) {
+          summary.suggestedFixes.push(fix);
+        }
+      });
     }
-  } else if (results.tests.checkoutSession.duration > 2000) {
-    summary.warningsCount++;
-    summary.issues.push('Tworzenie sesji płatności trwa zbyt długo');
-  }
-  
-  // Check projects issues
-  if (!results.tests.projects?.success) {
-    summary.criticalIssuesCount++;
-    summary.issues.push('Błąd podczas pobierania projektów');
-  } else if (results.tests.projects.duration > 1000) {
-    summary.warningsCount++;
-    summary.issues.push('Pobieranie projektów trwa zbyt długo');
   }
   
   // Set main issue
@@ -523,114 +339,87 @@ const analyzeFunctionTestResults = (results: Record<string, any>) => {
 };
 
 /**
- * Apply emergency fixes for critical issues
+ * Show diagnostic results to the user
  */
-const applyEmergencyFixes = async (userId: string, testResults: Record<string, any>) => {
-  console.log('[EMERGENCY-FIX] Applying emergency fixes for user:', userId);
+const showDiagnosticResults = (results: Record<string, any>) => {
+  const { summary } = results;
   
-  const fixes: string[] = [];
-  
-  // Fix 1: If profile doesn't exist, create it
-  if (testResults.tests.profile?.exists === false) {
-    console.log('[EMERGENCY-FIX] Creating missing profile');
-    
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .insert({
-          id: userId,
-          is_premium: false,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
-        
-      if (error) {
-        console.error('[EMERGENCY-FIX] Error creating profile:', error);
-      } else {
-        console.log('[EMERGENCY-FIX] Profile created successfully');
-        fixes.push('Utworzono brakujący profil użytkownika');
-      }
-    } catch (e) {
-      console.error('[EMERGENCY-FIX] Exception creating profile:', e);
-    }
-  }
-  
-  // Fix 2: If session is invalid but profile exists, try to force premium update
-  if ((!testResults.tests.session?.success || !testResults.tests.session?.hasSession) && 
-      testResults.tests.profile?.exists) {
-    console.log('[EMERGENCY-FIX] Attempting to refresh premium status');
-    
-    try {
-      // Call edge function directly to fix premium status with timeout
-      const fixResult = await runWithTimeout(async () => {
-        const response = await supabase.functions.invoke('diagnose-user-data', {
-          body: { userId, forceFixPremium: true }
-        });
-        
-        // Type assertion for the response
-        return response as { data?: any, error?: any };
-      }, 8000, 'Fix premium status timeout');
-      
-      if (fixResult.error || !fixResult.data) {
-        console.error('[EMERGENCY-FIX] Error fixing premium status:', fixResult.error || 'No data returned');
-      } else {
-        console.log('[EMERGENCY-FIX] Premium status fixed:', fixResult.data);
-        if (fixResult.data?.fixes?.success) {
-          fixes.push('Naprawiono status premium');
-        }
-      }
-    } catch (e) {
-      console.error('[EMERGENCY-FIX] Exception fixing premium status:', e);
-    }
-  }
-  
-  // Fix 3: If payment logs exist but profile is not premium, update profile
-  if (testResults.tests.profile?.exists && !testResults.tests.profile?.isPremium) {
-    try {
-      console.log('[EMERGENCY-FIX] Checking payment logs for premium eligibility');
-      
-      const { data: paymentLogs, error: paymentError } = await supabase
-        .from('payment_logs')
-        .select('*')
-        .eq('user_id', userId);
-        
-      if (paymentError) {
-        console.error('[EMERGENCY-FIX] Error checking payment logs:', paymentError);
-      } else if (paymentLogs && paymentLogs.length > 0) {
-        console.log('[EMERGENCY-FIX] Found payment logs, updating premium status');
-        
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({
-            is_premium: true,
-            subscription_status: 'active',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', userId);
-          
-        if (updateError) {
-          console.error('[EMERGENCY-FIX] Error updating premium status:', updateError);
-        } else {
-          console.log('[EMERGENCY-FIX] Premium status updated successfully');
-          fixes.push('Zaktualizowano status premium na podstawie historii płatności');
-        }
-      } else {
-        console.log('[EMERGENCY-FIX] No payment logs found');
-      }
-    } catch (e) {
-      console.error('[EMERGENCY-FIX] Exception checking payment logs:', e);
-    }
-  }
-  
-  // Show results
-  if (fixes.length > 0) {
-    console.log('[EMERGENCY-FIX] Applied fixes:', fixes);
-    toast.success('Zastosowano automatyczne poprawki', {
-      description: fixes.join(', ')
+  if (summary.criticalIssuesCount > 0) {
+    toast.error(`Wykryto ${summary.criticalIssuesCount} krytyczne problemy`, {
+      description: summary.mainIssue,
+      duration: 8000
     });
-    return { success: true, fixes };
+    
+    // If we have suggested fixes, show them
+    if (summary.suggestedFixes.length > 0) {
+      setTimeout(() => {
+        toast.info('Sugerowane rozwiązania', {
+          description: summary.suggestedFixes.join('; '),
+          duration: 10000
+        });
+      }, 1000);
+    }
+  } else if (summary.warningsCount > 0) {
+    toast.warning(`Wykryto ${summary.warningsCount} ostrzeżenia`, {
+      description: summary.mainIssue,
+      duration: 8000
+    });
   } else {
-    console.log('[EMERGENCY-FIX] No fixes applied');
-    return { success: false };
+    toast.success('Wszystkie funkcje działają poprawnie', {
+      description: 'Nie wykryto żadnych problemów'
+    });
+  }
+  
+  // If edge diagnostics were successful, show detailed report
+  if (results.tests.edgeFunction?.success && results.edgeDiagnostics) {
+    const services = results.edgeDiagnostics.services || {};
+    const servicesChecked = Object.keys(services).length;
+    const servicesFailed = Object.values(services).filter((s: any) => !s.success).length;
+    
+    if (servicesFailed > 0) {
+      toast.warning(`${servicesFailed}/${servicesChecked} usług nie działa poprawnie`, {
+        duration: 5000
+      });
+    } else if (servicesChecked > 0) {
+      toast.success(`Wszystkie ${servicesChecked} usługi działają poprawnie`, {
+        duration: 5000
+      });
+    }
+  }
+};
+
+/**
+ * Run diagnostics on a user account with better error handling
+ */
+export const diagnoseAndFixUserAccount = async (userId: string) => {
+  if (!userId) {
+    console.error('[DIAGNOSTICS] No user ID provided for diagnostics');
+    toast.error('Nie podano ID użytkownika');
+    return {
+      success: false,
+      message: 'No user ID provided'
+    };
+  }
+  
+  try {
+    console.log('[DIAGNOSTICS] Running diagnostics for user:', userId);
+    toast.info('Uruchamianie diagnostyki konta...');
+    
+    // Run comprehensive diagnostics
+    const results = await testCriticalFunctions(userId);
+    
+    return {
+      success: true,
+      results
+    };
+  } catch (error) {
+    console.error('[DIAGNOSTICS] Exception running diagnostics:', error);
+    toast.error('Wystąpił błąd podczas diagnostyki konta');
+    
+    return {
+      success: false,
+      message: 'Exception running diagnostics',
+      error
+    };
   }
 };
