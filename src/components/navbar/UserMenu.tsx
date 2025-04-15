@@ -1,8 +1,8 @@
 
 import { User } from '@supabase/supabase-js';
-import { useEffect, useState, useCallback } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { LogOut, FolderOpen, CreditCard, Shield, RefreshCw, AlertCircle } from 'lucide-react';
+import { LogOut, FolderOpen, CreditCard, Shield } from 'lucide-react';
 import { Profile } from '@/contexts/auth/types';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -16,9 +16,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import SubscriptionModal from '../subscription/SubscriptionModal';
 import { clearPremiumFromLocalStorage } from '@/contexts/auth/local-storage-utils';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
-import { diagnoseAndFixUserAccount } from '@/lib/stripe/user-diagnostics-client';
 
 interface UserMenuProps {
   user: User;
@@ -30,171 +27,16 @@ interface UserMenuProps {
 
 export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: UserMenuProps) => {
   const [subscriptionModalOpen, setSubscriptionModalOpen] = useState(false);
-  const [effectivePremium, setEffectivePremium] = useState(isPremium || localPremium);
-  const [isCheckingPremium, setIsCheckingPremium] = useState(false);
-  const [isDiagnosing, setIsDiagnosing] = useState(false);
+  const effectivePremium = isPremium || localPremium;
 
   const getInitials = () => {
     if (!user?.email) return 'U';
     return user.email.charAt(0).toUpperCase();
   };
 
-  const verifyPremiumDirectly = useCallback(async () => {
-    if (!user?.id) return false;
-    
-    setIsCheckingPremium(true);
-    try {
-      console.log('[UserMenu] Directly checking premium status for user:', user.id);
-      const { data: dbProfile, error } = await supabase
-        .from('profiles')
-        .select('id, is_premium, subscription_status, subscription_expiry')
-        .eq('id', user.id)
-        .maybeSingle();
-      
-      if (error) {
-        console.error('[UserMenu] Error fetching profile:', error);
-        return false;
-      }
-      
-      if (dbProfile) {
-        console.log('[UserMenu] Direct DB check result:', dbProfile);
-        
-        if (dbProfile.subscription_expiry) {
-          const isExpired = new Date(dbProfile.subscription_expiry) < new Date();
-          
-          if (isExpired) {
-            console.log('[UserMenu] Subscription expired according to date');
-            return false;
-          }
-        }
-        
-        if (dbProfile.is_premium === true) {
-          console.log('[UserMenu] User has valid premium status');
-          return true;
-        }
-      }
-      
-      return false;
-    } catch (e) {
-      console.error('[UserMenu] Error in direct premium check:', e);
-      return false;
-    } finally {
-      setIsCheckingPremium(false);
-    }
-  }, [user?.id]);
-
-  useEffect(() => {
-    const checkPremiumStatus = async () => {
-      console.log('[UserMenu] Checking premium status with inputs:', {
-        contextIsPremium: isPremium,
-        localPremium,
-        profileIsPremium: profile?.is_premium,
-        userIdAvailable: !!user?.id
-      });
-      
-      if (!user?.id) {
-        console.log('[UserMenu] No user ID available, skipping premium check');
-        setEffectivePremium(false);
-        return;
-      }
-      
-      const directCheckResult = await verifyPremiumDirectly();
-      
-      if (directCheckResult) {
-        console.log('[UserMenu] Direct check confirms premium status');
-        setEffectivePremium(true);
-        return;
-      }
-      
-      if (profile) {
-        if (profile.subscription_expiry) {
-          const isExpired = new Date(profile.subscription_expiry) < new Date();
-          if (isExpired) {
-            console.log('[UserMenu] Premium expired according to expiry date');
-            setEffectivePremium(false);
-            return;
-          }
-        }
-        
-        if (profile.subscription_status === 'canceled') {
-          console.log('[UserMenu] Subscription is canceled');
-          setEffectivePremium(false);
-          return;
-        }
-        
-        if (profile.is_premium === true) {
-          console.log('[UserMenu] Profile explicitly has is_premium=true');
-          setEffectivePremium(true);
-          return;
-        }
-      }
-      
-      setEffectivePremium(isPremium || localPremium);
-    };
-    
-    checkPremiumStatus();
-  }, [user?.id, isPremium, profile, localPremium, verifyPremiumDirectly]);
-
   const handleSignOut = () => {
     clearPremiumFromLocalStorage();
     signOut();
-  };
-
-  const handleRefreshPremium = async () => {
-    setIsCheckingPremium(true);
-    try {
-      const directCheck = await verifyPremiumDirectly();
-      setEffectivePremium(directCheck);
-      
-      if (directCheck) {
-        toast({
-          title: 'Sukces',
-          description: 'Status premium potwierdzony'
-        });
-      } else {
-        toast({
-          title: 'Informacja',
-          description: 'Status premium nie został potwierdzony'
-        });
-      }
-    } finally {
-      setIsCheckingPremium(false);
-    }
-  };
-
-  const runDiagnostics = async () => {
-    if (!user?.id) {
-      toast({
-        variant: "destructive",
-        title: 'Błąd',
-        description: 'Brak ID użytkownika'
-      });
-      return;
-    }
-    
-    if (isDiagnosing) {
-      toast({
-        title: 'Informacja',
-        description: 'Diagnostyka już trwa, proszę czekać...'
-      });
-      return;
-    }
-    
-    setIsDiagnosing(true);
-    
-    try {
-      console.log('[DIAGNOSTICS] Starting full diagnostics for user:', user.id);
-      await diagnoseAndFixUserAccount(user.id);
-    } catch (error) {
-      console.error('[DIAGNOSTICS] Error running diagnostics:', error);
-      toast({
-        variant: "destructive",
-        title: 'Błąd podczas diagnostyki',
-        description: error instanceof Error ? error.message : 'Nieznany błąd'
-      });
-    } finally {
-      setIsDiagnosing(false);
-    }
   };
 
   return (
@@ -219,20 +61,9 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
           <DropdownMenuLabel className="font-normal">
             <div className="flex flex-col space-y-1">
               <p className="text-sm font-medium leading-none">{user.email}</p>
-              <div className="flex items-center gap-1">
-                <p className="text-xs leading-none text-muted-foreground">
-                  {effectivePremium ? 'Konto Premium' : 'Konto Free'}
-                </p>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-4 w-4 p-0 text-muted-foreground hover:text-copywrite-teal"
-                  onClick={handleRefreshPremium}
-                  disabled={isCheckingPremium}
-                >
-                  <RefreshCw className={`h-3 w-3 ${isCheckingPremium ? 'animate-spin' : ''}`} />
-                </Button>
-              </div>
+              <p className="text-xs leading-none text-muted-foreground">
+                {effectivePremium ? 'Konto Premium' : 'Konto Free'}
+              </p>
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
@@ -245,14 +76,6 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
           <DropdownMenuItem onClick={() => setSubscriptionModalOpen(true)} className="gap-2">
             <CreditCard size={16} /> 
             <span>Subskrypcja</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem 
-            onClick={runDiagnostics} 
-            className="gap-2 text-amber-600"
-            disabled={isDiagnosing}
-          >
-            <AlertCircle size={16} /> 
-            <span>{isDiagnosing ? 'Diagnostyka...' : 'Diagnostyka konta'}</span>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem 
