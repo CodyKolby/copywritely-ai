@@ -15,6 +15,42 @@ export const updateProfilePremiumStatus = async (
   try {
     console.log(`[PROFILE-UPDATE] Updating profile premium status for user: ${userId}`);
     
+    // First check if the profile exists
+    const { data: existingProfile, error: checkError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', userId)
+      .maybeSingle();
+      
+    if (checkError) {
+      console.error('[PROFILE-UPDATE] Error checking if profile exists:', checkError);
+    }
+    
+    // If profile doesn't exist, create it first
+    if (!existingProfile) {
+      console.log('[PROFILE-UPDATE] Profile does not exist, creating it first');
+      
+      try {
+        const { error: createError } = await supabase
+          .from('profiles')
+          .insert({
+            id: userId,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+          
+        if (createError) {
+          console.error('[PROFILE-UPDATE] Error creating profile:', createError);
+          // Continue anyway, as upsert might still work
+        } else {
+          console.log('[PROFILE-UPDATE] Profile created successfully');
+        }
+      } catch (createErr) {
+        console.error('[PROFILE-UPDATE] Exception creating profile:', createErr);
+        // Continue anyway
+      }
+    }
+    
     // Set expiry to 30 days from now if not provided
     if (!subscriptionExpiry && isPremium) {
       const expiryDate = new Date();
@@ -38,10 +74,13 @@ export const updateProfilePremiumStatus = async (
     
     console.log('[PROFILE-UPDATE] Updating profile with:', updateData);
     
+    // Try upsert instead of update to handle cases where profile might not exist
     const { error } = await supabase
       .from('profiles')
-      .update(updateData)
-      .eq('id', userId);
+      .upsert({
+        id: userId,
+        ...updateData
+      });
       
     if (error) {
       console.error('[PROFILE-UPDATE] Error updating profile:', error);
@@ -61,20 +100,72 @@ export const updateProfilePremiumStatus = async (
  */
 export const getProfileData = async (userId: string) => {
   try {
+    console.log('[PROFILE-UPDATE] Getting profile data for user:', userId);
+    
     const { data, error } = await supabase
       .from('profiles')
       .select('is_premium, subscription_id, subscription_status, subscription_expiry')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
       
     if (error) {
       console.error('[PROFILE-UPDATE] Error getting profile data:', error);
       return null;
     }
     
+    console.log('[PROFILE-UPDATE] Profile data retrieved:', data);
     return data;
   } catch (error) {
     console.error('[PROFILE-UPDATE] Exception getting profile data:', error);
     return null;
+  }
+};
+
+/**
+ * Create profile if it doesn't exist
+ */
+export const createProfileIfNotExists = async (userId: string): Promise<boolean> => {
+  try {
+    console.log('[PROFILE-UPDATE] Checking if profile exists for user:', userId);
+    
+    // Check if profile exists
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', userId)
+      .maybeSingle();
+      
+    if (error) {
+      console.error('[PROFILE-UPDATE] Error checking profile existence:', error);
+      return false;
+    }
+    
+    if (data) {
+      console.log('[PROFILE-UPDATE] Profile already exists');
+      return true;
+    }
+    
+    // Create profile if it doesn't exist
+    console.log('[PROFILE-UPDATE] Creating new profile for user:', userId);
+    
+    const { error: createError } = await supabase
+      .from('profiles')
+      .insert({
+        id: userId,
+        is_premium: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+      
+    if (createError) {
+      console.error('[PROFILE-UPDATE] Error creating profile:', createError);
+      return false;
+    }
+    
+    console.log('[PROFILE-UPDATE] Profile created successfully');
+    return true;
+  } catch (error) {
+    console.error('[PROFILE-UPDATE] Exception checking/creating profile:', error);
+    return false;
   }
 };

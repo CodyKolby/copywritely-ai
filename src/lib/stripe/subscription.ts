@@ -20,6 +20,24 @@ export const getSubscriptionDetails = async (userId: string): Promise<Subscripti
   try {
     console.log('[SUBSCRIPTION] Fetching subscription details for user:', userId);
     
+    // First check if this user has a profile in the database
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, is_premium, subscription_status, subscription_expiry, subscription_id')
+      .eq('id', userId)
+      .maybeSingle();
+      
+    if (profileError) {
+      console.error('[SUBSCRIPTION] Error checking profile:', profileError);
+    } else {
+      console.log('[SUBSCRIPTION] Profile check result:', profile);
+      
+      if (!profile) {
+        console.warn('[SUBSCRIPTION] No profile found for user:', userId);
+        return null;
+      }
+    }
+    
     // Set a timeout for the function call
     const functionPromise = supabase.functions.invoke('subscription-details', {
       body: { userId }
@@ -37,7 +55,7 @@ export const getSubscriptionDetails = async (userId: string): Promise<Subscripti
       timeoutPromise
     ]) as {data: any, error: any};
     
-    const { data, error } = result;
+    const { data, error } = result || {};
     
     if (error) {
       console.error('[SUBSCRIPTION] Error fetching subscription details:', error);
@@ -52,6 +70,7 @@ export const getSubscriptionDetails = async (userId: string): Promise<Subscripti
         
       if (profile?.is_premium) {
         console.log('[SUBSCRIPTION] User has premium status in DB, creating fallback data');
+        console.log('[SUBSCRIPTION] Profile data:', profile);
         
         // Create fallback subscription data
         const currentDate = new Date();
@@ -178,6 +197,40 @@ export const checkSubscriptionStatus = async (userId: string): Promise<boolean> 
   try {
     console.log('[SUBSCRIPTION] Checking subscription status for user:', userId);
     
+    // First check if this user has a profile in the database
+    const { data: profile, error: profileCheckError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', userId)
+      .maybeSingle();
+      
+    if (profileCheckError) {
+      console.error('[SUBSCRIPTION] Error checking if user has profile:', profileCheckError);
+    } else if (!profile) {
+      console.warn('[SUBSCRIPTION] No profile found for user:', userId);
+      
+      // Try to create a profile for the user
+      try {
+        console.log('[SUBSCRIPTION] Attempting to create profile for user:', userId);
+        const { error: createError } = await supabase
+          .from('profiles')
+          .insert({
+            id: userId,
+            is_premium: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+          
+        if (createError) {
+          console.error('[SUBSCRIPTION] Error creating profile:', createError);
+        } else {
+          console.log('[SUBSCRIPTION] Profile created successfully');
+        }
+      } catch (createErr) {
+        console.error('[SUBSCRIPTION] Exception creating profile:', createErr);
+      }
+    }
+    
     // First check DB directly for faster response
     try {
       console.log('[SUBSCRIPTION] Checking DB directly for premium status');
@@ -229,13 +282,13 @@ export const checkSubscriptionStatus = async (userId: string): Promise<boolean> 
       timeoutPromise
     ]) as {data: {isPremium: boolean}, error: any};
     
-    if (result.error) {
+    if (result?.error) {
       console.error('[SUBSCRIPTION] Error checking subscription status:', result.error);
       return false;
     }
     
-    console.log('[SUBSCRIPTION] Subscription status check result:', result.data);
-    return result.data?.isPremium || false;
+    console.log('[SUBSCRIPTION] Subscription status check result:', result?.data);
+    return result?.data?.isPremium || false;
   } catch (error) {
     console.error('[SUBSCRIPTION] Error checking subscription status:', error);
     return false;

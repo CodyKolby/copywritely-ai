@@ -25,7 +25,7 @@ export const fetchSessionDetails = async (sessionId: string) => {
       timeoutPromise
     ]) as {data: any, error: any};
     
-    const { data, error } = result;
+    const { data, error } = result || {};
     
     if (error) {
       console.error('[EDGE-FUNCTIONS] Error fetching session details:', error);
@@ -64,6 +64,8 @@ export const fetchSessionDetails = async (sessionId: string) => {
 export const verifyPaymentWithEdgeFunction = async (sessionId: string, userId: string) => {
   try {
     console.log('[EDGE-FUNCTIONS] Calling verify-payment-session edge function');
+    console.log('[EDGE-FUNCTIONS] User ID:', userId);
+    console.log('[EDGE-FUNCTIONS] Session ID:', sessionId);
     
     // Set a timeout for the edge function call
     const functionPromise = supabase.functions.invoke('verify-payment-session', {
@@ -82,7 +84,7 @@ export const verifyPaymentWithEdgeFunction = async (sessionId: string, userId: s
       timeoutPromise
     ]) as {data: any, error: any};
     
-    const { data, error } = result;
+    const { data, error } = result || {};
     
     if (error) {
       console.error('[EDGE-FUNCTIONS] Error from verify-payment-session:', error);
@@ -90,6 +92,48 @@ export const verifyPaymentWithEdgeFunction = async (sessionId: string, userId: s
       // Fallback to direct database update on timeout
       try {
         console.log('[EDGE-FUNCTIONS] Using fallback premium status update');
+        console.log('[EDGE-FUNCTIONS] Checking if user exists in profiles:', userId);
+        
+        // First check if user exists
+        const { data: existingProfile, error: fetchError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', userId)
+          .maybeSingle();
+        
+        if (fetchError) {
+          console.error('[EDGE-FUNCTIONS] Error checking profile existence:', fetchError);
+          return false;
+        }
+        
+        if (!existingProfile) {
+          console.error('[EDGE-FUNCTIONS] User profile not found for ID:', userId);
+          
+          // Try to create profile if it doesn't exist
+          try {
+            console.log('[EDGE-FUNCTIONS] Attempting to create profile for user:', userId);
+            const { error: createError } = await supabase
+              .from('profiles')
+              .insert({ 
+                id: userId, 
+                is_premium: true, 
+                subscription_status: 'active',
+                updated_at: new Date().toISOString()
+              });
+              
+            if (createError) {
+              console.error('[EDGE-FUNCTIONS] Error creating profile:', createError);
+              return false;
+            }
+            
+            return true;
+          } catch (createErr) {
+            console.error('[EDGE-FUNCTIONS] Exception creating profile:', createErr);
+            return false;
+          }
+        }
+        
+        // Update existing profile
         const { error: updateError } = await supabase
           .from('profiles')
           .update({ 

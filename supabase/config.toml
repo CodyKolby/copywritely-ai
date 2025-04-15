@@ -1,42 +1,23 @@
 
-project_id = "jorbqjareswzdrsmepbv"
+# Update this file to configure edge functions
 
-[api]
-enabled = true
-port = 54321
-schemas = ["public", "storage"]
+[functions.check-session-details]
+verify_jwt = true
 
-[db]
-port = 54322
+[functions.verify-payment-session]
+verify_jwt = true
 
-[studio]
-enabled = true
-port = 54323
-api_url = "http://localhost:54321"
+[functions.subscription-details]
+verify_jwt = true
 
-[inbucket]
-enabled = true
-port = 54324
+[functions.check-subscription-status]
+verify_jwt = true
 
-[storage]
-enabled = true
+[functions.cancel-subscription]
+verify_jwt = true
 
-[auth]
-enabled = true
+[functions.create-profile]
+verify_jwt = true
 
-[realtime]
-enabled = true
-
-[analytics]
-enabled = false
-
-[vector]
-enabled = true
-
-# Konfiguracja funkcji webhooka Stripe (bez JWT weryfikacji)
-[functions.stripe-webhook]
-verify_jwt = false
-
-# Konfiguracja funkcji stripe-checkout (z JWT weryfikacją)
-[functions.stripe-checkout]
+[functions.diagnose-user-data]
 verify_jwt = true
