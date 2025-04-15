@@ -5,7 +5,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { AppLayout } from './components/layout/AppLayout';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Routes } from './routes';
-import { Toaster as SonnerToaster } from 'sonner';
+import { Toaster as SonnerToaster, toast } from 'sonner'; // Import toast directly here
 import React, { useState, useEffect } from 'react';
 import { supabase, validateSupabaseConnection, checkConnectionHealth } from './integrations/supabase/client';
 import { ConnectionStatusAlert } from './components/ui/ConnectionStatusAlert';
@@ -125,8 +125,7 @@ function App() {
     };
   }, [isCheckingConnection]);
 
-  // Import toast on component mount
-  const { toast } = require('sonner');
+  // Remove the require statement - Use the imported toast directly
 
   return (
     <QueryClientProvider client={queryClient}>
