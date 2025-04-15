@@ -1,5 +1,4 @@
 
-// Replace the regular import with a URL import for Supabase client
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7';
 import { DatabaseOperations } from './types.ts';
 
@@ -16,20 +15,29 @@ export function createDatabaseOperations(): DatabaseOperations {
     customer?: string;
     customerEmail?: string;
   }) => {
-    const { error } = await supabase
-      .from('payment_logs')
-      .insert({
-        user_id: data.userId,
-        session_id: data.sessionId,
-        subscription_id: data.subscriptionId,
-        customer: data.customer,
-        customer_email: data.customerEmail,
-        timestamp: new Date().toISOString()
-      });
+    console.log('Logging payment:', data);
+    
+    try {
+      const { error } = await supabase
+        .from('payment_logs')
+        .insert({
+          user_id: data.userId,
+          session_id: data.sessionId,
+          subscription_id: data.subscriptionId,
+          customer: data.customer,
+          customer_email: data.customerEmail,
+          timestamp: new Date().toISOString()
+        });
 
-    if (error) {
-      console.error('Error logging payment:', error);
-      throw error;
+      if (error) {
+        console.error('Error logging payment:', error);
+        throw error;
+      }
+      
+      console.log('Payment logged successfully');
+    } catch (e) {
+      console.error('Exception logging payment:', e);
+      throw e;
     }
   };
 
@@ -42,45 +50,89 @@ export function createDatabaseOperations(): DatabaseOperations {
     trial_started_at?: string | null;
     updated_at: string;
   }) => {
-    const { error } = await supabase
-      .from('profiles')
-      .update(data)
-      .eq('id', userId);
+    console.log(`Updating profile for user ${userId} with:`, data);
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update(data)
+        .eq('id', userId);
 
-    if (error) {
-      console.error('Error updating profile:', error);
-      throw error;
+      if (error) {
+        console.error('Error updating profile:', error);
+        throw error;
+      }
+      
+      console.log(`Profile updated successfully for user ${userId}`);
+      
+      // Verify the update by fetching the profile
+      const { data: profile, error: fetchError } = await supabase
+        .from('profiles')
+        .select('is_premium, subscription_id, subscription_status, subscription_expiry')
+        .eq('id', userId)
+        .single();
+        
+      if (fetchError) {
+        console.error('Error fetching updated profile:', fetchError);
+      } else {
+        console.log('Updated profile values:', profile);
+      }
+    } catch (e) {
+      console.error('Exception updating profile:', e);
+      throw e;
     }
   };
 
   const findUserByEmail = async (email: string) => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('email', email)
-      .maybeSingle();
+    console.log(`Finding user by email: ${email}`);
+    
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', email)
+        .maybeSingle();
 
-    if (error) {
-      console.error('Error finding user by email:', error);
-      throw error;
+      if (error) {
+        console.error('Error finding user by email:', error);
+        throw error;
+      }
+      
+      if (data) {
+        console.log(`Found user with id ${data.id} for email ${email}`);
+      } else {
+        console.log(`No user found with email ${email}`);
+      }
+
+      return data;
+    } catch (e) {
+      console.error('Exception finding user by email:', e);
+      throw e;
     }
-
-    return data;
   };
 
   const storeUnprocessedPayment = async (sessionId: string, sessionData: any) => {
-    const { error } = await supabase
-      .from('unprocessed_payments')
-      .insert({
-        session_id: sessionId,
-        session_data: sessionData,
-        processed: false,
-        timestamp: new Date().toISOString()
-      });
+    console.log(`Storing unprocessed payment for session ${sessionId}`);
+    
+    try {
+      const { error } = await supabase
+        .from('unprocessed_payments')
+        .insert({
+          session_id: sessionId,
+          session_data: sessionData,
+          processed: false,
+          timestamp: new Date().toISOString()
+        });
 
-    if (error) {
-      console.error('Error storing unprocessed payment:', error);
-      throw error;
+      if (error) {
+        console.error('Error storing unprocessed payment:', error);
+        throw error;
+      }
+      
+      console.log('Unprocessed payment stored successfully');
+    } catch (e) {
+      console.error('Exception storing unprocessed payment:', e);
+      throw e;
     }
   };
 

@@ -1,3 +1,4 @@
+
 import { DatabaseOperations } from './types.ts';
 import Stripe from 'https://esm.sh/stripe@12.1.1';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7';
@@ -74,7 +75,10 @@ async function handlePaidSessionWithUserId(
     customerEmail
   });
 
+  console.log(`Calculating expiry date for user ${userId} with subscription ${subscriptionId}`);
   const expiryDate = await calculateExpiryDate(session, subscriptionId);
+  console.log(`Got expiry date: ${expiryDate}`);
+  
   await updateUserProfile(userId, expiryDate, subscriptionId, db);
 }
 
@@ -113,6 +117,59 @@ async function handleSubscriptionDeletion(
   });
 }
 
+async function handleSubscriptionWithoutProfile(
+  subscription: Stripe.Subscription,
+  expiryDate: string | null,
+  db: DatabaseOperations,
+  eventType: string
+) {
+  try {
+    // Try to find customer associated with this subscription
+    console.log(`Trying to find profile for subscription ${subscription.id}`);
+    
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') || '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
+    );
+    
+    if (subscription.customer) {
+      console.log(`Looking up customer: ${subscription.customer}`);
+      const customerId = typeof subscription.customer === 'string' 
+        ? subscription.customer 
+        : subscription.customer.id;
+      
+      // Find payments with this customer ID
+      const { data: logs } = await supabase
+        .from('payment_logs')
+        .select('user_id, customer_email')
+        .eq('customer', customerId)
+        .order('timestamp', { ascending: false })
+        .limit(1);
+      
+      if (logs && logs.length > 0 && logs[0].user_id) {
+        console.log(`Found user_id ${logs[0].user_id} in payment logs for customer ${customerId}`);
+        const userId = logs[0].user_id;
+        
+        // Update the user's profile with subscription info
+        await db.updateProfile(userId, {
+          is_premium: subscription.status === 'active' || subscription.status === 'trialing',
+          subscription_id: subscription.id,
+          subscription_status: subscription.status,
+          subscription_expiry: expiryDate || undefined,
+          updated_at: new Date().toISOString()
+        });
+        
+        console.log(`Updated profile for user ${userId} with subscription ${subscription.id}`);
+        return;
+      }
+    }
+    
+    console.log(`Could not find profile for subscription ${subscription.id} on ${eventType} event`);
+  } catch (error) {
+    console.error('Error handling subscription without profile:', error);
+  }
+}
+
 async function findProfileBySubscriptionId(subscriptionId: string, db: DatabaseOperations) {
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL') || '',
@@ -134,12 +191,14 @@ async function calculateExpiryDate(
   
   if (session.mode === 'subscription' && subscriptionId) {
     try {
+      console.log(`Retrieving subscription details for ${subscriptionId}`);
       const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
         apiVersion: '2023-10-16'
       });
       const subscription = await stripe.subscriptions.retrieve(subscriptionId);
       if (subscription.current_period_end) {
         expiryDate = new Date(subscription.current_period_end * 1000).toISOString();
+        console.log(`Retrieved expiry date from subscription: ${expiryDate}`);
       }
     } catch (error) {
       console.error('Error getting subscription details:', error);
@@ -150,6 +209,7 @@ async function calculateExpiryDate(
     const fallbackDate = new Date();
     fallbackDate.setDate(fallbackDate.getDate() + 30);
     expiryDate = fallbackDate.toISOString();
+    console.log(`Using fallback expiry date: ${expiryDate}`);
   }
 
   return expiryDate;
@@ -161,7 +221,10 @@ async function updateUserProfile(
   subscriptionId: string | null,
   db: DatabaseOperations
 ) {
-  await db.updateProfile(userId, {
+  console.log(`Updating profile for user ${userId} with subscription ${subscriptionId} and expiry ${expiryDate}`);
+  
+  // Add more detailed logging
+  const updateData = {
     is_premium: true,
     subscription_id: subscriptionId ?? undefined,
     subscription_status: 'active',
@@ -169,5 +232,14 @@ async function updateUserProfile(
     subscription_created_at: new Date().toISOString(),
     trial_started_at: null,
     updated_at: new Date().toISOString()
-  });
+  };
+  
+  console.log('Profile update data:', updateData);
+  
+  try {
+    await db.updateProfile(userId, updateData);
+    console.log(`Successfully updated profile for user ${userId}`);
+  } catch (error) {
+    console.error(`Error updating profile for user ${userId}:`, error);
+  }
 }
