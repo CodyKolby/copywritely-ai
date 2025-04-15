@@ -9,36 +9,33 @@ const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJh
 // Log initialization parameters to help with debugging
 console.log('[SUPABASE] Initializing client with:', { url: SUPABASE_URL, keyLength: SUPABASE_PUBLISHABLE_KEY?.length || 0 });
 
-// Create a singleton instance with optimized configuration for better reliability
+// Create a singleton instance with more aggressive timeout settings
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
     storage: localStorage,
-    storageKey: 'sb-jorbqjareswzdrsmepbv-auth-token',
-    detectSessionInUrl: true,
-    flowType: 'implicit'
+    detectSessionInUrl: true
   },
   global: {
     headers: { 'x-application-name': 'scriptcreator' },
-    // Increase timeouts to prevent quick failures
+    // Custom fetch with shorter timeout to fail faster
     fetch: (url, options) => {
       return fetch(url, {
         ...options,
-        signal: options?.signal || (AbortSignal && AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined)
+        // Set a shorter timeout (8 seconds) to prevent long hanging connections
+        signal: AbortSignal.timeout ? AbortSignal.timeout(8000) : undefined
       });
     }
   },
-  db: {
-    schema: 'public'
-  },
+  // Reduced realtime timeout
   realtime: {
-    timeout: 30000 // 30 seconds for realtime connections
+    timeout: 5000 // 5 seconds for realtime connections
   }
 });
 
 // Add connection validation function with retry logic
-export const validateSupabaseConnection = async (maxRetries = 3): Promise<boolean> => {
+export const validateSupabaseConnection = async (maxRetries = 2): Promise<boolean> => {
   let attempts = 0;
   
   while (attempts < maxRetries) {
@@ -46,12 +43,17 @@ export const validateSupabaseConnection = async (maxRetries = 3): Promise<boolea
       console.log(`[SUPABASE] Validating connection to ${SUPABASE_URL} (attempt ${attempts + 1}/${maxRetries})`);
       const startTime = Date.now();
       
-      // Use a simple query to check connectivity
+      // Use a simple query to check connectivity with shorter timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('count')
-        .limit(1);
+        .limit(1)
+        .abortSignal(controller.signal);
       
+      clearTimeout(timeoutId);
       const duration = Date.now() - startTime;
       
       if (error) {
@@ -59,10 +61,9 @@ export const validateSupabaseConnection = async (maxRetries = 3): Promise<boolea
         attempts++;
         
         if (attempts < maxRetries) {
-          // Exponential backoff: 1s, 2s, 4s, etc.
-          const backoff = Math.min(1000 * Math.pow(2, attempts), 8000);
-          console.log(`[SUPABASE] Retrying in ${backoff}ms...`);
-          await new Promise(resolve => setTimeout(resolve, backoff));
+          // Short backoff: 1s between attempts
+          console.log(`[SUPABASE] Retrying in 1000ms...`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
           continue;
         }
         return false;
@@ -75,10 +76,8 @@ export const validateSupabaseConnection = async (maxRetries = 3): Promise<boolea
       attempts++;
       
       if (attempts < maxRetries) {
-        // Exponential backoff
-        const backoff = Math.min(1000 * Math.pow(2, attempts), 8000);
-        console.log(`[SUPABASE] Retrying in ${backoff}ms...`);
-        await new Promise(resolve => setTimeout(resolve, backoff));
+        // Short backoff
+        await new Promise(resolve => setTimeout(resolve, 1000));
       } else {
         return false;
       }
@@ -88,14 +87,7 @@ export const validateSupabaseConnection = async (maxRetries = 3): Promise<boolea
   return false;
 };
 
-// Perform a reduced number of initial connection checks to avoid overwhelming logs
-setTimeout(() => {
-  validateSupabaseConnection(2)
-    .then(isConnected => console.log(`[SUPABASE] Initial connection check: ${isConnected ? 'SUCCESS' : 'FAILED'}`))
-    .catch(err => console.error('[SUPABASE] Initial connection check error:', err));
-}, 1000);
-
-// Add a connection health check function for components to use
+// Check connection health - improved with timeouts and error handling
 export const checkConnectionHealth = async (): Promise<{
   online: boolean;
   supabaseConnected: boolean;
@@ -111,17 +103,45 @@ export const checkConnectionHealth = async (): Promise<{
       };
     }
     
-    // Then check Supabase connection
-    const startTime = Date.now();
-    const { data, error } = await supabase
+    // Try a direct ping request to Supabase with a short timeout
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/`, {
+        method: 'HEAD',
+        headers: { 'apikey': SUPABASE_PUBLISHABLE_KEY },
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        return {
+          online: true,
+          supabaseConnected: false,
+          message: 'Serwer Supabase jest niedostępny'
+        };
+      }
+    } catch (e) {
+      console.warn('[CONNECTION-CHECK] Ping to Supabase failed:', e);
+      // Continue anyway to try the query method
+    }
+    
+    // Then try a simple query with short timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    
+    const { error } = await supabase
       .from('profiles')
       .select('count')
-      .limit(1);
+      .limit(1)
+      .abortSignal(controller.signal);
       
-    const duration = Date.now() - startTime;
+    clearTimeout(timeoutId);
     
     if (error) {
-      console.error(`[CONNECTION-CHECK] Supabase connection failed in ${duration}ms:`, error);
+      console.error('[CONNECTION-CHECK] Supabase query failed:', error);
       return {
         online: true,
         supabaseConnected: false,
@@ -142,3 +162,15 @@ export const checkConnectionHealth = async (): Promise<{
     };
   }
 };
+
+// Run a short connection test on module load
+setTimeout(() => {
+  validateSupabaseConnection(1)
+    .then(isConnected => {
+      console.log(`[SUPABASE] Initial connection test: ${isConnected ? 'SUCCESS' : 'FAILED'}`);
+      if (!isConnected) {
+        console.warn('[SUPABASE] Connection failed, app functionality may be limited');
+      }
+    })
+    .catch(err => console.error('[SUPABASE] Initial connection test error:', err));
+}, 500);

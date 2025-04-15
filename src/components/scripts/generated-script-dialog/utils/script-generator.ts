@@ -1,3 +1,4 @@
+
 import type { SocialMediaPlatform } from '../../SocialMediaPlatformDialog';
 import { ScriptGenerationResult } from '../types';
 import { supabase } from "@/integrations/supabase/client";
@@ -34,25 +35,32 @@ export const generateScript = async (
     // Add a strong cache-busting timestamp to prevent caching issues
     const cacheBuster = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
     
-    // Fetch the target audience data first
+    // Fetch the target audience data first with increased timeout and retries
     let targetAudience = null;
     let audienceError = null;
     
     // Try up to 3 times with exponential backoff
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
+        console.log(`Fetching target audience (attempt ${attempt}/3)...`);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+        
         const { data, error } = await supabase
           .from('target_audiences')
           .select('*')
           .eq('id', targetAudienceId)
+          .abortSignal(controller.signal)
           .single();
+          
+        clearTimeout(timeoutId);
           
         if (error) {
           console.error(`Error fetching target audience (attempt ${attempt}/3):`, error);
           audienceError = error;
           
           if (attempt < 3) {
-            const backoff = Math.min(1000 * Math.pow(2, attempt), 8000);
+            const backoff = Math.min(1000 * Math.pow(2, attempt), 5000); // Max 5s backoff
             console.log(`Retrying audience fetch in ${backoff}ms...`);
             await delay(backoff);
             continue;
@@ -64,8 +72,15 @@ export const generateScript = async (
       } catch (fetchError) {
         console.error(`Exception fetching target audience (attempt ${attempt}/3):`, fetchError);
         
+        if (fetchError.name === 'AbortError') {
+          console.error(`Target audience fetch timed out (attempt ${attempt}/3)`);
+          toast.error('Przekroczono czas oczekiwania na odpowiedź serwera', {
+            description: 'Próbujemy ponownie...'
+          });
+        }
+        
         if (attempt < 3) {
-          const backoff = Math.min(1000 * Math.pow(2, attempt), 8000);
+          const backoff = Math.min(1000 * Math.pow(2, attempt), 5000);
           await delay(backoff);
           continue;
         }
@@ -85,31 +100,48 @@ export const generateScript = async (
     console.log('Pobrano dane grupy docelowej:', targetAudience);
 
     // Get the access token
-    const { data: { session } } = await supabase.auth.getSession();
-    const accessToken = session?.access_token || '';
-    
-    if (!accessToken) {
-      toast.error('Użytkownik nie jest zalogowany');
-      throw new Error('Użytkownik nie jest zalogowany.');
-    }
-
-    // Use template specific generators
-    if (templateId === 'social') {
-      return generateSocialMedia(
-        targetAudience,
-        advertisingGoal,
-        socialMediaPlatform,
-        accessToken
-      );
-    } else {
-      // Default to online ad script for other templates
-      return generateOnlineAdScript(
-        targetAudience,
-        advertisingGoal,
-        hookIndex,
-        templateId,
-        accessToken
-      );
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
+      const { data } = await supabase.auth.getSession({
+        abortSignal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      const accessToken = data?.session?.access_token || '';
+      
+      if (!accessToken) {
+        toast.error('Użytkownik nie jest zalogowany');
+        throw new Error('Użytkownik nie jest zalogowany.');
+      }
+      
+      // Use template specific generators
+      if (templateId === 'social') {
+        return generateSocialMedia(
+          targetAudience,
+          advertisingGoal,
+          socialMediaPlatform,
+          accessToken
+        );
+      } else {
+        // Default to online ad script for other templates
+        return generateOnlineAdScript(
+          targetAudience,
+          advertisingGoal,
+          hookIndex,
+          templateId,
+          accessToken
+        );
+      }
+    } catch (sessionError) {
+      if (sessionError.name === 'AbortError') {
+        toast.error('Przekroczono czas pobierania sesji', {
+          description: 'Odśwież stronę i spróbuj ponownie'
+        });
+        throw new Error('Timeout podczas pobierania sesji użytkownika');
+      }
+      throw sessionError;
     }
   } catch (error: any) {
     console.error('Error generating script:', error);
@@ -152,6 +184,10 @@ async function generateSocialMedia(
     
     while (introRetries < 3) {
       try {
+        // Use AbortController for timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        
         introResponse = await fetch(`https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/social-intro-agent?_nocache=${cacheBuster}`, {
           method: 'POST',
           headers: {
@@ -167,14 +203,23 @@ async function generateSocialMedia(
             platform,
             cacheBuster
           }),
-          // Set a 20 second timeout on the request
-          signal: AbortSignal.timeout ? AbortSignal.timeout(20000) : undefined
+          signal: controller.signal
         });
+        
+        clearTimeout(timeoutId);
         
         // Successfully made request, break out of retry loop
         break;
       } catch (error) {
         console.error(`Social intro API error (attempt ${introRetries + 1}/3):`, error);
+        
+        if (error.name === 'AbortError') {
+          toast.dismiss('generating-social');
+          toast.error('Przekroczono czas oczekiwania na odpowiedź', {
+            description: 'Próbujemy ponownie...'
+          });
+        }
+        
         introRetries++;
         
         if (introRetries >= 3) {
@@ -186,7 +231,7 @@ async function generateSocialMedia(
         }
         
         // Exponential backoff before retrying
-        const backoff = Math.min(1000 * Math.pow(2, introRetries), 8000);
+        const backoff = Math.min(1000 * Math.pow(2, introRetries), 5000);
         console.log(`Retrying intro generation in ${backoff}ms...`);
         await delay(backoff);
       }
@@ -220,6 +265,10 @@ async function generateSocialMedia(
     
     while (postRetries < 3) {
       try {
+        // Use AbortController for timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+        
         postResponse = await fetch(`https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/social-post-agent?_nocache=${cacheBuster}`, {
           method: 'POST',
           headers: {
@@ -236,14 +285,23 @@ async function generateSocialMedia(
             platform,
             cacheBuster
           }),
-          // Set a 30 second timeout on the request
-          signal: AbortSignal.timeout ? AbortSignal.timeout(30000) : undefined
+          signal: controller.signal
         });
+        
+        clearTimeout(timeoutId);
         
         // Successfully made request, break out of retry loop
         break;
       } catch (error) {
         console.error(`Social post API error (attempt ${postRetries + 1}/3):`, error);
+        
+        if (error.name === 'AbortError') {
+          toast.dismiss('generating-post');
+          toast.error('Przekroczono czas oczekiwania na odpowiedź', {
+            description: 'Próbujemy ponownie...'
+          });
+        }
+        
         postRetries++;
         
         if (postRetries >= 3) {
@@ -255,7 +313,7 @@ async function generateSocialMedia(
         }
         
         // Exponential backoff before retrying
-        const backoff = Math.min(2000 * Math.pow(2, postRetries), 10000);
+        const backoff = Math.min(2000 * Math.pow(2, postRetries), 6000);
         console.log(`Retrying post generation in ${backoff}ms...`);
         await delay(backoff);
       }
@@ -338,6 +396,10 @@ async function generateOnlineAdScript(
   
   while (retryCount < maxRetries) {
     try {
+      // Use AbortController for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout
+      
       response = await fetch(`https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/generate-script?_nocache=${Date.now()}`, {
         method: 'POST',
         headers: {
@@ -355,14 +417,22 @@ async function generateOnlineAdScript(
           debugInfo: true,
           cacheBuster
         }),
-        // Set a longer timeout for this request since it can take time
-        signal: AbortSignal.timeout ? AbortSignal.timeout(40000) : undefined
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       
       // Successfully made request, break out of retry loop
       break;
     } catch (error) {
       console.error(`Generate script API error (attempt ${retryCount + 1}/${maxRetries}):`, error);
+      
+      if (error.name === 'AbortError') {
+        toast.error('Przekroczono czas oczekiwania na odpowiedź', {
+          description: 'Próbujemy ponownie...'
+        });
+      }
+      
       retryCount++;
       
       if (retryCount >= maxRetries) {
@@ -374,7 +444,7 @@ async function generateOnlineAdScript(
       }
       
       // Exponential backoff before retrying
-      const backoff = Math.min(2000 * Math.pow(2, retryCount), 10000);
+      const backoff = Math.min(2000 * Math.pow(2, retryCount), 5000);
       console.log(`Retrying script generation in ${backoff}ms...`);
       await delay(backoff);
     }

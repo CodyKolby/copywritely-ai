@@ -49,16 +49,17 @@ export const useAuthProvider = () => {
     refreshSession
   } = useSessionManagement(handleUserAuthenticated);
 
-  // Check connection health periodically
-  const checkConnection = useCallback(async () => {
+  // Check connection health with short circuit
+  const checkConnection = useCallback(async (force = false) => {
     const now = Date.now();
     
-    // Don't check more than once every 15 seconds unless forced
-    if (now - connectionStatus.lastChecked < 15000) {
+    // Don't check more than once every 10 seconds unless forced
+    if (!force && now - connectionStatus.lastChecked < 10000) {
       return connectionStatus;
     }
     
     try {
+      console.log('[AUTH] Checking connection health');
       const status = await checkConnectionHealth();
       
       setConnectionStatus({
@@ -84,68 +85,84 @@ export const useAuthProvider = () => {
     }
   }, [connectionStatus.lastChecked]);
 
-  // Function to fetch and set user profile with connection checks
+  // Function to fetch profile with connection checks and timeouts
   const fetchAndSetProfile = async (userId: string) => {
     try {
-      // Check connection before fetching profile
+      // Quick connection check before attempting fetch
       const connStatus = await checkConnection();
       
       if (!connStatus.online) {
         console.log('[AUTH] Device is offline, skipping profile fetch');
-        toast.error('Brak połączenia z internetem', {
-          description: 'Sprawdź połączenie internetowe i spróbuj ponownie'
-        });
         return null;
       }
       
       if (!connStatus.supabaseConnected) {
-        console.log('[AUTH] Supabase connection issues, will try profile fetch anyway');
-        toast.error('Problem z połączeniem do serwera', {
-          description: 'Próbujemy naprawić problem automatycznie...'
-        });
+        console.log('[AUTH] Connection issues detected, will attempt profile fetch anyway');
       }
       
       console.log('[AUTH] Fetching profile for user:', userId);
-      const userProfile = await fetchProfile(userId);
       
-      if (userProfile) {
-        console.log('[AUTH] Profile fetched successfully:', userProfile);
-        setProfile(userProfile);
-        return userProfile;
-      } else {
-        console.warn('[AUTH] No profile found for user:', userId);
+      // Use AbortController for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
+      try {
+        // Try to fetch profile with abort signal
+        const userProfile = await fetchProfile(userId, controller.signal);
+        clearTimeout(timeoutId);
         
-        console.log('[AUTH] Creating profile through regular methods');
-        try {
-          const { data: createData, error: createError } = await supabase
-            .from('profiles')
-            .upsert({
-              id: userId,
-              is_premium: false,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            })
-            .select()
-            .maybeSingle();
-            
-          if (!createError && createData) {
-            console.log('[AUTH] Profile created successfully:', createData);
-            setProfile(createData as Profile);
-            return createData as Profile;
+        if (userProfile) {
+          console.log('[AUTH] Profile fetched successfully');
+          setProfile(userProfile);
+          return userProfile;
+        } else {
+          console.warn('[AUTH] No profile found for user:', userId);
+          
+          // If connection seems okay but no profile, try to create one
+          if (connStatus.supabaseConnected) {
+            try {
+              const { data: createData, error: createError } = await supabase
+                .from('profiles')
+                .upsert({
+                  id: userId,
+                  is_premium: false,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
+                })
+                .select()
+                .abortSignal(AbortSignal.timeout ? AbortSignal.timeout(5000) : undefined)
+                .maybeSingle();
+                
+              if (!createError && createData) {
+                console.log('[AUTH] Profile created successfully');
+                setProfile(createData as Profile);
+                return createData as Profile;
+              } else {
+                console.error('[AUTH] Error creating profile:', createError);
+              }
+            } catch (e) {
+              console.error('[AUTH] Exception creating profile:', e);
+            }
           } else {
-            console.error('[AUTH] Error creating profile:', createError);
+            console.log('[AUTH] Skipping profile creation due to connection issues');
           }
-        } catch (e) {
-          console.error('[AUTH] Exception creating profile:', e);
+        }
+      } catch (abortError) {
+        clearTimeout(timeoutId);
+        if (abortError.name === 'AbortError') {
+          console.error('[AUTH] Profile fetch timed out');
+        } else {
+          console.error('[AUTH] Error during profile fetch:', abortError);
         }
       }
     } catch (profileError) {
-      console.error('[AUTH] Error fetching profile:', profileError);
+      console.error('[AUTH] Error in fetchAndSetProfile:', profileError);
     }
+    
     return null;
   };
 
-  // Connection status monitoring
+  // Connection and online status monitoring
   useEffect(() => {
     const handleOnline = () => {
       console.log('[AUTH] Device went online');
@@ -155,7 +172,7 @@ export const useAuthProvider = () => {
         lastChecked: 0 // Force a fresh check
       }));
       
-      // Refresh session when going online
+      // On reconnection, try to refresh session if we have a user
       if (user) {
         refreshSession();
       }
@@ -176,10 +193,10 @@ export const useAuthProvider = () => {
     // Initial connection check
     checkConnection();
     
-    // Periodic connection checks
+    // Periodic connection checks (every 30 seconds)
     const intervalId = setInterval(() => {
       checkConnection();
-    }, 60000); // Check every minute
+    }, 30000);
     
     return () => {
       window.removeEventListener('online', handleOnline);
@@ -188,6 +205,7 @@ export const useAuthProvider = () => {
     };
   }, [checkConnection, refreshSession, user]);
 
+  // Auth state listener
   useEffect(() => {
     console.log("[AUTH] Setting up auth state listener");
     
@@ -203,19 +221,23 @@ export const useAuthProvider = () => {
             localStorage.setItem('userEmail', newSession.user.email);
           }
           
-          // Fetch profile info with retries
-          let retries = 3;
+          // Fetch profile with retries
+          let retries = 2;
           let userProfile = null;
           
-          while (retries > 0 && !userProfile) {
+          while (retries >= 0 && !userProfile) {
             try {
               userProfile = await fetchAndSetProfile(newSession.user.id);
               if (userProfile) break;
             } catch (profileError) {
-              console.error(`[AUTH] Error fetching profile during auth change (retry ${4-retries}/3):`, profileError);
+              console.error(`[AUTH] Error fetching profile (try ${2-retries}/2):`, profileError);
             }
+            
             retries--;
-            if (retries > 0) await new Promise(resolve => setTimeout(resolve, 1000));
+            if (retries >= 0) {
+              console.log(`[AUTH] Retrying profile fetch, ${retries+1} attempts remaining`);
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
           }
           
           // Use setTimeout to avoid deadlocks with auth state change
@@ -230,6 +252,7 @@ export const useAuthProvider = () => {
       }
     });
 
+    // Auth initialization
     const initializeAuth = async () => {
       try {
         console.log('[AUTH] Initializing auth state');
@@ -244,74 +267,93 @@ export const useAuthProvider = () => {
           return;
         }
 
-        // First check connection before attempting to get session
-        const connStatus = await checkConnection();
+        // Check connection first
+        const connStatus = await checkConnection(true);
+        
         if (!connStatus.supabaseConnected) {
           console.log('[AUTH] Connection issues detected during initialization');
           toast.error('Problem z połączeniem do serwera', {
             description: 'Próbujemy nawiązać połączenie...'
           });
           
-          // Retry connection after a short delay
+          // We'll continue anyway but will show appropriate UI
           setTimeout(async () => {
-            const retryStatus = await checkConnection();
-            if (!retryStatus.supabaseConnected) {
-              console.log('[AUTH] Still having connection issues after retry');
-              toast.error('Nadal występują problemy z połączeniem', {
-                description: 'Odśwież stronę lub spróbuj ponownie później'
-              });
-            }
+            await checkConnection(true);
           }, 3000);
         }
 
-        const { data: { session: currentSession }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error('[AUTH] Error getting session:', error);
-        }
-        
-        if (currentSession?.user) {
-          console.log('[AUTH] Found existing session, user ID:', currentSession.user.id);
+        try {
+          // Use AbortController to prevent hanging
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 5000);
           
-          if (currentSession.user.email) {
-            localStorage.setItem('userEmail', currentSession.user.email);
+          const { data, error } = await supabase.auth.getSession({
+            abortSignal: controller.signal
+          });
+          
+          clearTimeout(timeoutId);
+          
+          if (error) {
+            console.error('[AUTH] Error getting session:', error);
+            throw error;
           }
           
-          setSession(currentSession);
-          setUser(currentSession.user);
+          const currentSession = data.session;
           
-          // Fetch profile info with retries
-          let retries = 3;
-          let userProfile = null;
-          
-          while (retries > 0 && !userProfile) {
-            try {
-              userProfile = await fetchAndSetProfile(currentSession.user.id);
-              if (userProfile) break;
-            } catch (profileError) {
-              console.error(`[AUTH] Error fetching profile during initialization (retry ${4-retries}/3):`, profileError);
+          if (currentSession?.user) {
+            console.log('[AUTH] Found existing session, user ID:', currentSession.user.id);
+            
+            if (currentSession.user.email) {
+              localStorage.setItem('userEmail', currentSession.user.email);
             }
-            retries--;
-            if (retries > 0) await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            setSession(currentSession);
+            setUser(currentSession.user);
+            
+            // Fetch profile with limited retries
+            let retries = 1; // Only one retry to prevent slow initialization
+            let userProfile = null;
+            
+            while (retries >= 0 && !userProfile) {
+              try {
+                userProfile = await fetchAndSetProfile(currentSession.user.id);
+                if (userProfile) break;
+              } catch (profileError) {
+                console.error(`[AUTH] Error fetching profile during init (try ${1-retries}/1):`, profileError);
+              }
+              retries--;
+              if (retries >= 0) await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            
+            // Use setTimeout to avoid deadlocks
+            setTimeout(async () => {
+              await handleUserAuthenticated(currentSession.user.id);
+            }, 0);
+          } else {
+            console.log('[AUTH] No active session found');
+            setSession(null);
+            setUser(null);
+            clearPremiumFromLocalStorage();
+          }
+        } catch (sessionError) {
+          if (sessionError.name === 'AbortError') {
+            console.error('[AUTH] Session fetch timed out');
+            toast.error('Problem z weryfikacją sesji', {
+              description: 'Odśwież stronę lub spróbuj ponownie za chwilę'
+            });
+          } else {
+            console.error('[AUTH] Error getting session:', sessionError);
           }
           
-          // Use setTimeout to avoid deadlocks
-          setTimeout(async () => {
-            await handleUserAuthenticated(currentSession.user.id);
-          }, 0);
-        } else {
-          console.log('[AUTH] No active session found');
           setSession(null);
           setUser(null);
           clearPremiumFromLocalStorage();
         }
-        
-        setAuthInitialized(true);
       } catch (error) {
         console.error('[AUTH] Error initializing auth:', error);
-        setAuthInitialized(true);
       }
       
+      setAuthInitialized(true);
       setLoading(false);
     };
 
@@ -323,6 +365,7 @@ export const useAuthProvider = () => {
     };
   }, [testUser, testSession, testIsPremium, testProfile, handleUserAuthenticated, setIsPremium, setUser, setSession, checkConnection]);
 
+  // Export all the functions and state
   return {
     user: testUser || user, 
     session: testSession || session, 
