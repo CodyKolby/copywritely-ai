@@ -124,7 +124,6 @@ export const useAuthProvider = () => {
                 updated_at: new Date().toISOString()
               })
               .select()
-              .abortSignal(controller.signal)
               .maybeSingle();
               
             clearTimeout(timeoutId);

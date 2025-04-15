@@ -8,11 +8,10 @@ import * as PremiumUtils from './premium-utils';
 // Re-export auth methods
 export * from './auth-methods';
 
-// Re-export everything from profile-utils except updatePremiumStatus
+// Re-export everything from profile-utils
 export const {
   fetchProfile,
   createProfile,
-  // Explicitly exclude updatePremiumStatus
 } = ProfileUtils;
 
 // Re-export all premium utilities

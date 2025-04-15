@@ -45,38 +45,53 @@ export const generateScript = async (
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
         
-        const { data, error } = await supabase
-          .from('target_audiences')
-          .select('*')
-          .eq('id', targetAudienceId)
-          .abortSignal(controller.signal)
-          .single();
+        // Using a try-catch block to manually handle the abort signal instead
+        try {
+          const { data, error } = await supabase
+            .from('target_audiences')
+            .select('*')
+            .eq('id', targetAudienceId)
+            .maybeSingle();
           
-        clearTimeout(timeoutId);
-          
-        if (error) {
-          console.error(`Error fetching target audience (attempt ${attempt}/3):`, error);
-          audienceError = error;
-          
-          if (attempt < 3) {
-            const backoff = Math.min(1000 * Math.pow(2, attempt), 5000); // Max 5s backoff
-            console.log(`Retrying audience fetch in ${backoff}ms...`);
-            await delay(backoff);
-            continue;
+          if (controller.signal.aborted) {
+            throw new DOMException('Aborted', 'AbortError');
           }
-        } else if (data) {
-          targetAudience = data;
-          break;
+          
+          clearTimeout(timeoutId);
+            
+          if (error) {
+            console.error(`Error fetching target audience (attempt ${attempt}/3):`, error);
+            audienceError = error;
+            
+            if (attempt < 3) {
+              const backoff = Math.min(1000 * Math.pow(2, attempt), 5000); // Max 5s backoff
+              console.log(`Retrying audience fetch in ${backoff}ms...`);
+              await delay(backoff);
+              continue;
+            }
+          } else if (data) {
+            targetAudience = data;
+            break;
+          }
+        } catch (fetchError) {
+          clearTimeout(timeoutId);
+          
+          if (fetchError.name === 'AbortError') {
+            console.error(`Target audience fetch timed out (attempt ${attempt}/3)`);
+            audienceError = new Error('Timeout');
+            
+            if (attempt < 3) {
+              const backoff = Math.min(1000 * Math.pow(2, attempt), 5000);
+              console.log(`Retrying after timeout in ${backoff}ms...`);
+              await delay(backoff);
+              continue;
+            }
+          } else {
+            throw fetchError;
+          }
         }
       } catch (fetchError) {
         console.error(`Exception fetching target audience (attempt ${attempt}/3):`, fetchError);
-        
-        if (fetchError.name === 'AbortError') {
-          console.error(`Target audience fetch timed out (attempt ${attempt}/3)`);
-          toast.error('Przekroczono czas oczekiwania na odpowiedź serwera', {
-            description: 'Próbujemy ponownie...'
-          });
-        }
         
         if (attempt < 3) {
           const backoff = Math.min(1000 * Math.pow(2, attempt), 5000);

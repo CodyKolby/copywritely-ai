@@ -21,15 +21,16 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     headers: { 'x-application-name': 'scriptcreator' },
     // Custom fetch with shorter timeout to fail faster
     fetch: (url, options) => {
+      // Create a new controller for timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
       
       // Combine the signal from options with our timeout signal
-      const originalSignal = options?.signal;
-      if (originalSignal) {
-        originalSignal.addEventListener('abort', () => controller.abort());
+      if (options?.signal) {
+        options.signal.addEventListener('abort', () => controller.abort());
       }
       
+      // Use our controller's signal
       const fetchPromise = fetch(url, {
         ...options,
         signal: controller.signal
