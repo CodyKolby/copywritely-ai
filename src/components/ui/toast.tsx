@@ -1,3 +1,4 @@
+
 import * as React from "react"
 import * as ToastPrimitives from "@radix-ui/react-toast"
 import { cva, type VariantProps } from "class-variance-authority"
@@ -126,8 +127,3 @@ export {
   ToastAction,
 }
 
-// Add the useToast hook and toast function
-import { useToast as originalUseToast, toast as originalToast } from "@radix-ui/react-toast"
-
-export const useToast = originalUseToast
-export const toast = originalToast
