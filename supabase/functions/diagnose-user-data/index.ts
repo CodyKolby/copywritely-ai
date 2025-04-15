@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.20.0";
 
@@ -138,25 +137,31 @@ async function runDiagnostics(userId: string, supabase: any, forceFixPremium?: b
     const startTime = Date.now();
     console.log(`[DIAGNOSE-USER] Starting diagnostics at ${new Date().toISOString()}`);
     
-    // Check 1: Auth service - Can we verify the user exists?
+    // Check 1: Auth service - REMOVED admin.getUserById API call as it's causing errors
     servicesChecked++;
     try {
-      console.log('[DIAGNOSE-USER] Checking user in auth service');
-      const { data: user, error: userError } = await supabase.auth.admin.getUserById(userId);
+      console.log('[DIAGNOSE-USER] Checking user in auth service via session');
       
-      if (userError) {
+      // Instead of using admin API, we'll check if user exists in profiles table
+      const { data: profile, error: profileCheckError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', userId)
+        .maybeSingle();
+      
+      if (profileCheckError) {
         servicesFailed++;
-        services.auth = { success: false, error: userError.message };
+        services.auth = { success: false, error: profileCheckError.message };
         problems.push('Problem z weryfikacją użytkownika');
-        console.error('[DIAGNOSE-USER] User verification error:', userError);
-      } else if (!user) {
+        console.error('[DIAGNOSE-USER] User verification error:', profileCheckError);
+      } else if (!profile) {
         servicesFailed++;
-        services.auth = { success: false, error: 'User not found' };
-        problems.push('Nie znaleziono użytkownika');
-        console.error('[DIAGNOSE-USER] User not found for ID:', userId);
+        services.auth = { success: false, error: 'User not found in profiles' };
+        problems.push('Nie znaleziono użytkownika w tabeli profile');
+        console.error('[DIAGNOSE-USER] User not found in profiles table:', userId);
       } else {
-        services.auth = { success: true, email: user.email };
-        console.log('[DIAGNOSE-USER] User verified successfully:', user.email);
+        services.auth = { success: true, id: profile.id };
+        console.log('[DIAGNOSE-USER] User verified via profiles table:', profile.id);
       }
     } catch (authError) {
       servicesFailed++;

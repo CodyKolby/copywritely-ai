@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Profile } from './types';
 
@@ -73,27 +72,7 @@ export const createProfile = async (userId: string): Promise<Profile | null> => 
   try {
     console.log(`[PROFILE-UTILS] Creating profile for user: ${userId}`);
     
-    // First, check if a user with this ID exists in auth.users
-    try {
-      const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
-      
-      if (userError) {
-        console.error('[PROFILE-UTILS] Error verifying user existence:', userError);
-        
-        // Don't rely on admin API, just continue with creation
-        console.log('[PROFILE-UTILS] Continuing with profile creation without user verification');
-      } else if (!userData?.user) {
-        console.warn('[PROFILE-UTILS] No user found in auth.users with ID:', userId);
-        // Still continue as this might be a valid user ID passed from elsewhere
-      } else {
-        console.log('[PROFILE-UTILS] User verified in auth.users:', userData.user.email);
-      }
-    } catch (verificationError) {
-      console.error('[PROFILE-UTILS] Exception verifying user:', verificationError);
-      // Continue with profile creation
-    }
-    
-    // Get current session for user data - use explicit headers to prevent 406 errors
+    // Get current session for user data
     const { data: sessionData } = await supabase.auth.getSession();
     const user = sessionData?.session?.user;
     
@@ -152,7 +131,7 @@ export const createProfile = async (userId: string): Promise<Profile | null> => 
         is_premium: false,
         updated_at: new Date().toISOString()
       })
-      .select('id, email, full_name, avatar_url, is_premium') // Explicitly select only needed fields
+      .select('id, email, full_name, avatar_url, is_premium')
       .maybeSingle();
       
     if (error) {

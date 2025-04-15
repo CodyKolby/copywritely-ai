@@ -52,30 +52,31 @@ export const useAuthProvider = () => {
       } else {
         console.warn('[AUTH] No profile found for user:', userId);
         
-        // Try direct edge function call as a last resort
+        // Try direct edge function call as a last resort - REMOVED as it's causing errors
+        // We'll handle profile creation through regular methods
+        
+        console.log('[AUTH] Creating profile through regular methods');
         try {
-          console.log('[AUTH] Attempting profile creation with edge function directly');
-          
-          const response = await fetch('https://jorbqjareswzdrsmepbv.functions.supabase.co/create-profile', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ userId }),
-          });
-          
-          if (response.ok) {
-            const result = await response.json();
-            if (result.profile) {
-              console.log('[AUTH] Profile created via edge function:', result.profile);
-              setProfile(result.profile);
-              return result.profile;
-            }
+          const { data: createData, error: createError } = await supabase
+            .from('profiles')
+            .upsert({
+              id: userId,
+              is_premium: false,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .select()
+            .maybeSingle();
+            
+          if (!createError && createData) {
+            console.log('[AUTH] Profile created successfully:', createData);
+            setProfile(createData as Profile);
+            return createData as Profile;
           } else {
-            console.error('[AUTH] Edge function call failed:', await response.text());
+            console.error('[AUTH] Error creating profile:', createError);
           }
-        } catch (edgeFnError) {
-          console.error('[AUTH] Error calling create-profile edge function directly:', edgeFnError);
+        } catch (e) {
+          console.error('[AUTH] Exception creating profile:', e);
         }
       }
     } catch (profileError) {
@@ -114,6 +115,7 @@ export const useAuthProvider = () => {
             if (retries > 0) await new Promise(resolve => setTimeout(resolve, 1000));
           }
           
+          // Use setTimeout to avoid deadlocks with auth state change
           setTimeout(() => {
             handleUserAuthenticated(newSession.user.id);
           }, 0);
@@ -170,7 +172,10 @@ export const useAuthProvider = () => {
             if (retries > 0) await new Promise(resolve => setTimeout(resolve, 1000));
           }
           
-          await handleUserAuthenticated(currentSession.user.id);
+          // Use setTimeout to avoid deadlocks
+          setTimeout(async () => {
+            await handleUserAuthenticated(currentSession.user.id);
+          }, 0);
         } else {
           console.log('[AUTH] No active session found');
           setSession(null);
