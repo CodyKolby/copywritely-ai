@@ -1,5 +1,4 @@
-
-import { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Profile } from './types';
 import { fetchProfile } from './profile-utils';
