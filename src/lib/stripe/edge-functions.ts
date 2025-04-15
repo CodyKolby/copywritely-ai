@@ -13,17 +13,19 @@ export const fetchSessionDetails = async (sessionId: string) => {
       body: { sessionId }
     });
     
-    const timeoutPromise = new Promise((_, reject) => {
+    const timeoutPromise = new Promise<{data: null, error: Error}>((_, reject) => {
       setTimeout(() => {
         reject(new Error('Timeout fetching session details'));
       }, 5000); // 5 second timeout
     });
     
     // Race between function and timeout
-    const { data, error } = await Promise.race([
+    const result = await Promise.race([
       functionPromise,
       timeoutPromise
-    ]);
+    ]) as {data: any, error: any};
+    
+    const { data, error } = result;
     
     if (error) {
       console.error('[EDGE-FUNCTIONS] Error fetching session details:', error);
@@ -68,17 +70,19 @@ export const verifyPaymentWithEdgeFunction = async (sessionId: string, userId: s
       body: { sessionId, userId }
     });
     
-    const timeoutPromise = new Promise((_, reject) => {
+    const timeoutPromise = new Promise<{data: null, error: Error}>((_, reject) => {
       setTimeout(() => {
         reject(new Error('Timeout verifying payment'));
       }, 5000); // 5 second timeout
     });
     
     // Race between function and timeout
-    const { data, error } = await Promise.race([
+    const result = await Promise.race([
       functionPromise,
       timeoutPromise
-    ]);
+    ]) as {data: any, error: any};
+    
+    const { data, error } = result;
     
     if (error) {
       console.error('[EDGE-FUNCTIONS] Error from verify-payment-session:', error);

@@ -25,17 +25,19 @@ export const getSubscriptionDetails = async (userId: string): Promise<Subscripti
       body: { userId }
     });
     
-    const timeoutPromise = new Promise<null>((_, reject) => {
+    const timeoutPromise = new Promise<{data: null, error: Error}>((_, reject) => {
       setTimeout(() => {
         reject(new Error('Przekroczono czas oczekiwania na dane subskrypcji'));
       }, 5000); // 5 second timeout
     });
     
     // Race between function call and timeout
-    const { data, error } = await Promise.race([
+    const result = await Promise.race([
       functionPromise,
       timeoutPromise
-    ]);
+    ]) as {data: any, error: any};
+    
+    const { data, error } = result;
     
     if (error) {
       console.error('[SUBSCRIPTION] Error fetching subscription details:', error);
@@ -144,17 +146,19 @@ export const cancelSubscription = async (userId: string, subscriptionId: string)
       body: { userId, subscriptionId }
     });
     
-    const timeoutPromise = new Promise((_, reject) => {
+    const timeoutPromise = new Promise<{data: null, error: Error}>((_, reject) => {
       setTimeout(() => {
         reject(new Error('Przekroczono czas oczekiwania na anulowanie subskrypcji'));
       }, 5000); // 5 second timeout
     });
     
     // Race between function call and timeout
-    const { data, error } = await Promise.race([
+    const result = await Promise.race([
       functionPromise,
       timeoutPromise
-    ]);
+    ]) as {data: any, error: any};
+    
+    const { data, error } = result;
     
     if (error) {
       console.error('[SUBSCRIPTION] Error canceling subscription:', error);
@@ -212,26 +216,26 @@ export const checkSubscriptionStatus = async (userId: string): Promise<boolean> 
       body: { userId }
     });
     
-    const timeoutPromise = new Promise<{data: {isPremium: boolean}}>((resolve) => {
+    const timeoutPromise = new Promise<{data: {isPremium: boolean}, error: null}>((resolve) => {
       setTimeout(() => {
         // On timeout, default to what we found in the database
-        resolve({data: {isPremium: false}});
+        resolve({data: {isPremium: false}, error: null});
       }, 5000); // 5 second timeout
     });
     
     // Race between function call and timeout
-    const { data, error } = await Promise.race([
+    const result = await Promise.race([
       functionPromise,
       timeoutPromise
-    ]);
+    ]) as {data: {isPremium: boolean}, error: any};
     
-    if (error) {
-      console.error('[SUBSCRIPTION] Error checking subscription status:', error);
+    if (result.error) {
+      console.error('[SUBSCRIPTION] Error checking subscription status:', result.error);
       return false;
     }
     
-    console.log('[SUBSCRIPTION] Subscription status check result:', data);
-    return data?.isPremium || false;
+    console.log('[SUBSCRIPTION] Subscription status check result:', result.data);
+    return result.data?.isPremium || false;
   } catch (error) {
     console.error('[SUBSCRIPTION] Error checking subscription status:', error);
     return false;

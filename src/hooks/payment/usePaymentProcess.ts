@@ -146,8 +146,11 @@ export function usePaymentProcess(
           description: 'Spróbujemy alternatywną metodę płatności',
         });
         
-        // Try netlifu fallback if available
-        const netlifyFallbackUrl = `https://copywrite-assist.com/.netlify/functions/stripe-checkout?priceId=${priceId}&customerEmail=${user.email || ''}`;
+        // Get the price ID for fallback
+        const fallbackPriceId = getPriceId(billingCycle);
+        
+        // Try netlify fallback if available
+        const netlifyFallbackUrl = `https://copywrite-assist.com/.netlify/functions/stripe-checkout?priceId=${fallbackPriceId}&customerEmail=${user.email || ''}`;
         console.log('Trying fallback URL:', netlifyFallbackUrl);
         
         // Delay a bit before redirecting
