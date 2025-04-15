@@ -95,6 +95,19 @@ serve(async (req) => {
       }
     }
 
+    // Check if subscription has been cancelled/deactivated
+    if (profile.subscription_status === 'canceled' && !isTrial) {
+      console.log('Subscription has been canceled');
+      
+      // Update database to reflect canceled status
+      await updatePremiumStatus(supabase, userId, false, 'canceled');
+      
+      return new Response(
+        JSON.stringify({ isPremium: false }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Check expiry date first - this is critical
     if (profile.subscription_expiry) {
       if (isSubscriptionExpired(profile.subscription_expiry) && !isTrial) {
@@ -158,7 +171,7 @@ serve(async (req) => {
     }
     
     // One final check - if premium is false but payment logs exist, override
-    if (!isPremium) {
+    if (!isPremium && profile.subscription_status !== 'canceled') {
       const hasPaymentLogs = await checkPaymentLogs(supabase, userId);
       
       if (hasPaymentLogs) {

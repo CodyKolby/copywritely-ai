@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/auth/AuthContext';
-import { checkAllPremiumStorages, updateAllPremiumStorages } from '@/contexts/auth/local-storage-utils';
+import { checkAllPremiumStorages, updateAllPremiumStorages, clearPremiumFromLocalStorage } from '@/contexts/auth/local-storage-utils';
 import { checkPremiumStatus, forcePremiumStatusUpdate } from '@/contexts/auth/premium-utils';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -59,14 +59,41 @@ export const usePremiumVerification = () => {
         .eq('id', user.id)
         .single();
         
-      if (!error && profile?.is_premium) {
-        console.log('[PREMIUM-VERIFICATION] Found premium status in database');
-        if (isMountedRef.current) {
-          setLocalPremiumStatus(true);
-          updateAllPremiumStorages(true);
+      if (!error && profile) {
+        // Check if subscription has expired
+        const isExpired = profile.subscription_expiry ? 
+          new Date(profile.subscription_expiry) < new Date() : false;
+          
+        if (isExpired && profile.is_premium) {
+          console.log('[PREMIUM-VERIFICATION] Subscription has expired based on date');
+          
+          // Update local storage and state
+          setLocalPremiumStatus(false);
+          clearPremiumFromLocalStorage();
+          
+          // Also update database if needed
+          await supabase
+            .from('profiles')
+            .update({
+              is_premium: false,
+              subscription_status: 'expired',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', user.id);
+            
+          setIsCheckingPremium(false);
+          return false;
         }
-        setIsCheckingPremium(false);
-        return true;
+        
+        if (profile.is_premium) {
+          console.log('[PREMIUM-VERIFICATION] Found premium status in database');
+          if (isMountedRef.current) {
+            setLocalPremiumStatus(true);
+            updateAllPremiumStorages(true);
+          }
+          setIsCheckingPremium(false);
+          return true;
+        }
       }
       
       // If database check didn't confirm premium, use the check function
@@ -77,6 +104,8 @@ export const usePremiumVerification = () => {
         setLocalPremiumStatus(status);
         if (status) {
           updateAllPremiumStorages(true);
+        } else {
+          clearPremiumFromLocalStorage();
         }
       }
       
@@ -96,30 +125,61 @@ export const usePremiumVerification = () => {
     
     // First check storage immediately
     const storagePremium = checkAllPremiumStorages();
-    if (storagePremium) {
-      return true;
-    }
     
     // Then check with database directly for fastest response
     setIsCheckingPremium(true);
     try {
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('is_premium')
+        .select('is_premium, subscription_expiry, subscription_status')
         .eq('id', user.id)
         .single();
         
-      if (!error && profile?.is_premium) {
-        console.log('[PREMIUM-VERIFICATION] Premium confirmed from database');
-        updateAllPremiumStorages(true);
-        setIsCheckingPremium(false);
-        return true;
+      if (!error && profile) {
+        // Check if subscription has expired
+        const isExpired = profile.subscription_expiry ? 
+          new Date(profile.subscription_expiry) < new Date() : false;
+          
+        if (isExpired && profile.is_premium) {
+          console.log('[PREMIUM-VERIFICATION] Subscription has expired based on date');
+          
+          // Update local storage and state
+          updateAllPremiumStorages(false);
+          clearPremiumFromLocalStorage();
+          
+          // Also update database if needed
+          await supabase
+            .from('profiles')
+            .update({
+              is_premium: false,
+              subscription_status: 'expired',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', user.id);
+            
+          setIsCheckingPremium(false);
+          return false;
+        }
+        
+        if (profile.is_premium) {
+          console.log('[PREMIUM-VERIFICATION] Premium confirmed from database');
+          updateAllPremiumStorages(true);
+          setIsCheckingPremium(false);
+          return true;
+        }
+      }
+      
+      // Reset storage premium if database says not premium
+      if (storagePremium && (!error && !profile?.is_premium)) {
+        clearPremiumFromLocalStorage();
       }
       
       // If not found in database, check with server function
       const serverPremium = await checkPremiumStatus(user.id, false);
       if (serverPremium) {
         updateAllPremiumStorages(true);
+      } else {
+        clearPremiumFromLocalStorage();
       }
       setIsCheckingPremium(false);
       return serverPremium;
@@ -142,6 +202,8 @@ export const usePremiumVerification = () => {
     if (forceResult && isMountedRef.current) {
       setLocalPremiumStatus(true);
       updateAllPremiumStorages(true);
+    } else if (!forceResult) {
+      clearPremiumFromLocalStorage();
     }
     
     return forceResult;
