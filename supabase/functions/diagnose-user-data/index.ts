@@ -27,8 +27,17 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseKey);
     
-    // Get user data from request
-    const { userId, forceFixPremium } = await req.json();
+    // Get request data - add fallback for empty body
+    let requestData = {};
+    try {
+      if (req.body) {
+        requestData = await req.json();
+      }
+    } catch (parseError) {
+      console.error('[DIAGNOSE-USER] Error parsing request body:', parseError);
+    }
+    
+    const { userId, forceFixPremium } = requestData;
     
     if (!userId) {
       throw new Error('No user ID provided');
@@ -48,6 +57,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         error: error.message || 'An unknown error occurred',
+        timestamp: new Date().toISOString()
       }),
       {
         status: 400,

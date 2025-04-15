@@ -137,7 +137,7 @@ export const testCriticalFunctions = async (userId: string) => {
         console.error('[CRITICAL-TEST] Session error:', sessionError);
         results.tests.session = { success: false, error: sessionError };
       } else {
-        console.log('[CRITICAL-TEST] Session data:', sessionData);
+        console.log('[CRITICAL-TEST] Session data:', !!sessionData.session ? 'Session exists' : 'No session');
         results.tests.session = { 
           success: true, 
           hasSession: !!sessionData.session,
@@ -147,10 +147,13 @@ export const testCriticalFunctions = async (userId: string) => {
       }
     } catch (e) {
       console.error('[CRITICAL-TEST] Exception checking session:', e);
-      results.tests.session = { success: false, error: e };
+      results.tests.session = { 
+        success: false, 
+        error: e instanceof Error ? e.message : 'Unknown error checking session'
+      };
     }
     
-    // Test 2: Direct check for profile data
+    // Always continue to the next test, regardless of previous test results
     console.log('[CRITICAL-TEST] Test 2: Checking profile data');
     try {
       const start = Date.now();
@@ -166,7 +169,12 @@ export const testCriticalFunctions = async (userId: string) => {
         console.error('[CRITICAL-TEST] Profile error:', profileError);
         results.tests.profile = { success: false, error: profileError, duration };
       } else {
-        console.log('[CRITICAL-TEST] Profile data:', profileData);
+        console.log('[CRITICAL-TEST] Profile data:', profileData ? 'Found' : 'Not found');
+        if (profileData) {
+          console.log('[CRITICAL-TEST] Profile premium status:', profileData.is_premium);
+          console.log('[CRITICAL-TEST] Profile subscription status:', profileData.subscription_status);
+        }
+        
         results.tests.profile = { 
           success: true, 
           exists: !!profileData,
@@ -178,127 +186,186 @@ export const testCriticalFunctions = async (userId: string) => {
       }
     } catch (e) {
       console.error('[CRITICAL-TEST] Exception checking profile:', e);
-      results.tests.profile = { success: false, error: e };
+      results.tests.profile = { 
+        success: false, 
+        error: e instanceof Error ? e.message : 'Unknown error checking profile'
+      };
     }
     
-    // Test 3: Check subscription via Edge Function
+    // Test 3: Check subscription via Edge Function with timeout handling
     console.log('[CRITICAL-TEST] Test 3: Testing check-subscription-status edge function');
     try {
       const start = Date.now();
       
-      // Set a timeout for the function call
-      const functionPromise = supabase.functions.invoke('check-subscription-status', {
-        body: { userId }
-      });
+      // Create an AbortController for the timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
       
-      const timeoutPromise = new Promise<{data: null, error: Error}>((_, reject) => {
-        setTimeout(() => {
-          reject(new Error('Timeout checking subscription status'));
-        }, 5000); // 5 second timeout
-      });
-      
-      // Race between function call and timeout
-      const result = await Promise.race([
-        functionPromise,
-        timeoutPromise
-      ]);
-      
-      const duration = Date.now() - start;
-      
-      console.log('[CRITICAL-TEST] Subscription status edge function result:', result);
-      results.tests.subscriptionEdgeFunction = { 
-        success: !result.error, 
-        data: result.data, 
-        error: result.error,
-        duration
-      };
+      try {
+        const { data, error } = await supabase.functions.invoke(
+          'check-subscription-status',
+          {
+            body: { userId },
+            signal: controller.signal
+          }
+        );
+        
+        clearTimeout(timeoutId);
+        
+        const duration = Date.now() - start;
+        
+        if (error) {
+          console.error('[CRITICAL-TEST] Subscription status error:', error);
+          results.tests.subscriptionEdgeFunction = { 
+            success: false, 
+            error,
+            duration
+          };
+        } else {
+          console.log('[CRITICAL-TEST] Subscription status result:', data);
+          results.tests.subscriptionEdgeFunction = { 
+            success: true, 
+            data, 
+            duration
+          };
+        }
+      } catch (e) {
+        clearTimeout(timeoutId);
+        console.error('[CRITICAL-TEST] Exception or timeout in subscription check:', e);
+        
+        results.tests.subscriptionEdgeFunction = { 
+          success: false, 
+          error: e instanceof Error ? e.message : 'Unknown error',
+          timedOut: e.name === 'AbortError' 
+        };
+      }
     } catch (e) {
-      console.error('[CRITICAL-TEST] Exception checking subscription with edge function:', e);
+      console.error('[CRITICAL-TEST] Outer exception in subscription check:', e);
       results.tests.subscriptionEdgeFunction = { 
         success: false, 
-        error: e,
-        timedOut: e.message?.includes('Timeout') 
+        error: e instanceof Error ? e.message : 'Unknown error checking subscription'
       };
     }
     
-    // Test 4: Try to create a checkout session
+    // Test 4: Test checkout session creation with timeout handling
     console.log('[CRITICAL-TEST] Test 4: Testing stripe-checkout edge function');
     try {
       const start = Date.now();
       
-      const priceId = 'price_1R5A8aAGO17NLUWtxzthF8lo'; // Sample price ID for test
-      const origin = window.location.origin;
-      const successUrl = `${origin}/success?session_id={CHECKOUT_SESSION_ID}`;
-      const cancelUrl = `${origin}/pricing?canceled=true`;
+      // Create an AbortController for the timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
       
-      // Set a timeout for the function call
-      const functionPromise = supabase.functions.invoke('stripe-checkout', {
-        body: {
-          priceId,
-          userId,
-          successUrl,
-          cancelUrl,
-          timestamp: new Date().toISOString()
+      try {
+        const priceId = 'price_1R5A8aAGO17NLUWtxzthF8lo';
+        const origin = window.location.origin;
+        const successUrl = `${origin}/success?session_id={CHECKOUT_SESSION_ID}`;
+        const cancelUrl = `${origin}/pricing?canceled=true`;
+        
+        const { data, error } = await supabase.functions.invoke(
+          'stripe-checkout',
+          {
+            body: {
+              priceId,
+              userId,
+              successUrl,
+              cancelUrl,
+              timestamp: new Date().toISOString()
+            },
+            signal: controller.signal
+          }
+        );
+        
+        clearTimeout(timeoutId);
+        
+        const duration = Date.now() - start;
+        
+        if (error) {
+          console.error('[CRITICAL-TEST] Checkout error:', error);
+          results.tests.checkoutSession = { 
+            success: false, 
+            error,
+            duration
+          };
+        } else {
+          console.log('[CRITICAL-TEST] Checkout result:', data);
+          results.tests.checkoutSession = { 
+            success: true, 
+            hasUrl: !!data?.url,
+            data,
+            duration
+          };
         }
-      });
-      
-      const timeoutPromise = new Promise<{data: null, error: Error}>((_, reject) => {
-        setTimeout(() => {
-          reject(new Error('Timeout creating checkout session'));
-        }, 5000); // 5 second timeout
-      });
-      
-      // Race between function call and timeout
-      const result = await Promise.race([
-        functionPromise,
-        timeoutPromise
-      ]);
-      
-      const duration = Date.now() - start;
-      
-      console.log('[CRITICAL-TEST] Checkout session creation result:', result);
-      results.tests.checkoutSession = { 
-        success: !result.error && !!result.data?.url, 
-        hasUrl: !!result.data?.url,
-        error: result.error,
-        duration
-      };
+      } catch (e) {
+        clearTimeout(timeoutId);
+        console.error('[CRITICAL-TEST] Exception or timeout in checkout:', e);
+        
+        results.tests.checkoutSession = { 
+          success: false, 
+          error: e instanceof Error ? e.message : 'Unknown error',
+          timedOut: e.name === 'AbortError' 
+        };
+      }
     } catch (e) {
-      console.error('[CRITICAL-TEST] Exception creating checkout session:', e);
+      console.error('[CRITICAL-TEST] Outer exception in checkout:', e);
       results.tests.checkoutSession = { 
         success: false, 
-        error: e,
-        timedOut: e.message?.includes('Timeout') 
+        error: e instanceof Error ? e.message : 'Unknown error in checkout session'
       };
     }
     
-    // Test 5: Fetch projects
+    // Test 5: Fetch projects with timeout handling
     console.log('[CRITICAL-TEST] Test 5: Testing projects fetch');
     try {
       const start = Date.now();
       
-      const { data: projects, error: projectsError } = await supabase
-        .from('projects')
-        .select('id, title, created_at, updated_at')
-        .eq('user_id', userId);
-        
-      const duration = Date.now() - start;
+      // Create an AbortController for the timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
       
-      if (projectsError) {
-        console.error('[CRITICAL-TEST] Projects fetch error:', projectsError);
-        results.tests.projects = { success: false, error: projectsError, duration };
-      } else {
-        console.log('[CRITICAL-TEST] Projects data:', projects);
+      try {
+        const { data: projects, error: projectsError } = await supabase
+          .from('projects')
+          .select('id, title, created_at, updated_at')
+          .eq('user_id', userId)
+          .abortSignal(controller.signal);
+          
+        clearTimeout(timeoutId);
+        
+        const duration = Date.now() - start;
+        
+        if (projectsError) {
+          console.error('[CRITICAL-TEST] Projects fetch error:', projectsError);
+          results.tests.projects = { success: false, error: projectsError, duration };
+        } else {
+          console.log('[CRITICAL-TEST] Projects count:', projects?.length || 0);
+          if (projects && projects.length > 0) {
+            console.log('[CRITICAL-TEST] First project:', projects[0]);
+          }
+          
+          results.tests.projects = { 
+            success: true, 
+            count: projects?.length || 0,
+            projects,
+            duration
+          };
+        }
+      } catch (e) {
+        clearTimeout(timeoutId);
+        console.error('[CRITICAL-TEST] Exception or timeout fetching projects:', e);
+        
         results.tests.projects = { 
-          success: true, 
-          count: projects?.length || 0,
-          projects,
-          duration
+          success: false, 
+          error: e instanceof Error ? e.message : 'Unknown error',
+          timedOut: e.name === 'AbortError' 
         };
       }
     } catch (e) {
-      console.error('[CRITICAL-TEST] Exception fetching projects:', e);
-      results.tests.projects = { success: false, error: e };
+      console.error('[CRITICAL-TEST] Outer exception fetching projects:', e);
+      results.tests.projects = { 
+        success: false, 
+        error: e instanceof Error ? e.message : 'Unknown error fetching projects'
+      };
     }
     
     // Create comprehensive summary
@@ -310,11 +377,13 @@ export const testCriticalFunctions = async (userId: string) => {
     // Show results to user
     if (results.summary.criticalIssuesCount > 0) {
       toast.error(`Wykryto ${results.summary.criticalIssuesCount} krytyczne problemy`, {
-        description: results.summary.mainIssue
+        description: results.summary.mainIssue,
+        duration: 8000
       });
     } else if (results.summary.warningsCount > 0) {
       toast.warning(`Wykryto ${results.summary.warningsCount} ostrzeżenia`, {
-        description: results.summary.mainIssue
+        description: results.summary.mainIssue,
+        duration: 8000
       });
     } else {
       toast.success('Wszystkie funkcje działają poprawnie', {
@@ -330,9 +399,11 @@ export const testCriticalFunctions = async (userId: string) => {
     return results;
   } catch (error) {
     console.error('[CRITICAL-TEST] Exception running tests:', error);
-    toast.error('Błąd podczas testowania funkcji');
+    toast.error('Błąd podczas testowania funkcji', {
+      description: error instanceof Error ? error.message : 'Nieznany błąd'
+    });
     
-    results.overallError = error;
+    results.overallError = error instanceof Error ? error.message : 'Unknown error';
     return results;
   } finally {
     console.log('[CRITICAL-TEST] ===== CRITICAL FUNCTION TESTS COMPLETE =====');

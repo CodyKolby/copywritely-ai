@@ -38,7 +38,6 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
     return user.email.charAt(0).toUpperCase();
   };
 
-  // Force direct database check for premium status
   const verifyPremiumDirectly = useCallback(async () => {
     if (!user?.id) return false;
     
@@ -59,7 +58,6 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
       if (dbProfile) {
         console.log('[UserMenu] Direct DB check result:', dbProfile);
         
-        // Check expiry
         if (dbProfile.subscription_expiry) {
           const isExpired = new Date(dbProfile.subscription_expiry) < new Date();
           
@@ -69,7 +67,6 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
           }
         }
         
-        // Premium is valid if explicitly true and not expired
         if (dbProfile.is_premium === true) {
           console.log('[UserMenu] User has valid premium status');
           return true;
@@ -85,7 +82,6 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
     }
   }, [user?.id]);
 
-  // Check premium status when component mounts or when props change
   useEffect(() => {
     const checkPremiumStatus = async () => {
       console.log('[UserMenu] Checking premium status with inputs:', {
@@ -101,7 +97,6 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
         return;
       }
       
-      // Start with direct DB check as most reliable source
       const directCheckResult = await verifyPremiumDirectly();
       
       if (directCheckResult) {
@@ -110,9 +105,7 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
         return;
       }
       
-      // Fall back to profile check
       if (profile) {
-        // Check expiry date if it exists
         if (profile.subscription_expiry) {
           const isExpired = new Date(profile.subscription_expiry) < new Date();
           if (isExpired) {
@@ -122,14 +115,12 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
           }
         }
         
-        // Check for canceled status
         if (profile.subscription_status === 'canceled') {
           console.log('[UserMenu] Subscription is canceled');
           setEffectivePremium(false);
           return;
         }
         
-        // If profile.is_premium is explicitly true, user is premium
         if (profile.is_premium === true) {
           console.log('[UserMenu] Profile explicitly has is_premium=true');
           setEffectivePremium(true);
@@ -137,7 +128,6 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
         }
       }
       
-      // Finally, fall back to context values
       setEffectivePremium(isPremium || localPremium);
     };
     
@@ -145,7 +135,6 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
   }, [user?.id, isPremium, profile, localPremium, verifyPremiumDirectly]);
 
   const handleSignOut = () => {
-    // Clear localStorage premium backup on logout
     clearPremiumFromLocalStorage();
     signOut();
   };
@@ -173,14 +162,22 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
     }
     
     setIsDiagnosing(true);
+    toast.info('Uruchamianie pełnej diagnostyki...', {
+      id: 'diagnostics-start',
+      duration: 3000
+    });
+    
     try {
-      toast.info('Uruchamianie pełnej diagnostyki...');
       console.log('[DIAGNOSTICS] Starting full diagnostics for user:', user.id);
+      
+      toast.loading('Diagnostyka w toku...', {
+        id: 'diagnostics-running',
+        duration: 10000
+      });
       
       const results = await testCriticalFunctions(user.id);
       console.log('[DIAGNOSTICS] Full diagnostic results:', results);
       
-      // Display summary in toast
       if (results.summary?.criticalIssuesCount > 0) {
         toast.error(`Wykryto ${results.summary.criticalIssuesCount} krytyczne problemy`, {
           description: results.summary.mainIssue,
@@ -196,11 +193,27 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
           duration: 5000
         });
       }
+      
+      for (const [testName, result] of Object.entries(results.tests)) {
+        if (result.success === false) {
+          console.error(`[DIAGNOSTICS] Test '${testName}' failed:`, result.error);
+          toast.error(`Test '${testName}' nie powiódł się`, {
+            description: typeof result.error === 'string' ? result.error : 'Szczegóły w konsoli',
+            duration: 5000
+          });
+        } else {
+          console.log(`[DIAGNOSTICS] Test '${testName}' completed:`, result);
+        }
+      }
+      
+      toast.dismiss('diagnostics-running');
     } catch (error) {
       console.error('[DIAGNOSTICS] Error running diagnostics:', error);
       toast.error('Błąd podczas diagnostyki', {
-        description: error instanceof Error ? error.message : 'Nieznany błąd'
+        description: error instanceof Error ? error.message : 'Nieznany błąd',
+        duration: 8000
       });
+      toast.dismiss('diagnostics-running');
     } finally {
       setIsDiagnosing(false);
     }
