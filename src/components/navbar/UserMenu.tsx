@@ -1,3 +1,4 @@
+
 import { User } from '@supabase/supabase-js';
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
@@ -16,8 +17,8 @@ import {
 import SubscriptionModal from '../subscription/SubscriptionModal';
 import { clearPremiumFromLocalStorage } from '@/contexts/auth/local-storage-utils';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { testCriticalFunctions } from '@/lib/stripe/user-diagnostics-client';
+import { toast } from '@/hooks/use-toast';
+import { diagnoseAndFixUserAccount } from '@/lib/stripe/user-diagnostics-client';
 
 interface UserMenuProps {
   user: User;
@@ -146,9 +147,15 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
       setEffectivePremium(directCheck);
       
       if (directCheck) {
-        toast.success('Status premium potwierdzony');
+        toast({
+          title: 'Sukces',
+          description: 'Status premium potwierdzony'
+        });
       } else {
-        toast.info('Status premium nie został potwierdzony');
+        toast({
+          title: 'Informacja',
+          description: 'Status premium nie został potwierdzony'
+        });
       }
     } finally {
       setIsCheckingPremium(false);
@@ -157,33 +164,33 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
 
   const runDiagnostics = async () => {
     if (!user?.id) {
-      toast.error('Brak ID użytkownika');
+      toast({
+        variant: "destructive",
+        title: 'Błąd',
+        description: 'Brak ID użytkownika'
+      });
       return;
     }
     
     if (isDiagnosing) {
-      toast.info('Diagnostyka już trwa, proszę czekać...');
+      toast({
+        title: 'Informacja',
+        description: 'Diagnostyka już trwa, proszę czekać...'
+      });
       return;
     }
     
     setIsDiagnosing(true);
-    toast.info('Uruchamianie pełnej diagnostyki...', {
-      id: 'diagnostics-start',
-      duration: 3000
-    });
     
     try {
       console.log('[DIAGNOSTICS] Starting full diagnostics for user:', user.id);
-      
-      const results = await testCriticalFunctions(user.id);
-      
-      console.log('[DIAGNOSTICS] Full diagnostic results:', results);
-      
+      await diagnoseAndFixUserAccount(user.id);
     } catch (error) {
       console.error('[DIAGNOSTICS] Error running diagnostics:', error);
-      toast.error('Błąd podczas diagnostyki', {
-        description: error instanceof Error ? error.message : 'Nieznany błąd',
-        duration: 8000
+      toast({
+        variant: "destructive",
+        title: 'Błąd podczas diagnostyki',
+        description: error instanceof Error ? error.message : 'Nieznany błąd'
       });
     } finally {
       setIsDiagnosing(false);

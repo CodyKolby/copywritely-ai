@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { toast } from '@/hooks/use-toast';
 
 /**
  * Test all critical user functions with fast, independent checks
@@ -18,8 +18,10 @@ export const testCriticalFunctions = async (userId: string) => {
   
   // Show initial toast that will be updated or dismissed later
   const toastId = 'diagnostics-running';
-  toast.loading('Diagnostyka w toku...', {
+  toast({
     id: toastId,
+    title: 'Diagnostyka w toku...',
+    description: 'Sprawdzanie połączenia z serwerem...',
     duration: 30000 // Set a long duration as we'll dismiss it manually
   });
   
@@ -259,7 +261,12 @@ export const testCriticalFunctions = async (userId: string) => {
   console.log('[CRITICAL-TEST] Full test results:', results);
   
   // Dismiss the loading toast
-  toast.dismiss(toastId);
+  toast({
+    id: toastId,
+    title: 'Diagnostyka zakończona',
+    description: 'Przetwarzanie wyników...',
+    duration: 2000
+  });
   
   // Show results to user
   showDiagnosticResults(results);
@@ -284,6 +291,13 @@ const analyzeTestResults = (results: Record<string, any>) => {
     suggestedFixes: [] as string[]
   };
   
+  // Add network connectivity issues first if they exist
+  if (!results.tests.connectivity?.success) {
+    summary.criticalIssuesCount++;
+    summary.issues.push('Problem z połączeniem internetowym');
+    summary.suggestedFixes.push('Sprawdź połączenie internetowe i stabilność sieci');
+  }
+  
   // Check local session issues
   if (!results.tests.localSession?.success || !results.tests.localSession?.hasSession) {
     summary.criticalIssuesCount++;
@@ -296,7 +310,12 @@ const analyzeTestResults = (results: Record<string, any>) => {
     if (results.tests.edgeFunction?.timedOut) {
       summary.criticalIssuesCount++;
       summary.issues.push('Połączenie z serwerem przekroczyło limit czasu');
-      summary.suggestedFixes.push('Sprawdź połączenie internetowe lub spróbuj ponownie później');
+      
+      if (results.tests.connectivity?.success) {
+        summary.suggestedFixes.push('Problem z dostępnością serwera - spróbuj ponownie później');
+      } else {
+        summary.suggestedFixes.push('Sprawdź połączenie internetowe lub spróbuj ponownie później');
+      }
     } else {
       summary.criticalIssuesCount++;
       summary.issues.push('Błąd połączenia z funkcją diagnostyczną');
@@ -340,6 +359,9 @@ const analyzeTestResults = (results: Record<string, any>) => {
     }
   }
   
+  // Remove duplicate fixes
+  summary.suggestedFixes = Array.from(new Set(summary.suggestedFixes));
+  
   // Set main issue
   if (summary.issues.length > 0) {
     summary.mainIssue = summary.issues[0];
@@ -357,7 +379,9 @@ const showDiagnosticResults = (results: Record<string, any>) => {
   const { summary } = results;
   
   if (summary.criticalIssuesCount > 0) {
-    toast.error(`Wykryto ${summary.criticalIssuesCount} krytyczne problemy`, {
+    toast({
+      variant: "destructive",
+      title: `Wykryto ${summary.criticalIssuesCount} krytyczne problemy`,
       description: summary.mainIssue,
       duration: 8000
     });
@@ -365,19 +389,23 @@ const showDiagnosticResults = (results: Record<string, any>) => {
     // If we have suggested fixes, show them
     if (summary.suggestedFixes.length > 0) {
       setTimeout(() => {
-        toast.info('Sugerowane rozwiązania', {
+        toast({
+          title: 'Sugerowane rozwiązania',
           description: summary.suggestedFixes.join('; '),
           duration: 10000
         });
       }, 1000);
     }
   } else if (summary.warningsCount > 0) {
-    toast.warning(`Wykryto ${summary.warningsCount} ostrzeżenia`, {
+    toast({
+      variant: "destructive",
+      title: `Wykryto ${summary.warningsCount} ostrzeżenia`,
       description: summary.mainIssue,
       duration: 8000
     });
   } else {
-    toast.success('Wszystkie funkcje działają poprawnie', {
+    toast({
+      title: 'Wszystkie funkcje działają poprawnie',
       description: 'Nie wykryto żadnych problemów'
     });
   }
@@ -389,11 +417,14 @@ const showDiagnosticResults = (results: Record<string, any>) => {
     const servicesFailed = Object.values(services).filter((s: any) => !s.success).length;
     
     if (servicesFailed > 0) {
-      toast.warning(`${servicesFailed}/${servicesChecked} usług nie działa poprawnie`, {
+      toast({
+        variant: "destructive",
+        title: `${servicesFailed}/${servicesChecked} usług nie działa poprawnie`,
         duration: 5000
       });
     } else if (servicesChecked > 0) {
-      toast.success(`Wszystkie ${servicesChecked} usługi działają poprawnie`, {
+      toast({
+        title: `Wszystkie ${servicesChecked} usługi działają poprawnie`,
         duration: 5000
       });
     }
@@ -406,7 +437,11 @@ const showDiagnosticResults = (results: Record<string, any>) => {
 export const diagnoseAndFixUserAccount = async (userId: string) => {
   if (!userId) {
     console.error('[DIAGNOSTICS] No user ID provided for diagnostics');
-    toast.error('Nie podano ID użytkownika');
+    toast({
+      variant: "destructive",
+      title: 'Błąd',
+      description: 'Nie podano ID użytkownika'
+    });
     return {
       success: false,
       message: 'No user ID provided'
@@ -415,7 +450,10 @@ export const diagnoseAndFixUserAccount = async (userId: string) => {
   
   try {
     console.log('[DIAGNOSTICS] Running diagnostics for user:', userId);
-    toast.info('Uruchamianie diagnostyki konta...');
+    toast({
+      title: 'Informacja',
+      description: 'Uruchamianie diagnostyki konta...'
+    });
     
     // Run comprehensive diagnostics
     const results = await testCriticalFunctions(userId);
@@ -426,7 +464,11 @@ export const diagnoseAndFixUserAccount = async (userId: string) => {
     };
   } catch (error) {
     console.error('[DIAGNOSTICS] Exception running diagnostics:', error);
-    toast.error('Wystąpił błąd podczas diagnostyki konta');
+    toast({
+      variant: "destructive",
+      title: 'Błąd',
+      description: 'Wystąpił błąd podczas diagnostyki konta'
+    });
     
     return {
       success: false,
