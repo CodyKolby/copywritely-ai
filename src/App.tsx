@@ -22,46 +22,74 @@ import AnimatedTransition from "./components/AnimatedTransition";
 import Success from './pages/Success';
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
+import { checkSupabaseConnection } from "./lib/supabase";
+import { useEffect } from "react";
 
-const queryClient = new QueryClient();
+// Configure query client with better error handling
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 2,
+      staleTime: 30000,
+      refetchOnWindowFocus: false
+    }
+  }
+});
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <AuthProvider>
-        <LazyMotion features={domAnimation}>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <div className="flex flex-col min-h-screen">
-              <Navbar />
-              <div className="flex-grow">
-                <AnimatedTransition>
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/brief-generator" element={<BriefGenerator />} />
-                    <Route path="/script-generator" element={<ScriptGenerator />} />
-                    <Route path="/copy-editor" element={<CopyEditor />} />
-                    <Route path="/copy-editor/:projectId" element={<CopyEditor />} />
-                    <Route path="/about" element={<About />} />
-                    <Route path="/pricing" element={<Pricing />} />
-                    <Route path="/contact" element={<Contact />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/projekty" element={<Projekty />} />
-                    <Route path="/success" element={<Success />} />
-                    <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-                    <Route path="/terms-of-service" element={<TermsOfService />} />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </AnimatedTransition>
+const App = () => {
+  // Perform connection check when app loads
+  useEffect(() => {
+    checkSupabaseConnection()
+      .then(connected => {
+        if (connected) {
+          console.log('[APP] Supabase connection verified successfully');
+        } else {
+          console.error('[APP] Failed to connect to Supabase');
+        }
+      })
+      .catch(error => {
+        console.error('[APP] Error checking Supabase connection:', error);
+      });
+  }, []);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <AuthProvider>
+          <LazyMotion features={domAnimation}>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <div className="flex flex-col min-h-screen">
+                <Navbar />
+                <div className="flex-grow">
+                  <AnimatedTransition>
+                    <Routes>
+                      <Route path="/" element={<Index />} />
+                      <Route path="/brief-generator" element={<BriefGenerator />} />
+                      <Route path="/script-generator" element={<ScriptGenerator />} />
+                      <Route path="/copy-editor" element={<CopyEditor />} />
+                      <Route path="/copy-editor/:projectId" element={<CopyEditor />} />
+                      <Route path="/about" element={<About />} />
+                      <Route path="/pricing" element={<Pricing />} />
+                      <Route path="/contact" element={<Contact />} />
+                      <Route path="/login" element={<Login />} />
+                      <Route path="/projekty" element={<Projekty />} />
+                      <Route path="/success" element={<Success />} />
+                      <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                      <Route path="/terms-of-service" element={<TermsOfService />} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </AnimatedTransition>
+                </div>
+                <Footer />
               </div>
-              <Footer />
-            </div>
-          </BrowserRouter>
-        </LazyMotion>
-      </AuthProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+            </BrowserRouter>
+          </LazyMotion>
+        </AuthProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
