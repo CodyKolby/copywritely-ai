@@ -1,4 +1,3 @@
-
 import type { SocialMediaPlatform } from '../../SocialMediaPlatformDialog';
 import { ScriptGenerationResult } from '../types';
 import { supabase } from "@/integrations/supabase/client";

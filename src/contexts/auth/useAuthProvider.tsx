@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase, checkConnectionHealth } from '@/integrations/supabase/client';
 import { Profile } from './types';
@@ -49,11 +48,9 @@ export const useAuthProvider = () => {
     refreshSession
   } = useSessionManagement(handleUserAuthenticated);
 
-  // Check connection health with short circuit
   const checkConnection = useCallback(async (force = false) => {
     const now = Date.now();
     
-    // Don't check more than once every 10 seconds unless forced
     if (!force && now - connectionStatus.lastChecked < 10000) {
       return connectionStatus;
     }
@@ -85,10 +82,8 @@ export const useAuthProvider = () => {
     }
   }, [connectionStatus.lastChecked]);
 
-  // Function to fetch profile with connection checks and timeouts
   const fetchAndSetProfile = async (userId: string) => {
     try {
-      // Quick connection check before attempting fetch
       const connStatus = await checkConnection();
       
       if (!connStatus.online) {
@@ -102,12 +97,10 @@ export const useAuthProvider = () => {
       
       console.log('[AUTH] Fetching profile for user:', userId);
       
-      // Use AbortController for timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
       
       try {
-        // Try to fetch profile with abort signal
         const userProfile = await fetchProfile(userId, controller.signal);
         clearTimeout(timeoutId);
         
@@ -118,30 +111,30 @@ export const useAuthProvider = () => {
         } else {
           console.warn('[AUTH] No profile found for user:', userId);
           
-          // If connection seems okay but no profile, try to create one
           if (connStatus.supabaseConnected) {
-            try {
-              const { data: createData, error: createError } = await supabase
-                .from('profiles')
-                .upsert({
-                  id: userId,
-                  is_premium: false,
-                  created_at: new Date().toISOString(),
-                  updated_at: new Date().toISOString()
-                })
-                .select()
-                .abortSignal(AbortSignal.timeout ? AbortSignal.timeout(5000) : undefined)
-                .maybeSingle();
-                
-              if (!createError && createData) {
-                console.log('[AUTH] Profile created successfully');
-                setProfile(createData as Profile);
-                return createData as Profile;
-              } else {
-                console.error('[AUTH] Error creating profile:', createError);
-              }
-            } catch (e) {
-              console.error('[AUTH] Exception creating profile:', e);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            
+            const { data: createData, error: createError } = await supabase
+              .from('profiles')
+              .upsert({
+                id: userId,
+                is_premium: false,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              })
+              .select()
+              .abortSignal(controller.signal)
+              .maybeSingle();
+              
+            clearTimeout(timeoutId);
+            
+            if (!createError && createData) {
+              console.log('[AUTH] Profile created successfully');
+              setProfile(createData as Profile);
+              return createData as Profile;
+            } else {
+              console.error('[AUTH] Error creating profile:', createError);
             }
           } else {
             console.log('[AUTH] Skipping profile creation due to connection issues');
@@ -162,17 +155,15 @@ export const useAuthProvider = () => {
     return null;
   };
 
-  // Connection and online status monitoring
   useEffect(() => {
     const handleOnline = () => {
       console.log('[AUTH] Device went online');
       setConnectionStatus(prev => ({
         ...prev,
         online: true,
-        lastChecked: 0 // Force a fresh check
+        lastChecked: 0
       }));
       
-      // On reconnection, try to refresh session if we have a user
       if (user) {
         refreshSession();
       }
@@ -186,14 +177,11 @@ export const useAuthProvider = () => {
       }));
     };
     
-    // Setup event listeners
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     
-    // Initial connection check
     checkConnection();
     
-    // Periodic connection checks (every 30 seconds)
     const intervalId = setInterval(() => {
       checkConnection();
     }, 30000);
@@ -205,13 +193,10 @@ export const useAuthProvider = () => {
     };
   }, [checkConnection, refreshSession, user]);
 
-  // Auth state listener
   useEffect(() => {
     console.log("[AUTH] Setting up auth state listener");
     
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-      console.log("[AUTH] Auth state changed", event, !!newSession?.user);
-      
       if (!testUser) {
         setSession(newSession);
         setUser(newSession?.user ?? null);
@@ -221,7 +206,6 @@ export const useAuthProvider = () => {
             localStorage.setItem('userEmail', newSession.user.email);
           }
           
-          // Fetch profile with retries
           let retries = 2;
           let userProfile = null;
           
@@ -240,7 +224,6 @@ export const useAuthProvider = () => {
             }
           }
           
-          // Use setTimeout to avoid deadlocks with auth state change
           setTimeout(() => {
             handleUserAuthenticated(newSession.user.id);
           }, 0);
@@ -252,7 +235,6 @@ export const useAuthProvider = () => {
       }
     });
 
-    // Auth initialization
     const initializeAuth = async () => {
       try {
         console.log('[AUTH] Initializing auth state');
@@ -267,7 +249,6 @@ export const useAuthProvider = () => {
           return;
         }
 
-        // Check connection first
         const connStatus = await checkConnection(true);
         
         if (!connStatus.supabaseConnected) {
@@ -276,14 +257,12 @@ export const useAuthProvider = () => {
             description: 'Próbujemy nawiązać połączenie...'
           });
           
-          // We'll continue anyway but will show appropriate UI
           setTimeout(async () => {
             await checkConnection(true);
           }, 3000);
         }
 
         try {
-          // Use AbortController to prevent hanging
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 5000);
           
@@ -310,8 +289,7 @@ export const useAuthProvider = () => {
             setSession(currentSession);
             setUser(currentSession.user);
             
-            // Fetch profile with limited retries
-            let retries = 1; // Only one retry to prevent slow initialization
+            let retries = 1;
             let userProfile = null;
             
             while (retries >= 0 && !userProfile) {
@@ -325,7 +303,6 @@ export const useAuthProvider = () => {
               if (retries >= 0) await new Promise(resolve => setTimeout(resolve, 1000));
             }
             
-            // Use setTimeout to avoid deadlocks
             setTimeout(async () => {
               await handleUserAuthenticated(currentSession.user.id);
             }, 0);
@@ -365,7 +342,6 @@ export const useAuthProvider = () => {
     };
   }, [testUser, testSession, testIsPremium, testProfile, handleUserAuthenticated, setIsPremium, setUser, setSession, checkConnection]);
 
-  // Export all the functions and state
   return {
     user: testUser || user, 
     session: testSession || session, 
