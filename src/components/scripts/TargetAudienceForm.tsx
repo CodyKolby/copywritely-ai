@@ -83,15 +83,17 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
       const data = form.getValues();
       console.log("Submitting form on last step with data:", data);
       
-      // Call the onSubmit function with the form data
-      // This will now properly save data to the database
-      console.log("Calling onSubmit function with user ID:", user?.id);
-      const audienceId = await onSubmit(data, user?.id);
+      if (!user?.id) {
+        console.error("No user ID available for form submission");
+        toast.error("Musisz być zalogowany, aby zapisać grupę docelową");
+        return;
+      }
       
-      // If submission is successful, return to the selection screen
+      // Directly call onSubmit with the form data
+      const audienceId = await onSubmit(data);
+      
       if (audienceId) {
         console.log("Form submission successful with ID:", audienceId, "- returning to selection");
-        // This will close the form and return to the selection screen
         onBack();
       } else {
         console.error("Form submission failed - no audience ID returned");
@@ -112,18 +114,13 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
     }
   };
 
-  const onFormSubmit = form.handleSubmit(async (data) => {
-    // In this implementation, we pass the user ID explicitly when needed
-    await onSubmit(data, user?.id);
-  });
-
   return (
     <TooltipProvider>
       <StepContainer 
         currentStep={currentStep} 
         form={form} 
         handleKeyDown={handleKeyDown}
-        onSubmit={onFormSubmit}
+        onSubmit={form.handleSubmit(handleFormSubmission)}
       >
         <StepRenderer currentStep={currentStep} form={form} />
       </StepContainer>

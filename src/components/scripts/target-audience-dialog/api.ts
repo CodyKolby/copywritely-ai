@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { TargetAudience } from './types';
@@ -117,80 +116,55 @@ export const generateAudienceName = (ageRange?: string, mainOffer?: string): str
   return defaultName;
 };
 
-// Improved direct data insertion function with more detailed error handling and logging
 export const saveTargetAudience = async (data: any, userId: string): Promise<string | undefined> => {
   if (!userId) {
     console.error('No user ID provided for saving target audience');
-    throw new Error('No user ID provided for saving target audience');
+    toast.error('Nie jesteś zalogowany');
+    return undefined;
   }
   
   try {
     console.log('Direct database insertion starting with userId:', userId);
-    console.log('Data to save:', data);
+    console.log('Data to save:', JSON.stringify(data));
     
     // Generate a name if not provided
     const audienceName = data.name || generateAudienceName(data.ageRange || data.age_range, data.mainOffer || data.main_offer);
     console.log('Using audience name:', audienceName);
     
-    // Map field names to match database schema
+    // Normalize data to ensure all fields are in the right format
     const dbData = {
       user_id: userId,
       name: audienceName,
       age_range: data.age_range || data.ageRange || '',
       gender: data.gender || '',
-      competitors: Array.isArray(data.competitors) ? data.competitors.filter(Boolean) : [],
+      competitors: Array.isArray(data.competitors) 
+        ? data.competitors.filter(Boolean).slice(0, 10)
+        : ['Konkurent 1', 'Konkurent 2', 'Konkurent 3'],
       language: data.language || '',
       biography: data.biography || '',
       beliefs: data.beliefs || '',
-      pains: Array.isArray(data.pains) ? data.pains.filter(Boolean) : [],
-      desires: Array.isArray(data.desires) ? data.desires.filter(Boolean) : [],
+      pains: Array.isArray(data.pains) 
+        ? data.pains.filter(Boolean).slice(0, 10)
+        : ['Problem 1', 'Problem 2', 'Problem 3', 'Problem 4', 'Problem 5'],
+      desires: Array.isArray(data.desires) 
+        ? data.desires.filter(Boolean).slice(0, 10)
+        : ['Pragnienie 1', 'Pragnienie 2', 'Pragnienie 3', 'Pragnienie 4', 'Pragnienie 5'],
       main_offer: data.main_offer || data.mainOffer || '',
       offer_details: data.offer_details || data.offerDetails || '',
-      benefits: Array.isArray(data.benefits) ? data.benefits.filter(Boolean) : [],
+      benefits: Array.isArray(data.benefits) 
+        ? data.benefits.filter(Boolean).slice(0, 10)
+        : ['Korzyść 1', 'Korzyść 2', 'Korzyść 3', 'Korzyść 4', 'Korzyść 5'],
       why_it_works: data.why_it_works || data.whyItWorks || '',
       experience: data.experience || ''
     };
     
-    console.log('Mapped data for database insertion:', dbData);
+    console.log('Mapped data for database insertion:', JSON.stringify(dbData));
     
-    // Verify all required fields are present and valid
-    const requiredFields = [
-      'user_id', 'name', 'age_range', 'gender', 'language', 
-      'biography', 'beliefs', 'main_offer', 'offer_details',
-      'why_it_works', 'experience'
-    ];
-    
-    const arrayFields = ['competitors', 'pains', 'desires', 'benefits'];
-    
-    // Validate required fields
-    for (const field of requiredFields) {
-      if (!dbData[field] || dbData[field].trim() === '') {
-        console.error(`Missing required field: ${field}`);
-        throw new Error(`Brak wymaganego pola: ${field}`);
-      }
-    }
-    
-    // Validate array fields
-    for (const field of arrayFields) {
-      if (!Array.isArray(dbData[field]) || dbData[field].length < 1) {
-        console.error(`Missing or invalid array field: ${field}`);
-        if (!Array.isArray(dbData[field])) {
-          dbData[field] = ['Element 1']; // Fallback with at least one item
-        }
-      }
-    }
-    
-    // Add retry logic for database insertion
-    let attempts = 0;
-    const maxAttempts = 3;
-    let lastError = null;
-    
-    while (attempts < maxAttempts) {
-      attempts++;
-      console.log(`Database insertion attempt ${attempts}/${maxAttempts}`);
+    // Simple direct insertion approach with max 5 retries
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      console.log(`Insertion attempt ${attempt}/5`);
       
       try {
-        // Insert into the database with simpler query first
         const { data: insertData, error } = await supabase
           .from('target_audiences')
           .insert(dbData)
@@ -198,52 +172,53 @@ export const saveTargetAudience = async (data: any, userId: string): Promise<str
           .single();
           
         if (error) {
-          console.error(`Error saving target audience (attempt ${attempts}):`, error);
-          lastError = error;
+          console.error(`Error on attempt ${attempt}:`, error);
+          
+          if (attempt === 5) {
+            toast.error('Nie udało się zapisać grupy docelowej po wielu próbach');
+            return undefined;
+          }
+          
+          // Wait a bit before retry
+          await new Promise(resolve => setTimeout(resolve, 500));
+          continue;
+        }
+        
+        if (!insertData || !insertData.id) {
+          console.error(`No ID returned on attempt ${attempt}`);
+          
+          if (attempt === 5) {
+            toast.error('Błąd podczas zapisywania - brak zwróconego identyfikatora');
+            return undefined;
+          }
           
           // Wait before retry
           await new Promise(resolve => setTimeout(resolve, 500));
           continue;
         }
         
-        if (!insertData || !insertData.id) {
-          console.error('Insertion succeeded but no ID was returned');
-          
-          // Try to find the just-inserted record
-          const { data: findData } = await supabase
-            .from('target_audiences')
-            .select('id')
-            .eq('user_id', userId)
-            .eq('name', audienceName)
-            .order('created_at', { ascending: false })
-            .limit(1);
-            
-          if (findData && findData.length > 0) {
-            console.log('Found inserted audience by query:', findData[0].id);
-            return findData[0].id;
-          }
-          
-          await new Promise(resolve => setTimeout(resolve, 500));
-          continue;
-        }
+        // Success!
+        console.log('Successfully inserted target audience with ID:', insertData.id);
+        toast.success('Grupa docelowa została utworzona');
         
-        console.log('Successfully saved target audience with ID:', insertData.id);
         return insertData.id;
-      } catch (insertError) {
-        console.error(`Attempt ${attempts} failed with error:`, insertError);
-        lastError = insertError;
+      } catch (attemptError) {
+        console.error(`Exception on attempt ${attempt}:`, attemptError);
+        
+        if (attempt === 5) {
+          toast.error('Nieoczekiwany błąd podczas zapisywania');
+          return undefined;
+        }
         
         // Wait before retry
         await new Promise(resolve => setTimeout(resolve, 500));
       }
     }
     
-    // After all attempts fail, log the detailed error and throw
-    console.error(`Failed to save target audience after ${maxAttempts} attempts. Last error:`, lastError);
-    throw lastError || new Error('Failed to save target audience after multiple attempts');
+    return undefined;
   } catch (error) {
-    console.error('Error in saveTargetAudience:', error);
-    toast.error('Nie udało się zapisać grupy docelowej: ' + (error instanceof Error ? error.message : 'Nieznany błąd'));
-    throw error;
+    console.error('Fatal error in saveTargetAudience:', error);
+    toast.error('Krytyczny błąd podczas zapisywania grupy docelowej');
+    return undefined;
   }
 };
