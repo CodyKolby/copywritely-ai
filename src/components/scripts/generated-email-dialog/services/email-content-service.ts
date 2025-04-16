@@ -1,13 +1,10 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { NarrativeBlueprint } from './narrative-blueprint-service';
 import { EmailStyle } from '../../EmailStyleDialog';
 import { cleanEmailContentForUI } from './ui-cleaner-service';
 
-// Email content structure types
 export type EmailStructure = 'PAS' | 'CJN';
 
-// Response from the email content generation
 export interface EmailContentResponse {
   emailContent: string;
   structureUsed: EmailStructure;
@@ -21,7 +18,6 @@ export interface EmailContentResponse {
   };
 }
 
-// PAS structure prompt template (Problem-Agitation-Solution)
 export const PAS_EMAIL_PROMPT = `## Jesteś zaawansowanym polskim copywriterem. Doskonale rozumiesz strukturę i budowę polskich zdań, dzięki czemu potrafisz w prosty, ale precyzyjny sposób opisywać emocje, jakie czuje klient. Twoje zadanie polega na tworzeniu pełnych maili marketingowych, które mają być gotowe do wysłania, bez wyraźnego rozdzielania treści na sekcje. Cały mail ma być jednolitą historią, prowadzącą klienta przez problem, napięcie emocjonalne i rozwiązanie, z wyraźnym CTA na końcu. Kluczowe jest, by maile nie zawierały bezpośredniej sprzedaży, a raczej angażowały klienta i prowadziły do konkretnego działania, które jest spójne z celem maila.
 
 ## Zasady tworzenia maili marketingowych:
@@ -77,10 +73,8 @@ Punkty emocjonalne: {{punktyemocjonalne}}
 Oś narracyjna: {{osnarracyjna}}
 Dane z ankiety klienta: {{surveyData}}
 Styl maila z wyboru klienta: {{emailStyle}}
-Cel reklamy**: {{advertisingGoal}}
-`;
+Cel reklamy**: {{advertisingGoal}}`;
 
-// CJN structure prompt template (Customer Journey Narrative)
 export const CJN_EMAIL_PROMPT = `Jesteś zaawansowanym polskim copywriterem. Doskonale rozumiesz strukturę i budowę polskich zdań, dzięki czemu potrafisz w prosty, ale precyzyjny sposób opisywać emocje, jakie czuje klient. Twoje zadanie polega na tworzeniu pełnych maili marketingowych, które mają być gotowe do wysłania, bez wyraźnego rozdzielania treści na sekcje. Cały mail ma być jednolitą historią, prowadzącą klienta przez problem, napięcie emocjonalne i rozwiązanie, z wyraźnym CTA na końcu. Kluczowe jest, by maile nie zawierały bezpośredniej sprzedaży, a raczej angażowały klienta i prowadziły do konkretnego działania, które jest spójne z celem maila.
 
 ## Zasady tworzenia maili marketingowych:
@@ -136,24 +130,27 @@ export function selectRandomEmailStructure(): EmailStructure {
   return Math.random() < 0.5 ? 'PAS' : 'CJN';
 }
 
-/**
- * Generates email content based on the narrative blueprint and target audience data
- * Randomly selects between PAS and CJN structures
- */
 export async function generateEmailContent(
   blueprint: NarrativeBlueprint,
   targetAudienceData: any,
-  forcedStructure?: EmailStructure, // Optional parameter to force a specific structure
+  forcedStructure?: EmailStructure,
   advertisingGoal?: string,
   emailStyle?: EmailStyle
 ): Promise<EmailContentResponse> {
   const timestamp = new Date().toISOString();
-  console.log('Generating email content with request timestamp:', timestamp);
+  console.log('=== EMAIL GENERATION START ===');
+  console.log('Timestamp:', timestamp);
+  console.log('Email Style:', emailStyle);
+  console.log('Advertising Goal:', advertisingGoal);
+  console.log('Forced Structure:', forcedStructure);
+  console.log('Blueprint:', JSON.stringify(blueprint, null, 2));
+  console.log('Target Audience Data:', JSON.stringify(targetAudienceData, null, 2));
 
   try {
     // Select structure (randomly or use forced structure if provided)
     const selectedStructure = forcedStructure || selectRandomEmailStructure();
     console.log(`Selected email structure: ${selectedStructure}`);
+    console.log('Using prompt template:', selectedStructure === 'PAS' ? 'PAS_EMAIL_PROMPT' : 'CJN_EMAIL_PROMPT');
     
     // Choose appropriate prompt based on selected structure
     const promptTemplate = selectedStructure === 'PAS' ? PAS_EMAIL_PROMPT : CJN_EMAIL_PROMPT;
@@ -228,8 +225,6 @@ export async function generateEmailContent(
     };
   } catch (err: any) {
     console.error('Failed to generate email content:', err);
-    
-    // In case of error, return a placeholder email with error information
     return {
       emailContent: `Nie udało się wygenerować treści maila.\n\nBłąd: ${err.message}\n\nProszę spróbować ponownie.`,
       structureUsed: forcedStructure || 'PAS',

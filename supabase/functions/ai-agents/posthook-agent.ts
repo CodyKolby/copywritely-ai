@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "./cors.ts";
@@ -36,11 +35,16 @@ Dane z ankiety klienta: {{surveyData}}`;
 console.log("PosthookAgent Edge Function initialized");
 
 serve(async (req) => {
-  console.log("PosthookAgent received request:", req.method, req.url);
+  const requestId = crypto.randomUUID();
+  const startTime = new Date().toISOString();
   
-  // Handle OPTIONS requests for CORS preflight
+  console.log(`=== POSTHOOK AGENT START (${requestId}) ===`);
+  console.log('Timestamp:', startTime);
+  console.log('Method:', req.method);
+  console.log('URL:', req.url);
+  
   if (req.method === 'OPTIONS') {
-    console.log("Handling OPTIONS preflight request");
+    console.log(`[${startTime}][REQ:${requestId}] Handling OPTIONS preflight request`);
     return new Response(null, { 
       status: 204, 
       headers: corsHeaders 
@@ -48,44 +52,31 @@ serve(async (req) => {
   }
 
   try {
-    // Parse request data
-    const requestData = await req.json().catch(err => {
-      console.error("Error parsing JSON request:", err);
-      throw new Error("Invalid JSON in request body");
-    });
+    const requestData = await req.json();
+    console.log('=== REQUEST DATA ===');
+    console.log(JSON.stringify(requestData, null, 2));
     
-    const { targetAudience, advertisingGoal, platform } = requestData;
+    const { targetAudience, advertisingGoal, platform, cacheBuster, timestamp } = requestData;
     
-    console.log("PosthookAgent processing request:", { 
-      targetAudienceId: targetAudience?.id, 
-      advertisingGoal, 
-      platform 
-    });
+    console.log('=== SYSTEM PROMPT ===');
+    console.log(SYSTEM_PROMPT);
     
-    if (!targetAudience) {
-      console.error("Missing target audience data");
-      return new Response(
-        JSON.stringify({ error: 'Brak danych o grupie docelowej' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    const userPrompt = `Timestamp to avoid caching: ${startTime}
+    Random value to break cache: ${Math.random().toString(36).substring(2, 15)}
+    Request ID: ${requestId}
     
-    // Prepare platform info
-    const platformInfo = `Platforma: ${platform || 'Meta (Instagram/Facebook)'}`;
-    
-    // Construct prompt with survey data
-    const userPrompt = `Oto dane o grupie docelowej:
+    Oto dane o grupie docelowej:
     ${JSON.stringify(targetAudience, null, 2)}
     
     Cel reklamy: ${advertisingGoal || 'Brak określonego celu'}
     
-    ${platformInfo}
+    Platforma: ${platform || 'Meta (Instagram/Facebook)'}
     
     Stwórz hook, określ tematykę i formę postu.`;
     
-    // Log the prompt for debugging
-    console.log("Prompt for PosthookAgent:", userPrompt);
-    
+    console.log('=== USER PROMPT ===');
+    console.log(userPrompt);
+
     // Get response from OpenAI
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -169,13 +160,15 @@ serve(async (req) => {
     
     console.log("Processed PosthookAgent response:", processedResponse);
     
+    console.log(`=== POSTHOOK AGENT COMPLETE (${requestId}) ===`);
+    
     return new Response(
       JSON.stringify(processedResponse),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
     
   } catch (error) {
-    console.error('Error in posthook-agent:', error);
+    console.error(`[${startTime}][REQ:${requestId}] Error in posthook-agent:`, error);
     return new Response(
       JSON.stringify({ error: error.message || "Unknown error" }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

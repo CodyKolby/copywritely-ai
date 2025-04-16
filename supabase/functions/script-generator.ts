@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -21,11 +20,16 @@ Nie dodawaj własnego początku ani zakończenia - skupiaj się tylko na główn
 Dostosuj styl i ton do podanego szablonu reklamowego (np. TikTok, VSL, post na FB).`;
 
 serve(async (req) => {
-  console.log("Otrzymano zapytanie do script-generator:", req.method);
+  const requestId = crypto.randomUUID();
+  const startTime = new Date().toISOString();
+  
+  console.log(`=== SCRIPT GENERATOR START (${requestId}) ===`);
+  console.log('Timestamp:', startTime);
+  console.log('Method:', req.method);
   
   // Handle CORS preflight requests - ensure proper status and headers
   if (req.method === 'OPTIONS') {
-    console.log("Obsługa zapytania preflight OPTIONS");
+    console.log("Handling OPTIONS preflight request");
     return new Response(null, { 
       status: 204, 
       headers: corsHeaders 
@@ -33,26 +37,22 @@ serve(async (req) => {
   }
 
   try {
-    console.log("Przetwarzanie zapytania POST");
-    // Parse request data
+    console.log(`[${startTime}][REQ:${requestId}] Processing POST request`);
+    
     const { targetAudience, templateType, selectedHook, selectedAngle } = await req.json();
     
-    if (!targetAudience || !selectedHook || !selectedAngle) {
-      console.error("Brak wymaganych danych");
-      return new Response(
-        JSON.stringify({ error: 'Brak wymaganych danych (grupa docelowa, hook, angle)' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    console.log('=== REQUEST DATA ===');
+    console.log('Template Type:', templateType);
+    console.log('Selected Hook:', selectedHook);
+    console.log('Selected Angle:', selectedAngle);
+    console.log('Target Audience:', JSON.stringify(targetAudience, null, 2));
 
-    console.log('Generowanie skryptu dla szablonu:', templateType);
-    console.log('Wybrany hook:', selectedHook);
-    console.log('Wybrany angle:', selectedAngle);
-    
-    // Format audience description for the AI prompt
+    // Format audience description
     const audienceDescription = formatAudienceDescription(targetAudience);
     
-    // Create the prompt for OpenAI
+    console.log('=== SYSTEM PROMPT ===');
+    console.log(SYSTEM_PROMPT);
+    
     const prompt = `
 # Informacje o grupie docelowej
 ${audienceDescription}
@@ -69,9 +69,8 @@ ${templateType}
 Na podstawie powyższych informacji, napisz treść główną reklamy, która będzie pasować do podanego hooka i angle.
 `;
 
-    // Dodajemy pełny log promptu
-    console.log("PEŁNY PROMPT DLA SCRIPT-GENERATOR:\n", prompt);
-    console.log("PEŁNY SYSTEM PROMPT DLA SCRIPT-GENERATOR:\n", SYSTEM_PROMPT);
+    console.log('=== USER PROMPT ===');
+    console.log(prompt);
 
     // Call OpenAI API
     console.log("Wysyłanie zapytania do OpenAI...");
@@ -104,7 +103,6 @@ Na podstawie powyższych informacji, napisz treść główną reklamy, która b�
     const data = await response.json();
     const scriptContent = data.choices[0].message.content;
     
-    // Log pełnej odpowiedzi
     console.log('PEŁNA ODPOWIEDŹ OD OPENAI:\n', scriptContent);
     console.log('Wygenerowano skrypt');
     
@@ -115,7 +113,7 @@ Na podstawie powyższych informacji, napisz treść główną reklamy, która b�
     );
     
   } catch (error) {
-    console.error('Błąd w funkcji script-generator:', error);
+    console.error(`[${startTime}][REQ:${requestId}] Error in script-generator:`, error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
