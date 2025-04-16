@@ -88,6 +88,25 @@ const DialogManager = ({
     onOpenChange(false);
   };
 
+  // Custom form submission handler to ensure we return to the selection screen after successful form submission
+  const handleFormSubmitWrapped = async (values: any) => {
+    try {
+      console.log("Form submission wrapper in DialogManager");
+      // Call the actual form submit handler
+      const result = await handleFormSubmit(values);
+      
+      // After successful submission, close the form dialog and show the main selection dialog
+      if (result) {
+        console.log("Form submitted successfully in DialogManager, showing main selection");
+      }
+      
+      return result;
+    } catch (error) {
+      console.error("Error in form submission wrapper:", error);
+      throw error;
+    }
+  };
+
   // Hide the audience dialog when script/email dialog is shown
   const shouldShowAudienceDialog = open && !showScriptDialog && !showEmailDialog && !showSocialDialog;
   
@@ -131,7 +150,7 @@ const DialogManager = ({
       <FormDialog
         open={showFormDialog}
         onOpenChange={handleDialogClose}
-        onSubmit={handleFormSubmit}
+        onSubmit={handleFormSubmitWrapped}
         onBack={handleBack}
       />
       

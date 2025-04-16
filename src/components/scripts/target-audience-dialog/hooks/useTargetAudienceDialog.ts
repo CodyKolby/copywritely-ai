@@ -103,7 +103,7 @@ export const useTargetAudienceDialog = ({
     dialogState.setIsProcessing
   );
 
-  // Enhanced form submission handler with improved error handling
+  // Enhanced form submission handler with improved flow control
   const handleFormSubmit = async (values: any) => {
     try {
       dialogState.setIsProcessing(true);
@@ -113,33 +113,25 @@ export const useTargetAudienceDialog = ({
       console.log("Data being submitted to Supabase:", dataToSubmit);
       
       // Pass the cleaned data to submitAudienceForm
-      const audienceId = await submitAudienceForm(dataToSubmit);
+      const audienceId = await formSubmission.handleFormSubmit(values);
       
       if (audienceId) {
-        // Set the selectedAudienceId before changing dialog states
+        console.log("Target audience created successfully with ID:", audienceId);
+        
+        // Set the selectedAudienceId
         dialogState.setSelectedAudienceId(audienceId);
         
-        // First hide the form
+        // First hide the form and go back to the main selection dialog
         dialogState.setShowForm(false);
-        
-        // Close the main dialog completely to prevent background visibility
-        onOpenChange(false);
-        
-        // Reset isProcessing to false immediately
-        dialogState.setIsProcessing(false);
-        
-        // Reopen dialogs in correct sequence
-        setTimeout(() => {
-          onOpenChange(true);
-          
-          // Switch to the goal dialog after a very brief delay
-          setTimeout(() => {
-            dialogState.setShowGoalDialog(true);
-          }, 50);
-        }, 100);
         
         // Refresh audience list
         await fetchExistingAudiences();
+        
+        // Reset processing state
+        dialogState.setIsProcessing(false);
+        
+        // Return the audience ID to indicate success
+        return audienceId;
       } else {
         throw new Error("No audience ID returned");
       }
@@ -147,6 +139,7 @@ export const useTargetAudienceDialog = ({
       console.error("Error submitting form:", error);
       toast.error('Nie udało się utworzyć grupy docelowej');
       dialogState.setIsProcessing(false);
+      throw error;
     }
   };
 

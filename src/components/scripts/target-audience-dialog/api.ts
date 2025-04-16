@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { TargetAudience } from './types';
@@ -112,4 +113,54 @@ export const generateAudienceName = (ageRange?: string, mainOffer?: string): str
   }
   
   return defaultName;
+};
+
+// New direct data insertion function as an alternative method
+export const saveTargetAudience = async (data: any, userId: string): Promise<string | undefined> => {
+  if (!userId) {
+    throw new Error('No user ID provided for saving target audience');
+  }
+  
+  try {
+    console.log('Direct database insertion with data:', data);
+    
+    // Map field names to match database schema
+    const dbData = {
+      user_id: userId,
+      name: data.name || generateAudienceName(data.ageRange, data.mainOffer),
+      age_range: data.ageRange,
+      gender: data.gender,
+      competitors: data.competitors?.filter(Boolean) || [],
+      language: data.language,
+      biography: data.biography,
+      beliefs: data.beliefs,
+      pains: data.pains?.filter(Boolean) || [],
+      desires: data.desires?.filter(Boolean) || [],
+      main_offer: data.mainOffer,
+      offer_details: data.offerDetails,
+      benefits: data.benefits?.filter(Boolean) || [],
+      why_it_works: data.whyItWorks,
+      experience: data.experience
+    };
+    
+    console.log('Mapped data for database:', dbData);
+    
+    // Insert into the database
+    const { data: responseData, error } = await supabase
+      .from('target_audiences')
+      .insert(dbData)
+      .select('id')
+      .single();
+      
+    if (error) {
+      console.error('Error saving target audience:', error);
+      throw error;
+    }
+    
+    console.log('Successfully saved target audience with ID:', responseData.id);
+    return responseData.id;
+  } catch (error) {
+    console.error('Error in saveTargetAudience:', error);
+    throw error;
+  }
 };

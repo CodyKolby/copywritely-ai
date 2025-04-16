@@ -82,7 +82,17 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
       setIsSubmitting(true);
       const data = form.getValues();
       console.log("Submitting form on last step");
-      await handleSubmit(data);
+      
+      // Call the onSubmit function with the form data
+      // This will now properly save data to the database
+      const result = await handleSubmit(data);
+      
+      // If submission is successful, return to the selection screen
+      if (result) {
+        console.log("Form submission successful, returning to selection");
+        // This will close the form and return to the selection screen
+        onBack();
+      }
     } catch (error) {
       console.error("Form submission error:", error);
       toast.error('Wystąpił błąd podczas wysyłania formularza');
@@ -96,7 +106,7 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
       if (!user) {
         console.error("No user found in auth context");
         toast.error('Nie jesteś zalogowany lub sesja wygasła');
-        return;
+        return null;
       }
       
       const userId = user.id;
@@ -112,8 +122,9 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
       
       try {
         // Call the onSubmit function with the full form data
-        await onSubmit(formDataWithName, null);
-        console.log("Form successfully submitted");
+        const result = await onSubmit(formDataWithName, null);
+        console.log("Form successfully submitted with result:", result);
+        return result;
       } catch (error) {
         console.error("Error in onSubmit callback:", error);
         throw error;
@@ -121,7 +132,7 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
     } catch (error) {
       console.error("Form submission error:", error);
       toast.error('Wystąpił błąd podczas wysyłania formularza');
-      throw error; // Rethrow to allow the parent component to handle it
+      throw error;
     }
   };
 

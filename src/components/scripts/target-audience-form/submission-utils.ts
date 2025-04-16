@@ -1,8 +1,9 @@
 
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { FormValues } from './types';
 import { toast } from 'sonner';
 import { compressFormData } from './compression-service';
+import { saveTargetAudience } from '../target-audience-dialog/api';
 
 export const submitTargetAudienceForm = async (
   data: FormValues & { name?: string },
@@ -34,6 +35,13 @@ export const submitTargetAudienceForm = async (
       console.warn("Błąd kompresji, używam oryginalnych danych:", compressError);
     }
 
+    // First try to use the API method
+    try {
+      return await saveTargetAudience(compressedData, userId);
+    } catch (apiError) {
+      console.warn("API method failed, falling back to direct database insertion:", apiError);
+    }
+
     // Tworzymy nazwę grupy docelowej, jeśli nie została podana
     const audienceName = data.name || `Grupa ${Math.floor(Math.random() * 1000) + 1}`;
     
@@ -43,7 +51,6 @@ export const submitTargetAudienceForm = async (
     const desires = validateArrayField(compressedData.desires || cleanDataBeforeCompression.desires, 5);
     const benefits = validateArrayField(compressedData.benefits || cleanDataBeforeCompression.benefits, 5);
     
-    // WAŻNE: Mapowanie nazw pól z camelCase na snake_case używane w bazie danych
     // Przygotowanie danych do zapisu z odpowiednimi nazwami kolumn
     const targetAudienceData = {
       user_id: userId,
@@ -65,21 +72,43 @@ export const submitTargetAudienceForm = async (
     
     console.log("Dane przygotowane do zapisu w bazie (z poprawnymi nazwami kolumn):", targetAudienceData);
     
-    // Zapisanie danych do bazy - use direct Supabase client
-    const { data: insertedData, error } = await supabase
-      .from('target_audiences')
-      .insert(targetAudienceData)
-      .select('id')
-      .single();
+    // Try the insertion with three attempts
+    let attempt = 0;
+    const maxAttempts = 3;
+    let lastError;
     
-    if (error) {
-      console.error("Błąd podczas zapisywania danych:", error);
-      throw new Error(`Błąd podczas zapisywania danych: ${error.message}`);
+    while (attempt < maxAttempts) {
+      attempt++;
+      console.log(`Próba zapisania danych (${attempt}/${maxAttempts})...`);
+      
+      try {
+        // Zapisanie danych do bazy - use direct Supabase client
+        const { data: insertedData, error } = await supabase
+          .from('target_audiences')
+          .insert(targetAudienceData)
+          .select('id')
+          .single();
+        
+        if (error) {
+          console.error(`Błąd podczas próby ${attempt}:`, error);
+          lastError = error;
+          // Wait a bit between attempts
+          await new Promise(resolve => setTimeout(resolve, 500));
+          continue;
+        }
+        
+        console.log("Dane zostały zapisane pomyślnie. ID grupy docelowej:", insertedData.id);
+        return insertedData.id;
+      } catch (error: any) {
+        console.error(`Nieoczekiwany błąd podczas próby ${attempt}:`, error);
+        lastError = error;
+        // Wait a bit between attempts
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
     }
     
-    console.log("Dane zostały zapisane pomyślnie. ID grupy docelowej:", insertedData.id);
-    
-    return insertedData.id;
+    console.error(`Nie udało się zapisać danych po ${maxAttempts} próbach.`);
+    throw lastError || new Error("Nie udało się zapisać danych grupy docelowej");
   } catch (error: any) {
     console.error("Nieoczekiwany błąd podczas zapisywania danych:", error);
     throw error;
