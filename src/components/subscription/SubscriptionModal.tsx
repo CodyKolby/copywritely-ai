@@ -26,7 +26,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
     handleRetry
   } = useSubscriptionModal(open);
 
-  // Loading state
+  // Loading state - only show when actually loading and we have no fallback data
   if (isLoading) {
     return <LoadingState open={open} onOpenChange={onOpenChange} />;
   }

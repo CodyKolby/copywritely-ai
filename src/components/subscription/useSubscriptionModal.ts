@@ -15,6 +15,7 @@ export const useSubscriptionModal = (open: boolean) => {
   const timeoutRef = useRef<number | null>(null);
   const maxRetries = 2; // Limit retries
   const documentVisibleRef = useRef(true);
+  const lastSuccessDataRef = useRef<SubscriptionDetails | null>(null);
 
   // Clear timeout on unmount
   useEffect(() => {
@@ -68,17 +69,21 @@ export const useSubscriptionModal = (open: boolean) => {
     
     if (open) {
       console.log('[SubscriptionModal] Modal opened, starting timeout check');
-      setTimeoutErrored(false); // Reset timeout error when opening
       
-      timeoutRef.current = window.setTimeout(() => {
-        // Only set timeout error if the document is visible
-        if (documentVisibleRef.current) {
-          setTimeoutErrored(true);
-          console.log('[SubscriptionModal] Subscription data fetch timeout reached');
-        } else {
-          console.log('[SubscriptionModal] Timeout reached but tab not visible, deferring error');
-        }
-      }, 10000); // 10 second timeout
+      // Only set a new timeout if we don't have successful data yet or we're retrying
+      if (!lastSuccessDataRef.current || retryCount > 0) {
+        setTimeoutErrored(false); // Reset timeout error when opening
+        
+        timeoutRef.current = window.setTimeout(() => {
+          // Only set timeout error if the document is visible and we don't have fallback data
+          if (documentVisibleRef.current && !lastSuccessDataRef.current) {
+            setTimeoutErrored(true);
+            console.log('[SubscriptionModal] Subscription data fetch timeout reached');
+          } else {
+            console.log('[SubscriptionModal] Timeout reached but using cached data or tab not visible');
+          }
+        }, 10000); // 10 second timeout
+      }
     }
     
     return () => {
@@ -181,9 +186,16 @@ export const useSubscriptionModal = (open: boolean) => {
       try {
         console.log('[SubscriptionModal] Starting subscription data fetch for user:', user.id);
         
-        // If we hit the timeout error, use fallback immediately
+        // If we hit the timeout error, use fallback data or cached data immediately
         if (timeoutErrored && retryCount >= maxRetries) {
-          console.log('[SubscriptionModal] Timeout reached after max retries, using fallback');
+          console.log('[SubscriptionModal] Timeout reached after max retries, using fallback or cached data');
+          
+          // If we have previously successful data, use that instead of generating new fallback data
+          if (lastSuccessDataRef.current) {
+            console.log('[SubscriptionModal] Using cached successful data');
+            return lastSuccessDataRef.current;
+          }
+          
           if (isPremium) {
             // Check if the user is in trial mode
             const profileData = await checkPremiumDirectly(user.id);
@@ -192,8 +204,10 @@ export const useSubscriptionModal = (open: boolean) => {
               profileData.subscription_status === 'trialing'
             );
             
-            return getFallbackSubscriptionData(!!isTrial);
+            const fallbackData = getFallbackSubscriptionData(!!isTrial);
+            return fallbackData;
           }
+          
           throw new Error('Przekroczono czas oczekiwania na dane subskrypcji');
         }
 
@@ -220,7 +234,7 @@ export const useSubscriptionModal = (open: boolean) => {
           
           const daysUntil = calculateDaysUntilRenewal(expiryDate);
           
-          return {
+          const subscriptionData = {
             hasSubscription: true,
             subscriptionId: profileData.subscription_id || 'manual_premium',
             status: profileData.subscription_status || (isTrial ? 'trialing' : 'active'),
@@ -228,10 +242,15 @@ export const useSubscriptionModal = (open: boolean) => {
             daysUntilRenewal: Math.max(0, daysUntil),
             cancelAtPeriodEnd: false,
             portalUrl: profileData.subscription_id ? '/customer-portal' : null,
-            plan: isTrial ? 'Trial' : 'Pro',
+            plan: isTrial ? 'Pro' : 'Pro',
             trialEnd: isTrial ? expiryDate : null,
             isTrial: !!isTrial
           } as SubscriptionDetails;
+          
+          // Store successful data for fallback
+          lastSuccessDataRef.current = subscriptionData;
+          
+          return subscriptionData;
         }
         
         // Set a quick timeout for edge function call
@@ -245,7 +264,7 @@ export const useSubscriptionModal = (open: boolean) => {
               console.log('[SubscriptionModal] Tab not visible during timeout, not showing error');
               reject(new Error('Tab not visible'));
             }
-          }, 5000); // 5 second timeout for the edge function
+          }, 8000); // Increased timeout for the edge function (was 5000)
         });
         
         // Race between subscription data fetch and timeout
@@ -257,9 +276,15 @@ export const useSubscriptionModal = (open: boolean) => {
         if (!subscriptionData) {
           console.log('[SubscriptionModal] No subscription data returned from API');
           
-          // If timeout occurred but user has premium, use fallback data
+          // If timeout occurred but user has premium, use cached or fallback data
           if (isPremium) {
-            console.log('[SubscriptionModal] User has premium, using fallback data');
+            console.log('[SubscriptionModal] User has premium, checking for cached data or creating fallback');
+            
+            // If we have previously successful data, use that
+            if (lastSuccessDataRef.current) {
+              console.log('[SubscriptionModal] Using cached successful data');
+              return lastSuccessDataRef.current;
+            }
             
             // Check if the user is in trial mode
             const profileData = await checkPremiumDirectly(user.id);
@@ -318,6 +343,9 @@ export const useSubscriptionModal = (open: boolean) => {
           subscriptionData.trialEnd = trialEnd.toISOString();
         }
         
+        // Store successful data for fallback
+        lastSuccessDataRef.current = subscriptionData;
+        
         return subscriptionData;
       } catch (err) {
         console.error('[SubscriptionModal] Error in subscription fetch:', err);
@@ -325,11 +353,23 @@ export const useSubscriptionModal = (open: boolean) => {
         // If this is because tab is not visible, don't show error
         if (err instanceof Error && err.message === 'Tab not visible') {
           console.log('[SubscriptionModal] Error due to tab not being visible, returning last data');
+          
+          // Use cached data or fallback
+          if (lastSuccessDataRef.current) {
+            return lastSuccessDataRef.current;
+          }
+          
           return data || (isPremium ? getFallbackSubscriptionData() : null);
         }
         
         if (isPremium) {
           console.log('[SubscriptionModal] Creating fallback subscription for premium user');
+          
+          // If we have previously successful data, use that
+          if (lastSuccessDataRef.current) {
+            console.log('[SubscriptionModal] Using cached successful data');
+            return lastSuccessDataRef.current;
+          }
           
           // Create a fallback subscription object for users with premium status
           // but no subscription details (e.g. trial users)
@@ -361,7 +401,7 @@ export const useSubscriptionModal = (open: boolean) => {
               
               console.log('[SubscriptionModal] Created fallback subscription from profile data');
               
-              return {
+              const fallbackData = {
                 hasSubscription: true,
                 subscriptionId: profile.subscription_id || 'manual_premium',
                 status: profile.subscription_status || (isTrial ? 'trialing' : 'active'),
@@ -369,17 +409,27 @@ export const useSubscriptionModal = (open: boolean) => {
                 daysUntilRenewal: Math.max(0, daysUntil),
                 cancelAtPeriodEnd: false,
                 portalUrl: profile.subscription_id ? '/customer-portal' : null,
-                plan: isTrial ? 'Trial' : 'Pro',
+                plan: isTrial ? 'Pro' : 'Pro',
                 trialEnd: isTrial ? currentExpiryDate : null,
                 isTrial: !!isTrial
               } as SubscriptionDetails;
+              
+              // Store successful data for fallback
+              lastSuccessDataRef.current = fallbackData;
+              
+              return fallbackData;
             }
           } catch (profileErr) {
             console.error('[SubscriptionModal] Error fetching profile details:', profileErr);
           }
           
           // If we can't determine if the user is in trial mode, use a regular premium fallback
-          return getFallbackSubscriptionData(false);
+          const fallbackData = getFallbackSubscriptionData(false);
+          
+          // Store fallback data for future use
+          lastSuccessDataRef.current = fallbackData;
+          
+          return fallbackData;
         }
         
         throw err;
@@ -388,6 +438,7 @@ export const useSubscriptionModal = (open: boolean) => {
     enabled: !!user?.id && open,
     retry: false, // Disable auto retry, we handle our own retries
     staleTime: 60000, // Cache data for 1 minute
+    gcTime: 300000, // Keep cache for 5 minutes even when unused
   });
 
   // Refresh data when modal is opened
@@ -395,9 +446,13 @@ export const useSubscriptionModal = (open: boolean) => {
     if (open) {
       console.log('[SubscriptionModal] Modal opened, triggering data refresh');
       setTimeoutErrored(false);
-      setTimeout(() => {
-        setManualRefetch(prev => !prev);
-      }, 100);
+      
+      // Only refetch if we don't have cached data
+      if (!lastSuccessDataRef.current) {
+        setTimeout(() => {
+          setManualRefetch(prev => !prev);
+        }, 100);
+      }
     }
   }, [open]);
 
@@ -492,16 +547,16 @@ export const useSubscriptionModal = (open: boolean) => {
   const isPremiumButNoData = isPremium && (!data || !data.hasSubscription);
 
   return {
-    data,
-    isLoading: isLoading && !timeoutErrored,
-    error: timeoutErrored ? new Error('Przekroczono czas oczekiwania na dane subskrypcji') : error,
-    isPremiumButNoData,
+    data: data || lastSuccessDataRef.current,
+    isLoading: isLoading && !timeoutErrored && !lastSuccessDataRef.current,
+    error: timeoutErrored && !lastSuccessDataRef.current ? new Error('Przekroczono czas oczekiwania na dane subskrypcji') : error,
+    isPremiumButNoData: isPremiumButNoData && !lastSuccessDataRef.current,
     formatDate,
     renewSubscription,
     handleOpenPortal,
     fallbackData: getFallbackSubscriptionData(),
     refetch,
-    timeoutErrored,
+    timeoutErrored: timeoutErrored && !lastSuccessDataRef.current,
     handleRetry
   };
 };
