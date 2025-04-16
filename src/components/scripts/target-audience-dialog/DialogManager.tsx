@@ -89,7 +89,7 @@ const DialogManager = ({
   };
 
   // Custom form submission handler to ensure we return to the selection screen after successful form submission
-  const handleFormSubmitWrapped = async (values: any, userId: string | null): Promise<string | undefined> => {
+  const handleFormSubmitWrapped = async (values: any, userId?: string | null): Promise<string | undefined> => {
     try {
       console.log("Form submission wrapper in DialogManager with userId:", userId);
       

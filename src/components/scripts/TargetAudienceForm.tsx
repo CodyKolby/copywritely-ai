@@ -105,41 +105,6 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
     }
   };
 
-  const handleSubmit = async (data: FormValues) => {
-    try {
-      if (!user) {
-        console.error("No user found in auth context");
-        toast.error('Nie jesteś zalogowany lub sesja wygasła');
-        return null;
-      }
-      
-      const userId = user.id;
-      console.log("Submitting form with user ID:", userId);
-      
-      const audienceName = `Grupa ${Math.floor(Math.random() * 1000) + 1}`;
-      const formDataWithName = {
-        ...data,
-        name: audienceName
-      };
-      
-      console.log("Dane do zapisania w bazie:", formDataWithName);
-      
-      try {
-        // Call the onSubmit function with the full form data
-        const result = await onSubmit(formDataWithName, userId);
-        console.log("Form successfully submitted with result:", result);
-        return result;
-      } catch (error) {
-        console.error("Error in onSubmit callback:", error);
-        throw error;
-      }
-    } catch (error) {
-      console.error("Form submission error:", error);
-      toast.error('Wystąpił błąd podczas wysyłania formularza');
-      throw error;
-    }
-  };
-
   const handleKeyDown = (e: KeyboardEvent<HTMLFormElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -148,7 +113,8 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
   };
 
   const onFormSubmit = form.handleSubmit(async (data) => {
-    await handleSubmit(data);
+    // In this implementation, we pass the user ID explicitly when needed
+    await onSubmit(data, user?.id);
   });
 
   return (
