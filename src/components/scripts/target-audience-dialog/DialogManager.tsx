@@ -93,14 +93,14 @@ const DialogManager = ({
     try {
       console.log("Form submission wrapper in DialogManager");
       // Call the actual form submit handler
-      const result = await handleFormSubmit(values);
+      const audienceId = await handleFormSubmit(values);
       
-      // After successful submission, close the form dialog and show the main selection dialog
-      if (result) {
+      // After successful submission, check if we have a valid audience ID
+      if (audienceId) {
         console.log("Form submitted successfully in DialogManager, showing main selection");
       }
       
-      return result;
+      return audienceId;
     } catch (error) {
       console.error("Error in form submission wrapper:", error);
       throw error;

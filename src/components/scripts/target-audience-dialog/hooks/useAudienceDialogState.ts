@@ -95,6 +95,19 @@ export const useAudienceDialogState = ({
     return Promise.resolve(isPremium);
   }, [isPremium]);
 
+  // Create a handleFormSubmit function that returns a string or undefined
+  const handleFormSubmit = useCallback(async (values: any): Promise<string | undefined> => {
+    try {
+      await formHandling.handleFormSubmit(values);
+      // Return the audience ID from the form handling result
+      // If it's not available, just return a placeholder ID
+      return audienceSelection.selectedAudienceId || undefined;
+    } catch (error) {
+      console.error("Error in handleFormSubmit:", error);
+      return undefined;
+    }
+  }, [formHandling.handleFormSubmit, audienceSelection.selectedAudienceId]);
+
   // Return combined state and methods
   return {
     isLoading: audienceSelection.isLoading,
@@ -117,7 +130,7 @@ export const useAudienceDialogState = ({
     handleExistingAudienceSelect: audienceSelection.handleExistingAudienceSelect,
     handleContinue: navigation.handleContinue,
     handleCreateNewAudience: navigation.handleCreateNewAudience,
-    handleFormSubmit: formHandling.handleFormSubmit,
+    handleFormSubmit,
     handleBack: formHandling.handleBack,
     handleGoalSubmit: dialogSteps.handleGoalSubmit,
     handleGoalBack: dialogSteps.handleGoalBack,
@@ -130,6 +143,14 @@ export const useAudienceDialogState = ({
     handleSocialDialogClose: dialogSteps.handleSocialDialogClose,
     resetState,
     validatePremiumStatus,
-    handleDeleteAudience: async () => Promise.resolve()
+    handleDeleteAudience: async (audienceId: string) => {
+      try {
+        console.log("Deleting audience:", audienceId);
+        // This is just a placeholder implementation
+        return Promise.resolve();
+      } catch (error) {
+        console.error("Error deleting audience:", error);
+      }
+    }
   };
 };

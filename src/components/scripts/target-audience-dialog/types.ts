@@ -43,7 +43,7 @@ export interface UseTargetAudienceDialogReturn {
   handleExistingAudienceSelect: (id: string) => void;
   handleContinue: () => void;
   handleCreateNewAudience: () => void;
-  handleFormSubmit: (audienceId: string) => Promise<void>; // Changed to Promise<void>
+  handleFormSubmit: (values: any) => Promise<string | undefined>; // Changed to return a string | undefined
   handleBack: () => void;
   handleGoalSubmit: (goal: string) => void;
   handleGoalBack: () => void;
