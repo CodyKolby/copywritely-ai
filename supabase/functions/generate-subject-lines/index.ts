@@ -16,12 +16,12 @@ serve(async (req) => {
   const requestId = crypto.randomUUID();
   const timestamp = new Date().toISOString();
   
-  console.log(`🚀 [${timestamp}] Request received - ID: ${requestId}`);
-  console.log(`🔍 [${requestId}] Method: ${req.method}, URL: ${req.url}`);
+  console.log(`🚀 [${timestamp}][${requestId}] SUBJECT-LINES: Request received`);
+  console.log(`🔍 [${timestamp}][${requestId}] SUBJECT-LINES: Method: ${req.method}, URL: ${req.url}`);
   
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    console.log(`[${requestId}] Handling OPTIONS preflight request`);
+    console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: Handling OPTIONS preflight request`);
     return new Response(null, { 
       headers: corsHeaders,
       status: 204
@@ -29,18 +29,43 @@ serve(async (req) => {
   }
 
   try {
+    // For test requests, return immediately with a success message
+    const url = new URL(req.url);
+    const isTestRequest = url.searchParams.get('test') === 'true';
+    
     // Read raw body as text first for debugging
     const rawBody = await req.text();
-    console.log(`[${requestId}] 🧾 RAW REQUEST BODY LENGTH: ${rawBody.length} chars`);
-    console.log(`[${requestId}] 🧾 RAW REQUEST BODY (first 500 chars): ${rawBody.substring(0, 500)}...`);
+    console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: Raw request body length: ${rawBody.length} chars`);
+    
+    // Check if this is a test request based on the body content
+    const isTestViaBody = rawBody.includes('"test":"connection"') || rawBody.includes('"debugMode":true') || 
+                        rawBody.includes('"prompt":"Test connection"');
+    
+    if (isTestRequest || isTestViaBody) {
+      console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: Handling test request`);
+      return new Response(
+        JSON.stringify({
+          subject1: `Test Subject 1 (${timestamp})`,
+          subject2: `Test Subject 2 (${timestamp})`,
+          status: "success",
+          message: "Test connection successful",
+          timestamp,
+          requestId
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // If not a test request, proceed with normal processing
+    console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: Raw request body preview (first 200 chars): ${rawBody.substring(0, 200)}...`);
 
     // Parse JSON manually after logging raw body
     let data;
     try {
       data = JSON.parse(rawBody);
-      console.log(`[${requestId}] ✅ JSON parsing successful`);
+      console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: JSON parsing successful`);
     } catch (parseError) {
-      console.error(`[${requestId}] ❌ Failed to parse JSON:`, parseError);
+      console.error(`[${timestamp}][${requestId}] SUBJECT-LINES: Failed to parse JSON:`, parseError);
       return new Response(
         JSON.stringify({ error: 'Invalid JSON in request body', details: parseError.message }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -48,22 +73,22 @@ serve(async (req) => {
     }
 
     const { prompt, debugMode, requestId: clientRequestId } = data;
-    console.log(`[${requestId}] 🔗 Client request ID: ${clientRequestId || 'Not provided'}`);
+    console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: Client request ID: ${clientRequestId || 'Not provided'}`);
     
     if (!prompt) {
-      console.log(`[${requestId}] ❌ Missing prompt parameter`);
+      console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: Missing prompt parameter`);
       return new Response(
         JSON.stringify({ error: 'Prompt is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`[${requestId}] 📦 Prompt length: ${prompt.length} chars`);
-    console.log(`[${requestId}] 🆔 Debug mode: ${debugMode ? 'enabled' : 'disabled'}`);
+    console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: Prompt length: ${prompt.length} chars`);
+    console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: Debug mode: ${debugMode ? 'enabled' : 'disabled'}`);
     
     if (debugMode) {
       // Return debug response immediately without calling OpenAI
-      console.log(`[${requestId}] 🧪 Debug mode enabled, returning test subjects`);
+      console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: Debug mode enabled, returning test subjects`);
       return new Response(
         JSON.stringify({
           subject1: "DEBUG SUBJECT 1: " + new Date().toISOString(),
@@ -77,15 +102,15 @@ serve(async (req) => {
     }
     
     if (!OPENAI_API_KEY) {
-      console.error(`[${requestId}] ❌ OpenAI API key is missing`);
+      console.error(`[${timestamp}][${requestId}] SUBJECT-LINES: OpenAI API key is missing`);
       return new Response(
         JSON.stringify({ error: 'OpenAI API key is not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
-    console.log(`[${requestId}] 🧠 SENDING REQUEST TO OPENAI`);
-    console.log(`[${requestId}] 🧠 PROMPT PREVIEW: ${prompt.substring(0, 200)}...`);
+    console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: SENDING REQUEST TO OPENAI`);
+    console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: PROMPT PREVIEW: ${prompt.substring(0, 500)}...`);
 
     // Retry mechanism for OpenAI API calls
     let attempts = 0;
@@ -95,7 +120,7 @@ serve(async (req) => {
     
     while (attempts < maxAttempts) {
       attempts++;
-      console.log(`[${requestId}] 🔄 API call attempt ${attempts}/${maxAttempts}`);
+      console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: API call attempt ${attempts}/${maxAttempts}`);
       
       try {
         // Call OpenAI API with the provided prompt
@@ -128,16 +153,16 @@ serve(async (req) => {
         
         // If the request was successful, break out of the retry loop
         if (response.ok) {
-          console.log(`[${requestId}] ✅ OpenAI API responded with status ${response.status}`);
+          console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: OpenAI API responded with status ${response.status}`);
           break;
         } else {
           const errorData = await response.json().catch(() => ({}));
           lastError = `OpenAI API returned status ${response.status}: ${JSON.stringify(errorData)}`;
-          console.error(`[${requestId}] ❌ ${lastError}`);
+          console.error(`[${timestamp}][${requestId}] SUBJECT-LINES: ${lastError}`);
           
           if (response.status === 429 || response.status >= 500) {
             // For rate limiting (429) or server errors (5xx), we'll retry
-            console.log(`[${requestId}] ⏱️ Retrying in ${attempts * 1000}ms...`);
+            console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: Retrying in ${attempts * 1000}ms...`);
             await new Promise(resolve => setTimeout(resolve, attempts * 1000));
             continue;
           } else {
@@ -146,12 +171,12 @@ serve(async (req) => {
           }
         }
       } catch (error) {
-        console.error(`[${requestId}] ❌ Fetch error on attempt ${attempts}:`, error);
+        console.error(`[${timestamp}][${requestId}] SUBJECT-LINES: Fetch error on attempt ${attempts}:`, error);
         lastError = error;
         
         // For network errors, we'll retry
         if (attempts < maxAttempts) {
-          console.log(`[${requestId}] ⏱️ Retrying in ${attempts * 1000}ms...`);
+          console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: Retrying in ${attempts * 1000}ms...`);
           await new Promise(resolve => setTimeout(resolve, attempts * 1000));
           continue;
         }
@@ -166,8 +191,8 @@ serve(async (req) => {
     const responseData = await response.json();
     const aiOutput = responseData.choices[0].message.content;
     
-    console.log(`[${requestId}] 🤖 Raw AI output length: ${aiOutput.length} chars`);
-    console.log(`[${requestId}] 🤖 Raw AI output: ${aiOutput}`);
+    console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: Raw AI output length: ${aiOutput.length} chars`);
+    console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: Raw AI output: ${aiOutput}`);
     
     // Parse the subject lines from the AI output with improved regex patterns
     let subject1 = "Default subject 1";
@@ -197,7 +222,7 @@ serve(async (req) => {
         const match = aiOutput.match(pattern);
         if (match && match[1]) {
           subject1 = match[1].trim();
-          console.log(`[${requestId}] ✅ Found subject1 with pattern:`, pattern);
+          console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: Found subject1 with pattern:`, pattern);
           break;
         }
       }
@@ -207,7 +232,7 @@ serve(async (req) => {
         const match = aiOutput.match(pattern);
         if (match && match[1]) {
           subject2 = match[1].trim();
-          console.log(`[${requestId}] ✅ Found subject2 with pattern:`, pattern);
+          console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: Found subject2 with pattern:`, pattern);
           break;
         }
       }
@@ -218,7 +243,7 @@ serve(async (req) => {
         if (lines.length >= 2 && !subject1.includes("Default")) {
           subject1 = lines[0].replace(/^[^:]*:\s*/, '').trim();
           subject2 = lines[1].replace(/^[^:]*:\s*/, '').trim();
-          console.log(`[${requestId}] ✅ Using simple line-based extraction for subjects`);
+          console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: Using simple line-based extraction for subjects`);
         }
       }
       
@@ -228,7 +253,7 @@ serve(async (req) => {
         if (lines.length >= 2) {
           if (subject1 === "Default subject 1") subject1 = lines[0].trim();
           if (subject2 === "Default subject 2") subject2 = lines[1].trim();
-          console.log(`[${requestId}] ✅ Fallback to direct line extraction`);
+          console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: Fallback to direct line extraction`);
         }
       }
       
@@ -241,31 +266,31 @@ serve(async (req) => {
         if (filteredSubjects.length >= 2) {
           subject1 = filteredSubjects[0].trim();
           subject2 = filteredSubjects[1].trim();
-          console.log(`[${requestId}] ✅ Using intelligent splitting for subjects`);
+          console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: Using intelligent splitting for subjects`);
         } else if (filteredSubjects.length === 1) {
           // If there's only one good sentence, use it for both (better than nothing)
           subject1 = filteredSubjects[0].trim();
           subject2 = filteredSubjects[0].trim();
-          console.log(`[${requestId}] ⚠️ Only found one good subject, duplicating it`);
+          console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: Only found one good subject, duplicating it`);
         }
       }
       
       // Final check - if we still have defaults but have content, just use the first 100 chars
       if (subject1 === "Default subject 1" && aiOutput.trim().length > 0) {
         subject1 = aiOutput.trim().substring(0, 100);
-        console.log(`[${requestId}] ⚠️ Falling back to raw output substring for subject1`);
+        console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: Falling back to raw output substring for subject1`);
       }
       
       if (subject2 === "Default subject 2" && aiOutput.trim().length > 0) {
         const secondHalf = aiOutput.trim().substring(aiOutput.length / 2);
         subject2 = secondHalf.substring(0, 100);
-        console.log(`[${requestId}] ⚠️ Falling back to raw output substring for subject2`);
+        console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: Falling back to raw output substring for subject2`);
       }
       
-      console.log(`[${requestId}] ✅ Successfully extracted subject lines`);
+      console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: Successfully extracted subject lines`);
     } catch (parseError) {
-      console.error(`[${requestId}] ❌ Failed to parse subject lines from AI output:`, parseError);
-      console.log(`[${requestId}] ❌ Raw AI output that failed parsing:`, aiOutput);
+      console.error(`[${timestamp}][${requestId}] SUBJECT-LINES: Failed to parse subject lines from AI output:`, parseError);
+      console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: Raw AI output that failed parsing:`, aiOutput);
       
       // Last resort: if parsing failed completely, use a portion of the raw output
       if (aiOutput && aiOutput.trim().length > 0) {
@@ -278,13 +303,13 @@ serve(async (req) => {
         if (subject1.length > 100) subject1 = subject1.substring(0, 97) + '...';
         if (subject2.length > 100) subject2 = subject2.substring(0, 97) + '...';
         
-        console.log(`[${requestId}] ⚠️ Using emergency fallback for subject extraction`);
+        console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: Using emergency fallback for subject extraction`);
       }
     }
     
-    console.log(`[${requestId}] 📋 Final subject lines:`);
-    console.log(`[${requestId}] 📋 Subject 1: ${subject1}`);
-    console.log(`[${requestId}] 📋 Subject 2: ${subject2}`);
+    console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: Final subject lines:`);
+    console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: Subject 1: ${subject1}`);
+    console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: Subject 2: ${subject2}`);
     
     // Return a response with a timestamp and all debug info to help debug caching issues
     return new Response(
@@ -306,7 +331,7 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error(`❌ [${timestamp}] [${requestId}] Error in generate-subject-lines:`, error.message);
+    console.error(`❌ [${timestamp}] [${requestId}] SUBJECT-LINES: Error in generate-subject-lines:`, error.message);
     console.error(error.stack);
     return new Response(
       JSON.stringify({ 

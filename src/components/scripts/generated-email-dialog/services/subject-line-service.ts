@@ -27,16 +27,18 @@ export const generateSubjectLines = async (
   advertisingGoal: string,
   emailStyle: EmailStyle
 ): Promise<SubjectLinesResponse> => {
-  console.log('SUBJECT LINE SERVICE: Generating subject lines with parameters:', {
-    narrativeBlueprintAvailable: !!narrativeBlueprint,
+  // Generate a unique request ID and timestamp for tracking
+  const requestId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15);
+  const timestamp = new Date().toISOString();
+  
+  console.log('🔵 SUBJECT LINE SERVICE: Starting subject line generation', {
+    requestId,
+    timestamp,
+    hasNarrativeBlueprint: !!narrativeBlueprint,
     targetAudienceId: targetAudience?.id || 'N/A',
     advertisingGoal,
     emailStyle
   });
-  
-  // Create timestamp to avoid caching issues
-  const timestamp = new Date().toISOString();
-  const requestId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15);
   
   // Build a prompt for the subject line generation based on the narrative blueprint and audience data
   const prompt = `
@@ -81,32 +83,50 @@ Timestamp do unikania cachowania: ${timestamp}
 RequestID: ${requestId}
 `;
 
-  console.log('SUBJECT LINE SERVICE: Full prompt for OpenAI:', prompt);
+  console.log(`🔵 SUBJECT LINE SERVICE: Full prompt for subject lines [${requestId}]:`, prompt);
   
   try {
-    console.log(`SUBJECT LINE SERVICE: Invoking generate-subject-lines edge function [${requestId}]`);
+    console.log(`🔵 SUBJECT LINE SERVICE: Invoking generate-subject-lines edge function [${requestId}]`);
     
+    // First, check if we can reach the edge function
+    const testResponse = await supabase.functions.invoke('generate-subject-lines', {
+      body: {
+        prompt: "Test connection",
+        debugMode: true,
+        timestamp,
+        requestId
+      }
+    });
+    
+    console.log(`🔵 SUBJECT LINE SERVICE: Test response received [${requestId}]`, testResponse);
+    
+    // Now make the actual call
     const { data, error } = await supabase.functions.invoke('generate-subject-lines', {
       body: {
         prompt,
         debugMode: false,
-        timestamp: timestamp, // Add timestamp to avoid caching
-        requestId: requestId  // Add requestId for tracing
+        timestamp,
+        requestId
+      },
+      headers: {
+        'Cache-Control': 'no-cache, no-store',
+        'Pragma': 'no-cache',
+        'X-No-Cache': timestamp,
       }
     });
     
     if (error) {
-      console.error('SUBJECT LINE SERVICE: Error from edge function:', error);
+      console.error(`🔴 SUBJECT LINE SERVICE: Error from edge function [${requestId}]:`, error);
       throw new Error(`Error generating subject lines: ${error.message}`);
     }
     
-    console.log(`SUBJECT LINE SERVICE: Response received [${requestId}]`, data);
+    console.log(`🔵 SUBJECT LINE SERVICE: Response received [${requestId}]`, data);
     
     // Extract subjects from the response
     const subject1 = data.subject1 || "Domyślny tytuł emaila";
     const subject2 = data.subject2 || "Alternatywny tytuł emaila";
     
-    console.log(`SUBJECT LINE SERVICE: Generated subjects [${requestId}]:`);
+    console.log(`🔵 SUBJECT LINE SERVICE: Generated subjects [${requestId}]:`);
     console.log(`- Subject 1: "${subject1}"`);
     console.log(`- Subject 2: "${subject2}"`);
     
@@ -122,15 +142,22 @@ RequestID: ${requestId}
       }
     };
   } catch (err: any) {
-    console.error('SUBJECT LINE SERVICE: Failed to generate subject lines:', err);
+    console.error(`🔴 SUBJECT LINE SERVICE: Failed to generate subject lines [${requestId}]:`, err);
+    
+    // Try to get a fallback from default subjects based on email style
+    const defaultSubjects = getDefaultSubjectsByStyle(emailStyle);
+    console.log(`🟠 SUBJECT LINE SERVICE: Using fallback subjects [${requestId}]:`, defaultSubjects);
+    
     // Return default subject lines in case of error
     return {
-      subject1: "Domyślny tytuł emaila",
-      subject2: "Alternatywny tytuł emaila",
+      subject1: defaultSubjects.subject1,
+      subject2: defaultSubjects.subject2,
       debugInfo: {
         error: err.message,
+        errorStack: err.stack,
         timestamp,
-        requestId
+        requestId,
+        fallbackUsed: true
       }
     };
   }

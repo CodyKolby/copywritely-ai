@@ -47,6 +47,7 @@ export const useEmailGeneration = ({
   const [debugInfo, setDebugInfo] = useState<any>(null);
   const [emailStructure, setEmailStructure] = useState<EmailStructure>('PAS');
   const [autoSaveAttempted, setAutoSaveAttempted] = useState(false);
+  const [generationFlowId, setGenerationFlowId] = useState<string>('');
   
   const navigate = useNavigate();
 
@@ -101,6 +102,7 @@ export const useEmailGeneration = ({
     setDebugInfo(null);
     setEmailStructure('PAS');
     setAutoSaveAttempted(false);
+    setGenerationFlowId('');
   };
 
   const generateEmail = async () => {
@@ -111,14 +113,23 @@ export const useEmailGeneration = ({
 
     setIsLoading(true);
     setError(null);
-    setRequestTimestamp(new Date().toISOString());
+    
+    // Create a unique flow ID for this generation process
+    const flowId = uuidv4();
+    setGenerationFlowId(flowId);
+    
+    const startTimestamp = new Date().toISOString();
+    setRequestTimestamp(startTimestamp);
+
+    console.log(`🔵 EMAIL GENERATION [${flowId}]: Starting email generation at ${startTimestamp}`);
+    console.log(`🔵 EMAIL GENERATION [${flowId}]: Target audience ID:`, targetAudienceId);
+    console.log(`🔵 EMAIL GENERATION [${flowId}]: Email style:`, emailStyle);
+    console.log(`🔵 EMAIL GENERATION [${flowId}]: Advertising goal:`, advertisingGoal);
 
     try {
-      console.log('EMAIL GENERATION: Starting email generation for target audience:', targetAudienceId);
-      console.log('EMAIL GENERATION: Email style:', emailStyle);
-      console.log('EMAIL GENERATION: Advertising goal:', advertisingGoal);
-      console.log('EMAIL GENERATION: Request timestamp:', requestTimestamp);
-
+      // Step 1: Get target audience data
+      console.log(`🔵 EMAIL GENERATION [${flowId}]: Fetching target audience data...`);
+      
       const { data: targetAudienceData, error: targetAudienceError } = await supabase
         .from('target_audiences')
         .select('*')
@@ -128,58 +139,92 @@ export const useEmailGeneration = ({
       if (targetAudienceError) {
         throw new Error(`Nie udało się pobrać danych grupy docelowej: ${targetAudienceError.message}`);
       }
+      
+      console.log(`🔵 EMAIL GENERATION [${flowId}]: Target audience data retrieved:`, 
+        targetAudienceData ? { id: targetAudienceData.id, name: targetAudienceData.name } : null);
 
-      const blueprint = await generateNarrativeBlueprint(targetAudienceData, emailStyle, advertisingGoal);
-      setNarrativeBlueprint(blueprint);
+      // Step 2: Generate narrative blueprint
+      console.log(`🔵 EMAIL GENERATION [${flowId}]: Generating narrative blueprint...`);
+      let blueprint: NarrativeBlueprint;
       
-      console.log('EMAIL GENERATION: Narrative blueprint generated:', blueprint);
+      try {
+        blueprint = await generateNarrativeBlueprint(targetAudienceData, emailStyle, advertisingGoal);
+        console.log(`🔵 EMAIL GENERATION [${flowId}]: Narrative blueprint generated successfully`);
+        setNarrativeBlueprint(blueprint);
+      } catch (blueprintError: any) {
+        console.error(`🔴 EMAIL GENERATION [${flowId}]: Blueprint generation failed:`, blueprintError);
+        throw new Error(`Nie udało się wygenerować blueprint narracyjnego: ${blueprintError.message}`);
+      }
       
-      const subjectLinesResponse = await generateSubjectLines(
-        blueprint, 
-        targetAudienceData, 
-        advertisingGoal, 
-        emailStyle
-      );
+      // Step 3: Generate subject lines
+      console.log(`🔵 EMAIL GENERATION [${flowId}]: Generating subject lines...`);
+      let subjectLinesResponse;
       
-      console.log('EMAIL GENERATION: Subject lines generated:', subjectLinesResponse);
+      try {
+        subjectLinesResponse = await generateSubjectLines(
+          blueprint, 
+          targetAudienceData, 
+          advertisingGoal, 
+          emailStyle
+        );
+        
+        console.log(`🔵 EMAIL GENERATION [${flowId}]: Subject lines generated:`, {
+          subject1: subjectLinesResponse.subject1,
+          subject2: subjectLinesResponse.subject2
+        });
+        
+        setDebugInfo({
+          subjectLines: subjectLinesResponse.debugInfo,
+          emailStructure: emailStructure
+        });
+        
+        // Set two distinctly different subject lines
+        setGeneratedSubject(subjectLinesResponse.subject1);
+        setAlternativeSubject(subjectLinesResponse.subject2);
+      } catch (subjectError: any) {
+        console.error(`🔴 EMAIL GENERATION [${flowId}]: Subject line generation failed:`, subjectError);
+        // Don't throw here, continue with default subjects
+        setGeneratedSubject("Domyślny tytuł emaila");
+        setAlternativeSubject("Alternatywny tytuł emaila");
+      }
       
-      setDebugInfo({
-        subjectLines: subjectLinesResponse.debugInfo,
-        emailStructure: emailStructure
-      });
-      
-      // Set two distinctly different subject lines
-      setGeneratedSubject(subjectLinesResponse.subject1);
-      setAlternativeSubject(subjectLinesResponse.subject2);
-      
+      // Step 4: Select email structure and generate content
       const selectedStructure = selectRandomEmailStructure();
       setEmailStructure(selectedStructure);
-      console.log(`EMAIL GENERATION: Selected email structure: ${selectedStructure}`);
+      console.log(`🔵 EMAIL GENERATION [${flowId}]: Selected email structure: ${selectedStructure}`);
       
-      const emailContentResponse = await generateEmailContent(
-        blueprint, 
-        targetAudienceData, 
-        selectedStructure, 
-        advertisingGoal, 
-        emailStyle
-      );
+      try {
+        const emailContentResponse = await generateEmailContent(
+          blueprint, 
+          targetAudienceData, 
+          selectedStructure, 
+          advertisingGoal, 
+          emailStyle
+        );
+        
+        console.log(`🔵 EMAIL GENERATION [${flowId}]: Email content generated using structure: ${emailContentResponse.structureUsed}`);
+        
+        setGeneratedEmail(emailContentResponse.emailContent);
+        
+        setDebugInfo(prev => ({
+          ...prev,
+          emailContent: emailContentResponse.debugInfo,
+          structureUsed: emailContentResponse.structureUsed
+        }));
+      } catch (contentError: any) {
+        console.error(`🔴 EMAIL GENERATION [${flowId}]: Email content generation failed:`, contentError);
+        throw new Error(`Nie udało się wygenerować treści emaila: ${contentError.message}`);
+      }
       
-      console.log(`EMAIL GENERATION: Email content generated using structure: ${emailContentResponse.structureUsed}`);
-      
-      setGeneratedEmail(emailContentResponse.emailContent);
-      
-      setDebugInfo(prev => ({
-        ...prev,
-        emailContent: emailContentResponse.debugInfo,
-        structureUsed: emailContentResponse.structureUsed
-      }));
+      console.log(`🔵 EMAIL GENERATION [${flowId}]: Email generation completed successfully`);
 
     } catch (err: any) {
-      console.error('EMAIL GENERATION: Error generating email:', err);
+      console.error(`🔴 EMAIL GENERATION [${flowId}]: Error generating email:`, err);
       setError(err.message || 'Nie udało się wygenerować emaila');
       toast.error('Wystąpił błąd podczas generowania emaila');
     } finally {
       setIsLoading(false);
+      console.log(`🔵 EMAIL GENERATION [${flowId}]: Generation process finished`);
     }
   };
 
