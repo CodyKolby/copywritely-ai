@@ -53,6 +53,7 @@ export type Database = {
           subscription_expiry: string | null
           subscription_id: string | null
           subscription_status: string | null
+          trial_started_at: string | null
           updated_at: string
         }
         Insert: {
@@ -65,6 +66,7 @@ export type Database = {
           subscription_expiry?: string | null
           subscription_id?: string | null
           subscription_status?: string | null
+          trial_started_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -77,6 +79,7 @@ export type Database = {
           subscription_expiry?: string | null
           subscription_id?: string | null
           subscription_status?: string | null
+          trial_started_at?: string | null
           updated_at?: string
         }
         Relationships: []

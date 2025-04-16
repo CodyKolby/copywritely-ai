@@ -187,10 +187,12 @@ export const useSubscriptionModal = (open: boolean) => {
           if (isPremium) {
             // Check if the user is in trial mode
             const profileData = await checkPremiumDirectly(user.id);
-            const isTrial = profileData?.trial_started_at || 
-                           profileData?.subscription_status === 'trialing';
+            const isTrial = profileData && (
+              profileData.trial_started_at !== null || 
+              profileData.subscription_status === 'trialing'
+            );
             
-            return getFallbackSubscriptionData(isTrial);
+            return getFallbackSubscriptionData(!!isTrial);
           }
           throw new Error('Przekroczono czas oczekiwania na dane subskrypcji');
         }
@@ -202,14 +204,16 @@ export const useSubscriptionModal = (open: boolean) => {
           console.log('[SubscriptionModal] Creating fallback data from profile');
           
           // Check if the user is in trial mode
-          const isTrial = !!profileData.trial_started_at || 
-                         profileData.subscription_status === 'trialing';
+          const isTrial = profileData && (
+            profileData.trial_started_at !== null || 
+            profileData.subscription_status === 'trialing'
+          );
             
           // Get expiry date based on subscription type
           let expiryDate;
           if (isTrial) {
             expiryDate = profileData.subscription_expiry || 
-                        getTrialExpiryDate(profileData.trial_started_at);
+                        getTrialExpiryDate(profileData.trial_started_at || null);
           } else {
             expiryDate = profileData.subscription_expiry || getDefaultExpiryDate();
           }
@@ -226,7 +230,7 @@ export const useSubscriptionModal = (open: boolean) => {
             portalUrl: profileData.subscription_id ? '/customer-portal' : null,
             plan: isTrial ? 'Trial' : 'Pro',
             trialEnd: isTrial ? expiryDate : null,
-            isTrial: isTrial
+            isTrial: !!isTrial
           } as SubscriptionDetails;
         }
         
@@ -259,10 +263,12 @@ export const useSubscriptionModal = (open: boolean) => {
             
             // Check if the user is in trial mode
             const profileData = await checkPremiumDirectly(user.id);
-            const isTrial = profileData?.trial_started_at || 
-                           profileData?.subscription_status === 'trialing';
+            const isTrial = profileData && (
+              profileData.trial_started_at !== null || 
+              profileData.subscription_status === 'trialing'
+            );
             
-            return getFallbackSubscriptionData(isTrial);
+            return getFallbackSubscriptionData(!!isTrial);
           }
           
           throw new Error('Nie udało się pobrać danych subskrypcji');
@@ -334,14 +340,16 @@ export const useSubscriptionModal = (open: boolean) => {
               
             if (profile && profile.is_premium === true) {
               // Check if user is in trial mode
-              const isTrial = !!profile.trial_started_at || 
-                           profile.subscription_status === 'trialing';
+              const isTrial = profile && (
+                profile.trial_started_at !== null || 
+                profile.subscription_status === 'trialing'
+              );
                            
               // Verify expiry date
               let currentExpiryDate;
               if (isTrial) {
                 currentExpiryDate = profile.subscription_expiry || 
-                                  getTrialExpiryDate(profile.trial_started_at);
+                                    getTrialExpiryDate(profile.trial_started_at || null);
               } else {
                 currentExpiryDate = profile.subscription_expiry || getDefaultExpiryDate();
               }
@@ -363,7 +371,7 @@ export const useSubscriptionModal = (open: boolean) => {
                 portalUrl: profile.subscription_id ? '/customer-portal' : null,
                 plan: isTrial ? 'Trial' : 'Pro',
                 trialEnd: isTrial ? currentExpiryDate : null,
-                isTrial: isTrial
+                isTrial: !!isTrial
               } as SubscriptionDetails;
             }
           } catch (profileErr) {
@@ -497,4 +505,3 @@ export const useSubscriptionModal = (open: boolean) => {
     handleRetry
   };
 };
-
