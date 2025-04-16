@@ -1,69 +1,94 @@
 
 import { FormValues } from './types';
 
-// Kompresja danych formularza - symulacja procesu kompresji
+/**
+ * Utility function to compress form data using text processing techniques
+ * This simulates what would typically be done by an AI/NLP service in production
+ */
 export const compressFormData = async (data: any): Promise<any> => {
   try {
-    console.log("Rozpoczynam kompresję danych formularza");
+    console.log("Beginning data compression process");
     
     // Ensure we strip out any advertisingGoal field
     const { advertisingGoal, ...dataWithoutAdvertisingGoal } = data;
     
-    // Symulacja opóźnienia procesu kompresji - w rzeczywistych warunkach
-    // tutaj byłoby wywołanie API AI lub innej usługi kompresującej dane
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    // This would typically be an API call to an AI service
+    // Here we're just simulating the delay and doing some basic compression
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // Process each field
-    const result = { ...dataWithoutAdvertisingGoal };
+    // Create a deep copy to avoid mutating the original data
+    const result = JSON.parse(JSON.stringify(dataWithoutAdvertisingGoal));
     
-    // Example of field compression (simulated)
-    console.log("Kompresja pola offerDetails rozpoczęta");
+    // Process text fields - trim whitespace and remove duplicate spaces
+    if (result.mainOffer) {
+      result.mainOffer = result.mainOffer.trim().replace(/\s+/g, ' ');
+      console.log("Compressed mainOffer:", result.mainOffer);
+    }
+    
     if (result.offerDetails) {
-      result.offerDetails = result.offerDetails.trim();
+      result.offerDetails = result.offerDetails.trim().replace(/\s+/g, ' ');
+      console.log("Compressed offerDetails:", result.offerDetails);
     }
-    console.log("Kompresja pola offerDetails zakończona pomyślnie");
     
-    console.log("Kompresja pola language rozpoczęta");
     if (result.language) {
-      result.language = result.language.trim();
+      result.language = result.language.trim().replace(/\s+/g, ' ');
     }
-    console.log("Kompresja pola language zakończona pomyślnie");
     
-    console.log("Kompresja pola beliefs rozpoczęta");
-    if (result.beliefs) {
-      result.beliefs = result.beliefs.trim();
-    }
-    console.log("Kompresja pola beliefs zakończona pomyślnie");
-    
-    console.log("Kompresja pola biography rozpoczęta");
     if (result.biography) {
-      result.biography = result.biography.trim();
+      result.biography = result.biography.trim().replace(/\s+/g, ' ');
+      console.log("Compressed biography:", result.biography);
     }
-    console.log("Kompresja pola biography zakończona pomyślnie");
     
-    console.log("Kompresja pola competitors rozpoczęta");
-    if (result.competitors) {
-      result.competitors = result.competitors.map((item: string) => item.trim());
+    if (result.beliefs) {
+      result.beliefs = result.beliefs.trim().replace(/\s+/g, ' ');
+      console.log("Compressed beliefs:", result.beliefs);
     }
-    console.log("Kompresja pola competitors zakończona pomyślnie");
     
-    console.log("Kompresja pola whyItWorks rozpoczęta");
     if (result.whyItWorks) {
-      result.whyItWorks = result.whyItWorks.trim();
+      result.whyItWorks = result.whyItWorks.trim().replace(/\s+/g, ' ');
+      console.log("Compressed whyItWorks:", result.whyItWorks);
     }
-    console.log("Kompresja pola whyItWorks zakończona pomyślnie");
     
-    console.log("Kompresja pola experience rozpoczęta");
     if (result.experience) {
-      result.experience = result.experience.trim();
+      result.experience = result.experience.trim().replace(/\s+/g, ' ');
+      console.log("Compressed experience:", result.experience);
     }
-    console.log("Kompresja pola experience zakończona pomyślnie");
     
-    console.log("Kompresja danych formularza zakończona");
+    // Process array fields - trim each item and filter empty ones
+    if (Array.isArray(result.competitors)) {
+      result.competitors = result.competitors
+        .map((item: string) => item?.trim().replace(/\s+/g, ' ') || "")
+        .filter(Boolean);
+      console.log("Compressed competitors:", result.competitors);
+    }
     
+    if (Array.isArray(result.pains)) {
+      result.pains = result.pains
+        .map((item: string) => item?.trim().replace(/\s+/g, ' ') || "")
+        .filter(Boolean);
+      console.log("Compressed pains:", result.pains);
+    }
+    
+    if (Array.isArray(result.desires)) {
+      result.desires = result.desires
+        .map((item: string) => item?.trim().replace(/\s+/g, ' ') || "")
+        .filter(Boolean);
+      console.log("Compressed desires:", result.desires);
+    }
+    
+    if (Array.isArray(result.benefits)) {
+      result.benefits = result.benefits
+        .map((item: string) => item?.trim().replace(/\s+/g, ' ') || "")
+        .filter(Boolean);
+      console.log("Compressed benefits:", result.benefits);
+    }
+    
+    console.log("Data compression process completed");
+    
+    // In a real implementation, this is where AI would summarize/compress the data
     return result;
   } catch (error) {
-    console.error("Błąd podczas kompresji danych:", error);
+    console.error("Error during data compression:", error);
     // On error, return the original data to avoid blocking the flow
     return data;
   }

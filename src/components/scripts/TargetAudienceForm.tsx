@@ -20,6 +20,8 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
   const [currentStep, setCurrentStep] = useState(1);
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Track if we've already created an audience to prevent duplicates
+  const [hasCreatedAudience, setHasCreatedAudience] = useState(false);
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -74,8 +76,9 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
   };
 
   const handleFormSubmission = async () => {
-    if (isSubmitting) {
-      console.log("Already submitting, skipping duplicate submission");
+    // Prevent double submission
+    if (isSubmitting || hasCreatedAudience) {
+      console.log("Already submitted, preventing duplicate submission");
       return;
     }
     
@@ -89,6 +92,9 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
         toast.error("Musisz być zalogowany, aby zapisać grupę docelową");
         return;
       }
+      
+      // Mark as having created an audience to prevent duplicates
+      setHasCreatedAudience(true);
       
       // Direct database approach - more reliable than delegation
       try {
@@ -126,9 +132,10 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
         if (error) {
           console.error("Database insertion error:", error);
           toast.error("Błąd podczas zapisywania do bazy danych");
+          setHasCreatedAudience(false); // Reset flag to allow retry
           
           // Try the onSubmit prop as a fallback
-          const audienceId = await onSubmit(data, user.id);
+          const audienceId = await onSubmit(data);
           console.log("Fallback onSubmit returned:", audienceId);
           return audienceId;
         }
@@ -138,24 +145,27 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
           toast.success("Grupa docelowa została utworzona");
           
           // Call onSubmit with the ID to ensure parent components are updated
-          await onSubmit(data, user.id);
+          await onSubmit(data);
           
           return insertData.id;
         } else {
           console.error("No ID returned from direct database insert");
+          setHasCreatedAudience(false); // Reset flag to allow retry
           
           // Try the onSubmit prop as a last resort
-          return await onSubmit(data, user.id);
+          return await onSubmit(data);
         }
       } catch (directDbError) {
         console.error("Direct database approach failed:", directDbError);
+        setHasCreatedAudience(false); // Reset flag to allow retry
         
         // Fall back to the provided onSubmit function
-        return await onSubmit(data, user.id);
+        return await onSubmit(data);
       }
     } catch (error) {
       console.error("Form submission error:", error);
       toast.error('Wystąpił błąd podczas wysyłania formularza');
+      setHasCreatedAudience(false); // Reset flag to allow retry
       return undefined;
     } finally {
       setIsSubmitting(false);

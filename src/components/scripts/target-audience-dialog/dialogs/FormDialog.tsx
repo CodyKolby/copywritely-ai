@@ -21,6 +21,12 @@ const FormDialog = ({
     onOpenChange(false);
   };
 
+  const handleFormSubmit = async (values: any) => {
+    console.log("FormDialog - handling form submit with values:", values);
+    // Return the result of onSubmit
+    return await onSubmit(values);
+  };
+
   return (
     <Dialog 
       open={open} 
@@ -28,7 +34,7 @@ const FormDialog = ({
     >
       <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
         <TargetAudienceForm 
-          onSubmit={onSubmit}
+          onSubmit={handleFormSubmit}
           onCancel={handleCancel}
           onBack={onBack}
         />

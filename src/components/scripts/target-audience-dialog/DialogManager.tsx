@@ -62,6 +62,7 @@ const DialogManager = ({
     handleSocialDialogClose,
     handleDeleteAudience,
     resetState,
+    fetchExistingAudiences,
   } = useTargetAudienceDialog({
     open,
     onOpenChange,
@@ -85,6 +86,14 @@ const DialogManager = ({
     }
   }, [open, resetState]);
 
+  // Force refresh audiences on form dialog close
+  useEffect(() => {
+    if (!showForm && existingAudiences.length === 0 && userId) {
+      console.log("Form closed - ensuring audiences are refreshed");
+      fetchExistingAudiences();
+    }
+  }, [showForm, existingAudiences.length, userId, fetchExistingAudiences]);
+
   const handleDialogClose = () => {
     resetState(); // Reset all states
     onOpenChange(false);
@@ -102,66 +111,20 @@ const DialogManager = ({
         return undefined;
       }
       
-      // Direct database approach - more reliable than going through multiple functions
-      const audienceName = values.name || `Grupa ${Math.floor(Math.random() * 10000)}`;
-      
-      // Create a properly formatted object for database insertion
-      const dbData = {
-        user_id: userId,
-        name: audienceName,
-        age_range: values.ageRange || '',
-        gender: values.gender || '',
-        competitors: Array.isArray(values.competitors) ? values.competitors.filter(Boolean) : [],
-        language: values.language || '',
-        biography: values.biography || '',
-        beliefs: values.beliefs || '',
-        pains: Array.isArray(values.pains) ? values.pains.filter(Boolean) : [],
-        desires: Array.isArray(values.desires) ? values.desires.filter(Boolean) : [],
-        main_offer: values.mainOffer || '',
-        offer_details: values.offerDetails || '',
-        benefits: Array.isArray(values.benefits) ? values.benefits.filter(Boolean) : [],
-        why_it_works: values.whyItWorks || '',
-        experience: values.experience || ''
-      };
-      
-      console.log("Calling handleFormSubmit with data and userId:", userId);
-      
-      // Direct database insertion attempt 
+      let audienceId: string | undefined = undefined;
+      let errorOccurred = false;
+            
+      // Call the handleFormSubmit function from the hook
       try {
-        console.log("Direct database insertion for reliability");
-        const { data: insertResult, error: insertError } = await supabase
-          .from('target_audiences')
-          .insert(dbData)
-          .select('id')
-          .single();
-          
-        if (insertError) {
-          console.error("Direct database insertion failed:", insertError);
-          // Fallback to the handler function
-          return await handleFormSubmit(values);
-        }
-        
-        if (insertResult && insertResult.id) {
-          console.log("Direct insertion successful with ID:", insertResult.id);
-          toast.success("Grupa docelowa została utworzona");
-          
-          // Update UI state to reflect the new audience
-          setTimeout(() => {
-            handleBack();  // Return to selection screen
-          }, 300);
-          
-          return insertResult.id;
-        }
-      } catch (directError) {
-        console.error("Error in direct database insertion:", directError);
-      }
-      
-      // Fallback to the handler function if direct insertion failed
-      try {
-        const audienceId = await handleFormSubmit(values);
+        audienceId = await handleFormSubmit(values);
         
         if (audienceId) {
           console.log("Form submitted successfully in DialogManager with ID:", audienceId);
+          
+          // Ensure a refresh of audiences list
+          setTimeout(() => {
+            fetchExistingAudiences();
+          }, 500);
           
           // After successful submission, go back to selection screen
           setTimeout(() => {
@@ -170,15 +133,19 @@ const DialogManager = ({
           
           return audienceId;
         } else {
+          errorOccurred = true;
           console.error("Form submission completed but no audience ID was returned");
-          toast.error("Nie udało się zapisać grupy docelowej - spróbuj ponownie");
-          return undefined;
         }
       } catch (error) {
+        errorOccurred = true;
         console.error("Error in form submission:", error);
-        toast.error("Wystąpił błąd podczas zapisywania grupy docelowej");
-        return undefined;
       }
+      
+      if (errorOccurred) {
+        toast.error("Wystąpił błąd podczas zapisywania grupy docelowej");
+      }
+      
+      return undefined;
     } catch (error) {
       console.error("Error in form submission wrapper:", error);
       toast.error("Nieoczekiwany błąd podczas przetwarzania formularza");

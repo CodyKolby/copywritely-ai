@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { compressFormData } from '../../target-audience-form/compression-service';
 import { deleteTargetAudience, generateAudienceName } from '../api';
@@ -9,13 +9,28 @@ export const useAudienceData = (userId: string | undefined, open: boolean) => {
   const [existingAudiences, setExistingAudiences] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCompressing, setIsCompressing] = useState(false);
+  const [hasRefreshedAfterCreation, setHasRefreshedAfterCreation] = useState(false);
 
-  // Fetch existing target audiences
+  // Fetch existing target audiences whenever the dialog opens
   useEffect(() => {
     if (open && userId) {
+      console.log("Dialog opened - fetching existing audiences");
       fetchExistingAudiences();
     }
   }, [open, userId]);
+
+  // Explicitly trigger a refresh after creation
+  useEffect(() => {
+    if (hasRefreshedAfterCreation) {
+      const refreshTimer = setTimeout(() => {
+        console.log("Performing post-creation audience refresh");
+        fetchExistingAudiences();
+        setHasRefreshedAfterCreation(false);
+      }, 500);
+      
+      return () => clearTimeout(refreshTimer);
+    }
+  }, [hasRefreshedAfterCreation, userId]);
 
   const fetchExistingAudiences = async () => {
     setIsLoading(true);
@@ -124,7 +139,10 @@ export const useAudienceData = (userId: string | undefined, open: boolean) => {
       // Success - show a success toast and refresh audiences
       toast.success('Grupa docelowa została utworzona pomyślnie!');
       
-      // Refresh the list of target audiences
+      // Mark for refresh on next dialog cycle
+      setHasRefreshedAfterCreation(true);
+      
+      // Force an immediate refresh too
       await fetchExistingAudiences();
       
       console.log("Successfully created target audience with ID:", data.id);
