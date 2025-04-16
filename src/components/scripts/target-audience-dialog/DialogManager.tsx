@@ -9,6 +9,7 @@ import EmailStyleDialog from './dialogs/EmailStyleDialog';
 import SocialMediaDialog from './dialogs/SocialMediaDialog';
 import ResultDialogs from './dialogs/ResultDialogs';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Main dialog manager component that orchestrates all dialogs
@@ -101,17 +102,63 @@ const DialogManager = ({
         return undefined;
       }
       
-      // Directly call the API function to save the target audience
-      // Skip complex validation and just go straight to the API
-      const cleanData = {...values};
-      if (cleanData.advertisingGoal) {
-        delete cleanData.advertisingGoal; // Remove this field as it's not in the database schema
-      }
+      // Direct database approach - more reliable than going through multiple functions
+      const audienceName = values.name || `Grupa ${Math.floor(Math.random() * 10000)}`;
+      
+      // Create a properly formatted object for database insertion
+      const dbData = {
+        user_id: userId,
+        name: audienceName,
+        age_range: values.ageRange || '',
+        gender: values.gender || '',
+        competitors: Array.isArray(values.competitors) ? values.competitors.filter(Boolean) : [],
+        language: values.language || '',
+        biography: values.biography || '',
+        beliefs: values.beliefs || '',
+        pains: Array.isArray(values.pains) ? values.pains.filter(Boolean) : [],
+        desires: Array.isArray(values.desires) ? values.desires.filter(Boolean) : [],
+        main_offer: values.mainOffer || '',
+        offer_details: values.offerDetails || '',
+        benefits: Array.isArray(values.benefits) ? values.benefits.filter(Boolean) : [],
+        why_it_works: values.whyItWorks || '',
+        experience: values.experience || ''
+      };
       
       console.log("Calling handleFormSubmit with data and userId:", userId);
+      
+      // Direct database insertion attempt 
       try {
-        // This will attempt to save the target audience and return the ID
-        const audienceId = await handleFormSubmit({...cleanData, user_id: userId});
+        console.log("Direct database insertion for reliability");
+        const { data: insertResult, error: insertError } = await supabase
+          .from('target_audiences')
+          .insert(dbData)
+          .select('id')
+          .single();
+          
+        if (insertError) {
+          console.error("Direct database insertion failed:", insertError);
+          // Fallback to the handler function
+          return await handleFormSubmit(values);
+        }
+        
+        if (insertResult && insertResult.id) {
+          console.log("Direct insertion successful with ID:", insertResult.id);
+          toast.success("Grupa docelowa została utworzona");
+          
+          // Update UI state to reflect the new audience
+          setTimeout(() => {
+            handleBack();  // Return to selection screen
+          }, 300);
+          
+          return insertResult.id;
+        }
+      } catch (directError) {
+        console.error("Error in direct database insertion:", directError);
+      }
+      
+      // Fallback to the handler function if direct insertion failed
+      try {
+        const audienceId = await handleFormSubmit(values);
         
         if (audienceId) {
           console.log("Form submitted successfully in DialogManager with ID:", audienceId);

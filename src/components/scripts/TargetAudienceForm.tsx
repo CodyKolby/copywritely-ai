@@ -12,6 +12,7 @@ import NavigationControls from './target-audience-form/NavigationControls';
 import StepRenderer from './target-audience-form/StepRenderer';
 import { formSchema, FormValues, TargetAudienceFormProps } from './target-audience-form/types';
 import { validateStep } from './target-audience-form/validation-utils';
+import { supabase } from '@/integrations/supabase/client';
 
 const TOTAL_STEPS = 13;
 
@@ -89,19 +90,73 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
         return;
       }
       
-      // Directly call onSubmit with the form data
-      const audienceId = await onSubmit(data);
-      
-      if (audienceId) {
-        console.log("Form submission successful with ID:", audienceId, "- returning to selection");
-        onBack();
-      } else {
-        console.error("Form submission failed - no audience ID returned");
-        toast.error('Nie udało się zapisać grupy docelowej');
+      // Direct database approach - more reliable than delegation
+      try {
+        // Generate a name based on the form data
+        const audienceName = `Grupa ${Math.floor(Math.random() * 10000)}`;
+        
+        // Prepare data for database insertion
+        const dbData = {
+          user_id: user.id,
+          name: audienceName,
+          age_range: data.ageRange,
+          gender: data.gender,
+          competitors: data.competitors.filter(Boolean),
+          language: data.language,
+          biography: data.biography,
+          beliefs: data.beliefs,
+          pains: data.pains.filter(Boolean),
+          desires: data.desires.filter(Boolean),
+          main_offer: data.mainOffer,
+          offer_details: data.offerDetails,
+          benefits: data.benefits.filter(Boolean),
+          why_it_works: data.whyItWorks,
+          experience: data.experience
+        };
+        
+        console.log("Direct database insertion with data:", dbData);
+        
+        // Insert directly into the database
+        const { data: insertData, error } = await supabase
+          .from('target_audiences')
+          .insert(dbData)
+          .select('id')
+          .single();
+          
+        if (error) {
+          console.error("Database insertion error:", error);
+          toast.error("Błąd podczas zapisywania do bazy danych");
+          
+          // Try the onSubmit prop as a fallback
+          const audienceId = await onSubmit(data, user.id);
+          console.log("Fallback onSubmit returned:", audienceId);
+          return audienceId;
+        }
+        
+        if (insertData && insertData.id) {
+          console.log("Direct database insert successful with ID:", insertData.id);
+          toast.success("Grupa docelowa została utworzona");
+          
+          // Call onSubmit with the ID to ensure parent components are updated
+          await onSubmit(data, user.id);
+          
+          return insertData.id;
+        } else {
+          console.error("No ID returned from direct database insert");
+          
+          // Try the onSubmit prop as a last resort
+          return await onSubmit(data, user.id);
+        }
+      } catch (directDbError) {
+        console.error("Direct database approach failed:", directDbError);
+        
+        // Fall back to the provided onSubmit function
+        return await onSubmit(data, user.id);
       }
     } catch (error) {
       console.error("Form submission error:", error);
       toast.error('Wystąpił błąd podczas wysyłania formularza');
+      return undefined;
     } finally {
       setIsSubmitting(false);
     }

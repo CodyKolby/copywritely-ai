@@ -6,7 +6,7 @@ import TargetAudienceForm from '../../TargetAudienceForm';
 interface FormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (values: any, userId?: string | null) => Promise<string | undefined>;
+  onSubmit: (values: any) => Promise<string | undefined>;
   onBack: () => void;
 }
 

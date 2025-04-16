@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { TargetAudience } from './types';
@@ -123,10 +124,10 @@ export const saveTargetAudience = async (data: any, userId: string): Promise<str
     return undefined;
   }
   
+  console.log('Direct database insertion starting with userId:', userId);
+  console.log('Data to save:', JSON.stringify(data));
+  
   try {
-    console.log('Direct database insertion starting with userId:', userId);
-    console.log('Data to save:', JSON.stringify(data));
-    
     // Generate a name if not provided
     const audienceName = data.name || generateAudienceName(data.ageRange || data.age_range, data.mainOffer || data.main_offer);
     console.log('Using audience name:', audienceName);
@@ -158,67 +159,74 @@ export const saveTargetAudience = async (data: any, userId: string): Promise<str
       experience: data.experience || ''
     };
     
-    console.log('Mapped data for database insertion:', JSON.stringify(dbData));
+    console.log('Mapped data for database insertion:', dbData);
     
-    // Simple direct insertion approach with max 5 retries
-    for (let attempt = 1; attempt <= 5; attempt++) {
-      console.log(`Insertion attempt ${attempt}/5`);
+    // Direct insertion approach - no intermediate functions that can fail
+    const { data: insertData, error } = await supabase
+      .from('target_audiences')
+      .insert(dbData)
+      .select('id')
+      .single();
       
-      try {
-        const { data: insertData, error } = await supabase
-          .from('target_audiences')
-          .insert(dbData)
-          .select('id')
-          .single();
-          
-        if (error) {
-          console.error(`Error on attempt ${attempt}:`, error);
-          
-          if (attempt === 5) {
-            toast.error('Nie udało się zapisać grupy docelowej po wielu próbach');
-            return undefined;
-          }
-          
-          // Wait a bit before retry
-          await new Promise(resolve => setTimeout(resolve, 500));
-          continue;
-        }
-        
-        if (!insertData || !insertData.id) {
-          console.error(`No ID returned on attempt ${attempt}`);
-          
-          if (attempt === 5) {
-            toast.error('Błąd podczas zapisywania - brak zwróconego identyfikatora');
-            return undefined;
-          }
-          
-          // Wait before retry
-          await new Promise(resolve => setTimeout(resolve, 500));
-          continue;
-        }
-        
-        // Success!
-        console.log('Successfully inserted target audience with ID:', insertData.id);
-        toast.success('Grupa docelowa została utworzona');
-        
-        return insertData.id;
-      } catch (attemptError) {
-        console.error(`Exception on attempt ${attempt}:`, attemptError);
-        
-        if (attempt === 5) {
-          toast.error('Nieoczekiwany błąd podczas zapisywania');
-          return undefined;
-        }
-        
-        // Wait before retry
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
+    if (error) {
+      console.error('Error inserting target audience:', error);
+      toast.error('Błąd podczas zapisywania grupy docelowej');
+      
+      // Try a second approach with retry
+      return await retryDatabaseInsertion(dbData);
     }
     
-    return undefined;
+    if (!insertData || !insertData.id) {
+      console.error('No ID returned from database insertion');
+      toast.error('Błąd podczas zapisywania - brak zwróconego identyfikatora');
+      
+      // Try a second approach with retry
+      return await retryDatabaseInsertion(dbData);
+    }
+    
+    console.log('Successfully inserted target audience with ID:', insertData.id);
+    toast.success('Grupa docelowa została utworzona');
+    
+    return insertData.id;
   } catch (error) {
-    console.error('Fatal error in saveTargetAudience:', error);
-    toast.error('Krytyczny błąd podczas zapisywania grupy docelowej');
+    console.error('Error in saveTargetAudience:', error);
+    toast.error('Błąd podczas zapisywania grupy docelowej');
     return undefined;
   }
+};
+
+// Helper function to retry database insertion with multiple attempts
+const retryDatabaseInsertion = async (dbData: any): Promise<string | undefined> => {
+  const maxAttempts = 3;
+  
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    console.log(`Retry attempt ${attempt}/${maxAttempts}`);
+    
+    try {
+      // Wait a bit before retry to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 500 * attempt));
+      
+      const { data: insertData, error } = await supabase
+        .from('target_audiences')
+        .insert(dbData)
+        .select('id')
+        .single();
+        
+      if (error) {
+        console.error(`Error on retry attempt ${attempt}:`, error);
+        continue;
+      }
+      
+      if (insertData && insertData.id) {
+        console.log(`Successful insertion on retry attempt ${attempt} with ID:`, insertData.id);
+        toast.success('Grupa docelowa została utworzona');
+        return insertData.id;
+      }
+    } catch (error) {
+      console.error(`Exception on retry attempt ${attempt}:`, error);
+    }
+  }
+  
+  console.error(`Failed to insert data after ${maxAttempts} retry attempts`);
+  return undefined;
 };
