@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { TargetAudienceDialogProps } from './types';
 import { useTargetAudienceDialog } from './hooks/useRefactoredTargetAudienceDialog';
 import MainSelectionDialog from './dialogs/MainSelectionDialog';
@@ -9,7 +9,6 @@ import EmailStyleDialog from './dialogs/EmailStyleDialog';
 import SocialMediaDialog from './dialogs/SocialMediaDialog';
 import ResultDialogs from './dialogs/ResultDialogs';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Main dialog manager component that orchestrates all dialogs
@@ -22,13 +21,28 @@ const DialogManager = ({
   userId,
   isPremium,
 }: TargetAudienceDialogProps) => {
+  // Prevent excessive re-renders and API calls
+  const previousOpenState = useRef<boolean>(false);
+  const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   // Only log on template ID changes or when open state changes, not on every render
   useEffect(() => {
     if (templateId || open) {
       console.log("DialogManager rendering with templateId:", templateId);
     }
+    
+    // If dialog is transitioning from closed to open, clear any potential error toasts
+    if (open && !previousOpenState.current) {
+      // Clear existing timeout if any
+      if (fetchTimeoutRef.current) {
+        clearTimeout(fetchTimeoutRef.current);
+        fetchTimeoutRef.current = null;
+      }
+    }
+    
+    previousOpenState.current = open;
   }, [templateId, open]);
-
+  
   const {
     isLoading,
     showForm,
@@ -63,6 +77,7 @@ const DialogManager = ({
     handleDeleteAudience,
     resetState,
     fetchExistingAudiences,
+    hasError
   } = useTargetAudienceDialog({
     open,
     onOpenChange,
@@ -86,13 +101,39 @@ const DialogManager = ({
     }
   }, [open, resetState]);
 
-  // Force refresh audiences on form dialog close
+  // Force refresh audiences on dialog open and periodically if there are errors
   useEffect(() => {
-    if (!showForm && existingAudiences.length === 0 && userId) {
-      console.log("Form closed - ensuring audiences are refreshed");
-      fetchExistingAudiences();
+    if (open && userId) {
+      // Initial fetch on open
+      if (!previousOpenState.current) {
+        console.log("Dialog opened - fetching audiences");
+        fetchExistingAudiences();
+      }
+      
+      // Schedule periodic refreshes only if we've had an error
+      if (hasError) {
+        console.log("Setting up retry for audience fetch due to previous error");
+        if (fetchTimeoutRef.current) {
+          clearTimeout(fetchTimeoutRef.current);
+        }
+        
+        fetchTimeoutRef.current = setTimeout(() => {
+          if (open) {
+            console.log("Retry fetching audiences after error");
+            fetchExistingAudiences();
+          }
+          fetchTimeoutRef.current = null;
+        }, 5000); // Retry every 5 seconds
+      }
+      
+      return () => {
+        if (fetchTimeoutRef.current) {
+          clearTimeout(fetchTimeoutRef.current);
+          fetchTimeoutRef.current = null;
+        }
+      };
     }
-  }, [showForm, existingAudiences.length, userId, fetchExistingAudiences]);
+  }, [open, userId, fetchExistingAudiences, hasError]);
 
   const handleDialogClose = () => {
     resetState(); // Reset all states
@@ -171,6 +212,8 @@ const DialogManager = ({
                                  
   const showSocialMediaDialogUi = shouldShowAudienceDialog && showSocialMediaPlatformDialog && 
                                   !showForm && !showGoalDialog && !showEmailStyleDialog;
+  
+  const isEmptyAudiences = existingAudiences.length === 0 && !isLoading;
 
   return (
     <>
@@ -190,6 +233,9 @@ const DialogManager = ({
         handleCancel={handleDialogClose}
         isProcessing={isProcessing}
         handleDeleteAudience={handleDeleteAudience}
+        manualRefresh={fetchExistingAudiences}
+        hasError={hasError}
+        isEmpty={isEmptyAudiences}
       />
       
       {/* Form dialog */}

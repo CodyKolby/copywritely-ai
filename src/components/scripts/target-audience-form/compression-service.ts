@@ -14,7 +14,8 @@ export const compressFormData = async (data: any): Promise<any> => {
     
     // This would typically be an API call to an AI service
     // Here we're just simulating the delay and doing some basic compression
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Add longer delay to simulate AI processing time
+    await new Promise(resolve => setTimeout(resolve, 2000));
     
     // Create a deep copy to avoid mutating the original data
     const result = JSON.parse(JSON.stringify(dataWithoutAdvertisingGoal));
@@ -83,9 +84,22 @@ export const compressFormData = async (data: any): Promise<any> => {
       console.log("Compressed benefits:", result.benefits);
     }
     
+    // Simulate more sophisticated language processing
+    // In a real implementation, an AI would optimize these fields
+    
+    // Add a simulated "AI comprehension" step
+    console.log("Performing AI comprehension analysis...");
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // In a production implementation, this would be where AI would:
+    // 1. Remove redundant information
+    // 2. Extract key concepts
+    // 3. Optimize language for marketing effectiveness
+    // 4. Ensure consistent tone
+    // 5. Remove irrelevant details
+    
     console.log("Data compression process completed");
     
-    // In a real implementation, this is where AI would summarize/compress the data
     return result;
   } catch (error) {
     console.error("Error during data compression:", error);

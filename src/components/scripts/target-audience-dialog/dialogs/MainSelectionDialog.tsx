@@ -19,6 +19,9 @@ interface MainSelectionDialogProps {
   handleContinue: () => void;
   handleCancel: () => void;
   handleDeleteAudience?: (audienceId: string) => void;
+  manualRefresh?: () => void;
+  hasError?: boolean;
+  isEmpty?: boolean;
 }
 
 const MainSelectionDialog = ({
@@ -36,6 +39,9 @@ const MainSelectionDialog = ({
   handleContinue,
   handleCancel,
   handleDeleteAudience,
+  manualRefresh,
+  hasError = false,
+  isEmpty = false,
 }: MainSelectionDialogProps) => {
   return (
     <Dialog 
@@ -56,6 +62,9 @@ const MainSelectionDialog = ({
           handleCancel={handleCancel}
           isProcessing={isProcessing}
           handleDeleteAudience={handleDeleteAudience}
+          manualRefresh={manualRefresh}
+          hasError={hasError}
+          isEmpty={isEmpty}
         />
       </DialogContent>
     </Dialog>

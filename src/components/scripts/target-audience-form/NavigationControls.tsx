@@ -90,13 +90,21 @@ const NavigationControls = ({
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Zapisywanie...
+              {isLastStep ? 'Przetwarzanie i zapisywanie...' : 'Ładowanie...'}
             </>
           ) : (
             isLastStep ? 'Zapisz i kontynuuj' : 'Następny krok'
           )}
         </Button>
       </div>
+      
+      {isSubmitting && isLastStep && (
+        <div className="flex justify-center items-center mt-2">
+          <p className="text-sm text-gray-500">
+            Trwa kompresja i optymalizacja danych. Proszę czekać...
+          </p>
+        </div>
+      )}
     </div>
   );
 };

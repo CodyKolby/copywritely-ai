@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { compressFormData } from '../../target-audience-form/compression-service';
@@ -10,31 +10,68 @@ export const useAudienceData = (userId: string | undefined, open: boolean) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isCompressing, setIsCompressing] = useState(false);
   const [hasRefreshedAfterCreation, setHasRefreshedAfterCreation] = useState(false);
+  
+  // Add a flag to prevent excessive fetching
+  const [lastFetchTime, setLastFetchTime] = useState<number>(0);
+  const isFetchingRef = useRef<boolean>(false);
+  const [hasError, setHasError] = useState<boolean>(false);
+  const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch existing target audiences whenever the dialog opens
+  // Fetch existing target audiences when the dialog opens, but with throttling
   useEffect(() => {
     if (open && userId) {
-      console.log("Dialog opened - fetching existing audiences");
-      fetchExistingAudiences();
+      const now = Date.now();
+      // Only fetch if it's been more than 2 seconds since last fetch
+      if (now - lastFetchTime > 2000 && !isFetchingRef.current) {
+        fetchExistingAudiences();
+      }
     }
+    
+    // Clear any pending refresh timeout when component unmounts
+    return () => {
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+        refreshTimeoutRef.current = null;
+      }
+    };
   }, [open, userId]);
 
-  // Explicitly trigger a refresh after creation
+  // Handle post-creation refresh with delay and without constant retries
   useEffect(() => {
-    if (hasRefreshedAfterCreation) {
-      const refreshTimer = setTimeout(() => {
-        console.log("Performing post-creation audience refresh");
+    if (hasRefreshedAfterCreation && !isFetchingRef.current) {
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
+      
+      refreshTimeoutRef.current = setTimeout(() => {
+        console.log("Performing one-time post-creation audience refresh");
         fetchExistingAudiences();
         setHasRefreshedAfterCreation(false);
+        refreshTimeoutRef.current = null;
       }, 500);
-      
-      return () => clearTimeout(refreshTimer);
     }
   }, [hasRefreshedAfterCreation, userId]);
 
   const fetchExistingAudiences = async () => {
-    setIsLoading(true);
+    // Prevent concurrent fetches
+    if (isFetchingRef.current) {
+      console.log("Already fetching audiences, skipping duplicate request");
+      return;
+    }
+    
+    // Early exit if no user ID
+    if (!userId) {
+      console.log("No user ID provided, skipping audience fetch");
+      setIsLoading(false);
+      return;
+    }
+    
     try {
+      setLastFetchTime(Date.now());
+      setIsLoading(true);
+      isFetchingRef.current = true;
+      setHasError(false);
+      
       console.log("Fetching target audiences for user:", userId);
       const { data, error } = await supabase
         .from('target_audiences')
@@ -43,16 +80,27 @@ export const useAudienceData = (userId: string | undefined, open: boolean) => {
 
       if (error) {
         console.error("Error fetching target audiences:", error);
+        setHasError(true);
         throw error;
       }
 
       console.log("Fetched target audiences:", data);
       setExistingAudiences(data || []);
+      
+      // Clear error toast if previous attempts failed
+      if (hasError) {
+        toast.success('Pobrano grupy docelowe');
+      }
     } catch (error) {
       console.error('Error fetching target audiences:', error);
-      toast.error('Nie udało się pobrać grup docelowych');
+      // Limit notifications to avoid spamming
+      if (!hasError) {
+        toast.error('Nie udało się pobrać grup docelowych');
+        setHasError(true);
+      }
     } finally {
       setIsLoading(false);
+      isFetchingRef.current = false;
     }
   };
 
@@ -142,8 +190,10 @@ export const useAudienceData = (userId: string | undefined, open: boolean) => {
       // Mark for refresh on next dialog cycle
       setHasRefreshedAfterCreation(true);
       
-      // Force an immediate refresh too
-      await fetchExistingAudiences();
+      // Schedule a one-time refresh
+      setTimeout(() => {
+        fetchExistingAudiences();
+      }, 1000);
       
       console.log("Successfully created target audience with ID:", data.id);
       return data.id;
@@ -157,12 +207,22 @@ export const useAudienceData = (userId: string | undefined, open: boolean) => {
     }
   };
 
+  // Add a manual refresh method
+  const manualRefresh = () => {
+    if (!isFetchingRef.current) {
+      console.log("Manually refreshing audiences");
+      fetchExistingAudiences();
+    }
+  };
+
   return {
     existingAudiences,
     isLoading,
     isCompressing,
+    hasError,
     handleFormSubmit,
     fetchExistingAudiences,
-    handleDeleteAudience
+    handleDeleteAudience,
+    manualRefresh
   };
 };

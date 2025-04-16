@@ -31,9 +31,11 @@ export const useTargetAudienceDialog = ({
     existingAudiences, 
     isLoading, 
     isCompressing,
+    hasError,
     handleFormSubmit: submitAudienceForm,
     fetchExistingAudiences,
-    handleDeleteAudience
+    handleDeleteAudience,
+    manualRefresh
   } = useAudienceData(userId, open);
   
   // Use the hook for audience state updates
@@ -189,6 +191,7 @@ export const useTargetAudienceDialog = ({
     emailStyle: dialogState.emailStyle,
     socialMediaPlatform: dialogState.socialMediaPlatform,
     isProcessing: dialogState.isProcessing,
+    hasError, // Expose the hasError flag
     
     // Methods from audienceManagement
     handleChoiceSelection: audienceManagement.handleChoiceSelection,
@@ -217,6 +220,9 @@ export const useTargetAudienceDialog = ({
     
     // Added fetchExistingAudiences to be available in components
     fetchExistingAudiences,
+    
+    // Added manual refresh
+    manualRefresh,
     
     // Added resetState, to be available in the component
     resetState: dialogState.resetState,
