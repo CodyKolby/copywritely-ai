@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -9,8 +10,16 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  const requestId = crypto.randomUUID();
+  const startTime = new Date().toISOString();
+  
+  console.log(`=== NARRATIVE BLUEPRINT START (${requestId}) ===`);
+  console.log('Timestamp:', startTime);
+  console.log('Method:', req.method);
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log(`[${startTime}][REQ:${requestId}] Handling OPTIONS preflight request`);
     return new Response(null, { headers: corsHeaders });
   }
 
@@ -18,13 +27,15 @@ serve(async (req) => {
     const { surveyData, emailStyle, advertisingGoal } = await req.json();
     
     if (!surveyData) {
+      console.error(`[${requestId}] Missing survey data`);
       return new Response(
         JSON.stringify({ error: 'Survey data is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`Processing narrative blueprint for email style: ${emailStyle}`);
+    console.log(`[${requestId}] Processing narrative blueprint for email style: ${emailStyle}`);
+    console.log(`[${requestId}] Advertising goal: ${advertisingGoal || 'Not specified'}`);
     
     // Format the survey data as a string
     let surveyDataString = "";
@@ -41,23 +52,15 @@ serve(async (req) => {
       surveyDataString = String(surveyData);
     }
 
-    // Call OpenAI API with the Narrative Blueprint prompt
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { 
-            role: 'system', 
-            content: `Jesteś profesjonalnym strategiem marketingowym, który specjalizuje się w tworzeniu fundamentów narracyjnych dla pojedynczych maili marketingowych. Twoim zadaniem jest wygenerowanie kluczowych punktów emocjonalnych i kreatywnych inspiracji, na podstawie których inne AI stworzą resztę maila. Nie tworzysz treści — tworzysz strukturę emocjonalną i logiczną.`
-          },
-          { 
-            role: 'user', 
-            content: `Masz dostęp do danych o grupie docelowej, ich problemach i pragnieniach, stylu maila oraz celu kampanii.
+    console.log(`[${requestId}] Survey data prepared, length: ${surveyDataString.length} chars`);
+    
+    // System prompt for the blueprint generator
+    const systemPrompt = `Jesteś profesjonalnym strategiem marketingowym, który specjalizuje się w tworzeniu fundamentów narracyjnych dla pojedynczych maili marketingowych. Twoim zadaniem jest wygenerowanie kluczowych punktów emocjonalnych i kreatywnych inspiracji, na podstawie których inne AI stworzą resztę maila. Nie tworzysz treści — tworzysz strukturę emocjonalną i logiczną.`;
+
+    console.log(`[${requestId}] System prompt: ${systemPrompt}`);
+    
+    // User prompt for the blueprint generator
+    const userPrompt = `Masz dostęp do danych o grupie docelowej, ich problemach i pragnieniach, stylu maila oraz celu kampanii.
 
 Dane wejściowe, które otrzymujesz:
 ${surveyDataString}
@@ -88,21 +91,42 @@ Zachowuj maksymalną zwięzłość. Nie powtarzaj informacji z danych wejściowy
 Wynik powinien mieć format:
 punktyemocjonalne: [tutaj punkty emocjonalne]
 specyfikamaila: [tutaj pomysły na styl maila]
-osnarracyjna: [tutaj oś narracyjną]`
-          }
+osnarracyjna: [tutaj oś narracyjną]`;
+
+    console.log(`[${requestId}] User prompt snippet (first 200 chars): ${userPrompt.substring(0, 200)}...`);
+    console.log(`[${requestId}] User prompt length: ${userPrompt.length} chars`);
+    
+    console.log(`[${requestId}] Calling OpenAI API...`);
+
+    // Call OpenAI API with the Narrative Blueprint prompt
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
         ],
         temperature: 0.7,
-        max_tokens: 1000
+        max_tokens: 2000,  // Zwiększona wartość z 1000 do 2000
       }),
     });
 
     if (!response.ok) {
       const errorData = await response.json();
+      console.error(`[${requestId}] OpenAI API error:`, errorData);
       throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
     }
     
     const data = await response.json();
     const aiOutput = data.choices[0].message.content;
+    
+    console.log(`[${requestId}] Raw AI response length: ${aiOutput.length} chars`);
+    console.log(`[${requestId}] Raw AI response preview: ${aiOutput.substring(0, 300)}...`);
     
     // Parse the AI output to extract the three sections
     const parseOutput = (output: string): {
@@ -130,10 +154,15 @@ osnarracyjna: [tutaj oś narracyjną]`
 
     const parsedOutput = parseOutput(aiOutput);
     
-    console.log("Narrative blueprint generated successfully");
-    console.log("Punkty emocjonalne:", parsedOutput.punktyemocjonalne.substring(0, 100) + "...");
-    console.log("Specyfika maila:", parsedOutput.specyfikamaila.substring(0, 100) + "...");
-    console.log("Oś narracyjna:", parsedOutput.osnarracyjna);
+    console.log(`[${requestId}] Parsed output - punktyemocjonalne length: ${parsedOutput.punktyemocjonalne.length} chars`);
+    console.log(`[${requestId}] Parsed output - specyfikamaila length: ${parsedOutput.specyfikamaila.length} chars`);
+    console.log(`[${requestId}] Parsed output - osnarracyjna length: ${parsedOutput.osnarracyjna.length} chars`);
+    
+    console.log(`[${requestId}] Punkty emocjonalne: ${parsedOutput.punktyemocjonalne}`);
+    console.log(`[${requestId}] Specyfika maila: ${parsedOutput.specyfikamaila}`);
+    console.log(`[${requestId}] Oś narracyjna: ${parsedOutput.osnarracyjna}`);
+    
+    console.log(`[${requestId}] Narrative blueprint generated successfully`);
     
     return new Response(
       JSON.stringify(parsedOutput),

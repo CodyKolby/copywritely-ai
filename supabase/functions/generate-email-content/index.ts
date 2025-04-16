@@ -13,11 +13,17 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  console.log("Otrzymano zapytanie do generate-email-content:", req.method, req.url);
+  const requestId = crypto.randomUUID();
+  const timestamp = new Date().toISOString();
+  
+  console.log(`=== GENERATE EMAIL CONTENT START (${requestId}) ===`);
+  console.log('Timestamp:', timestamp);
+  console.log('Method:', req.method);
+  console.log('URL:', req.url);
   
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    console.log("Obsługa zapytania preflight OPTIONS");
+    console.log(`[${timestamp}][REQ:${requestId}] Handling OPTIONS preflight request`);
     return new Response(null, { 
       status: 204, 
       headers: corsHeaders 
@@ -25,28 +31,52 @@ serve(async (req) => {
   }
 
   try {
-    console.log("Przetwarzanie zapytania POST dla generacji treści email");
+    console.log(`[${timestamp}][REQ:${requestId}] Processing POST request for email content generation`);
     
     // Parse request data
-    const requestData = await req.json();
+    const requestText = await req.text();
+    let requestData;
+    
+    try {
+      requestData = JSON.parse(requestText);
+      console.log(`[${timestamp}][REQ:${requestId}] JSON parsed successfully`);
+    } catch (parseError) {
+      console.error(`[${timestamp}][REQ:${requestId}] JSON parse error:`, parseError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body', details: parseError.message }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     const { prompt, structureType, debugMode } = requestData;
     
     // Log received data
-    console.log(`Typ struktury maila: ${structureType}`);
-    console.log(`Długość promptu: ${prompt.length} znaków`);
-    console.log(`Tryb debugowania: ${debugMode ? 'włączony' : 'wyłączony'}`);
+    console.log(`[${timestamp}][REQ:${requestId}] Structure type: ${structureType}`);
+    console.log(`[${timestamp}][REQ:${requestId}] Prompt length: ${prompt?.length || 0} chars`);
+    console.log(`[${timestamp}][REQ:${requestId}] Debug mode: ${debugMode ? 'enabled' : 'disabled'}`);
+    
+    if (!prompt) {
+      console.error(`[${timestamp}][REQ:${requestId}] Missing prompt parameter`);
+      return new Response(
+        JSON.stringify({ error: 'Prompt is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Log the prompt for debugging (only first 500 characters to avoid excessive logs)
+    console.log(`[${timestamp}][REQ:${requestId}] Prompt (first 500 chars): ${prompt.substring(0, 500)}...`);
     
     // For debug mode, return mock response without calling OpenAI
     if (debugMode) {
-      console.log("Tryb debugowania - zwracam przykładową odpowiedź bez wywoływania OpenAI");
+      console.log(`[${timestamp}][REQ:${requestId}] Debug mode - returning sample response`);
       
       const debugResponse = {
         emailContent: `DEBUG MODE: To jest przykładowa treść maila w strukturze ${structureType}.\n\n` +
                       `Struktura ${structureType === 'PAS' ? 'Problem-Agitacja-Rozwiązanie' : 'Customer Journey Narrative'}.\n\n` +
                       `Ta odpowiedź została wygenerowana w trybie debugowania bez wywoływania OpenAI.`,
         structureUsed: structureType,
-        timestamp: new Date().toISOString(),
-        requestId: `debug-${Date.now()}`,
+        timestamp: timestamp,
+        requestId: requestId,
         debugInfo: { promptLength: prompt.length }
       };
       
@@ -58,7 +88,7 @@ serve(async (req) => {
     
     // Validate OpenAI API key
     if (!openAIApiKey) {
-      console.error('Brak klucza API OpenAI');
+      console.error(`[${timestamp}][REQ:${requestId}] OpenAI API key missing`);
       return new Response(
         JSON.stringify({ error: 'Brak skonfigurowanego klucza OpenAI API' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -66,63 +96,104 @@ serve(async (req) => {
     }
 
     // Log that we're about to call OpenAI
-    console.log(`Wysyłam zapytanie do OpenAI dla struktury: ${structureType}`);
-    console.log(`Fragment promptu (pierwsze 100 znaków): ${prompt.substring(0, 100)}...`);
+    console.log(`[${timestamp}][REQ:${requestId}] Sending request to OpenAI API for structure: ${structureType}`);
     
     // Set the system prompt based on structure type
-    let systemPrompt = "Jesteś ekspertem od tworzenia treści emaili marketingowych w języku polskim.";
+    let systemPrompt = `Jesteś ekspertem od tworzenia treści emaili marketingowych w języku polskim.
+Specjalizujesz się w tworzeniu emaili o strukturze ${structureType === 'PAS' 
+  ? 'Problem-Agitacja-Rozwiązanie, gdzie najpierw identyfikujesz problem, następnie wzmacniasz jego znaczenie, a na koniec przedstawiasz rozwiązanie' 
+  : 'Customer Journey, gdzie prowadzisz czytelnika przez narracyjną podróż od problemu do rozwiązania'}.
+`;
     
-    // Call OpenAI to generate email content
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.7,
-        max_tokens: 1500,
-      }),
-    });
-
-    // Check if OpenAI response is successful
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Błąd API OpenAI:', errorData);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Błąd podczas generowania treści email', 
-          details: errorData 
-        }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    console.log(`[${timestamp}][REQ:${requestId}] System prompt: ${systemPrompt}`);
+    
+    // Call OpenAI to generate email content - with retry mechanism
+    let response;
+    let attempts = 0;
+    const maxAttempts = 3;
+    let lastError;
+    
+    while (attempts < maxAttempts) {
+      attempts++;
+      console.log(`[${timestamp}][REQ:${requestId}] OpenAI API call attempt ${attempts}/${maxAttempts}`);
+      
+      try {
+        response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openAIApiKey}`,
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0',
+            'X-Request-ID': requestId
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: prompt }
+            ],
+            temperature: 0.7,
+            max_tokens: 2000,  // Zwiększona wartość z 1500 do 2000
+          }),
+        });
+        
+        if (response.ok) {
+          console.log(`[${timestamp}][REQ:${requestId}] OpenAI API responded OK (status ${response.status})`);
+          break;
+        } else {
+          const errorData = await response.json();
+          lastError = `OpenAI API error (status ${response.status}): ${JSON.stringify(errorData)}`;
+          console.error(`[${timestamp}][REQ:${requestId}] ${lastError}`);
+          
+          // For rate limiting (429) or server errors (5xx), we'll retry
+          if (response.status === 429 || response.status >= 500) {
+            console.log(`[${timestamp}][REQ:${requestId}] Retrying in ${attempts * 1000}ms...`);
+            await new Promise(resolve => setTimeout(resolve, attempts * 1000));
+            continue;
+          } else {
+            // For other errors like 400 (bad request), don't retry
+            throw new Error(lastError);
+          }
+        }
+      } catch (error) {
+        console.error(`[${timestamp}][REQ:${requestId}] Fetch error on attempt ${attempts}:`, error);
+        lastError = error.message || String(error);
+        
+        if (attempts < maxAttempts) {
+          console.log(`[${timestamp}][REQ:${requestId}] Retrying in ${attempts * 1000}ms...`);
+          await new Promise(resolve => setTimeout(resolve, attempts * 1000));
+        }
+      }
+    }
+    
+    // If we've exhausted all attempts without a successful response
+    if (!response || !response.ok) {
+      throw new Error(lastError || `Failed to get response from OpenAI after ${maxAttempts} attempts`);
     }
 
     // Parse OpenAI response
     const data = await response.json();
-    console.log("Otrzymano odpowiedź z OpenAI");
+    console.log(`[${timestamp}][REQ:${requestId}] OpenAI response received, parsing content`);
     
     // Extract email content from OpenAI response
     const emailContent = data.choices[0].message.content;
-    console.log(`Długość wygenerowanej treści: ${emailContent.length} znaków`);
-    console.log(`Fragment wygenerowanej treści (pierwsze 100 znaków): ${emailContent.substring(0, 100)}...`);
+    console.log(`[${timestamp}][REQ:${requestId}] Generated content length: ${emailContent.length} chars`);
+    console.log(`[${timestamp}][REQ:${requestId}] Content preview (first 300 chars): ${emailContent.substring(0, 300)}...`);
     
     // Prepare response object
     const responseObject = {
       emailContent: emailContent,
       structureUsed: structureType,
-      timestamp: new Date().toISOString(),
-      requestId: `email-content-${Date.now()}`,
-      rawOutput: data,
-      rawPrompt: prompt.substring(0, 500) + (prompt.length > 500 ? '...' : '')
+      timestamp: timestamp,
+      requestId: requestId,
+      modelUsed: data.model || 'gpt-4o-mini',
+      tokensUsed: data.usage?.total_tokens || 'unknown',
+      rawPromptPreview: prompt.substring(0, 300) + (prompt.length > 300 ? '...' : '')
     };
     
-    console.log(`Wysyłam odpowiedź dla struktury ${structureType}`);
+    console.log(`[${timestamp}][REQ:${requestId}] Sending response for structure ${structureType}`);
     
     // Send response
     return new Response(
@@ -131,12 +202,14 @@ serve(async (req) => {
     );
     
   } catch (error) {
-    console.error('Nieobsłużony błąd w funkcji generate-email-content:', error);
+    console.error(`[${timestamp}][REQ:${requestId}] Unhandled error in generate-email-content:`, error);
     
     return new Response(
       JSON.stringify({ 
-        error: 'Nieoczekiwany błąd',
-        details: error.message
+        error: 'Unexpected error',
+        details: error.message || String(error),
+        timestamp: timestamp,
+        requestId: requestId
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

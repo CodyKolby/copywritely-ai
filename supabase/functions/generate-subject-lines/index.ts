@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -15,7 +16,8 @@ serve(async (req) => {
   const requestId = crypto.randomUUID();
   const timestamp = new Date().toISOString();
   
-  console.log(`🚀 Request received [${timestamp}] Request ID: ${requestId}`);
+  console.log(`🚀 [${timestamp}] Request received - ID: ${requestId}`);
+  console.log(`🔍 [${requestId}] Method: ${req.method}, URL: ${req.url}`);
   
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -29,33 +31,35 @@ serve(async (req) => {
   try {
     // Read raw body as text first for debugging
     const rawBody = await req.text();
-    console.log(`[${requestId}] 🧾 RAW REQUEST BODY:`, rawBody);
+    console.log(`[${requestId}] 🧾 RAW REQUEST BODY LENGTH: ${rawBody.length} chars`);
+    console.log(`[${requestId}] 🧾 RAW REQUEST BODY (first 500 chars): ${rawBody.substring(0, 500)}...`);
 
     // Parse JSON manually after logging raw body
     let data;
     try {
       data = JSON.parse(rawBody);
-      console.log(`[${requestId}] JSON parsing successful`);
+      console.log(`[${requestId}] ✅ JSON parsing successful`);
     } catch (parseError) {
-      console.error(`[${requestId}] Failed to parse JSON:`, parseError);
+      console.error(`[${requestId}] ❌ Failed to parse JSON:`, parseError);
       return new Response(
-        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        JSON.stringify({ error: 'Invalid JSON in request body', details: parseError.message }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const { prompt, debugMode } = data;
+    const { prompt, debugMode, requestId: clientRequestId } = data;
+    console.log(`[${requestId}] 🔗 Client request ID: ${clientRequestId || 'Not provided'}`);
     
     if (!prompt) {
-      console.log(`[${requestId}] Missing prompt`);
+      console.log(`[${requestId}] ❌ Missing prompt parameter`);
       return new Response(
         JSON.stringify({ error: 'Prompt is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`[${requestId}] 📦 Prompt size: ${prompt.length}`);
-    console.log(`[${requestId}] 🆔 Debug mode:`, debugMode ? 'enabled' : 'disabled');
+    console.log(`[${requestId}] 📦 Prompt length: ${prompt.length} chars`);
+    console.log(`[${requestId}] 🆔 Debug mode: ${debugMode ? 'enabled' : 'disabled'}`);
     
     if (debugMode) {
       // Return debug response immediately without calling OpenAI
@@ -66,48 +70,104 @@ serve(async (req) => {
           subject2: "DEBUG SUBJECT 2: " + new Date().toISOString(),
           timestamp: timestamp,
           requestId: requestId,
-          rawPrompt: prompt
+          rawPrompt: prompt.substring(0, 200) + "..." // We only return a preview of the prompt
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
-    console.log(`[${requestId}] 🧠 FINAL PROMPT TO OPENAI:`, prompt);
+    if (!OPENAI_API_KEY) {
+      console.error(`[${requestId}] ❌ OpenAI API key is missing`);
+      return new Response(
+        JSON.stringify({ error: 'OpenAI API key is not configured' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    console.log(`[${requestId}] 🧠 SENDING REQUEST TO OPENAI`);
+    console.log(`[${requestId}] 🧠 PROMPT PREVIEW: ${prompt.substring(0, 200)}...`);
 
-    // Call OpenAI API with the provided prompt
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-        'X-Request-ID': requestId,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'user',
-            content: prompt
+    // Retry mechanism for OpenAI API calls
+    let attempts = 0;
+    const maxAttempts = 3;
+    let response;
+    let lastError;
+    
+    while (attempts < maxAttempts) {
+      attempts++;
+      console.log(`[${requestId}] 🔄 API call attempt ${attempts}/${maxAttempts}`);
+      
+      try {
+        // Call OpenAI API with the provided prompt
+        response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${OPENAI_API_KEY}`,
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0',
+            'X-Request-ID': requestId,
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [
+              {
+                role: 'system',
+                content: 'Jesteś ekspertem od tworzenia przyciągających uwagę linii tytułowych dla emaili marketingowych.'
+              },
+              {
+                role: 'user',
+                content: prompt
+              }
+            ],
+            temperature: 0.7,
+            max_tokens: 300
+          }),
+        });
+        
+        // If the request was successful, break out of the retry loop
+        if (response.ok) {
+          console.log(`[${requestId}] ✅ OpenAI API responded with status ${response.status}`);
+          break;
+        } else {
+          const errorData = await response.json().catch(() => ({}));
+          lastError = `OpenAI API returned status ${response.status}: ${JSON.stringify(errorData)}`;
+          console.error(`[${requestId}] ❌ ${lastError}`);
+          
+          if (response.status === 429 || response.status >= 500) {
+            // For rate limiting (429) or server errors (5xx), we'll retry
+            console.log(`[${requestId}] ⏱️ Retrying in ${attempts * 1000}ms...`);
+            await new Promise(resolve => setTimeout(resolve, attempts * 1000));
+            continue;
+          } else {
+            // For other errors like 400, 401, etc., don't retry
+            throw new Error(lastError);
           }
-        ],
-        temperature: 0.7,
-        max_tokens: 300
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error(`[${requestId}] OpenAI API error:`, errorData);
-      throw new Error(`OpenAI API error: ${errorData.error?.message || JSON.stringify(errorData)}`);
+        }
+      } catch (error) {
+        console.error(`[${requestId}] ❌ Fetch error on attempt ${attempts}:`, error);
+        lastError = error;
+        
+        // For network errors, we'll retry
+        if (attempts < maxAttempts) {
+          console.log(`[${requestId}] ⏱️ Retrying in ${attempts * 1000}ms...`);
+          await new Promise(resolve => setTimeout(resolve, attempts * 1000));
+          continue;
+        }
+      }
+    }
+    
+    // If we've exhausted all attempts without a successful response
+    if (!response || !response.ok) {
+      throw new Error(lastError || `Failed to get response from OpenAI after ${maxAttempts} attempts`);
     }
     
     const responseData = await response.json();
     const aiOutput = responseData.choices[0].message.content;
     
-    console.log(`[${requestId}] 🤖 Raw AI output:`, aiOutput);
+    console.log(`[${requestId}] 🤖 Raw AI output length: ${aiOutput.length} chars`);
+    console.log(`[${requestId}] 🤖 Raw AI output: ${aiOutput}`);
     
     // Parse the subject lines from the AI output with improved regex patterns
     let subject1 = "Default subject 1";
@@ -137,7 +197,7 @@ serve(async (req) => {
         const match = aiOutput.match(pattern);
         if (match && match[1]) {
           subject1 = match[1].trim();
-          console.log(`[${requestId}] Found subject1 with pattern:`, pattern);
+          console.log(`[${requestId}] ✅ Found subject1 with pattern:`, pattern);
           break;
         }
       }
@@ -147,7 +207,7 @@ serve(async (req) => {
         const match = aiOutput.match(pattern);
         if (match && match[1]) {
           subject2 = match[1].trim();
-          console.log(`[${requestId}] Found subject2 with pattern:`, pattern);
+          console.log(`[${requestId}] ✅ Found subject2 with pattern:`, pattern);
           break;
         }
       }
@@ -158,7 +218,7 @@ serve(async (req) => {
         if (lines.length >= 2 && !subject1.includes("Default")) {
           subject1 = lines[0].replace(/^[^:]*:\s*/, '').trim();
           subject2 = lines[1].replace(/^[^:]*:\s*/, '').trim();
-          console.log(`[${requestId}] Using simple line-based extraction for subjects`);
+          console.log(`[${requestId}] ✅ Using simple line-based extraction for subjects`);
         }
       }
       
@@ -168,7 +228,7 @@ serve(async (req) => {
         if (lines.length >= 2) {
           if (subject1 === "Default subject 1") subject1 = lines[0].trim();
           if (subject2 === "Default subject 2") subject2 = lines[1].trim();
-          console.log(`[${requestId}] Fallback to direct line extraction`);
+          console.log(`[${requestId}] ✅ Fallback to direct line extraction`);
         }
       }
       
@@ -181,31 +241,31 @@ serve(async (req) => {
         if (filteredSubjects.length >= 2) {
           subject1 = filteredSubjects[0].trim();
           subject2 = filteredSubjects[1].trim();
-          console.log(`[${requestId}] Using intelligent splitting for subjects`);
+          console.log(`[${requestId}] ✅ Using intelligent splitting for subjects`);
         } else if (filteredSubjects.length === 1) {
           // If there's only one good sentence, use it for both (better than nothing)
           subject1 = filteredSubjects[0].trim();
           subject2 = filteredSubjects[0].trim();
-          console.log(`[${requestId}] Only found one good subject, duplicating it`);
+          console.log(`[${requestId}] ⚠️ Only found one good subject, duplicating it`);
         }
       }
       
       // Final check - if we still have defaults but have content, just use the first 100 chars
       if (subject1 === "Default subject 1" && aiOutput.trim().length > 0) {
         subject1 = aiOutput.trim().substring(0, 100);
-        console.log(`[${requestId}] Falling back to raw output substring for subject1`);
+        console.log(`[${requestId}] ⚠️ Falling back to raw output substring for subject1`);
       }
       
       if (subject2 === "Default subject 2" && aiOutput.trim().length > 0) {
         const secondHalf = aiOutput.trim().substring(aiOutput.length / 2);
         subject2 = secondHalf.substring(0, 100);
-        console.log(`[${requestId}] Falling back to raw output substring for subject2`);
+        console.log(`[${requestId}] ⚠️ Falling back to raw output substring for subject2`);
       }
       
-      console.log(`[${requestId}] Successfully extracted subject lines`);
+      console.log(`[${requestId}] ✅ Successfully extracted subject lines`);
     } catch (parseError) {
-      console.error(`[${requestId}] Failed to parse subject lines from AI output:`, parseError);
-      console.log(`[${requestId}] Raw AI output that failed parsing:`, aiOutput);
+      console.error(`[${requestId}] ❌ Failed to parse subject lines from AI output:`, parseError);
+      console.log(`[${requestId}] ❌ Raw AI output that failed parsing:`, aiOutput);
       
       // Last resort: if parsing failed completely, use a portion of the raw output
       if (aiOutput && aiOutput.trim().length > 0) {
@@ -218,20 +278,20 @@ serve(async (req) => {
         if (subject1.length > 100) subject1 = subject1.substring(0, 97) + '...';
         if (subject2.length > 100) subject2 = subject2.substring(0, 97) + '...';
         
-        console.log(`[${requestId}] Using emergency fallback for subject extraction`);
+        console.log(`[${requestId}] ⚠️ Using emergency fallback for subject extraction`);
       }
     }
     
     console.log(`[${requestId}] 📋 Final subject lines:`);
-    console.log(`[${requestId}] Subject 1:`, subject1);
-    console.log(`[${requestId}] Subject 2:`, subject2);
+    console.log(`[${requestId}] 📋 Subject 1: ${subject1}`);
+    console.log(`[${requestId}] 📋 Subject 2: ${subject2}`);
     
     // Return a response with a timestamp and all debug info to help debug caching issues
     return new Response(
       JSON.stringify({ 
         subject1, 
         subject2,
-        rawPrompt: prompt,
+        rawPrompt: prompt.substring(0, 300) + "...", // Return only a preview of the prompt
         timestamp: timestamp,
         requestId: requestId,
         rawOutput: aiOutput
@@ -246,7 +306,7 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error(`❌ Error in generate-subject-lines function [${timestamp}] [${requestId}]: ${error.message}`);
+    console.error(`❌ [${timestamp}] [${requestId}] Error in generate-subject-lines:`, error.message);
     console.error(error.stack);
     return new Response(
       JSON.stringify({ 

@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -6,7 +7,7 @@ const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 // Properly configured CORS headers
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, cache-control, pragma, expires, x-no-cache',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Max-Age': '86400',
 };
@@ -26,10 +27,11 @@ serve(async (req) => {
   console.log(`=== SCRIPT GENERATOR START (${requestId}) ===`);
   console.log('Timestamp:', startTime);
   console.log('Method:', req.method);
+  console.log('URL:', req.url);
   
   // Handle CORS preflight requests - ensure proper status and headers
   if (req.method === 'OPTIONS') {
-    console.log("Handling OPTIONS preflight request");
+    console.log(`[${startTime}][REQ:${requestId}] Handling OPTIONS preflight request`);
     return new Response(null, { 
       status: 204, 
       headers: corsHeaders 
@@ -39,7 +41,25 @@ serve(async (req) => {
   try {
     console.log(`[${startTime}][REQ:${requestId}] Processing POST request`);
     
-    const { targetAudience, templateType, selectedHook, selectedAngle } = await req.json();
+    // Parse request body as text first for logging
+    const requestText = await req.text();
+    console.log(`[${startTime}][REQ:${requestId}] Raw request body length: ${requestText.length} chars`);
+    console.log(`[${startTime}][REQ:${requestId}] Raw request preview: ${requestText.substring(0, 200)}...`);
+    
+    // Parse the text as JSON
+    let parsedData;
+    try {
+      parsedData = JSON.parse(requestText);
+      console.log(`[${startTime}][REQ:${requestId}] JSON parsed successfully`);
+    } catch (parseError) {
+      console.error(`[${startTime}][REQ:${requestId}] JSON parse error:`, parseError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    const { targetAudience, templateType, selectedHook, selectedAngle } = parsedData;
     
     console.log('=== REQUEST DATA ===');
     console.log('Template Type:', templateType);
@@ -47,6 +67,18 @@ serve(async (req) => {
     console.log('Selected Angle:', selectedAngle);
     console.log('Target Audience:', JSON.stringify(targetAudience, null, 2));
 
+    // Validate required parameters
+    if (!selectedHook || !selectedAngle || !templateType) {
+      console.error(`[${startTime}][REQ:${requestId}] Missing required parameters`);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Missing required parameters', 
+          details: 'selectedHook, selectedAngle, and templateType are required' 
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     // Format audience description
     const audienceDescription = formatAudienceDescription(targetAudience);
     
@@ -72,50 +104,101 @@ Na podstawie powyższych informacji, napisz treść główną reklamy, która b�
     console.log('=== USER PROMPT ===');
     console.log(prompt);
 
-    // Call OpenAI API
-    console.log("Wysyłanie zapytania do OpenAI...");
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.7,
-      }),
-    });
+    // Call OpenAI API with retry logic
+    let attempts = 0;
+    const maxAttempts = 3;
+    let openaiResponse;
+    let lastError;
+    
+    while (attempts < maxAttempts) {
+      attempts++;
+      console.log(`[${startTime}][REQ:${requestId}] OpenAI API call attempt ${attempts}/${maxAttempts}`);
+      
+      try {
+        console.log(`[${startTime}][REQ:${requestId}] Sending request to OpenAI...`);
+        openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openAIApiKey}`,
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0',
+            'X-Request-ID': requestId
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [
+              { role: 'system', content: SYSTEM_PROMPT },
+              { role: 'user', content: prompt }
+            ],
+            temperature: 0.7,
+            max_tokens: 2000,  // Zwiększona wartość z defaultowej
+          }),
+        });
+        
+        if (openaiResponse.ok) {
+          console.log(`[${startTime}][REQ:${requestId}] OpenAI API responded OK (status ${openaiResponse.status})`);
+          break;
+        } else {
+          const errorData = await openaiResponse.json();
+          lastError = `OpenAI API error (status ${openaiResponse.status}): ${JSON.stringify(errorData)}`;
+          console.error(`[${startTime}][REQ:${requestId}] ${lastError}`);
+          
+          // For rate limiting (429) or server errors (5xx), we'll retry
+          if (openaiResponse.status === 429 || openaiResponse.status >= 500) {
+            console.log(`[${startTime}][REQ:${requestId}] Retrying in ${attempts * 1000}ms...`);
+            await new Promise(resolve => setTimeout(resolve, attempts * 1000));
+            continue;
+          } else {
+            // For other errors like 400 (bad request), don't retry
+            throw new Error(lastError);
+          }
+        }
+      } catch (error) {
+        console.error(`[${startTime}][REQ:${requestId}] Fetch error on attempt ${attempts}:`, error);
+        lastError = error.message || String(error);
+        
+        if (attempts < maxAttempts) {
+          console.log(`[${startTime}][REQ:${requestId}] Retrying in ${attempts * 1000}ms...`);
+          await new Promise(resolve => setTimeout(resolve, attempts * 1000));
+        }
+      }
+    }
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Błąd API OpenAI:', errorData);
-      return new Response(
-        JSON.stringify({ error: 'Błąd generowania skryptu', details: errorData }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // If we've exhausted all attempts without a successful response
+    if (!openaiResponse || !openaiResponse.ok) {
+      throw new Error(lastError || `Failed to get response from OpenAI after ${maxAttempts} attempts`);
     }
 
     // Parse response
-    const data = await response.json();
+    const data = await openaiResponse.json();
     const scriptContent = data.choices[0].message.content;
     
-    console.log('PEŁNA ODPOWIEDŹ OD OPENAI:\n', scriptContent);
-    console.log('Wygenerowano skrypt');
+    console.log(`[${startTime}][REQ:${requestId}] Generated content length: ${scriptContent.length} chars`);
+    console.log(`[${startTime}][REQ:${requestId}] Content preview: ${scriptContent.substring(0, 300)}...`);
+    console.log(`[${startTime}][REQ:${requestId}] Script generation successful`);
     
     // Return the generated script content
     return new Response(
-      JSON.stringify({ scriptContent }),
+      JSON.stringify({ 
+        scriptContent,
+        requestId,
+        timestamp: startTime,
+        modelUsed: data.model || 'gpt-4o-mini',
+        tokensUsed: data.usage?.total_tokens || 'unknown'
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
     
   } catch (error) {
     console.error(`[${startTime}][REQ:${requestId}] Error in script-generator:`, error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message || "Unexpected error occurred",
+        requestId,
+        timestamp: startTime
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
