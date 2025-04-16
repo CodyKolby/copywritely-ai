@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { submitTargetAudienceForm } from '../../target-audience-form/submission-utils';
+import { saveTargetAudience } from '../api';
 
 /**
  * Hook to handle form submission logic
@@ -15,46 +16,78 @@ export const useFormSubmission = (
 
   const handleFormSubmit = async (values: any): Promise<string | undefined> => {
     try {
-      console.log("Form submission started");
+      console.log("Form submission started in useFormSubmission");
       setIsProcessing(true);
       
       if (!userId) {
         console.error("No user ID provided");
         toast.error('Nie jesteś zalogowany');
         setIsProcessing(false);
-        return;
+        return undefined;
       }
       
       // Create a clean copy of values without advertisingGoal
       const { advertisingGoal, ...dataToSubmit } = values;
       console.log("Values for submission (without advertisingGoal):", dataToSubmit);
       
-      // Try both methods of submission to ensure data is saved
+      // Try multiple methods of submission to ensure data is saved
       let audienceId: string | undefined;
+      let savedSuccessfully = false;
       
+      // Method 1: Direct API call
       try {
-        // First attempt: use the direct submission utility
-        audienceId = await submitTargetAudienceForm(dataToSubmit, userId);
-        console.log("Audience saved using direct submission with ID:", audienceId);
-      } catch (submissionError) {
-        console.error("Direct submission failed, falling back to second method:", submissionError);
-        
-        // Second attempt: use the passed submitAudienceForm function
-        audienceId = await submitAudienceForm(dataToSubmit);
-        console.log("Audience saved using fallback method with ID:", audienceId);
+        console.log("Attempting direct API save method");
+        audienceId = await saveTargetAudience(dataToSubmit, userId);
+        if (audienceId) {
+          console.log("Direct API save successful with ID:", audienceId);
+          savedSuccessfully = true;
+        }
+      } catch (apiError) {
+        console.error("Direct API save failed:", apiError);
       }
       
-      if (audienceId) {
+      // Method 2: Form submission util if direct API failed
+      if (!savedSuccessfully) {
+        try {
+          console.log("Attempting form submission util");
+          audienceId = await submitTargetAudienceForm(dataToSubmit, userId);
+          if (audienceId) {
+            console.log("Submission util successful with ID:", audienceId);
+            savedSuccessfully = true;
+          }
+        } catch (submissionError) {
+          console.error("Submission util failed:", submissionError);
+        }
+      }
+      
+      // Method 3: Fallback to passed submitAudienceForm function
+      if (!savedSuccessfully) {
+        try {
+          console.log("Attempting fallback submission method");
+          audienceId = await submitAudienceForm(dataToSubmit);
+          if (audienceId) {
+            console.log("Fallback submission successful with ID:", audienceId);
+            savedSuccessfully = true;
+          }
+        } catch (fallbackError) {
+          console.error("Fallback submission failed:", fallbackError);
+        }
+      }
+      
+      if (audienceId && savedSuccessfully) {
         // Refresh audience list to ensure we have the latest data
+        console.log("Refreshing audience list after successful save");
         await fetchExistingAudiences();
+        console.log("Audience list refreshed");
+        toast.success('Grupa docelowa została utworzona');
         return audienceId;
       } else {
-        throw new Error("No audience ID returned from either submission method");
+        throw new Error("None of the submission methods succeeded");
       }
     } catch (error) {
       console.error("Error submitting form:", error);
       toast.error('Nie udało się utworzyć grupy docelowej');
-      throw error;
+      return undefined;
     } finally {
       setIsProcessing(false);
     }

@@ -10,6 +10,7 @@ import { useFormSubmission } from './useFormSubmission';
 import { usePremiumValidator } from './usePremiumValidator';
 import { useDialogReset } from './useDialogReset';
 import { useAudienceStateUpdater } from './useAudienceStateUpdater';
+import { saveTargetAudience } from '../api';
 
 export const useTargetAudienceDialog = ({ 
   open, 
@@ -104,19 +105,33 @@ export const useTargetAudienceDialog = ({
   );
 
   // Enhanced form submission handler with improved flow control
-  const handleFormSubmit = async (values: any) => {
+  const handleFormSubmit = async (values: any): Promise<string | undefined> => {
     try {
       dialogState.setIsProcessing(true);
+      console.log("Starting target audience form submission with user ID:", userId);
       
       // Create a clean copy of values without advertisingGoal
       const { advertisingGoal, ...dataToSubmit } = values;
-      console.log("Data being submitted to Supabase:", dataToSubmit);
+      console.log("Clean data being submitted:", dataToSubmit);
       
-      // Pass the cleaned data to submitAudienceForm
-      const audienceId = await formSubmission.handleFormSubmit(values);
+      // Direct attempt to save to the database using the API function
+      let audienceId: string | undefined;
+      
+      try {
+        // First try the direct API approach
+        console.log("Attempting direct API save method");
+        audienceId = await saveTargetAudience(dataToSubmit, userId || '');
+        console.log("Direct API save method successful, audience ID:", audienceId);
+      } catch (apiError) {
+        console.error("Direct API save failed, falling back to form submission:", apiError);
+        // Fallback to the form submission handler
+        audienceId = await formSubmission.handleFormSubmit(values);
+        console.log("Fallback save method completed, audience ID:", audienceId);
+      }
       
       if (audienceId) {
         console.log("Target audience created successfully with ID:", audienceId);
+        toast.success("Grupa docelowa została utworzona");
         
         // Set the selectedAudienceId
         dialogState.setSelectedAudienceId(audienceId);
@@ -139,7 +154,7 @@ export const useTargetAudienceDialog = ({
       console.error("Error submitting form:", error);
       toast.error('Nie udało się utworzyć grupy docelowej');
       dialogState.setIsProcessing(false);
-      throw error;
+      return undefined;
     }
   };
 

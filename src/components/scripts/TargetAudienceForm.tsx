@@ -85,13 +85,16 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
       
       // Call the onSubmit function with the form data
       // This will now properly save data to the database
-      const result = await handleSubmit(data);
+      const audienceId = await onSubmit(data, null);
       
       // If submission is successful, return to the selection screen
-      if (result) {
-        console.log("Form submission successful, returning to selection");
+      if (audienceId) {
+        console.log("Form submission successful with ID:", audienceId, "- returning to selection");
         // This will close the form and return to the selection screen
         onBack();
+      } else {
+        console.error("Form submission failed - no audience ID returned");
+        toast.error('Nie udało się zapisać grupy docelowej');
       }
     } catch (error) {
       console.error("Form submission error:", error);

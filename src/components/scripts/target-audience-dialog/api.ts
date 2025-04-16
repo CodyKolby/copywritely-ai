@@ -115,7 +115,7 @@ export const generateAudienceName = (ageRange?: string, mainOffer?: string): str
   return defaultName;
 };
 
-// New direct data insertion function as an alternative method
+// New direct data insertion function with improved error handling and retries
 export const saveTargetAudience = async (data: any, userId: string): Promise<string | undefined> => {
   if (!userId) {
     throw new Error('No user ID provided for saving target audience');
@@ -123,6 +123,7 @@ export const saveTargetAudience = async (data: any, userId: string): Promise<str
   
   try {
     console.log('Direct database insertion with data:', data);
+    console.log('User ID for audience creation:', userId);
     
     // Map field names to match database schema
     const dbData = {
@@ -145,22 +146,44 @@ export const saveTargetAudience = async (data: any, userId: string): Promise<str
     
     console.log('Mapped data for database:', dbData);
     
-    // Insert into the database
-    const { data: responseData, error } = await supabase
-      .from('target_audiences')
-      .insert(dbData)
-      .select('id')
-      .single();
+    // Add retry logic for database insertion
+    let attempts = 0;
+    const maxAttempts = 3;
+    let lastError = null;
+    
+    while (attempts < maxAttempts) {
+      attempts++;
+      console.log(`Database insertion attempt ${attempts}/${maxAttempts}`);
       
-    if (error) {
-      console.error('Error saving target audience:', error);
-      throw error;
+      try {
+        // Insert into the database
+        const { data: responseData, error } = await supabase
+          .from('target_audiences')
+          .insert(dbData)
+          .select('id')
+          .single();
+          
+        if (error) {
+          console.error('Error saving target audience:', error);
+          lastError = error;
+          await new Promise(resolve => setTimeout(resolve, 500)); // Wait before retry
+          continue;
+        }
+        
+        console.log('Successfully saved target audience with ID:', responseData.id);
+        toast.success('Grupa docelowa została utworzona');
+        return responseData.id;
+      } catch (insertError) {
+        console.error(`Attempt ${attempts} failed:`, insertError);
+        lastError = insertError;
+        await new Promise(resolve => setTimeout(resolve, 500)); // Wait before retry
+      }
     }
     
-    console.log('Successfully saved target audience with ID:', responseData.id);
-    return responseData.id;
+    throw lastError || new Error('Failed to save target audience after multiple attempts');
   } catch (error) {
     console.error('Error in saveTargetAudience:', error);
+    toast.error('Nie udało się zapisać grupy docelowej');
     throw error;
   }
 };

@@ -92,12 +92,16 @@ const DialogManager = ({
   const handleFormSubmitWrapped = async (values: any) => {
     try {
       console.log("Form submission wrapper in DialogManager");
+      
       // Call the actual form submit handler
       const audienceId = await handleFormSubmit(values);
       
       // After successful submission, check if we have a valid audience ID
       if (audienceId) {
         console.log("Form submitted successfully in DialogManager, showing main selection");
+        
+        // Important: No additional navigation here - the useTargetAudienceDialog.handleFormSubmit 
+        // function will handle showing the selection screen
       }
       
       return audienceId;
