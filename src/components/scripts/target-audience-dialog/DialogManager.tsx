@@ -89,25 +89,31 @@ const DialogManager = ({
   };
 
   // Custom form submission handler to ensure we return to the selection screen after successful form submission
-  const handleFormSubmitWrapped = async (values: any) => {
+  const handleFormSubmitWrapped = async (values: any, userId: string | null): Promise<string | undefined> => {
     try {
-      console.log("Form submission wrapper in DialogManager");
+      console.log("Form submission wrapper in DialogManager with userId:", userId);
       
-      // Call the actual form submit handler
-      const audienceId = await handleFormSubmit(values);
+      // Only proceed if we have a real user ID
+      if (!userId) {
+        console.error("No user ID provided to form submission wrapper");
+        return undefined;
+      }
+      
+      // Call the actual form submit handler with explicit userId
+      console.log("Calling handleFormSubmit with data and userId:", userId);
+      const audienceId = await handleFormSubmit({...values, user_id: userId});
       
       // After successful submission, check if we have a valid audience ID
       if (audienceId) {
-        console.log("Form submitted successfully in DialogManager, showing main selection");
-        
-        // Important: No additional navigation here - the useTargetAudienceDialog.handleFormSubmit 
-        // function will handle showing the selection screen
+        console.log("Form submitted successfully in DialogManager with ID:", audienceId);
+        return audienceId;
+      } else {
+        console.error("Form submission completed but no audience ID was returned");
+        return undefined;
       }
-      
-      return audienceId;
     } catch (error) {
       console.error("Error in form submission wrapper:", error);
-      throw error;
+      return undefined;
     }
   };
 

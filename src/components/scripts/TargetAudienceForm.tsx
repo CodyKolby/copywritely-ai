@@ -81,11 +81,12 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
     try {
       setIsSubmitting(true);
       const data = form.getValues();
-      console.log("Submitting form on last step");
+      console.log("Submitting form on last step with data:", data);
       
       // Call the onSubmit function with the form data
       // This will now properly save data to the database
-      const audienceId = await onSubmit(data, null);
+      console.log("Calling onSubmit function with user ID:", user?.id);
+      const audienceId = await onSubmit(data, user?.id);
       
       // If submission is successful, return to the selection screen
       if (audienceId) {
@@ -125,7 +126,7 @@ const TargetAudienceForm = ({ onSubmit, onCancel, onBack }: TargetAudienceFormPr
       
       try {
         // Call the onSubmit function with the full form data
-        const result = await onSubmit(formDataWithName, null);
+        const result = await onSubmit(formDataWithName, userId);
         console.log("Form successfully submitted with result:", result);
         return result;
       } catch (error) {

@@ -5,7 +5,7 @@ import { submitTargetAudienceForm } from '../../target-audience-form/submission-
 import { saveTargetAudience } from '../api';
 
 /**
- * Hook to handle form submission logic
+ * Hook to handle form submission logic with improved error handling and debugging
  */
 export const useFormSubmission = (
   userId: string | undefined,
@@ -34,13 +34,15 @@ export const useFormSubmission = (
       let audienceId: string | undefined;
       let savedSuccessfully = false;
       
-      // Method 1: Direct API call
+      // Method 1: Direct API call with better error handling
       try {
-        console.log("Attempting direct API save method");
+        console.log("Attempting direct API save method with user ID:", userId);
         audienceId = await saveTargetAudience(dataToSubmit, userId);
         if (audienceId) {
           console.log("Direct API save successful with ID:", audienceId);
           savedSuccessfully = true;
+        } else {
+          console.error("Direct API save returned no audience ID");
         }
       } catch (apiError) {
         console.error("Direct API save failed:", apiError);
@@ -49,11 +51,13 @@ export const useFormSubmission = (
       // Method 2: Form submission util if direct API failed
       if (!savedSuccessfully) {
         try {
-          console.log("Attempting form submission util");
+          console.log("Attempting form submission util with user ID:", userId);
           audienceId = await submitTargetAudienceForm(dataToSubmit, userId);
           if (audienceId) {
             console.log("Submission util successful with ID:", audienceId);
             savedSuccessfully = true;
+          } else {
+            console.error("Submission util returned no audience ID");
           }
         } catch (submissionError) {
           console.error("Submission util failed:", submissionError);
@@ -68,6 +72,8 @@ export const useFormSubmission = (
           if (audienceId) {
             console.log("Fallback submission successful with ID:", audienceId);
             savedSuccessfully = true;
+          } else {
+            console.error("Fallback submission returned no audience ID");
           }
         } catch (fallbackError) {
           console.error("Fallback submission failed:", fallbackError);
@@ -82,6 +88,7 @@ export const useFormSubmission = (
         toast.success('Grupa docelowa została utworzona');
         return audienceId;
       } else {
+        console.error("All submission methods failed. No audience ID returned.");
         throw new Error("None of the submission methods succeeded");
       }
     } catch (error) {

@@ -10,6 +10,7 @@ export const fetchExistingAudiences = async (userId: string): Promise<TargetAudi
   }
   
   try {
+    console.log("Fetching audiences for user ID:", userId);
     const { data, error } = await supabase
       .from('target_audiences')
       .select('id, name')
@@ -21,6 +22,7 @@ export const fetchExistingAudiences = async (userId: string): Promise<TargetAudi
       return [];
     }
     
+    console.log(`Found ${data?.length || 0} audiences for user:`, data);
     return data || [];
   } catch (error) {
     console.error('Error in fetchExistingAudiences:', error);
@@ -115,36 +117,45 @@ export const generateAudienceName = (ageRange?: string, mainOffer?: string): str
   return defaultName;
 };
 
-// New direct data insertion function with improved error handling and retries
+// New direct data insertion function with improved error handling, debugging and retries
 export const saveTargetAudience = async (data: any, userId: string): Promise<string | undefined> => {
   if (!userId) {
+    console.error('No user ID provided for saving target audience');
     throw new Error('No user ID provided for saving target audience');
   }
   
   try {
-    console.log('Direct database insertion with data:', data);
-    console.log('User ID for audience creation:', userId);
+    console.log('Direct database insertion starting with userId:', userId);
+    console.log('Data to save:', data);
     
-    // Map field names to match database schema
+    // If data already has user_id, use it; otherwise set it
+    const userIdToUse = data.user_id || userId;
+    console.log('Using user ID for insertion:', userIdToUse);
+    
+    // Map field names to match database schema if needed
     const dbData = {
-      user_id: userId,
+      user_id: userIdToUse,
       name: data.name || generateAudienceName(data.ageRange, data.mainOffer),
-      age_range: data.ageRange,
+      age_range: data.age_range || data.ageRange,
       gender: data.gender,
-      competitors: data.competitors?.filter(Boolean) || [],
+      competitors: Array.isArray(data.competitors) ? data.competitors.filter(Boolean) : 
+                 (Array.isArray(data.competitors) ? data.competitors.filter(Boolean) : []),
       language: data.language,
       biography: data.biography,
       beliefs: data.beliefs,
-      pains: data.pains?.filter(Boolean) || [],
-      desires: data.desires?.filter(Boolean) || [],
-      main_offer: data.mainOffer,
-      offer_details: data.offerDetails,
-      benefits: data.benefits?.filter(Boolean) || [],
-      why_it_works: data.whyItWorks,
+      pains: Array.isArray(data.pains) ? data.pains.filter(Boolean) : 
+            (Array.isArray(data.pains) ? data.pains.filter(Boolean) : []),
+      desires: Array.isArray(data.desires) ? data.desires.filter(Boolean) : 
+              (Array.isArray(data.desires) ? data.desires.filter(Boolean) : []),
+      main_offer: data.main_offer || data.mainOffer,
+      offer_details: data.offer_details || data.offerDetails,
+      benefits: Array.isArray(data.benefits) ? data.benefits.filter(Boolean) : 
+               (Array.isArray(data.benefits) ? data.benefits.filter(Boolean) : []),
+      why_it_works: data.why_it_works || data.whyItWorks,
       experience: data.experience
     };
     
-    console.log('Mapped data for database:', dbData);
+    console.log('Mapped data for database insertion:', dbData);
     
     // Add retry logic for database insertion
     let attempts = 0;
@@ -164,26 +175,32 @@ export const saveTargetAudience = async (data: any, userId: string): Promise<str
           .single();
           
         if (error) {
-          console.error('Error saving target audience:', error);
+          console.error(`Error saving target audience (attempt ${attempts}):`, error);
           lastError = error;
           await new Promise(resolve => setTimeout(resolve, 500)); // Wait before retry
           continue;
         }
         
+        if (!responseData || !responseData.id) {
+          console.error(`No ID returned from successful insertion (attempt ${attempts})`);
+          await new Promise(resolve => setTimeout(resolve, 500)); // Wait before retry
+          continue;
+        }
+        
         console.log('Successfully saved target audience with ID:', responseData.id);
-        toast.success('Grupa docelowa została utworzona');
         return responseData.id;
       } catch (insertError) {
-        console.error(`Attempt ${attempts} failed:`, insertError);
+        console.error(`Attempt ${attempts} failed with error:`, insertError);
         lastError = insertError;
         await new Promise(resolve => setTimeout(resolve, 500)); // Wait before retry
       }
     }
     
+    // After all attempts fail, log the detailed error and throw
+    console.error(`Failed to save target audience after ${maxAttempts} attempts. Last error:`, lastError);
     throw lastError || new Error('Failed to save target audience after multiple attempts');
   } catch (error) {
     console.error('Error in saveTargetAudience:', error);
-    toast.error('Nie udało się zapisać grupy docelowej');
     throw error;
   }
 };
