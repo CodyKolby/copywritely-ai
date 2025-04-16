@@ -60,7 +60,7 @@ serve(async (req) => {
           }
         }
       },
-      payment_method_collection: 'always', // Change to always require payment method
+      payment_method_collection: 'always', // Always require payment method
       allow_promotion_codes: true,
       payment_method_types: ['card'],
       billing_address_collection: 'auto',

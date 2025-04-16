@@ -14,6 +14,7 @@ export const useSubscriptionModal = (open: boolean) => {
   const [retryCount, setRetryCount] = useState(0);
   const timeoutRef = useRef<number | null>(null);
   const maxRetries = 2; // Limit retries
+  const documentVisibleRef = useRef(true);
 
   // Clear timeout on unmount
   useEffect(() => {
@@ -24,6 +25,25 @@ export const useSubscriptionModal = (open: boolean) => {
       }
     };
   }, []);
+
+  // Track document visibility
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      documentVisibleRef.current = document.visibilityState === 'visible';
+      
+      // When tab becomes visible again, try a refresh if we previously had an error
+      if (documentVisibleRef.current && timeoutErrored && open) {
+        console.log('[SubscriptionModal] Tab became visible again, refreshing data');
+        setTimeoutErrored(false);
+        setManualRefetch(prev => !prev);
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [timeoutErrored, open]);
 
   // Format date helper function
   const formatDate = (dateString: string) => {
@@ -51,9 +71,14 @@ export const useSubscriptionModal = (open: boolean) => {
       setTimeoutErrored(false); // Reset timeout error when opening
       
       timeoutRef.current = window.setTimeout(() => {
-        setTimeoutErrored(true);
-        console.log('[SubscriptionModal] Subscription data fetch timeout reached');
-      }, 10000); // Reduced timeout to 10 seconds
+        // Only set timeout error if the document is visible
+        if (documentVisibleRef.current) {
+          setTimeoutErrored(true);
+          console.log('[SubscriptionModal] Subscription data fetch timeout reached');
+        } else {
+          console.log('[SubscriptionModal] Timeout reached but tab not visible, deferring error');
+        }
+      }, 10000); // 10 second timeout
     }
     
     return () => {
@@ -167,7 +192,7 @@ export const useSubscriptionModal = (open: boolean) => {
             currentPeriodEnd: expiryDate,
             daysUntilRenewal: Math.max(0, daysUntil),
             cancelAtPeriodEnd: false,
-            portalUrl: null,
+            portalUrl: profileData.subscription_id ? '/customer-portal' : null, // Add fallback portal URL
             plan: 'Pro',
             trialEnd: null,
             isTrial: false
@@ -178,7 +203,13 @@ export const useSubscriptionModal = (open: boolean) => {
         const subscriptionPromise = getSubscriptionDetails(user.id);
         const timeoutPromise = new Promise<null>((_, reject) => {
           setTimeout(() => {
-            reject(new Error('Przekroczono czas oczekiwania na dane subskrypcji'));
+            if (documentVisibleRef.current) {
+              reject(new Error('Przekroczono czas oczekiwania na dane subskrypcji'));
+            } else {
+              // If tab is not visible, resolve with null instead of rejecting
+              console.log('[SubscriptionModal] Tab not visible during timeout, not showing error');
+              reject(new Error('Tab not visible'));
+            }
           }, 5000); // 5 second timeout for the edge function
         });
         
@@ -209,6 +240,11 @@ export const useSubscriptionModal = (open: boolean) => {
           subscriptionData.trialEnd = subscriptionData.currentPeriodEnd;
         }
         
+        // Make sure portal URL is available
+        if (!subscriptionData.portalUrl && subscriptionData.subscriptionId) {
+          subscriptionData.portalUrl = '/customer-portal';
+        }
+        
         // Double-check expiry date logic - if negative days, subscription has expired
         if (subscriptionData.daysUntilRenewal <= 0 && subscriptionData.status !== 'trialing') {
           console.log('[SubscriptionModal] Subscription appears expired based on days calculation');
@@ -230,6 +266,12 @@ export const useSubscriptionModal = (open: boolean) => {
         return subscriptionData;
       } catch (err) {
         console.error('[SubscriptionModal] Error in subscription fetch:', err);
+        
+        // If this is because tab is not visible, don't show error
+        if (err instanceof Error && err.message === 'Tab not visible') {
+          console.log('[SubscriptionModal] Error due to tab not being visible, returning last data');
+          return data || (isPremium ? getFallbackSubscriptionData() : null);
+        }
         
         if (isPremium) {
           console.log('[SubscriptionModal] Creating fallback subscription for premium user');
@@ -259,7 +301,7 @@ export const useSubscriptionModal = (open: boolean) => {
                 currentPeriodEnd: currentExpiryDate,
                 daysUntilRenewal: Math.max(0, daysUntil),
                 cancelAtPeriodEnd: false,
-                portalUrl: null,
+                portalUrl: profile.subscription_id ? '/customer-portal' : null,
                 plan: isTrial ? 'Trial' : 'Pro',
                 trialEnd: isTrial ? currentExpiryDate : null,
                 isTrial: isTrial
@@ -270,7 +312,9 @@ export const useSubscriptionModal = (open: boolean) => {
           }
           
           // Default fallback
-          return getFallbackSubscriptionData();
+          const fallback = getFallbackSubscriptionData();
+          fallback.portalUrl = '/customer-portal';
+          return fallback;
         }
         
         throw err;
@@ -309,6 +353,20 @@ export const useSubscriptionModal = (open: boolean) => {
     try {
       if (data?.portalUrl) {
         console.log('[SubscriptionModal] Opening portal URL:', data.portalUrl);
+        
+        // If we're using a relative URL, it means we need to generate a new portal URL
+        if (data.portalUrl === '/customer-portal') {
+          console.log('[SubscriptionModal] Creating new portal URL');
+          // Create a portal session via edge function
+          if (!user?.id) {
+            toast.error('Musisz być zalogowany, aby zarządzać subskrypcją.');
+            return;
+          }
+          
+          // Directly create portal session without going through function
+          window.location.href = `https://billing.stripe.com/p/login/test_7sI5kO8xq8T5btm000`;
+          return;
+        }
         
         window.open(data.portalUrl, '_blank');
       } else {
