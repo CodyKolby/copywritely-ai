@@ -117,7 +117,7 @@ export const generateAudienceName = (ageRange?: string, mainOffer?: string): str
   return defaultName;
 };
 
-// New direct data insertion function with improved error handling, debugging and retries
+// Improved direct data insertion function with more detailed error handling and logging
 export const saveTargetAudience = async (data: any, userId: string): Promise<string | undefined> => {
   if (!userId) {
     console.error('No user ID provided for saving target audience');
@@ -128,34 +128,57 @@ export const saveTargetAudience = async (data: any, userId: string): Promise<str
     console.log('Direct database insertion starting with userId:', userId);
     console.log('Data to save:', data);
     
-    // If data already has user_id, use it; otherwise set it
-    const userIdToUse = data.user_id || userId;
-    console.log('Using user ID for insertion:', userIdToUse);
+    // Generate a name if not provided
+    const audienceName = data.name || generateAudienceName(data.ageRange || data.age_range, data.mainOffer || data.main_offer);
+    console.log('Using audience name:', audienceName);
     
-    // Map field names to match database schema if needed
+    // Map field names to match database schema
     const dbData = {
-      user_id: userIdToUse,
-      name: data.name || generateAudienceName(data.ageRange, data.mainOffer),
-      age_range: data.age_range || data.ageRange,
-      gender: data.gender,
-      competitors: Array.isArray(data.competitors) ? data.competitors.filter(Boolean) : 
-                 (Array.isArray(data.competitors) ? data.competitors.filter(Boolean) : []),
-      language: data.language,
-      biography: data.biography,
-      beliefs: data.beliefs,
-      pains: Array.isArray(data.pains) ? data.pains.filter(Boolean) : 
-            (Array.isArray(data.pains) ? data.pains.filter(Boolean) : []),
-      desires: Array.isArray(data.desires) ? data.desires.filter(Boolean) : 
-              (Array.isArray(data.desires) ? data.desires.filter(Boolean) : []),
-      main_offer: data.main_offer || data.mainOffer,
-      offer_details: data.offer_details || data.offerDetails,
-      benefits: Array.isArray(data.benefits) ? data.benefits.filter(Boolean) : 
-               (Array.isArray(data.benefits) ? data.benefits.filter(Boolean) : []),
-      why_it_works: data.why_it_works || data.whyItWorks,
-      experience: data.experience
+      user_id: userId,
+      name: audienceName,
+      age_range: data.age_range || data.ageRange || '',
+      gender: data.gender || '',
+      competitors: Array.isArray(data.competitors) ? data.competitors.filter(Boolean) : [],
+      language: data.language || '',
+      biography: data.biography || '',
+      beliefs: data.beliefs || '',
+      pains: Array.isArray(data.pains) ? data.pains.filter(Boolean) : [],
+      desires: Array.isArray(data.desires) ? data.desires.filter(Boolean) : [],
+      main_offer: data.main_offer || data.mainOffer || '',
+      offer_details: data.offer_details || data.offerDetails || '',
+      benefits: Array.isArray(data.benefits) ? data.benefits.filter(Boolean) : [],
+      why_it_works: data.why_it_works || data.whyItWorks || '',
+      experience: data.experience || ''
     };
     
     console.log('Mapped data for database insertion:', dbData);
+    
+    // Verify all required fields are present and valid
+    const requiredFields = [
+      'user_id', 'name', 'age_range', 'gender', 'language', 
+      'biography', 'beliefs', 'main_offer', 'offer_details',
+      'why_it_works', 'experience'
+    ];
+    
+    const arrayFields = ['competitors', 'pains', 'desires', 'benefits'];
+    
+    // Validate required fields
+    for (const field of requiredFields) {
+      if (!dbData[field] || dbData[field].trim() === '') {
+        console.error(`Missing required field: ${field}`);
+        throw new Error(`Brak wymaganego pola: ${field}`);
+      }
+    }
+    
+    // Validate array fields
+    for (const field of arrayFields) {
+      if (!Array.isArray(dbData[field]) || dbData[field].length < 1) {
+        console.error(`Missing or invalid array field: ${field}`);
+        if (!Array.isArray(dbData[field])) {
+          dbData[field] = ['Element 1']; // Fallback with at least one item
+        }
+      }
+    }
     
     // Add retry logic for database insertion
     let attempts = 0;
@@ -167,8 +190,8 @@ export const saveTargetAudience = async (data: any, userId: string): Promise<str
       console.log(`Database insertion attempt ${attempts}/${maxAttempts}`);
       
       try {
-        // Insert into the database
-        const { data: responseData, error } = await supabase
+        // Insert into the database with simpler query first
+        const { data: insertData, error } = await supabase
           .from('target_audiences')
           .insert(dbData)
           .select('id')
@@ -177,22 +200,41 @@ export const saveTargetAudience = async (data: any, userId: string): Promise<str
         if (error) {
           console.error(`Error saving target audience (attempt ${attempts}):`, error);
           lastError = error;
-          await new Promise(resolve => setTimeout(resolve, 500)); // Wait before retry
+          
+          // Wait before retry
+          await new Promise(resolve => setTimeout(resolve, 500));
           continue;
         }
         
-        if (!responseData || !responseData.id) {
-          console.error(`No ID returned from successful insertion (attempt ${attempts})`);
-          await new Promise(resolve => setTimeout(resolve, 500)); // Wait before retry
+        if (!insertData || !insertData.id) {
+          console.error('Insertion succeeded but no ID was returned');
+          
+          // Try to find the just-inserted record
+          const { data: findData } = await supabase
+            .from('target_audiences')
+            .select('id')
+            .eq('user_id', userId)
+            .eq('name', audienceName)
+            .order('created_at', { ascending: false })
+            .limit(1);
+            
+          if (findData && findData.length > 0) {
+            console.log('Found inserted audience by query:', findData[0].id);
+            return findData[0].id;
+          }
+          
+          await new Promise(resolve => setTimeout(resolve, 500));
           continue;
         }
         
-        console.log('Successfully saved target audience with ID:', responseData.id);
-        return responseData.id;
+        console.log('Successfully saved target audience with ID:', insertData.id);
+        return insertData.id;
       } catch (insertError) {
         console.error(`Attempt ${attempts} failed with error:`, insertError);
         lastError = insertError;
-        await new Promise(resolve => setTimeout(resolve, 500)); // Wait before retry
+        
+        // Wait before retry
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
     }
     
@@ -201,6 +243,7 @@ export const saveTargetAudience = async (data: any, userId: string): Promise<str
     throw lastError || new Error('Failed to save target audience after multiple attempts');
   } catch (error) {
     console.error('Error in saveTargetAudience:', error);
+    toast.error('Nie udało się zapisać grupy docelowej: ' + (error instanceof Error ? error.message : 'Nieznany błąd'));
     throw error;
   }
 };

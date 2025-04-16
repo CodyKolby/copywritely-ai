@@ -8,6 +8,7 @@ import GoalDialog from './dialogs/GoalDialog';
 import EmailStyleDialog from './dialogs/EmailStyleDialog';
 import SocialMediaDialog from './dialogs/SocialMediaDialog';
 import ResultDialogs from './dialogs/ResultDialogs';
+import { toast } from 'sonner';
 
 /**
  * Main dialog manager component that orchestrates all dialogs
@@ -96,23 +97,69 @@ const DialogManager = ({
       // Only proceed if we have a real user ID
       if (!userId) {
         console.error("No user ID provided to form submission wrapper");
+        toast.error("Brak ID użytkownika - zaloguj się ponownie");
         return undefined;
+      }
+      
+      // Add proper data validation
+      const requiredFields = ['ageRange', 'gender', 'language', 'biography', 'beliefs', 
+                              'mainOffer', 'offerDetails', 'whyItWorks', 'experience'];
+      
+      // Validate individual fields
+      for (const field of requiredFields) {
+        if (!values[field] || values[field].trim() === '') {
+          console.error(`Missing required field: ${field}`);
+          toast.error(`Brakuje wymaganego pola: ${field}`);
+          return undefined;
+        }
+      }
+      
+      // Validate array fields
+      const arrayFieldRequirements = {
+        'competitors': 3,
+        'pains': 5,
+        'desires': 5,
+        'benefits': 5
+      };
+      
+      for (const [field, requiredCount] of Object.entries(arrayFieldRequirements)) {
+        if (!Array.isArray(values[field]) || 
+            values[field].filter(item => item && item.trim() !== '').length < requiredCount) {
+          console.error(`Field ${field} requires at least ${requiredCount} non-empty items`);
+          toast.error(`Pole ${field} wymaga co najmniej ${requiredCount} niepustych elementów`);
+          return undefined;
+        }
       }
       
       // Call the actual form submit handler with explicit userId
       console.log("Calling handleFormSubmit with data and userId:", userId);
-      const audienceId = await handleFormSubmit({...values, user_id: userId});
-      
-      // After successful submission, check if we have a valid audience ID
-      if (audienceId) {
-        console.log("Form submitted successfully in DialogManager with ID:", audienceId);
-        return audienceId;
-      } else {
-        console.error("Form submission completed but no audience ID was returned");
+      try {
+        const audienceId = await handleFormSubmit({...values, user_id: userId});
+        
+        // After successful submission, check if we have a valid audience ID
+        if (audienceId) {
+          console.log("Form submitted successfully in DialogManager with ID:", audienceId);
+          toast.success("Grupa docelowa została zapisana");
+          
+          // Important: Close the form dialog and return to selection screen
+          setTimeout(() => {
+            handleBack();  // Return to selection screen
+          }, 500);
+          
+          return audienceId;
+        } else {
+          console.error("Form submission completed but no audience ID was returned");
+          toast.error("Nie udało się zapisać grupy docelowej - spróbuj ponownie");
+          return undefined;
+        }
+      } catch (error) {
+        console.error("Error in form submission:", error);
+        toast.error("Wystąpił błąd podczas zapisywania grupy docelowej");
         return undefined;
       }
     } catch (error) {
       console.error("Error in form submission wrapper:", error);
+      toast.error("Nieoczekiwany błąd podczas przetwarzania formularza");
       return undefined;
     }
   };
