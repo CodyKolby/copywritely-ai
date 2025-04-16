@@ -44,7 +44,7 @@ const SubscriptionDetails: React.FC<SubscriptionDetailsProps> = ({ data, formatD
     <div className="space-y-2">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">
-          {isTrial ? 'Okres próbny' : `Plan ${data.plan || 'Premium'}`}
+          Plan {data.plan || 'Premium'}
         </h3>
       </div>
       

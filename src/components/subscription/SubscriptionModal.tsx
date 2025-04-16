@@ -22,7 +22,8 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
     formatDate,
     renewSubscription,
     handleOpenPortal,
-    fallbackData
+    fallbackData,
+    handleRetry
   } = useSubscriptionModal(open);
 
   // Loading state
@@ -36,7 +37,8 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
       open={open} 
       onOpenChange={onOpenChange} 
       isPremium={isPremiumButNoData}
-      error={error} 
+      error={error}
+      onRetry={handleRetry}
     />;
   }
 
@@ -54,6 +56,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ open, onOpenChang
         formatDate={formatDate}
         expiryDate={data.currentPeriodEnd}
         daysRemaining={data.daysUntilRenewal}
+        onOpenPortal={handleOpenPortal}
       />
     );
   }

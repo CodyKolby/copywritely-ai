@@ -38,7 +38,7 @@ const PremiumSubscription: React.FC<PremiumSubscriptionProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="mx-auto max-w-md rounded-xl p-6">
         <SubscriptionModalHeader 
-          title={isTrial ? "Twój okres próbny" : "Twoja subskrypcja"}
+          title="Twoja subskrypcja Premium"
           description={isTrial ? "Posiadasz aktywny okres próbny" : undefined}
         />
         
