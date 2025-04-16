@@ -1,3 +1,4 @@
+
 import type { SocialMediaPlatform } from '../../SocialMediaPlatformDialog';
 import { ScriptGenerationResult } from '../types';
 import { supabase } from "@/integrations/supabase/client";
@@ -43,9 +44,9 @@ export const generateScript = async (
       try {
         console.log(`Fetching target audience (attempt ${attempt}/3)...`);
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // Increased to 10 second timeout
         
-        // Using a try-catch block to manually handle the abort signal instead
+        // Using a try-catch block to manually handle the abort signal
         try {
           const { data, error } = await supabase
             .from('target_audiences')
@@ -116,7 +117,7 @@ export const generateScript = async (
     // Get the access token
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // Increased to 10 second timeout
       
       const { data } = await supabase.auth.getSession();
       
@@ -185,7 +186,7 @@ async function generateSocialMedia(
     // Show a toast to indicate processing is happening
     toast.loading('Generowanie posta na social media...', {
       id: 'generating-social',
-      duration: 10000
+      duration: 30000 // Increased to 30 seconds
     });
     
     // Step 1: Generate intro with social-intro-agent
@@ -198,7 +199,7 @@ async function generateSocialMedia(
       try {
         // Use AbortController for timeout
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 20000); // Increased to 20 second timeout
         
         introResponse = await fetch(`https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/social-intro-agent?_nocache=${cacheBuster}`, {
           method: 'POST',
@@ -208,6 +209,7 @@ async function generateSocialMedia(
             'Cache-Control': 'no-cache, no-store, must-revalidate',
             'Pragma': 'no-cache',
             'Expires': '0',
+            'x-cache-buster': cacheBuster
           },
           body: JSON.stringify({
             targetAudience,
@@ -243,7 +245,7 @@ async function generateSocialMedia(
         }
         
         // Exponential backoff before retrying
-        const backoff = Math.min(1000 * Math.pow(2, introRetries), 5000);
+        const backoff = Math.min(2000 * Math.pow(2, introRetries), 6000); // Increased backoff times
         console.log(`Retrying intro generation in ${backoff}ms...`);
         await delay(backoff);
       }
@@ -266,7 +268,7 @@ async function generateSocialMedia(
     toast.dismiss('generating-social');
     toast.loading('Generowanie treści postu...', { 
       id: 'generating-post',
-      duration: 20000
+      duration: 30000 // Increased to 30 seconds
     });
     
     // Step 2: Generate the full post with social-post-agent
@@ -279,7 +281,7 @@ async function generateSocialMedia(
       try {
         // Use AbortController for timeout
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 25000); // Increased to 25 second timeout
         
         postResponse = await fetch(`https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/social-post-agent?_nocache=${cacheBuster}`, {
           method: 'POST',
@@ -289,6 +291,7 @@ async function generateSocialMedia(
             'Cache-Control': 'no-cache, no-store, must-revalidate',
             'Pragma': 'no-cache',
             'Expires': '0',
+            'x-cache-buster': cacheBuster
           },
           body: JSON.stringify({
             targetAudience,
@@ -325,7 +328,7 @@ async function generateSocialMedia(
         }
         
         // Exponential backoff before retrying
-        const backoff = Math.min(2000 * Math.pow(2, postRetries), 6000);
+        const backoff = Math.min(3000 * Math.pow(2, postRetries), 8000); // Increased backoff times
         console.log(`Retrying post generation in ${backoff}ms...`);
         await delay(backoff);
       }
@@ -396,7 +399,7 @@ async function generateOnlineAdScript(
 
   toast.loading('Generowanie skryptu reklamowego...', {
     id: 'generating-script',
-    duration: 30000 // 30 seconds timeout for UI
+    duration: 60000 // Increased to 60 seconds timeout for UI
   });
 
   // Call the generate-script function with retry logic
@@ -410,7 +413,7 @@ async function generateOnlineAdScript(
     try {
       // Use AbortController for timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 40000); // Increased to 40 second timeout
       
       response = await fetch(`https://jorbqjareswzdrsmepbv.supabase.co/functions/v1/generate-script?_nocache=${Date.now()}`, {
         method: 'POST',
@@ -420,6 +423,7 @@ async function generateOnlineAdScript(
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache',
           'Expires': '0',
+          'x-cache-buster': cacheBuster
         },
         body: JSON.stringify({
           templateId,
@@ -456,7 +460,7 @@ async function generateOnlineAdScript(
       }
       
       // Exponential backoff before retrying
-      const backoff = Math.min(2000 * Math.pow(2, retryCount), 5000);
+      const backoff = Math.min(3000 * Math.pow(2, retryCount), 8000); // Increased backoff times
       console.log(`Retrying script generation in ${backoff}ms...`);
       await delay(backoff);
     }
