@@ -55,9 +55,9 @@ serve(async (req) => {
     }
     
     // For regular requests, parse the JSON body
-    let requestData;
+    let data;
     try {
-      requestData = JSON.parse(rawBody);
+      data = JSON.parse(rawBody);
       console.log(`[${requestId}] NARRATIVE-BLUEPRINT: JSON parsing successful`);
     } catch (parseError) {
       console.error(`[${requestId}] NARRATIVE-BLUEPRINT: Failed to parse JSON:`, parseError);
@@ -67,7 +67,7 @@ serve(async (req) => {
       );
     }
     
-    const { surveyData, emailStyle, advertisingGoal, timestamp: clientTimestamp, requestId: clientRequestId } = requestData;
+    const { surveyData, emailStyle, advertisingGoal, timestamp: clientTimestamp, requestId: clientRequestId } = data;
     
     console.log(`[${requestId}] NARRATIVE-BLUEPRINT: Client request ID: ${clientRequestId || 'Not provided'}`);
     console.log(`[${requestId}] NARRATIVE-BLUEPRINT: Client timestamp: ${clientTimestamp || 'Not provided'}`);
@@ -159,7 +159,7 @@ WAŻNE: Zwróć pełną zawartość każdej sekcji, nie ucinaj żadnych zdań. K
     // Retry mechanism for OpenAI API calls
     let attempts = 0;
     const maxAttempts = 3;
-    let apiResponse;
+    let response;
     let lastError;
     
     while (attempts < maxAttempts) {
@@ -168,7 +168,7 @@ WAŻNE: Zwróć pełną zawartość każdej sekcji, nie ucinaj żadnych zdań. K
       
       try {
         // Call OpenAI API with the Narrative Blueprint prompt
-        apiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        response = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${OPENAI_API_KEY}`,
@@ -190,15 +190,15 @@ WAŻNE: Zwróć pełną zawartość każdej sekcji, nie ucinaj żadnych zdań. K
         });
         
         // If the request was successful, break out of the retry loop
-        if (apiResponse.ok) {
-          console.log(`[${requestId}] NARRATIVE-BLUEPRINT: OpenAI API responded with status ${apiResponse.status}`);
+        if (response.ok) {
+          console.log(`[${requestId}] NARRATIVE-BLUEPRINT: OpenAI API responded with status ${response.status}`);
           break;
         } else {
-          const errorData = await apiResponse.json().catch(() => ({}));
-          lastError = `OpenAI API returned status ${apiResponse.status}: ${JSON.stringify(errorData)}`;
+          const errorData = await response.json().catch(() => ({}));
+          lastError = `OpenAI API returned status ${response.status}: ${JSON.stringify(errorData)}`;
           console.error(`[${requestId}] NARRATIVE-BLUEPRINT: ${lastError}`);
           
-          if (apiResponse.status === 429 || apiResponse.status >= 500) {
+          if (response.status === 429 || response.status >= 500) {
             // For rate limiting (429) or server errors (5xx), we'll retry
             console.log(`[${requestId}] NARRATIVE-BLUEPRINT: Retrying in ${attempts * 1000}ms...`);
             await new Promise(resolve => setTimeout(resolve, attempts * 1000));
@@ -222,12 +222,12 @@ WAŻNE: Zwróć pełną zawartość każdej sekcji, nie ucinaj żadnych zdań. K
     }
     
     // If we've exhausted all attempts without a successful response
-    if (!apiResponse || !apiResponse.ok) {
+    if (!response || !response.ok) {
       throw new Error(lastError || `Failed to get response from OpenAI after ${maxAttempts} attempts`);
     }
 
-    const responseData = await apiResponse.json();
-    const aiOutput = responseData.choices[0].message.content;
+    const data = await response.json();
+    const aiOutput = data.choices[0].message.content;
     
     console.log(`[${requestId}] NARRATIVE-BLUEPRINT: Raw AI response length: ${aiOutput.length} chars`);
     console.log(`[${requestId}] NARRATIVE-BLUEPRINT: Raw AI response: ${aiOutput}`);
