@@ -26,7 +26,7 @@ const GoalDialog = ({
   // Create a submission handler that wraps onSubmit
   const handleSubmit = (goal: string) => {
     console.log("GoalDialog - submitting goal:", goal);
-    // Call the provided onSubmit function
+    // Call the provided onSubmit function with the goal
     onSubmit(goal);
   };
 
