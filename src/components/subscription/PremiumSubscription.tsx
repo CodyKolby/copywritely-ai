@@ -3,6 +3,7 @@ import React from 'react';
 import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { trackEvent } from '@/lib/posthog';
 import SubscriptionModalHeader from './SubscriptionModalHeader';
 import SubscriptionDetails from './SubscriptionDetails';
 import SubscriptionActions from './SubscriptionActions';
@@ -28,6 +29,11 @@ const PremiumSubscription: React.FC<PremiumSubscriptionProps> = ({
   // Ensure isTrial is properly set
   const isTrial = data.isTrial === true || data.status === 'trialing';
   
+  const handleClose = () => {
+    trackEvent('premium_subscription_modal_closed');
+    onOpenChange(false);
+  };
+  
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="mx-auto max-w-md rounded-xl p-6">
@@ -48,7 +54,7 @@ const PremiumSubscription: React.FC<PremiumSubscriptionProps> = ({
         </Card>
         
         <DialogFooter className="flex justify-center pt-4">
-          <Button onClick={() => onOpenChange(false)} className="rounded-lg">Zamknij</Button>
+          <Button onClick={handleClose} className="rounded-lg">Zamknij</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

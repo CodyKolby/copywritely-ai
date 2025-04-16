@@ -2,6 +2,8 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { ExternalLink } from 'lucide-react';
+import { toast } from 'sonner';
+import { trackEvent } from '@/lib/posthog';
 
 interface SubscriptionActionsProps {
   isTrial: boolean;
@@ -18,12 +20,27 @@ const SubscriptionActions: React.FC<SubscriptionActionsProps> = ({
   onRenew,
   onOpenPortal
 }) => {
+  const handleManageSubscription = () => {
+    trackEvent('subscription_portal_clicked');
+    onOpenPortal();
+  };
+
+  const handleRenewSubscription = () => {
+    trackEvent('subscription_renew_clicked');
+    onRenew();
+  };
+
+  const handleBuySubscription = () => {
+    trackEvent('subscription_upgrade_clicked');
+    window.location.href = '/pricing';
+  };
+
   return (
     <div className="flex flex-col space-y-4 pt-2">
       {isTrial && (
         <div className="flex justify-center">
           <Button 
-            onClick={() => window.location.href = '/pricing'} 
+            onClick={handleBuySubscription} 
             className="flex items-center gap-2 rounded-lg px-6" 
             variant="default"
           >
@@ -35,7 +52,7 @@ const SubscriptionActions: React.FC<SubscriptionActionsProps> = ({
       {cancelAtPeriodEnd && !isTrial && (
         <div className="flex justify-center">
           <Button 
-            onClick={onRenew} 
+            onClick={handleRenewSubscription} 
             className="flex items-center gap-2 rounded-lg px-6" 
             variant="default"
           >
@@ -47,7 +64,7 @@ const SubscriptionActions: React.FC<SubscriptionActionsProps> = ({
       {!isTrial && (
         <div className="flex justify-center">
           <Button 
-            onClick={onOpenPortal} 
+            onClick={handleManageSubscription} 
             className="flex items-center gap-2 rounded-lg px-6" 
             variant="outline"
           >

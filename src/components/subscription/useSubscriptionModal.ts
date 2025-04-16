@@ -363,8 +363,34 @@ export const useSubscriptionModal = (open: boolean) => {
             return;
           }
           
-          // Directly create portal session without going through function
-          window.location.href = `https://billing.stripe.com/p/login/test_7sI5kO8xq8T5btm000`;
+          toast.loading('Przygotowywanie portalu zarządzania subskrypcją...');
+          
+          // Call the edge function to get a customer portal URL
+          supabase.functions.invoke('subscription-portal', {
+            body: { userId: user.id }
+          })
+            .then(response => {
+              toast.dismiss();
+              if (response.error) {
+                console.error('[SubscriptionModal] Error creating portal URL:', response.error);
+                toast.error('Nie udało się utworzyć sesji portalu klienta', {
+                  description: 'Spróbuj ponownie później lub skontaktuj się z obsługą.'
+                });
+                return;
+              }
+              
+              const portalUrl = response.data?.url;
+              if (portalUrl) {
+                window.open(portalUrl, '_blank');
+              } else {
+                toast.error('Nie udało się utworzyć sesji portalu klienta');
+              }
+            })
+            .catch(err => {
+              toast.dismiss();
+              console.error('[SubscriptionModal] Exception creating portal URL:', err);
+              toast.error('Wystąpił błąd podczas tworzenia sesji portalu');
+            });
           return;
         }
         

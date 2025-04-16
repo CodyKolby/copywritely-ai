@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import SubscriptionModal from '../subscription/SubscriptionModal';
 import { clearPremiumFromLocalStorage } from '@/contexts/auth/local-storage-utils';
+import { trackEvent } from '@/lib/posthog';
 
 interface UserMenuProps {
   user: User;
@@ -39,8 +40,14 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
   };
 
   const handleSignOut = () => {
+    trackEvent('user_signed_out');
     clearPremiumFromLocalStorage();
     signOut();
+  };
+  
+  const handleOpenSubscriptionModal = () => {
+    trackEvent('subscription_modal_opened');
+    setSubscriptionModalOpen(true);
   };
 
   return (
@@ -75,12 +82,12 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild className="gap-2">
-            <Link to="/projekty">
+            <Link to="/projekty" onClick={() => trackEvent('menu_projects_clicked')}>
               <FolderOpen size={16} /> 
               <span>Projekty</span>
             </Link>
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setSubscriptionModalOpen(true)} className="gap-2">
+          <DropdownMenuItem onClick={handleOpenSubscriptionModal} className="gap-2">
             <CreditCard size={16} /> 
             <span>Subskrypcja</span>
           </DropdownMenuItem>
