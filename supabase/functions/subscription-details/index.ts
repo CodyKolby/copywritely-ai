@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.5.0";
 import Stripe from "https://esm.sh/stripe@12.1.1";
@@ -32,6 +31,26 @@ const isSubscriptionExpired = (expiryDate: string): boolean => {
   }
 };
 
+// Helper function to calculate days until a date
+const calculateDaysUntil = (dateString: string): number => {
+  try {
+    const targetDate = new Date(dateString);
+    const now = new Date();
+    
+    return Math.ceil((targetDate.getTime() - now.getTime()) / (1000 * 3600 * 24));
+  } catch (error) {
+    console.error('Error calculating days until date:', error);
+    return 0;
+  }
+};
+
+// Helper function to get trial expiry date (3 days from trial start)
+const getTrialExpiryDate = (trialStartDate: string | null): string => {
+  const startDate = trialStartDate ? new Date(trialStartDate) : new Date();
+  startDate.setDate(startDate.getDate() + 3); // 3-day trial period
+  return startDate.toISOString();
+};
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -54,7 +73,7 @@ serve(async (req) => {
     // Get user profile with subscription information
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('subscription_id, subscription_status, subscription_expiry, is_premium, email')
+      .select('subscription_id, subscription_status, subscription_expiry, is_premium, email, trial_started_at')
       .eq('id', userId)
       .single();
 
@@ -65,10 +84,26 @@ serve(async (req) => {
 
     console.log('Profile data:', profile);
 
+    // Check if user is in trial mode
+    const isTrial = !!profile?.trial_started_at || profile?.subscription_status === 'trialing';
+    
+    // Determine expiry date based on subscription type
+    let expiryDate;
+    if (isTrial) {
+      expiryDate = profile?.subscription_expiry || getTrialExpiryDate(profile?.trial_started_at);
+    } else if (profile?.subscription_expiry) {
+      expiryDate = profile.subscription_expiry;
+    } else {
+      // Set default expiry date (30 days from now) for regular subscriptions
+      const defaultExpiry = new Date();
+      defaultExpiry.setDate(defaultExpiry.getDate() + 30);
+      expiryDate = defaultExpiry.toISOString();
+    }
+
     // First check if subscription is expired based on the database
-    if (profile?.subscription_expiry) {
-      if (isSubscriptionExpired(profile.subscription_expiry) && profile.subscription_status !== 'trialing') {
-        console.log('Subscription has expired based on database date:', profile.subscription_expiry);
+    if (expiryDate && !isTrial) {
+      if (isSubscriptionExpired(expiryDate)) {
+        console.log('Subscription has expired based on database date:', expiryDate);
         
         // Update profile to reflect expired status
         await supabase
@@ -90,19 +125,8 @@ serve(async (req) => {
       }
     }
 
-    // Check for trial status - only if explicitly marked as trialing 
-    // or if premium is true but no subscription ID exists
-    let isTrial = profile?.subscription_status === 'trialing';
-    
-    // If user has premium status but no subscription ID, they might be in a trial
-    // but only if we're sure a trial was explicitly started
-    if (profile?.is_premium && (!profile?.subscription_id || profile.subscription_id === '')) {
-      // We assume this is a trial, but will double-check with Stripe later if possible
-      isTrial = true;
-    }
-    
     // If user has premium but no subscription ID or it's marked as a trial,
-    // return basic information but continue to check with Stripe if available
+    // return trial information with correct timing
     if (profile?.is_premium && (isTrial || !profile?.subscription_id || profile.subscription_id === '')) {
       console.log('User has premium status in trial mode or without subscription ID');
       
@@ -193,69 +217,51 @@ serve(async (req) => {
         console.error('Error checking Stripe for customer/subscription:', stripeError);
       }
       
-      // Determine expiry date and days remaining
-      let expiryDate = profile.subscription_expiry;
+      // Calculate days until expiry - for trials, this should be 3 days or less
       let daysUntil = 0;
-      
-      // If we have Stripe data, use it
-      if (stripeSubscriptionData) {
-        isTrial = stripeSubscriptionData.isTrial;
-        expiryDate = stripeSubscriptionData.currentPeriodEnd;
+      if (isTrial) {
+        // For trials, force a 3-day maximum
+        daysUntil = Math.min(3, calculateDaysUntil(expiryDate));
+        
+        // If days until is more than 3, recalculate expiry date to be 3 days from now
+        if (daysUntil > 3) {
+          const correctTrialEnd = new Date();
+          correctTrialEnd.setDate(correctTrialEnd.getDate() + 3);
+          expiryDate = correctTrialEnd.toISOString();
+          daysUntil = 3;
+        }
+      } else {
+        // For regular subscriptions, calculate normally
+        daysUntil = calculateDaysUntil(expiryDate);
       }
       
-      // If no expiry date set, default to 30 days from now for subscriptions
-      // or 3 days for trials
-      if (!expiryDate) {
-        const now = new Date();
-        if (isTrial) {
-          now.setDate(now.getDate() + 3); // 3-day trial
-        } else {
-          now.setDate(now.getDate() + 30); // 30-day subscription
-        }
-        expiryDate = now.toISOString();
+      // If days until is negative, subscription has expired - force update status
+      if (daysUntil <= 0) {
+        console.log('Subscription has expired based on days calculation');
         
-        // Update the profile with this expiry date
         await supabase
           .from('profiles')
           .update({
-            subscription_expiry: expiryDate,
+            is_premium: false,
+            subscription_status: 'inactive',
             updated_at: new Date().toISOString()
           })
           .eq('id', userId);
-      }
-      
-      // Calculate days until expiry
-      if (expiryDate) {
-        daysUntil = Math.ceil((new Date(expiryDate).getTime() - Date.now()) / (1000 * 3600 * 24));
-        
-        // If days until is negative, subscription has expired - force update status
-        if (daysUntil <= 0) {
-          console.log('Subscription has expired based on days calculation');
           
-          await supabase
-            .from('profiles')
-            .update({
-              is_premium: false,
-              subscription_status: 'inactive',
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', userId);
-            
-          return new Response(
-            JSON.stringify({ 
-              hasSubscription: false,
-              error: 'Subscription has expired'
-            }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
+        return new Response(
+          JSON.stringify({ 
+            hasSubscription: false,
+            error: 'Subscription has expired'
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
         
       return new Response(
         JSON.stringify({ 
           hasSubscription: true,
           subscriptionId: profile.subscription_id || stripeSubscriptionData?.id || 'manual_premium',
-          status: profile.subscription_status || stripeSubscriptionData?.status || 'active',
+          status: profile.subscription_status || stripeSubscriptionData?.status || (isTrial ? 'trialing' : 'active'),
           currentPeriodEnd: expiryDate,
           daysUntilRenewal: daysUntil,
           cancelAtPeriodEnd: false,

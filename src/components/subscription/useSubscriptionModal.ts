@@ -107,7 +107,7 @@ export const useSubscriptionModal = (open: boolean) => {
       console.log('[SubscriptionModal] Direct DB premium check for user:', userId);
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('is_premium, subscription_status, subscription_expiry, subscription_id')
+        .select('is_premium, subscription_status, subscription_expiry, subscription_id, trial_started_at')
         .eq('id', userId)
         .maybeSingle();
         
@@ -124,6 +124,19 @@ export const useSubscriptionModal = (open: boolean) => {
     }
   }, []);
 
+  // Helper function to calculate trial expiry date (3 days from trial start)
+  const getTrialExpiryDate = (trialStartDate: string | null) => {
+    if (!trialStartDate) {
+      const now = new Date();
+      now.setDate(now.getDate() + 3); // Default 3-day trial
+      return now.toISOString();
+    }
+    
+    const startDate = new Date(trialStartDate);
+    startDate.setDate(startDate.getDate() + 3); // 3-day trial
+    return startDate.toISOString();
+  };
+  
   // Helper function to get default expiry date (30 days from now)
   const getDefaultExpiryDate = () => {
     const expiryDate = new Date();
@@ -141,18 +154,20 @@ export const useSubscriptionModal = (open: boolean) => {
   };
   
   // Get fallback subscription data
-  const getFallbackSubscriptionData = (): SubscriptionDetails => {
-    const expiryDate = getDefaultExpiryDate();
+  const getFallbackSubscriptionData = (isTrial: boolean = false): SubscriptionDetails => {
+    const expiryDate = isTrial ? getTrialExpiryDate(null) : getDefaultExpiryDate();
+    const daysUntil = calculateDaysUntilRenewal(expiryDate);
+    
     return {
       hasSubscription: true,
       subscriptionId: 'manual_premium',
-      status: 'active',
-      plan: 'Pro',
-      daysUntilRenewal: 30,
+      status: isTrial ? 'trialing' : 'active',
+      plan: isTrial ? 'Trial' : 'Pro',
+      daysUntilRenewal: Math.max(1, daysUntil),
       currentPeriodEnd: expiryDate,
       portalUrl: null,
-      trialEnd: null,
-      isTrial: false,
+      trialEnd: isTrial ? expiryDate : null,
+      isTrial: isTrial,
       cancelAtPeriodEnd: false
     };
   };
@@ -170,7 +185,12 @@ export const useSubscriptionModal = (open: boolean) => {
         if (timeoutErrored && retryCount >= maxRetries) {
           console.log('[SubscriptionModal] Timeout reached after max retries, using fallback');
           if (isPremium) {
-            return getFallbackSubscriptionData();
+            // Check if the user is in trial mode
+            const profileData = await checkPremiumDirectly(user.id);
+            const isTrial = profileData?.trial_started_at || 
+                           profileData?.subscription_status === 'trialing';
+            
+            return getFallbackSubscriptionData(isTrial);
           }
           throw new Error('Przekroczono czas oczekiwania na dane subskrypcji');
         }
@@ -180,22 +200,33 @@ export const useSubscriptionModal = (open: boolean) => {
         
         if (profileData && profileData.is_premium === true) {
           console.log('[SubscriptionModal] Creating fallback data from profile');
+          
+          // Check if the user is in trial mode
+          const isTrial = !!profileData.trial_started_at || 
+                         profileData.subscription_status === 'trialing';
             
-          // Get expiry date from profile
-          const expiryDate = profileData.subscription_expiry || getDefaultExpiryDate();
-          const daysUntil = Math.ceil((new Date(expiryDate).getTime() - Date.now()) / (1000 * 3600 * 24));
+          // Get expiry date based on subscription type
+          let expiryDate;
+          if (isTrial) {
+            expiryDate = profileData.subscription_expiry || 
+                        getTrialExpiryDate(profileData.trial_started_at);
+          } else {
+            expiryDate = profileData.subscription_expiry || getDefaultExpiryDate();
+          }
+          
+          const daysUntil = calculateDaysUntilRenewal(expiryDate);
           
           return {
             hasSubscription: true,
             subscriptionId: profileData.subscription_id || 'manual_premium',
-            status: profileData.subscription_status || 'active',
+            status: profileData.subscription_status || (isTrial ? 'trialing' : 'active'),
             currentPeriodEnd: expiryDate,
             daysUntilRenewal: Math.max(0, daysUntil),
             cancelAtPeriodEnd: false,
-            portalUrl: profileData.subscription_id ? '/customer-portal' : null, // Add fallback portal URL
-            plan: 'Pro',
-            trialEnd: null,
-            isTrial: false
+            portalUrl: profileData.subscription_id ? '/customer-portal' : null,
+            plan: isTrial ? 'Trial' : 'Pro',
+            trialEnd: isTrial ? expiryDate : null,
+            isTrial: isTrial
           } as SubscriptionDetails;
         }
         
@@ -225,7 +256,13 @@ export const useSubscriptionModal = (open: boolean) => {
           // If timeout occurred but user has premium, use fallback data
           if (isPremium) {
             console.log('[SubscriptionModal] User has premium, using fallback data');
-            return getFallbackSubscriptionData();
+            
+            // Check if the user is in trial mode
+            const profileData = await checkPremiumDirectly(user.id);
+            const isTrial = profileData?.trial_started_at || 
+                           profileData?.subscription_status === 'trialing';
+            
+            return getFallbackSubscriptionData(isTrial);
           }
           
           throw new Error('Nie udało się pobrać danych subskrypcji');
@@ -263,6 +300,18 @@ export const useSubscriptionModal = (open: boolean) => {
           }
         }
         
+        // If the user is in trial mode, set daysUntilRenewal to 3 days or less
+        if (subscriptionData.isTrial && subscriptionData.daysUntilRenewal > 3) {
+          console.log('[SubscriptionModal] Correcting trial days calculation to max 3 days');
+          subscriptionData.daysUntilRenewal = Math.min(3, subscriptionData.daysUntilRenewal);
+          
+          // Also update the currentPeriodEnd to match 3 days from now
+          const trialEnd = new Date();
+          trialEnd.setDate(trialEnd.getDate() + subscriptionData.daysUntilRenewal);
+          subscriptionData.currentPeriodEnd = trialEnd.toISOString();
+          subscriptionData.trialEnd = trialEnd.toISOString();
+        }
+        
         return subscriptionData;
       } catch (err) {
         console.error('[SubscriptionModal] Error in subscription fetch:', err);
@@ -284,20 +333,30 @@ export const useSubscriptionModal = (open: boolean) => {
             const profile = await checkPremiumDirectly(user.id);
               
             if (profile && profile.is_premium === true) {
+              // Check if user is in trial mode
+              const isTrial = !!profile.trial_started_at || 
+                           profile.subscription_status === 'trialing';
+                           
               // Verify expiry date
-              let currentExpiryDate = profile.subscription_expiry || getDefaultExpiryDate();
-              let isTrial = profile.subscription_status === 'trialing' || 
-                         (!profile.subscription_id && profile.subscription_expiry);
+              let currentExpiryDate;
+              if (isTrial) {
+                currentExpiryDate = profile.subscription_expiry || 
+                                  getTrialExpiryDate(profile.trial_started_at);
+              } else {
+                currentExpiryDate = profile.subscription_expiry || getDefaultExpiryDate();
+              }
               
               // Calculate days until expiry
-              const daysUntil = Math.ceil((new Date(currentExpiryDate).getTime() - Date.now()) / (1000 * 3600 * 24));
+              const daysUntil = isTrial ? 
+                Math.min(3, calculateDaysUntilRenewal(currentExpiryDate)) : 
+                calculateDaysUntilRenewal(currentExpiryDate);
               
               console.log('[SubscriptionModal] Created fallback subscription from profile data');
               
               return {
                 hasSubscription: true,
                 subscriptionId: profile.subscription_id || 'manual_premium',
-                status: profile.subscription_status || 'active',
+                status: profile.subscription_status || (isTrial ? 'trialing' : 'active'),
                 currentPeriodEnd: currentExpiryDate,
                 daysUntilRenewal: Math.max(0, daysUntil),
                 cancelAtPeriodEnd: false,
@@ -311,10 +370,8 @@ export const useSubscriptionModal = (open: boolean) => {
             console.error('[SubscriptionModal] Error fetching profile details:', profileErr);
           }
           
-          // Default fallback
-          const fallback = getFallbackSubscriptionData();
-          fallback.portalUrl = '/customer-portal';
-          return fallback;
+          // If we can't determine if the user is in trial mode, use a regular premium fallback
+          return getFallbackSubscriptionData(false);
         }
         
         throw err;
@@ -440,3 +497,4 @@ export const useSubscriptionModal = (open: boolean) => {
     handleRetry
   };
 };
+

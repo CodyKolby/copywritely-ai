@@ -37,7 +37,10 @@ const PremiumSubscription: React.FC<PremiumSubscriptionProps> = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="mx-auto max-w-md rounded-xl p-6">
-        <SubscriptionModalHeader title="Twoja subskrypcja" />
+        <SubscriptionModalHeader 
+          title={isTrial ? "Twój okres próbny" : "Twoja subskrypcja"}
+          description={isTrial ? "Posiadasz aktywny okres próbny" : undefined}
+        />
         
         <Card className="border-none shadow-none">
           <CardContent className="p-4 space-y-4">

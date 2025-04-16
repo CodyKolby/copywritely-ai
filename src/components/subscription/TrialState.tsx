@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { CalendarClock, Clock } from 'lucide-react';
 import { Separator } from "@/components/ui/separator";
 import SubscriptionModalHeader from './SubscriptionModalHeader';
+import { trackEvent } from '@/lib/posthog';
 
 interface TrialStateProps {
   open: boolean;
@@ -31,6 +32,11 @@ const TrialState: React.FC<TrialStateProps> = ({
     if (days === 1) return 'dzień';
     if (days % 10 >= 2 && days % 10 <= 4 && (days % 100 < 10 || days % 100 >= 20)) return 'dni';
     return 'dni';
+  };
+
+  const handleBuySubscription = () => {
+    trackEvent('trial_upgrade_clicked');
+    window.location.href = '/pricing';
   };
 
   return (
@@ -72,7 +78,7 @@ const TrialState: React.FC<TrialStateProps> = ({
             
             <div className="flex justify-center">
               <Button 
-                onClick={() => window.location.href = '/pricing'} 
+                onClick={handleBuySubscription} 
                 className="flex items-center gap-2 rounded-lg px-6" 
                 variant="default"
               >
