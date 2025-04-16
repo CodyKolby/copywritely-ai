@@ -23,18 +23,27 @@ const GoalDialog = ({
     onOpenChange(false);
   };
 
+  // Create a submission handler that wraps onSubmit
+  const handleSubmit = (goal: string) => {
+    console.log("GoalDialog - submitting goal:", goal);
+    // Call the provided onSubmit function
+    onSubmit(goal);
+  };
+
   return (
     <Dialog 
       open={open} 
       onOpenChange={onOpenChange}
     >
       <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
-        <AdvertisingGoalDialog 
-          onSubmit={onSubmit}
-          onBack={onBack}
-          onCancel={handleCancel}
-          isProcessing={isProcessing}
-        />
+        {open && (
+          <AdvertisingGoalDialog 
+            onSubmit={handleSubmit}
+            onBack={onBack}
+            onCancel={handleCancel}
+            isProcessing={isProcessing}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );

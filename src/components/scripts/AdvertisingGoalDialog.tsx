@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
@@ -23,6 +23,8 @@ const formSchema = z.object({
 });
 
 const AdvertisingGoalDialog = ({ onSubmit, onBack, onCancel, isProcessing }: AdvertisingGoalDialogProps) => {
+  const [submitting, setSubmitting] = useState(false);
+  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -32,35 +34,41 @@ const AdvertisingGoalDialog = ({ onSubmit, onBack, onCancel, isProcessing }: Adv
 
   // Reset form state when dialog's processing state changes from true to false
   useEffect(() => {
-    if (!isProcessing) {
-      form.reset(form.getValues());
+    if (!isProcessing && submitting) {
+      setSubmitting(false);
     }
-  }, [isProcessing, form]);
+  }, [isProcessing, submitting]);
 
   const handleSubmit = (values: z.infer<typeof formSchema>) => {
-    if (!isProcessing) {
-      onSubmit(values.advertisingGoal);
+    if (isProcessing || submitting) {
+      return;
     }
+    
+    setSubmitting(true);
+    console.log("Submitting goal:", values.advertisingGoal);
+    onSubmit(values.advertisingGoal);
   };
 
   // Handle button clicks with debouncing to prevent double-clicks
   // and immediate state change to prevent UI flicker
   const handleBackClick = () => {
-    if (!isProcessing) {
-      // Reset the form before navigation
-      form.reset();
-      // Call the back handler
-      onBack();
+    if (isProcessing || submitting) {
+      return;
     }
+    // Reset the form before navigation
+    form.reset();
+    // Call the back handler
+    onBack();
   };
 
   const handleCancelClick = () => {
-    if (!isProcessing) {
-      // Reset the form before navigation
-      form.reset();
-      // Call the cancel handler
-      onCancel();
+    if (isProcessing || submitting) {
+      return;
     }
+    // Reset the form before navigation
+    form.reset();
+    // Call the cancel handler
+    onCancel();
   };
 
   return (
@@ -89,7 +97,7 @@ const AdvertisingGoalDialog = ({ onSubmit, onBack, onCancel, isProcessing }: Adv
                   <Textarea
                     placeholder="Klient ma wejść na stronę przypiętą do reklamy a następnie umówić się na rozmowę"
                     className="min-h-[150px] resize-none"
-                    disabled={isProcessing}
+                    disabled={isProcessing || submitting}
                     {...field}
                   />
                 </FormControl>
@@ -104,7 +112,7 @@ const AdvertisingGoalDialog = ({ onSubmit, onBack, onCancel, isProcessing }: Adv
                 type="button" 
                 variant="outline" 
                 onClick={handleCancelClick} 
-                disabled={isProcessing}
+                disabled={isProcessing || submitting}
               >
                 Anuluj
               </Button>
@@ -112,7 +120,7 @@ const AdvertisingGoalDialog = ({ onSubmit, onBack, onCancel, isProcessing }: Adv
                 type="button" 
                 variant="outline" 
                 onClick={handleBackClick} 
-                disabled={isProcessing}
+                disabled={isProcessing || submitting}
               >
                 Wstecz
               </Button>
@@ -120,9 +128,9 @@ const AdvertisingGoalDialog = ({ onSubmit, onBack, onCancel, isProcessing }: Adv
             <Button 
               type="submit" 
               className="bg-copywrite-teal hover:bg-copywrite-teal-dark text-white"
-              disabled={isProcessing}
+              disabled={isProcessing || submitting}
             >
-              {isProcessing ? (
+              {isProcessing || submitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Przetwarzanie...

@@ -194,10 +194,10 @@ const DialogManager = ({
     }
   };
 
-  // Hide the audience dialog when script/email dialog is shown
+  // Fix the issue - Hide the audience dialog only when result dialogs are shown, not for intermediate steps
   const shouldShowAudienceDialog = open && !showScriptDialog && !showEmailDialog && !showSocialDialog;
   
-  // Using explicit mutual exclusion for each dialog to prevent flickering
+  // Using explicit mutual exclusion for each dialog to prevent flickering and ensure correct flow
   const showMainDialog = shouldShowAudienceDialog && !showForm && !showGoalDialog && 
                          !showEmailStyleDialog && !showSocialMediaPlatformDialog;
   
