@@ -5,16 +5,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { updateLocalStoragePremium } from '@/lib/stripe/localStorage-utils';
 import { User } from '@supabase/supabase-js';
 
-/**
- * Handle state and timers for success page
- */
 export const useSuccessPageState = (
   user: User | null,
   isPremium: boolean,
   sessionId: string | null,
   refreshSession: () => Promise<boolean>
 ) => {
-  // State
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [verificationSuccess, setVerificationSuccess] = useState(false);
@@ -23,10 +19,8 @@ export const useSuccessPageState = (
   const [processAttempts, setProcessAttempts] = useState(0);
   const [forceRedirect, setForceRedirect] = useState(false);
   
-  // Get verification utilities
   const { verifyPaymentSuccess, updateProfileDirectly } = useSuccessStatusVerification();
   
-  // Start wait timer
   useEffect(() => {
     const timer = setInterval(() => {
       setWaitTime(prev => prev + 1);
@@ -35,46 +29,37 @@ export const useSuccessPageState = (
     return () => clearInterval(timer);
   }, []);
   
-  // Auto redirect after success with shorter timeout
   useEffect(() => {
     if ((verificationSuccess || isPremium) && redirectTimer < 2) {
       const timer = setTimeout(() => {
         setRedirectTimer(prev => prev + 1);
-      }, 800); // Faster redirection
+      }, 800);
       
       return () => clearTimeout(timer);
     } else if ((verificationSuccess || isPremium) && redirectTimer >= 2) {
       console.log("[SUCCESS-PAGE] Redirecting to /projekty after success");
-      // Use window.location for a full page refresh to ensure auth state is updated
       window.location.href = '/projekty';
     }
   }, [verificationSuccess, redirectTimer, isPremium]);
   
-  // Force redirect after 10 seconds regardless of verification
   useEffect(() => {
     if (waitTime >= 10 && !forceRedirect) {
       console.log("[SUCCESS-PAGE] Force redirecting after 10 seconds regardless of status");
       setForceRedirect(true);
       
-      // Store session information to indicate payment was processed
       sessionStorage.setItem('paymentProcessed', 'true');
-      
-      // Set premium in local storage as a backup mechanism
       updateLocalStoragePremium(true);
       
-      // Force one more direct update to DB
       if (user?.id) {
         updateProfileDirectly(user.id)
           .then(() => {
             console.log("[SUCCESS-PAGE] Final DB update before redirect");
             
-            // Redirect to projects page after one final attempt
             setTimeout(() => {
               window.location.href = '/projekty';
             }, 500);
           });
       } else {
-        // No user, just redirect
         setTimeout(() => {
           window.location.href = '/projekty';
         }, 500);
@@ -82,7 +67,6 @@ export const useSuccessPageState = (
     }
   }, [waitTime, user, forceRedirect, updateProfileDirectly]);
   
-  // Handle manual completion (used in timeout and retry)
   const handleManualCompletion = useCallback(async () => {
     if (!user?.id || !sessionId) {
       console.error("[SUCCESS-PAGE] Cannot complete verification - missing user or sessionId");
@@ -105,7 +89,6 @@ export const useSuccessPageState = (
     } catch (error) {
       console.error("[SUCCESS-PAGE] Error in manual completion:", error);
       
-      // Final emergency attempt
       try {
         console.log("[SUCCESS-PAGE] Attempting emergency direct update");
         
@@ -131,7 +114,6 @@ export const useSuccessPageState = (
     }
   }, [user, sessionId, refreshSession, verifyPaymentSuccess, updateProfileDirectly]);
   
-  // Handle manual retry
   const handleManualRetry = useCallback(() => {
     setError(null);
     setLoading(true);

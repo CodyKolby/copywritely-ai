@@ -2,22 +2,14 @@
 import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { forceUpdatePremiumStatus } from '@/lib/stripe/verification';
-import { toast } from 'sonner';
 import { updateLocalStoragePremium } from '@/lib/stripe/localStorage-utils';
 import { User } from '@supabase/supabase-js';
 
-/**
- * Handle direct database updates for premium status
- */
 export const useSuccessStatusVerification = () => {
-  /**
-   * Update profile directly in database
-   */
   const updateProfileDirectly = useCallback(async (userId: string): Promise<boolean> => {
     try {
       console.log("[SUCCESS-VERIFY] Attempting direct profile update for user:", userId);
       
-      // Set expiry date to 30 days from now
       const expiryDate = new Date();
       expiryDate.setDate(expiryDate.getDate() + 30);
       
@@ -45,9 +37,6 @@ export const useSuccessStatusVerification = () => {
     }
   }, []);
 
-  /**
-   * Add payment to logs if it doesn't exist
-   */
   const addPaymentLog = useCallback(async (userId: string, sessionId: string): Promise<boolean> => {
     try {
       const { data: existingLog } = await supabase
@@ -81,9 +70,6 @@ export const useSuccessStatusVerification = () => {
     }
   }, []);
 
-  /**
-   * Perform complete verification process
-   */
   const verifyPaymentSuccess = useCallback(async (
     user: User | null,
     sessionId: string | null,
@@ -97,7 +83,6 @@ export const useSuccessStatusVerification = () => {
     try {
       console.log("[SUCCESS-VERIFY] Payment verification initiated for user:", user.id);
       
-      // STEP 1: Verify through edge function
       try {
         console.log("[SUCCESS-VERIFY] Calling verify-payment-session edge function");
         
@@ -117,19 +102,12 @@ export const useSuccessStatusVerification = () => {
         console.error("[SUCCESS-VERIFY] Edge function exception:", edgeFnError);
       }
       
-      // STEP 2: Direct update as backup
       await updateProfileDirectly(user.id);
-      
-      // STEP 3: Force update premium status with session ID
       await forceUpdatePremiumStatus(user.id, sessionId);
-      
-      // STEP 4: Add to payment logs
       await addPaymentLog(user.id, sessionId);
       
-      // STEP 5: Refresh session to update auth context
       await refreshSession();
       
-      // STEP 6: Check result after all updates
       const { data: profile } = await supabase
         .from('profiles')
         .select('is_premium, subscription_status, subscription_id, subscription_expiry')
@@ -138,34 +116,20 @@ export const useSuccessStatusVerification = () => {
       
       console.log("[SUCCESS-VERIFY] Profile after updates:", profile);
       
-      // STEP 7: Mark as processed in session storage
       sessionStorage.setItem('paymentProcessed', 'true');
-      
-      // Also store in localStorage as backup
       updateLocalStoragePremium(true);
-      
-      // Success toast
-      toast.success('Gratulacje! Twoje konto zostało zaktualizowane do wersji Premium.', {
-        dismissible: true
-      });
       
       return true;
     } catch (error) {
       console.error("[SUCCESS-VERIFY] Payment verification process error:", error);
       
-      // Final emergency attempt
       try {
         console.log("[SUCCESS-VERIFY] Attempting emergency direct update");
         const success = await updateProfileDirectly(user.id);
         
         if (success) {
-          // Mark as processed
           sessionStorage.setItem('paymentProcessed', 'true');
           updateLocalStoragePremium(true);
-          
-          toast.success('Twoje konto zostało zaktualizowane do wersji Premium!', {
-            dismissible: true
-          });
           
           return true;
         }
