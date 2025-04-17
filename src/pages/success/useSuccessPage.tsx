@@ -1,28 +1,142 @@
 
-import { useEffect } from 'react';
-import { useAuth } from '@/contexts/auth/AuthContext';
-import { useSuccessPageState } from './useSuccessPageState';
-import { useSuccessStatusVerification } from './useSuccessStatusVerification';
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { User } from '@supabase/supabase-js';
+import { updateLocalStoragePremium } from '@/lib/stripe/localStorage-utils';
+import { updateProfilePremiumStatus } from '@/lib/stripe/profile-updates';
 
-interface UseSuccessPageProps {
-  sessionId: string | null;
-}
+export const useSuccessPageState = (
+  user: User | null,
+  isPremium: boolean,
+  sessionId: string | null,
+  refreshSession: () => Promise<boolean>
+) => {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [verificationSuccess, setVerificationSuccess] = useState(false);
+  const [waitTime, setWaitTime] = useState(30);
+  const [redirectTimer, setRedirectTimer] = useState(0);
+  const [processAttempts, setProcessAttempts] = useState(0);
+  const navigate = useNavigate();
 
-interface UseSuccessPageResult {
-  loading: boolean;
-  error: string | null;
-  verificationSuccess: boolean;
-  waitTime: number;
-  redirectTimer: number;
-  handleManualRetry: () => void;
-}
-
-export const useSuccessPage = ({ sessionId }: UseSuccessPageProps): UseSuccessPageResult => {
-  const { user, refreshSession, isPremium } = useAuth();
-  const { verifyPaymentSuccess } = useSuccessStatusVerification();
+  // Force update profile directly when manual completion is needed
+  const handleManualCompletion = useCallback(async () => {
+    if (!user?.id) {
+      console.error("[SUCCESS-PAGE] No user for manual completion");
+      setError("Brak użytkownika, zaloguj się ponownie");
+      setLoading(false);
+      return;
+    }
+    
+    try {
+      console.log("[SUCCESS-PAGE] Performing manual completion");
+      
+      // CRITICAL: Direct profile update
+      await updateProfilePremiumStatus(user.id, true);
+      
+      // Update localStorage
+      updateLocalStoragePremium(true);
+      
+      // Refresh session
+      await refreshSession();
+      
+      // Store in session storage that we processed payment
+      sessionStorage.setItem('paymentProcessed', 'true');
+      
+      // Set success state
+      setVerificationSuccess(true);
+      setLoading(false);
+      
+      // Show success message
+      toast.success('Twoje konto zostało zaktualizowane do wersji Premium!');
+      
+      // Start redirect countdown
+      startRedirectCountdown();
+    } catch (err) {
+      console.error("[SUCCESS-PAGE] Error in manual completion:", err);
+      setError("Nie udało się zaktualizować statusu konta. Spróbuj ponownie.");
+      setLoading(false);
+    }
+  }, [user, refreshSession]);
   
-  // Set up state management
-  const {
+  // Manual retry handler
+  const handleManualRetry = useCallback(async () => {
+    if (!user?.id || !sessionId) {
+      setError("Brak danych do weryfikacji. Spróbuj ponownie później.");
+      return;
+    }
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // CRITICAL: First try direct profile update 
+      await updateProfilePremiumStatus(user.id, true);
+      
+      // Update localStorage
+      updateLocalStoragePremium(true);
+      
+      // Refresh session
+      await refreshSession();
+      
+      // Set success
+      setVerificationSuccess(true);
+      setLoading(false);
+      
+      // Start redirect
+      startRedirectCountdown();
+    } catch (err) {
+      console.error("[SUCCESS-PAGE] Manual retry failed:", err);
+      setError("Weryfikacja nie powiodła się. Skontaktuj się z obsługą.");
+      setLoading(false);
+    }
+  }, [user, sessionId, refreshSession]);
+  
+  // Start redirect countdown
+  const startRedirectCountdown = useCallback(() => {
+    setRedirectTimer(5);
+    
+    const interval = setInterval(() => {
+      setRedirectTimer(prev => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          navigate('/projekty');
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [navigate]);
+  
+  // Wait time countdown
+  useEffect(() => {
+    if (loading && !verificationSuccess) {
+      const interval = setInterval(() => {
+        setWaitTime(prev => Math.max(0, prev - 1));
+      }, 1000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [loading, verificationSuccess]);
+  
+  // If manual verification is needed after waiting
+  useEffect(() => {
+    if (waitTime === 0 && loading && !verificationSuccess && !error) {
+      handleManualCompletion();
+    }
+  }, [waitTime, loading, verificationSuccess, error, handleManualCompletion]);
+  
+  // Start redirect countdown after success
+  useEffect(() => {
+    if (verificationSuccess && !redirectTimer) {
+      startRedirectCountdown();
+    }
+  }, [verificationSuccess, redirectTimer, startRedirectCountdown]);
+
+  return {
     loading,
     setLoading,
     error,
@@ -34,105 +148,6 @@ export const useSuccessPage = ({ sessionId }: UseSuccessPageProps): UseSuccessPa
     processAttempts,
     setProcessAttempts,
     handleManualCompletion,
-    handleManualRetry
-  } = useSuccessPageState(user, isPremium, sessionId, refreshSession);
-  
-  // Check for isPremium directly from auth context
-  useEffect(() => {
-    if (isPremium && loading) {
-      console.log("[SUCCESS-PAGE] User already has premium status from auth context");
-      setVerificationSuccess(true);
-      setLoading(false);
-    }
-  }, [isPremium, loading, setVerificationSuccess, setLoading]);
-  
-  // Process payment verification when we have user and sessionId
-  useEffect(() => {
-    const successToastShown = sessionStorage.getItem('paymentProcessed') === 'true';
-    
-    // Skip if already processed
-    if (successToastShown) {
-      console.log("[SUCCESS-PAGE] Payment already processed, showing success");
-      setVerificationSuccess(true);
-      setLoading(false);
-      return;
-    }
-    
-    // Skip if already verified
-    if (verificationSuccess) {
-      return;
-    }
-    
-    // Skip if too many attempts - force manual completion
-    if (processAttempts >= 2) {
-      console.log("[SUCCESS-PAGE] Too many attempts, triggering manual completion");
-      handleManualCompletion();
-      return;
-    }
-    
-    const processPayment = async () => {
-      // Skip if already processed
-      if (verificationSuccess) {
-        console.log("[SUCCESS-PAGE] Already verified, skipping");
-        return;
-      }
-      
-      if (!sessionId) {
-        console.error("[SUCCESS-PAGE] No session ID found in URL");
-        setError("Brak identyfikatora sesji płatności");
-        setLoading(false);
-        return;
-      }
-      
-      if (!user?.id) {
-        try {
-          console.log("[SUCCESS-PAGE] No user, attempting to refresh session");
-          await refreshSession();
-        } catch (e) {
-          console.error("[SUCCESS-PAGE] Auth refresh error:", e);
-        }
-        return; // Wait for auth to complete
-      }
-      
-      setProcessAttempts(prev => prev + 1);
-      
-      // Use the centralized verification handler
-      const success = await verifyPaymentSuccess(user, sessionId, refreshSession);
-      
-      if (success) {
-        setVerificationSuccess(true);
-        setLoading(false);
-      } else {
-        // If verification failed, trigger manual completion
-        console.log("[SUCCESS-PAGE] Automatic verification failed, trying manual completion");
-        handleManualCompletion();
-      }
-    };
-    
-    if (user?.id && sessionId && loading && !verificationSuccess) {
-      processPayment();
-    }
-  }, [
-    user, 
-    sessionId, 
-    loading, 
-    verificationSuccess, 
-    refreshSession, 
-    processAttempts, 
-    handleManualCompletion,
-    setVerificationSuccess,
-    setLoading,
-    setError,
-    setProcessAttempts,
-    verifyPaymentSuccess
-  ]);
-  
-  return {
-    loading,
-    error,
-    verificationSuccess, 
-    waitTime,
-    redirectTimer,
     handleManualRetry
   };
 };

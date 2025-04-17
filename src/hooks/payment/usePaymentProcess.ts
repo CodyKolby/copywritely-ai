@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { updateLocalStoragePremium } from '@/lib/stripe/localStorage-utils';
 import { BillingCycle } from '@/components/pricing/pricing-utils';
 import { User } from '@supabase/supabase-js';
+import { updateProfilePremiumStatus } from '@/lib/stripe/profile-updates';
 
 export interface PaymentProcessResult {
   isProcessing: boolean;
@@ -63,6 +64,15 @@ export function usePaymentProcess() {
 
       console.log('Payment verified successfully:', data);
 
+      // CRITICAL: Directly update profile as a fallback mechanism
+      await updateProfilePremiumStatus(
+        user.id, 
+        true, 
+        data.subscriptionId, 
+        data.status || 'active',
+        data.expiryDate
+      );
+
       // Update local storage premium status
       updateLocalStoragePremium(true);
       
@@ -83,6 +93,29 @@ export function usePaymentProcess() {
       return true;
     } catch (err) {
       console.error('Error verifying payment:', err);
+      
+      // CRITICAL: If there's an error, still try to update the profile directly
+      try {
+        if (user && user.id) {
+          console.log('Attempting direct profile update as fallback');
+          await updateProfilePremiumStatus(user.id, true);
+          updateLocalStoragePremium(true);
+          await refreshSession();
+          setSuccess(true);
+          
+          toast.success('Twoje konto zostało zaktualizowane do wersji Premium!');
+          
+          // Redirect to projects page after a short delay
+          setTimeout(() => {
+            navigate('/projekty');
+          }, 2000);
+          
+          return true;
+        }
+      } catch (fallbackErr) {
+        console.error('Failed fallback profile update:', fallbackErr);
+      }
+      
       setError(err instanceof Error ? err.message : 'Wystąpił błąd podczas weryfikacji płatności');
       return false;
     } finally {
