@@ -136,10 +136,39 @@ export function createDatabaseOperations(): DatabaseOperations {
     }
   };
 
+  const findProfileBySubscriptionId = async (subscriptionId: string) => {
+    console.log(`Finding profile for subscription: ${subscriptionId}`);
+    
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, email, is_premium, subscription_status')
+        .eq('subscription_id', subscriptionId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error finding profile by subscription ID:', error);
+        throw error;
+      }
+      
+      if (data) {
+        console.log(`Found profile for subscription ${subscriptionId}: user ${data.id}`);
+      } else {
+        console.log(`No profile found for subscription ${subscriptionId}`);
+      }
+
+      return { data, error };
+    } catch (e) {
+      console.error('Exception finding profile by subscription ID:', e);
+      throw e;
+    }
+  };
+
   return {
     logPayment,
     updateProfile,
     findUserByEmail,
-    storeUnprocessedPayment
+    storeUnprocessedPayment,
+    findProfileBySubscriptionId
   };
 }

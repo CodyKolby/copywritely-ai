@@ -1,110 +1,171 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.5.0";
-import { corsHeaders } from "../shared/cors.ts";
+import Stripe from "https://esm.sh/stripe@12.1.1";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
+import { updatePremiumStatus } from "./profile.ts";
+import { checkPaymentLogs } from "./payment-logs.ts";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
 
 serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+  // Handle OPTIONS request
+  if (req.method === "OPTIONS") {
+    return new Response(null, {
+      status: 204,
+      headers: corsHeaders,
+    });
   }
 
+  // Set up Supabase client
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+  if (!supabaseUrl || !supabaseKey) {
+    return new Response(
+      JSON.stringify({ error: "Missing Supabase environment variables" }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
   try {
-    // Get user ID from request
-    const requestData = await req.json();
-    const userId = requestData.userId;
+    // Parse request body
+    const { userId } = await req.json();
 
     if (!userId) {
-      console.error('Missing userId parameter in request');
-      throw new Error('Missing userId parameter');
+      return new Response(
+        JSON.stringify({ error: "Missing user ID in request body" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
-    console.log(`Checking subscription status for user: ${userId}`);
+    console.log(`[CHECK-SUB] Checking subscription for user: ${userId}`);
 
-    // Create Supabase client with Service Role Key for admin operations
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') || '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
-    );
-
-    // First check if user exists in auth system
-    const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
-    if (userError || !userData?.user) {
-      console.warn('Error verifying user:', userError?.message || 'User not found');
-    }
-
-    // Check if the user has a profile
+    // Get the user's profile
     const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('is_premium, subscription_expiry, subscription_status, subscription_id')
-      .eq('id', userId)
-      .maybeSingle();
+      .from("profiles")
+      .select("id, email, is_premium, subscription_id, subscription_status, subscription_expiry")
+      .eq("id", userId)
+      .single();
 
     if (profileError) {
-      console.error('Error retrieving profile:', profileError.message);
-    }
-
-    if (!profile) {
-      console.log('No profile found, user has no premium status');
+      console.error("[CHECK-SUB] Error fetching user profile:", profileError);
       return new Response(
-        JSON.stringify({ isPremium: false }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log('Profile found:', profile);
-
-    // Check if subscription is explicitly marked as premium
-    if (profile.is_premium) {
-      // Check if there's an expiry date
-      if (profile.subscription_expiry) {
-        const expiryDate = new Date(profile.subscription_expiry);
-        const now = new Date();
-
-        if (expiryDate < now) {
-          console.log('Subscription has expired on:', profile.subscription_expiry);
-          
-          // Update database to reflect expired status
-          await supabase
-            .from('profiles')
-            .update({
-              is_premium: false,
-              subscription_status: 'expired',
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', userId);
-            
-          return new Response(
-            JSON.stringify({ isPremium: false }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+        JSON.stringify({ error: "Error fetching user profile", details: profileError.message }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
-      }
-      
-      console.log('User has valid premium status');
-      return new Response(
-        JSON.stringify({ isPremium: true }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // User does not have premium status
-    console.log('User does not have premium status');
-    return new Response(
-      JSON.stringify({ isPremium: false }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  } catch (error) {
-    console.error('Error checking subscription status:', error);
+    // Check for existing subscription ID first
+    if (profile?.subscription_id) {
+      console.log(`[CHECK-SUB] User has subscription ID: ${profile.subscription_id}`);
+      
+      try {
+        const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+        if (!stripeKey) {
+          throw new Error("Missing Stripe secret key");
+        }
+        
+        const stripe = new Stripe(stripeKey, {
+          apiVersion: "2023-10-16",
+        });
+
+        // Verify the subscription status in Stripe
+        const subscription = await stripe.subscriptions.retrieve(profile.subscription_id);
+        console.log(`[CHECK-SUB] Retrieved subscription from Stripe: status=${subscription.status}`);
+        
+        const isActive = subscription.status === "active" || subscription.status === "trialing";
+        
+        // Calculate expiry date
+        let expiryDate = null;
+        if (subscription.current_period_end) {
+          expiryDate = new Date(subscription.current_period_end * 1000).toISOString();
+        }
+        
+        // Update the user's profile if needed
+        if (isActive !== profile.is_premium || profile.subscription_status !== subscription.status) {
+          console.log(`[CHECK-SUB] Updating profile: isPremium=${isActive}, status=${subscription.status}`);
+          
+          await updatePremiumStatus(
+            supabase, 
+            userId, 
+            isActive, 
+            subscription.status,
+            expiryDate
+          );
+        } else {
+          console.log("[CHECK-SUB] No profile update needed, status unchanged");
+        }
+        
+        return new Response(
+          JSON.stringify({
+            isPremium: isActive,
+            subscriptionStatus: subscription.status,
+            subscriptionExpiry: expiryDate
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      } catch (stripeError) {
+        console.error("[CHECK-SUB] Error verifying subscription with Stripe:", stripeError);
+        
+        // The subscription ID might be invalid or deleted in Stripe
+        // Fall back to payment logs check
+        console.log("[CHECK-SUB] Falling back to payment logs check");
+      }
+    }
+
+    // Fall back to checking payment logs
+    const logCheck = await checkPaymentLogs(supabase, userId);
     
+    if (logCheck) {
+      return new Response(
+        JSON.stringify({
+          isPremium: true,
+          message: "Premium status verified through payment logs",
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // If we get here, no active subscription was found
     return new Response(
-      JSON.stringify({ 
-        error: error.message || 'Error checking subscription status',
-        isPremium: false
+      JSON.stringify({
+        isPremium: false,
+        message: "No active subscription found",
       }),
-      { 
-        status: 400, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
+
+  } catch (error) {
+    console.error("[CHECK-SUB] Error:", error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
   }

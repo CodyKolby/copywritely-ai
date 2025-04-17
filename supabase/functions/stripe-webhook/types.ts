@@ -35,4 +35,13 @@ export interface DatabaseOperations {
   }) => Promise<void>;
   findUserByEmail: (email: string) => Promise<{ id: string } | null>;
   storeUnprocessedPayment: (sessionId: string, sessionData: any) => Promise<void>;
+  findProfileBySubscriptionId: (subscriptionId: string) => Promise<{ 
+    data?: {
+      id: string;
+      email?: string;
+      is_premium?: boolean;
+      subscription_status?: string;
+    };
+    error?: any;
+  }>;
 }

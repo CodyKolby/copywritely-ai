@@ -63,10 +63,24 @@ serve(async (req) => {
         break;
       }
       
+      // Handle all subscription-related events
       case 'customer.subscription.created':
       case 'customer.subscription.updated':
-      case 'customer.subscription.deleted': {
+      case 'customer.subscription.deleted':
+      case 'customer.subscription.paused':
+      case 'customer.subscription.resumed':
+      case 'customer.subscription.pending_update_applied':
+      case 'customer.subscription.pending_update_expired':
+      case 'customer.subscription.trial_will_end': {
         await handleSubscriptionEvent(event, stripe, db);
+        break;
+      }
+      
+      // Handle invoice events that affect subscription status
+      case 'invoice.paid':
+      case 'invoice.payment_failed':
+      case 'invoice.payment_action_required': {
+        await handleInvoiceEvent(event, stripe, db);
         break;
       }
       
@@ -104,3 +118,45 @@ serve(async (req) => {
   }
 });
 
+async function handleInvoiceEvent(event: any, stripe: any, db: any) {
+  try {
+    console.log(`Processing invoice event: ${event.type}`);
+    const invoice = event.data.object;
+    const subscriptionId = invoice.subscription;
+    
+    if (!subscriptionId) {
+      console.log('No subscription ID in invoice, skipping');
+      return;
+    }
+    
+    // Get the subscription to update the user profile
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    
+    // Find the profile by subscription ID
+    const { data: profile } = await db.findProfileBySubscriptionId(subscriptionId);
+    
+    if (!profile) {
+      console.log(`No profile found for subscription ${subscriptionId}`);
+      return;
+    }
+    
+    const userId = profile.id;
+    const isPremium = subscription.status === 'active' || subscription.status === 'trialing';
+    const expiryDate = subscription.current_period_end 
+      ? new Date(subscription.current_period_end * 1000).toISOString()
+      : null;
+      
+    console.log(`Updating profile ${userId} based on invoice event. isPremium=${isPremium}, status=${subscription.status}`);
+    
+    await db.updateProfile(userId, {
+      is_premium: isPremium,
+      subscription_status: subscription.status,
+      subscription_expiry: expiryDate,
+      updated_at: new Date().toISOString()
+    });
+    
+    console.log(`Profile updated successfully for invoice event`);
+  } catch (error) {
+    console.error('Error processing invoice event:', error);
+  }
+}

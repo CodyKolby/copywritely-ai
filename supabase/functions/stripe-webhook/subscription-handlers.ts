@@ -1,3 +1,4 @@
+
 import { DatabaseOperations } from './types.ts';
 import Stripe from 'https://esm.sh/stripe@12.1.1';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7';
@@ -38,6 +39,7 @@ export async function handleSubscriptionEvent(
     ? new Date(subscription.current_period_end * 1000).toISOString()
     : null;
 
+  // Handle subscription deletion and cancellation
   if (event.type === 'customer.subscription.deleted') {
     console.log('Handling subscription deletion with details:', {
       status: subscription.status,
@@ -54,6 +56,7 @@ export async function handleSubscriptionEvent(
     return;
   }
 
+  // Find profile by subscription ID
   const { data: profile } = await findProfileBySubscriptionId(subscription.id, db);
   
   if (!profile) {
@@ -61,13 +64,19 @@ export async function handleSubscriptionEvent(
     return;
   }
 
+  // Determine premium status based on subscription status
   const isActive = subscription.status === 'active' || subscription.status === 'trialing';
+  
+  console.log(`Updating profile for subscription ${subscription.id}, status=${subscription.status}, isActive=${isActive}`);
+  
   await db.updateProfile(profile.id, {
     is_premium: isActive,
     subscription_status: subscription.status,
     subscription_expiry: expiryDate,
     updated_at: new Date().toISOString()
   });
+  
+  console.log(`Profile updated successfully for subscription event`);
 }
 
 async function handlePaidSessionWithUserId(
@@ -152,6 +161,7 @@ async function handleSubscriptionWithoutProfile(
         ? subscription.customer 
         : subscription.customer.id;
       
+      // Try to find profile using payment logs
       const { data: logs } = await supabase
         .from('payment_logs')
         .select('user_id, customer_email')
@@ -174,6 +184,27 @@ async function handleSubscriptionWithoutProfile(
         console.log(`Updated profile for user ${userId} with subscription ${subscription.id}`);
         return;
       }
+      
+      // Try to find by customer email if available
+      if (subscription.metadata?.email) {
+        const { data: userByEmail } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', subscription.metadata.email)
+          .maybeSingle();
+          
+        if (userByEmail) {
+          console.log(`Found profile by email ${subscription.metadata.email}`);
+          await db.updateProfile(userByEmail.id, {
+            is_premium: subscription.status === 'active' || subscription.status === 'trialing',
+            subscription_id: subscription.id,
+            subscription_status: subscription.status,
+            subscription_expiry: expiryDate || undefined,
+            updated_at: new Date().toISOString()
+          });
+          return;
+        }
+      }
     }
     
     console.log(`Could not find profile for subscription ${subscription.id} on ${eventType} event`);
@@ -182,7 +213,7 @@ async function handleSubscriptionWithoutProfile(
   }
 }
 
-async function findProfileBySubscriptionId(subscriptionId: string, db: DatabaseOperations) {
+export async function findProfileBySubscriptionId(subscriptionId: string, db: DatabaseOperations) {
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL') || '',
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
@@ -244,8 +275,6 @@ async function updateUserProfile(
     trial_started_at: null,
     updated_at: new Date().toISOString()
   };
-  
-  console.log('Profile update data:', updateData);
   
   try {
     await db.updateProfile(userId, updateData);
