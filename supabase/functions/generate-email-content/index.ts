@@ -32,40 +32,6 @@ Na podstawie dostarczonych danych o grupie docelowej i blueprintu narracyjnego, 
 
 Buduj narrację opartą na wartości i korzyściach. Unikaj agresywnego tonu, skup się na pozytywnych emocjach i spełnieniu potrzeb odbiorcy.`;
 
-const AIDA_AGENT_PROMPT = `Jesteś profesjonalnym polskim copywriterem, który specjalizuje się w tworzeniu treści marketingowych w strukturze Attention-Interest-Desire-Action (AIDA). Twój styl jest dynamiczny, wciągający i zorientowany na akcję.
-
-Na podstawie dostarczonych danych o grupie docelowej i blueprintu narracyjnego, stwórz email w strukturze:
-
-1. UWAGA - przyciągnij uwagę silnym, emocjonalnym otwarciem
-2. ZAINTERESOWANIE - przedstaw szczegóły, które zbudują zainteresowanie
-3. PRAGNIENIE - wzbudź pragnienie posiadania produktu/usługi
-4. DZIAŁANIE - jasne wezwanie do działania
-
-Stawiasz na dynamikę i progresję emocji. Prowadzisz odbiorcę od pierwszego zainteresowania do gotowości podjęcia działania.`;
-
-const BAB_AGENT_PROMPT = `Jesteś profesjonalnym polskim copywriterem, który specjalizuje się w tworzeniu treści marketingowych w strukturze Before-After-Bridge (BAB). Twój styl jest obrazowy, transformacyjny i zorientowany na zmianę.
-
-Na podstawie dostarczonych danych o grupie docelowej i blueprintu narracyjnego, stwórz email w strukturze:
-
-1. BEFORE - opisz obecną, problematyczną sytuację odbiorcy
-2. AFTER - namaluj obraz pożądanej, idealnej sytuacji po zmianie
-3. BRIDGE - pokaż, jak Twoja oferta pomoże przejść od "przed" do "po"
-
-Koncentrujesz się na kontraście między obecną rzeczywistością a możliwą przyszłością. Budujesz napięcie, a następnie oferujesz rozwiązanie jako most prowadzący do lepszej przyszłości.`;
-
-const STORY_AGENT_PROMPT = `Jesteś profesjonalnym polskim copywriterem, który specjalizuje się w tworzeniu treści marketingowych w formie angażującej opowieści. Twój styl jest osobisty, emocjonalny i relacyjny.
-
-Na podstawie dostarczonych danych o grupie docelowej i blueprintu narracyjnego, stwórz email w strukturze:
-
-1. BOHATER - zacznij od opowieści o kimś podobnym do odbiorcy
-2. PROBLEM - przedstaw wyzwanie, z którym się zmierzyli
-3. PRZEWODNIK - wprowadź siebie/swoją firmę jako przewodnika
-4. PLAN - przedstaw prosty plan działania
-5. WEZWANIE - zachęć do podjęcia działania
-6. SUKCES - opisz pozytywny rezultat
-
-Tworzysz narrację, w której odbiorca może się odnaleźć. Budujesz relację poprzez autentyczność i wspólne doświadczenia.`;
-
 // UI Cleaner prompt
 const UI_CLEANER_PROMPT = `Jesteś zaawansowanym copywriterem odpowiedzialnym za edytowanie gotowych maili marketingowych w języku polskim. Twoim zadaniem nie jest zmiana treści, ale poprawa jej formy i czytelności.
 
@@ -160,36 +126,24 @@ serve(async (req) => {
       );
     }
 
-    // Select agent type - randomly choose between PAS and CJN agents (50/50 chance)
-    // Or use a specific agent if structure type is provided
+    // Select agent type - only choose between PAS and CJN agents (50/50 chance)
     let systemPrompt;
     let agentType;
     
     if (structureType) {
-      switch(structureType) {
-        case 'PAS':
-          systemPrompt = PAS_AGENT_PROMPT;
-          agentType = 'PAS';
-          break;
-        case 'AIDA':
-          systemPrompt = AIDA_AGENT_PROMPT;
-          agentType = 'AIDA';
-          break;
-        case 'BAB':
-          systemPrompt = BAB_AGENT_PROMPT;
-          agentType = 'BAB';
-          break;
-        case 'STORY':
-          systemPrompt = STORY_AGENT_PROMPT;
-          agentType = 'STORY';
-          break;
-        default:
-          // Default to random selection if structure type is not recognized
-          agentType = Math.random() < 0.5 ? 'PAS' : 'CJN';
-          systemPrompt = agentType === 'PAS' ? PAS_AGENT_PROMPT : CJN_AGENT_PROMPT;
+      if (structureType === 'PAS') {
+        systemPrompt = PAS_AGENT_PROMPT;
+        agentType = 'PAS';
+      } else if (structureType === 'CJN') {
+        systemPrompt = CJN_AGENT_PROMPT;
+        agentType = 'CJN';
+      } else {
+        // Default to random selection if structure type is not recognized or not PAS/CJN
+        agentType = Math.random() < 0.5 ? 'PAS' : 'CJN';
+        systemPrompt = agentType === 'PAS' ? PAS_AGENT_PROMPT : CJN_AGENT_PROMPT;
       }
     } else {
-      // Random selection if structure type is not provided
+      // Random selection if structure type is not provided (50/50)
       agentType = Math.random() < 0.5 ? 'PAS' : 'CJN';
       systemPrompt = agentType === 'PAS' ? PAS_AGENT_PROMPT : CJN_AGENT_PROMPT;
     }

@@ -4,7 +4,7 @@ import { NarrativeBlueprint } from './narrative-blueprint-service';
 import { EmailStyle } from '../../EmailStyleDialog';
 import { cleanTextForDisplay, applyEdgeFunctionCleaning } from './ui-cleaner-service';
 
-export type EmailStructure = 'PAS' | 'AIDA' | 'BAB' | 'STORY' | 'CJN';
+export type EmailStructure = 'PAS' | 'CJN';
 
 export interface EmailContentResponse {
   emailContent: string;
@@ -12,9 +12,9 @@ export interface EmailContentResponse {
   debugInfo?: any;
 }
 
-// Select a random email structure
+// Select a random email structure between PAS and CJN
 export const selectRandomEmailStructure = (): EmailStructure => {
-  const structures: EmailStructure[] = ['PAS', 'AIDA', 'BAB', 'STORY', 'CJN'];
+  const structures: EmailStructure[] = ['PAS', 'CJN'];
   return structures[Math.floor(Math.random() * structures.length)];
 };
 
@@ -245,31 +245,6 @@ Cecha-Zaleta-Nagroda:
 1. Cecha — przedstaw główne cechy produktu/usługi
 2. Zaleta — wyjaśnij, jakie zalety wynikają z tych cech
 3. Nagroda — pokaż konkretne korzyści i rezultaty`;
-
-    case 'AIDA':
-      return `
-Attention-Interest-Desire-Action:
-1. Uwaga — przyciągnij uwagę silnym, emocjonalnym otwarciem
-2. Zainteresowanie — przedstaw szczegóły, które zbudują zainteresowanie
-3. Pragnienie — wzbudź pragnienie posiadania produktu/usługi
-4. Działanie — jasne wezwanie do działania`;
-
-    case 'BAB':
-      return `
-Before-After-Bridge:
-1. Before — opisz obecną sytuację odbiorcy
-2. After — namaluj obraz pożądanej sytuacji po zmianie
-3. Bridge — pokaż, jak Twoja oferta pomoże przejść od "przed" do "po"`;
-
-    case 'STORY':
-      return `
-Struktura narracyjna:
-1. Bohater — zacznij od opowieści o kimś podobnym do odbiorcy
-2. Problem — przedstaw wyzwanie z którym się zmierzyli
-3. Przewodnik — wprowadź siebie/swoją firmę jako przewodnika
-4. Plan — przedstaw prosty plan działania
-5. Wezwanie — zachęć do podjęcia działania
-6. Sukces — opisz pozytywny rezultat`;
 
     default:
       return 'Struktura nie została określona. Użyj swojej najlepszej oceny.';
