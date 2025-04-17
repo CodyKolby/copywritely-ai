@@ -52,10 +52,6 @@ const SubjectLineToggle = ({
             <p className="text-sm mt-1">{alternativeSubject}</p>
           </div>
         </div>
-        
-        <p className="text-xs text-gray-500 mt-1">
-          Możesz przełączyć między tytułami, aby wybrać ten, który bardziej odpowiada Twoim potrzebom.
-        </p>
       </div>
     </div>
   );
