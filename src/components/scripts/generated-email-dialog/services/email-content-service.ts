@@ -133,7 +133,15 @@ RequestID: ${requestId}
             timestamp,
             requestId,
             subjectLine1,
-            subjectLine2
+            subjectLine2,
+            narrativeBlueprint: {
+              punktyemocjonalne: narrativeBlueprint.punktyemocjonalne || '',
+              specyfikamaila: narrativeBlueprint.specyfikamaila || '',
+              osnarracyjna: narrativeBlueprint.osnarracyjna || ''
+            },
+            emailStyle,
+            advertisingGoal,
+            surveyData: audienceDataString
           },
           headers: {
             'Cache-Control': 'no-cache, no-store',
