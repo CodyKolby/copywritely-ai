@@ -2,7 +2,7 @@
 import { loadStripe } from '@stripe/stripe-js';
 
 // Directly use the correct publishable key without relying on environment variables
-const STRIPE_PUBLISHABLE_KEY = 'pk_test_51QfM9GAGO17NLUWtTEUDQB0czM3OCU3MFcZatLoi8LH5fil4we3YiXhg9c77yDELN12nlpyd185k0w8c1HX3dsEz0022Os2Bn5';
+const STRIPE_PUBLISHABLE_KEY = 'pk_test_51PrJJ7P9eOGurTfEorcNVrn32fyWtYCtYb5Ds6o66LESlNyDGMOsuOTp0GCp2LzFkEahm3f1WJHm3JajJQigNPCn00musc8KaN';
 
 // Initialize Stripe with the hardcoded key
 let stripePromise: Promise<any> | null = null;
@@ -17,6 +17,6 @@ export const getStripe = () => {
 
 // Use test mode price IDs that work with test mode
 export const PRICE_IDS = {
-  PRO_MONTHLY: 'price_1R5A8aAGO17NLUWtxzthF8lo', // Aktualizacja ID cenowego na poprawny
-  PRO_ANNUAL: 'price_1R5A8aAGO17NLUWtxzthF8lo', // Ten sam ID dla planu rocznego (dla testów)
+  PRO_MONTHLY: 'price_1REoq0P9eOGurTfE6HuKkge0', // Używamy dostarczonego Price ID
+  PRO_ANNUAL: 'price_1REoq0P9eOGurTfE6HuKkge0', // Ten sam ID dla planu rocznego (zgodnie z instrukcją)
 };

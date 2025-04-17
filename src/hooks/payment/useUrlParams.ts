@@ -1,31 +1,52 @@
 
-import { useCallback } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 
-/**
- * Hook to handle URL parameters related to payment processing
- */
 export function useUrlParams() {
-  const [searchParams] = useSearchParams();
+  const location = useLocation();
   const navigate = useNavigate();
-  
-  // Check for URL parameters
-  const isCanceled = searchParams.get('canceled') === 'true';
-  
-  // Clean up the URL when needed
-  const cleanupUrlParams = useCallback(() => {
-    if (searchParams.has('canceled')) {
-      const newParams = new URLSearchParams(searchParams);
-      newParams.delete('canceled');
-      const newUrl = newParams.toString() 
-        ? `${window.location.pathname}?${newParams}` 
-        : window.location.pathname;
-      navigate(newUrl, { replace: true });
+  const [isCanceled, setIsCanceled] = useState(false);
+  const [isSuccessful, setIsSuccessful] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Parse URL parameters
+    const params = new URLSearchParams(location.search);
+    const canceled = params.get('canceled');
+    const sessionIdParam = params.get('session_id');
+
+    // Check if payment was canceled
+    if (canceled === 'true') {
+      console.log('Payment canceled detected in URL');
+      setIsCanceled(true);
+    } else {
+      setIsCanceled(false);
     }
-  }, [searchParams, navigate]);
-  
+
+    // Check if we have a successful payment with session_id
+    if (sessionIdParam) {
+      console.log('Payment success detected with session ID:', sessionIdParam);
+      setIsSuccessful(true);
+      setSessionId(sessionIdParam);
+    } else {
+      setIsSuccessful(false);
+      setSessionId(null);
+    }
+  }, [location.search]);
+
+  // Function to clean up URL parameters
+  const cleanupUrlParams = () => {
+    if (isCanceled || isSuccessful) {
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+      console.log('URL parameters cleaned up');
+    }
+  };
+
   return {
     isCanceled,
+    isSuccessful,
+    sessionId,
     cleanupUrlParams
   };
 }
