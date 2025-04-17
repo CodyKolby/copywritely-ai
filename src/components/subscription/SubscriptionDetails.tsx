@@ -10,8 +10,11 @@ interface SubscriptionDetailsProps {
 }
 
 const SubscriptionDetails: React.FC<SubscriptionDetailsProps> = ({ data, formatDate }) => {
+  // Check if subscription has already expired
+  const isExpired = new Date(data.currentPeriodEnd) <= new Date();
+  
   // Make sure days until renewal is never negative
-  const daysRemaining = Math.max(0, data.daysUntilRenewal);
+  const daysRemaining = isExpired ? 0 : Math.max(0, data.daysUntilRenewal);
   
   // Helper for Polish plurality
   const getDayText = (days: number) => {
@@ -24,12 +27,15 @@ const SubscriptionDetails: React.FC<SubscriptionDetailsProps> = ({ data, formatD
   const isTrial = data.isTrial === true || data.status === 'trialing';
   const isExpiring = data.cancelAtPeriodEnd;
   const isPaused = data.status === 'paused';
-  const isActive = data.status === 'active' || isTrial;
+  const isActive = !isExpired && (data.status === 'active' || isTrial);
   
   let badgeLabel = 'Aktywna';
   let badgeColor = 'bg-green-500';
   
-  if (isTrial) {
+  if (isExpired) {
+    badgeLabel = 'Wygasła';
+    badgeColor = 'bg-red-500';
+  } else if (isTrial) {
     badgeLabel = 'Okres próbny';
     badgeColor = 'bg-blue-500';
   } else if (isExpiring) {
@@ -54,19 +60,30 @@ const SubscriptionDetails: React.FC<SubscriptionDetailsProps> = ({ data, formatD
         </Badge>
       </div>
       
-      <div className="flex items-center text-sm text-gray-600 gap-2">
-        <CalendarClock className="h-4 w-4" />
-        <span>
-          {isExpiring ? 'Wygasa' : isTrial ? 'Koniec okresu próbnego' : 'Następna płatność'}: {formatDate(data.currentPeriodEnd)}
-        </span>
-      </div>
+      {!isExpired && (
+        <>
+          <div className="flex items-center text-sm text-gray-600 gap-2">
+            <CalendarClock className="h-4 w-4" />
+            <span>
+              {isExpiring ? 'Wygasa' : isTrial ? 'Koniec okresu próbnego' : 'Następna płatność'}: {formatDate(data.currentPeriodEnd)}
+            </span>
+          </div>
+          
+          <div className="flex items-center text-sm text-gray-600 gap-2">
+            <Clock className="h-4 w-4" />
+            <span>
+              {daysRemaining} {getDayText(daysRemaining)} do {isExpiring ? 'wygaśnięcia' : isTrial ? 'końca okresu próbnego' : 'odnowienia'}
+            </span>
+          </div>
+        </>
+      )}
       
-      <div className="flex items-center text-sm text-gray-600 gap-2">
-        <Clock className="h-4 w-4" />
-        <span>
-          {daysRemaining} {getDayText(daysRemaining)} do {isExpiring ? 'wygaśnięcia' : isTrial ? 'końca okresu próbnego' : 'odnowienia'}
-        </span>
-      </div>
+      {isExpired && (
+        <div className="flex items-center text-sm text-gray-600 gap-2">
+          <Clock className="h-4 w-4" />
+          <span>Twoja subskrypcja wygasła {formatDate(data.currentPeriodEnd)}</span>
+        </div>
+      )}
     </div>
   );
 };

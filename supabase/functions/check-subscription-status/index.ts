@@ -70,6 +70,36 @@ serve(async (req) => {
       );
     }
 
+    // Check if the expiry date has passed for premium users
+    if (profile?.is_premium && profile.subscription_expiry) {
+      const expiryDate = new Date(profile.subscription_expiry);
+      const now = new Date();
+      
+      if (expiryDate <= now) {
+        console.log(`[CHECK-SUB] Subscription expired at ${expiryDate.toISOString()}, current time is ${now.toISOString()}`);
+        
+        await updatePremiumStatus(
+          supabase,
+          userId,
+          false,
+          'expired'
+        );
+        
+        return new Response(
+          JSON.stringify({
+            isPremium: false,
+            message: "Subscription has expired",
+            subscriptionStatus: 'expired',
+            subscriptionExpiry: profile.subscription_expiry
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+    }
+
     // Check for existing subscription ID first
     if (profile?.subscription_id) {
       console.log(`[CHECK-SUB] User has subscription ID: ${profile.subscription_id}`);
@@ -94,6 +124,9 @@ serve(async (req) => {
         let expiryDate = null;
         if (subscription.current_period_end) {
           expiryDate = new Date(subscription.current_period_end * 1000).toISOString();
+        } else if (!isActive) {
+          // For canceled/inactive subscriptions without a period end, use current date
+          expiryDate = new Date().toISOString();
         }
         
         // Update the user's profile if needed

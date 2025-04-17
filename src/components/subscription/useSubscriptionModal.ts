@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/auth/AuthContext';
@@ -57,6 +56,18 @@ export const useSubscriptionModal = (open: boolean) => {
       return new Date(dateString).toLocaleDateString('pl-PL', options);
     } catch {
       return 'Data niedostępna';
+    }
+  };
+
+  // Helper function to check if subscription is expired
+  const isSubscriptionExpired = (expiryDateStr: string | null): boolean => {
+    if (!expiryDateStr) return false;
+    try {
+      const expiryDate = new Date(expiryDateStr);
+      return expiryDate <= new Date();
+    } catch (e) {
+      console.error('[SubscriptionModal] Error parsing expiry date', e);
+      return false;
     }
   };
 
@@ -249,6 +260,16 @@ export const useSubscriptionModal = (open: boolean) => {
           
           // Store successful data for fallback
           lastSuccessDataRef.current = subscriptionData;
+          
+          // Check if the subscription has expired based on the date
+          if (subscriptionData && subscriptionData.currentPeriodEnd) {
+            const expired = isSubscriptionExpired(subscriptionData.currentPeriodEnd);
+            if (expired && subscriptionData.status !== 'canceled') {
+              console.log('[SubscriptionModal] Subscription appears expired based on date check');
+              subscriptionData.status = 'expired';
+              subscriptionData.daysUntilRenewal = 0;
+            }
+          }
           
           return subscriptionData;
         }
