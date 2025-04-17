@@ -172,7 +172,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: SYSTEM_PROMPT.replace('{{surveyData}}', JSON.stringify(targetAudience, null, 2)) },
           { role: 'user', content: userPrompt }
