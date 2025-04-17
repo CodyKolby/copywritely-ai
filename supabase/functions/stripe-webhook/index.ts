@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { stripe, constructWebhookEvent } from "./stripe.ts";
 import { createDatabaseOperations } from "./database.ts";
@@ -142,11 +141,20 @@ async function handleInvoiceEvent(event: any, stripe: any, db: any) {
     
     const userId = profile.id;
     const isPremium = subscription.status === 'active' || subscription.status === 'trialing';
-    const expiryDate = subscription.current_period_end 
-      ? new Date(subscription.current_period_end * 1000).toISOString()
-      : null;
+    
+    // Handle expiry date based on subscription status
+    let expiryDate = null;
+    
+    if (subscription.status === 'canceled' && !subscription.cancel_at_period_end) {
+      // For immediate cancellations, use current time
+      expiryDate = new Date().toISOString();
+      console.log(`Immediate cancellation detected in invoice event, setting expiry to current time: ${expiryDate}`);
+    } else if (subscription.current_period_end) {
+      // Otherwise use the period end date
+      expiryDate = new Date(subscription.current_period_end * 1000).toISOString();
+    }
       
-    console.log(`Updating profile ${userId} based on invoice event. isPremium=${isPremium}, status=${subscription.status}`);
+    console.log(`Updating profile ${userId} based on invoice event. isPremium=${isPremium}, status=${subscription.status}, expiryDate=${expiryDate}`);
     
     await db.updateProfile(userId, {
       is_premium: isPremium,

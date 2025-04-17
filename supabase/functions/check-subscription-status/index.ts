@@ -2,7 +2,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@12.1.1";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
-import { updatePremiumStatus } from "./profile.ts";
+import { updatePremiumStatus, getProfile } from "./profile.ts";
 import { checkPaymentLogs } from "./payment-logs.ts";
 
 const corsHeaders = {
@@ -53,18 +53,40 @@ serve(async (req) => {
     console.log(`[CHECK-SUB] Checking subscription for user: ${userId}`);
 
     // Get the user's profile
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("id, email, is_premium, subscription_id, subscription_status, subscription_expiry")
-      .eq("id", userId)
-      .single();
-
-    if (profileError) {
-      console.error("[CHECK-SUB] Error fetching user profile:", profileError);
+    const profile = await getProfile(supabase, userId);
+    
+    if (!profile) {
+      console.error("[CHECK-SUB] Error: User profile not found");
       return new Response(
-        JSON.stringify({ error: "Error fetching user profile", details: profileError.message }),
+        JSON.stringify({ error: "User profile not found" }),
         {
-          status: 500,
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Check if the subscription status is canceled, ensure expiry date is correct
+    if (profile.subscription_status === 'canceled') {
+      console.log('[CHECK-SUB] Subscription is canceled, verifying expiry date');
+      
+      await updatePremiumStatus(
+        supabase,
+        userId,
+        false,
+        'canceled',
+        new Date().toISOString()
+      );
+      
+      return new Response(
+        JSON.stringify({
+          isPremium: false,
+          message: "Subscription has been canceled",
+          subscriptionStatus: 'canceled',
+          subscriptionExpiry: new Date().toISOString()
+        }),
+        {
+          status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
@@ -123,7 +145,13 @@ serve(async (req) => {
         
         // Calculate expiry date
         let expiryDate = null;
-        if (subscription.current_period_end) {
+        
+        if (subscription.status === 'canceled' && !subscription.cancel_at_period_end) {
+          // For immediate cancellations, set to now
+          expiryDate = new Date().toISOString();
+          console.log(`[CHECK-SUB] Immediate cancellation detected, setting expiry to current time: ${expiryDate}`);
+        } else if (subscription.current_period_end) {
+          // For other cases, use period end
           expiryDate = new Date(subscription.current_period_end * 1000).toISOString();
         } else if (!isActive) {
           // For canceled/inactive subscriptions without a period end, use current date
@@ -131,7 +159,10 @@ serve(async (req) => {
         }
         
         // Update the user's profile if needed
-        if (isActive !== profile.is_premium || profile.subscription_status !== subscription.status || profile.subscription_expiry !== expiryDate) {
+        if (isActive !== profile.is_premium || 
+            profile.subscription_status !== subscription.status || 
+            profile.subscription_expiry !== expiryDate) {
+          
           console.log(`[CHECK-SUB] Updating profile: isPremium=${isActive}, status=${subscription.status}, expiry=${expiryDate}`);
           
           await updatePremiumStatus(

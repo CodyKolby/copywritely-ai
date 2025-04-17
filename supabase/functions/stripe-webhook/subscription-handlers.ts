@@ -34,10 +34,6 @@ export async function handleSubscriptionEvent(
   const subscription = event.data.object as Stripe.Subscription;
   console.log(`Processing ${event.type} for subscription ${subscription.id}`);
 
-  let expiryDate = subscription.current_period_end 
-    ? new Date(subscription.current_period_end * 1000).toISOString()
-    : null;
-
   // Handle subscription deletion and cancellation
   if (event.type === 'customer.subscription.deleted') {
     console.log('Handling subscription deletion with details:', {
@@ -46,11 +42,14 @@ export async function handleSubscriptionEvent(
       cancelAtPeriodEnd: subscription.cancel_at_period_end
     });
     
-    // For immediate cancellations, set expiry to current time
-    if (!subscription.cancel_at_period_end) {
-      expiryDate = new Date().toISOString();
-      console.log(`Immediate cancellation detected, setting expiry to current time: ${expiryDate}`);
-    }
+    // For immediate cancellations, explicitly set expiry to current time
+    const expiryDate = !subscription.cancel_at_period_end ? 
+      new Date().toISOString() : 
+      subscription.current_period_end ? 
+        new Date(subscription.current_period_end * 1000).toISOString() : 
+        new Date().toISOString();
+    
+    console.log(`Setting cancellation expiry date to: ${expiryDate}`);
     
     await handleSubscriptionDeletion(subscription, db, expiryDate);
     return;
@@ -60,14 +59,26 @@ export async function handleSubscriptionEvent(
   const { data: profile } = await findProfileBySubscriptionId(subscription.id, db);
   
   if (!profile) {
-    await handleSubscriptionWithoutProfile(subscription, expiryDate, db, event.type);
+    await handleSubscriptionWithoutProfile(subscription, 
+      subscription.current_period_end ? 
+        new Date(subscription.current_period_end * 1000).toISOString() : null, 
+      db, event.type);
     return;
   }
 
   // Determine premium status based on subscription status
   const isActive = subscription.status === 'active' || subscription.status === 'trialing';
   
-  console.log(`Updating profile for subscription ${subscription.id}, status=${subscription.status}, isActive=${isActive}`);
+  let expiryDate = subscription.current_period_end ? 
+    new Date(subscription.current_period_end * 1000).toISOString() : null;
+  
+  // If cancelled and not at period end, set expiry to now
+  if (subscription.status === 'canceled' && !subscription.cancel_at_period_end) {
+    expiryDate = new Date().toISOString();
+    console.log(`Immediate cancellation detected, setting expiry to current time: ${expiryDate}`);
+  }
+  
+  console.log(`Updating profile for subscription ${subscription.id}, status=${subscription.status}, isActive=${isActive}, expiryDate=${expiryDate}`);
   
   await db.updateProfile(profile.id, {
     is_premium: isActive,
@@ -120,7 +131,7 @@ async function handlePaidSessionWithEmail(
 async function handleSubscriptionDeletion(
   subscription: Stripe.Subscription,
   db: DatabaseOperations,
-  expiryDate: string | null
+  expiryDate: string
 ) {
   const { data: profile } = await findProfileBySubscriptionId(subscription.id, db);
   if (!profile) {
@@ -128,18 +139,16 @@ async function handleSubscriptionDeletion(
     return;
   }
 
-  // For immediate cancellations, set expiry to current time
-  const cancellationTime = expiryDate || new Date().toISOString();
-  console.log(`Setting subscription_expiry for user ${profile.id} to: ${cancellationTime}`);
+  console.log(`Setting subscription_expiry for user ${profile.id} to: ${expiryDate}`);
   
   await db.updateProfile(profile.id, {
     is_premium: false,
     subscription_status: 'canceled',
-    subscription_expiry: cancellationTime,
+    subscription_expiry: expiryDate,
     updated_at: new Date().toISOString()
   });
   
-  console.log(`Successfully updated user ${profile.id} as canceled with expiry: ${cancellationTime}`);
+  console.log(`Successfully updated user ${profile.id} as canceled with expiry: ${expiryDate}`);
 }
 
 export async function findProfileBySubscriptionId(subscriptionId: string, db: DatabaseOperations) {
