@@ -320,6 +320,9 @@ serve(async (req) => {
     while (attempts < maxAttempts) {
       attempts++;
       console.log(`[${requestId}] GENERATE-EMAIL-CONTENT: API call attempt ${attempts}/${maxAttempts}`);
+
+      console.log(`[${requestId}] GENERATE-EMAIL-CONTENT: FINAL PROMPT SENT TO OPENAI:\n`);
+      console.log(completePrompt + "\n\n" + prompt);
       
       try {
         apiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
