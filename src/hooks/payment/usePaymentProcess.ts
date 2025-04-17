@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useAuth } from '@/contexts/auth/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,6 +7,7 @@ import { updateLocalStoragePremium } from '@/lib/stripe/localStorage-utils';
 import { BillingCycle } from '@/components/pricing/pricing-utils';
 import { User } from '@supabase/supabase-js';
 import { updateProfilePremiumStatus } from '@/lib/stripe/profile-updates';
+import { analyticsService } from '@/lib/analytics/analytics-service';
 
 export interface PaymentProcessResult {
   isProcessing: boolean;
@@ -23,7 +23,6 @@ export function usePaymentProcess() {
   const navigate = useNavigate();
   const { user, refreshSession, isPremium } = useAuth();
 
-  // Process payment verification
   const verifyPayment = async (sessionId: string): Promise<boolean> => {
     if (!user || !user.id) {
       console.error('No authenticated user found');
@@ -43,7 +42,6 @@ export function usePaymentProcess() {
     try {
       console.log(`Verifying payment for session ID: ${sessionId}`);
 
-      // Call the edge function to verify the payment
       const { data, error: verifyError } = await supabase.functions.invoke(
         'verify-payment-session',
         {
@@ -64,7 +62,6 @@ export function usePaymentProcess() {
 
       console.log('Payment verified successfully:', data);
 
-      // CRITICAL: Directly update profile as a fallback mechanism
       await updateProfilePremiumStatus(
         user.id, 
         true, 
@@ -73,28 +70,31 @@ export function usePaymentProcess() {
         data.expiryDate
       );
 
-      // Update local storage premium status
       updateLocalStoragePremium(true);
       
-      // Refresh the session to update the auth context
       await refreshSession();
       
-      // Show success notification
       toast.success('Gratulacje! Twoje konto zostało zaktualizowane do wersji Premium.');
       
-      // Set success state
       setSuccess(true);
       
-      // Redirect to projects page after a short delay
       setTimeout(() => {
         navigate('/projekty');
       }, 2000);
       
+      if (data.success) {
+        if (data.status === 'trialing') {
+          analyticsService.trackTrialStarted();
+        }
+        if (data.status === 'active' && data.previousStatus === 'trialing') {
+          analyticsService.trackTrialConverted();
+        }
+      }
+
       return true;
     } catch (err) {
       console.error('Error verifying payment:', err);
       
-      // CRITICAL: If there's an error, still try to update the profile directly
       try {
         if (user && user.id) {
           console.log('Attempting direct profile update as fallback');
@@ -105,7 +105,6 @@ export function usePaymentProcess() {
           
           toast.success('Twoje konto zostało zaktualizowane do wersji Premium!');
           
-          // Redirect to projects page after a short delay
           setTimeout(() => {
             navigate('/projekty');
           }, 2000);
@@ -123,11 +122,9 @@ export function usePaymentProcess() {
     }
   };
 
-  // Handle subscription creation
   const handleSubscribe = async (billingCycle: BillingCycle) => {
     if (isLoading) return;
     
-    // Check if user is authenticated
     if (!user) {
       toast.error('Musisz być zalogowany, aby kontynuować');
       return;
@@ -140,12 +137,11 @@ export function usePaymentProcess() {
       console.log(`Creating ${billingCycle} subscription for user:`, user.email);
       sessionStorage.setItem('redirectingToStripe', 'true');
       
-      // Create a checkout session
       const { data, error: checkoutError } = await supabase.functions.invoke('stripe-checkout', {
         body: { 
-          priceId: 'price_1REoq0P9eOGurTfE6HuKkge0', // Using the fixed priceId provided
+          priceId: 'price_1REoq0P9eOGurTfE6HuKkge0',
           mode: 'subscription',
-          trialPeriodDays: 3 // Adding 3-day trial
+          trialPeriodDays: 3
         }
       });
       
@@ -157,10 +153,8 @@ export function usePaymentProcess() {
         throw new Error('Nie otrzymano URL do płatności');
       }
       
-      // Store the checkout time
       sessionStorage.setItem('stripeCheckoutStarted', Date.now().toString());
       
-      // Redirect to Stripe Checkout
       console.log('Redirecting to Stripe Checkout URL:', data.url);
       window.location.href = data.url;
       

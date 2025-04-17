@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
@@ -9,6 +8,8 @@ import { BillingCycle, getProPrice, getPricingLabel } from '@/components/pricing
 import { DebugDialog } from '@/components/pricing/DebugDialog';
 import { Button } from '@/components/ui/button';
 import { Mail } from 'lucide-react';
+import { useEffect } from 'react';
+import { analyticsService } from '@/lib/analytics/analytics-service';
 
 const Pricing = () => {
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('annual');
@@ -21,6 +22,10 @@ const Pricing = () => {
     clearPaymentFlags,
     handleSubscribe
   } = usePaymentHandler();
+
+  useEffect(() => {
+    analyticsService.trackViewPlansPage();
+  }, []);
 
   // Show debug dialog
   const showDebugDialog = () => {
@@ -37,6 +42,7 @@ const Pricing = () => {
 
   // Handle subscription
   const onSubscribe = () => {
+    analyticsService.trackClickStartTrial();
     handleSubscribe(billingCycle);
   };
 

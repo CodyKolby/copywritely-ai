@@ -1,7 +1,7 @@
-
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { clearPremiumFromLocalStorage } from './local-storage-utils'
+import { analyticsService } from '@/lib/analytics/analytics-service'
 
 export const signInWithGoogle = async () => {
   try {
@@ -30,6 +30,7 @@ export const signInWithGoogle = async () => {
     if (error) throw error
     
     console.log('[AUTH] Google sign in response:', data);
+    analyticsService.trackUserLoggedIn();
   } catch (error) {
     if (error instanceof Error) {
       toast.error('Error signing in with Google', {

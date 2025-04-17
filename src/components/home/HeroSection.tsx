@@ -1,9 +1,16 @@
-
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { analyticsService } from '@/lib/analytics/analytics-service';
 
 const HeroSection = () => {
+  const handleCTAClick = () => {
+    analyticsService.trackCTAClick({
+      button_id: 'cta-hero-section',
+      button_text: 'Wypróbuj za darmo'
+    });
+  };
+
   const fadeInUp = {
     hidden: { opacity: 0, y: 20 },
     visible: { 
@@ -51,7 +58,7 @@ const HeroSection = () => {
           </motion.p>
           
           <motion.div variants={fadeInUp} className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link to="/pricing">
+            <Link to="/pricing" onClick={handleCTAClick}>
               <Button className="h-12 px-8 rounded-lg text-white bg-copywrite-teal hover:bg-copywrite-teal-dark transition-colors">
                 Wypróbuj za darmo
               </Button>

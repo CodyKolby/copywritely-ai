@@ -8,8 +8,8 @@ import { NavLink } from './navbar/NavLink';
 import { MobileMenu } from './navbar/MobileMenu';
 import { UserMenu } from './navbar/UserMenu';
 import { useNavbar } from './navbar/useNavbar';
-import { trackEvent } from '@/lib/posthog';
 import { toast } from 'sonner';
+import { analyticsService } from '@/lib/analytics/analytics-service';
 
 const Navbar = () => {
   const location = useLocation();
@@ -17,7 +17,7 @@ const Navbar = () => {
   const { scrolled, localPremium, subscriptionModalOpen, setSubscriptionModalOpen, navItems } = useNavbar();
 
   const handleLogin = async () => {
-    trackEvent('login_clicked');
+    analyticsService.trackClickLoginPage();
     toast.loading('Łączenie z Google...', {
       duration: 3000,
     });
