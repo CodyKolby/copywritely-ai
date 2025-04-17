@@ -94,13 +94,6 @@ export const generateSubjectLines = async (
     .join('\n');
   
   console.log('🔵 SUBJECT LINE SERVICE: Full audience data string:', audienceDataString);
-
-  // Create the prompt for subject line generation
-  const completePrompt = DEFAULT_SUBJECT_LINE_PROMPT
-    .replace(/{{emailStyle}}/g, emailStyle)
-    .replace(/{{punktyemocjonalne}}/g, narrativeBlueprint.punktyemocjonalne || 'Nie określono')
-    .replace(/{{osnarracyjna}}/g, narrativeBlueprint.osnarracyjna || 'Nie określono')
-    .replace(/{{surveyData}}/g, audienceDataString || 'Brak danych');
   
   // Add the request specific details to the prompt
   const prompt = `
