@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -123,7 +122,7 @@ serve(async (req) => {
       console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: API call attempt ${attempts}/${maxAttempts}`);
       
       try {
-        // Call OpenAI API with the provided prompt
+        // Call OpenAI API with a single user prompt that includes the instruction
         response = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -138,12 +137,8 @@ serve(async (req) => {
             model: 'gpt-4o-mini',
             messages: [
               {
-                role: 'system',
-                content: 'Jesteś ekspertem od tworzenia przyciągających uwagę linii tytułowych dla emaili marketingowych.'
-              },
-              {
                 role: 'user',
-                content: prompt
+                content: `Jesteś ekspertem od tworzenia przyciągających uwagę linii tytułowych dla emaili marketingowych. ${prompt}`
               }
             ],
             temperature: 0.7,
