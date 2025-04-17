@@ -24,8 +24,8 @@ const SubscriptionActions: React.FC<SubscriptionActionsProps> = ({
     trackEvent('subscription_portal_clicked');
     
     // Let the user know we're processing their request
-    toast.loading('Łączenie z portalem zarządzania Stripe...', {
-      duration: 2000,
+    toast.loading('Trwa łączenie z portalem zarządzania subskrypcją...', {
+      duration: 5000,
     });
     
     onOpenPortal();
@@ -74,7 +74,7 @@ const SubscriptionActions: React.FC<SubscriptionActionsProps> = ({
           variant="outline"
         >
           <ExternalLink className="h-4 w-4" />
-          Zarządzaj subskrypcją w Stripe
+          Zarządzaj subskrypcją
         </Button>
       </div>
     </div>

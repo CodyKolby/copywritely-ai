@@ -34,7 +34,7 @@ serve(async (req) => {
 
     console.log('Getting user data for userId:', userId);
     
-    // Get the user's email from the profile
+    // Get the user's email and subscription_id from the profile
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('email, subscription_id')
@@ -99,13 +99,13 @@ serve(async (req) => {
     console.log('Creating portal session with return URL:', returnUrl);
     
     try {
-      // Create portal session with fallback for missing configuration
+      // Create a customer portal session
       const session = await stripe.billingPortal.sessions.create({
         customer: customerId,
         return_url: returnUrl,
       });
       
-      console.log('Portal session created with URL:', session.url);
+      console.log('Portal session created successfully with URL:', session.url);
 
       return new Response(
         JSON.stringify({ url: session.url }),
@@ -117,20 +117,21 @@ serve(async (req) => {
     } catch (portalError) {
       console.error('Error creating portal session:', portalError);
       
-      // Handle specific Stripe portal configuration error
+      // Check if the error is related to portal configuration
       if (portalError.message && portalError.message.includes('configuration')) {
-        // Provide alternate access - redirect to stripe dashboard for the customer
-        const stripeCustomerDashboardUrl = `https://dashboard.stripe.com/test/customers/${customerId}`;
+        console.error('Customer portal configuration issue detected.');
+        console.error('Please ensure you have configured the Customer Portal in the Stripe Dashboard.');
+        console.error('Go to https://dashboard.stripe.com/settings/billing/portal to configure the portal.');
         
         return new Response(
           JSON.stringify({ 
-            url: stripeCustomerDashboardUrl,
-            isAlternate: true,
-            message: 'Using alternate customer management URL due to missing portal configuration'
+            error: 'Customer portal not configured',
+            message: 'The Stripe Customer Portal is not properly configured. Please configure it in the Stripe Dashboard.',
+            url: 'https://dashboard.stripe.com/settings/billing/portal'
           }),
           {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 200,
+            status: 400,
           }
         );
       }

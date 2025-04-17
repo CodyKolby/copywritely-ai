@@ -433,7 +433,9 @@ export const useSubscriptionModal = (open: boolean) => {
             return;
           }
           
-          toast.loading('Przygotowywanie portalu zarządzania subskrypcją...');
+          toast.loading('Przygotowywanie portalu zarządzania subskrypcją...', {
+            duration: 5000,
+          });
           
           supabase.functions.invoke('subscription-portal', {
             body: { userId: user.id }
@@ -449,15 +451,17 @@ export const useSubscriptionModal = (open: boolean) => {
               }
               
               const portalUrl = response.data?.url;
-              const isAlternate = response.data?.isAlternate;
               
               if (portalUrl) {
-                if (isAlternate) {
-                  toast.info('Przekierowanie do panelu Stripe', {
-                    description: 'Portal klienta nie jest skonfigurowany. Otwieramy panel Stripe.'
-                  });
-                }
-                window.open(portalUrl, '_blank');
+                console.log('[SubscriptionModal] Redirecting to portal URL:', portalUrl);
+                window.location.href = portalUrl;
+              } else if (response.data?.error === 'Customer portal not configured') {
+                toast.error('Portal klienta nie jest skonfigurowany', {
+                  description: 'Administrator musi skonfigurować portal klienta w panelu Stripe.'
+                });
+                
+                // Optional: redirect to configuration page for admins
+                // window.open(response.data.url, '_blank');
               } else {
                 toast.error('Nie udało się utworzyć sesji portalu klienta');
               }
