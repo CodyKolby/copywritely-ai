@@ -103,3 +103,21 @@ export async function cleanEmailContentForUI(emailContent: string): Promise<stri
     return emailContent;
   }
 }
+
+/**
+ * Applies UI cleaning directly from the generate-email-content function response
+ * if the cleaning was already done in the edge function
+ * 
+ * @param rawContent The original raw content 
+ * @param cleanedContent The already cleaned content from the edge function
+ * @returns The best available content, preferring cleaned if available
+ */
+export function applyEdgeFunctionCleaning(rawContent: string, cleanedContent?: string): string {
+  if (!cleanedContent || cleanedContent.length < 50) {
+    console.log('No pre-cleaned content available, using raw content');
+    return cleanTextForDisplay(rawContent);
+  }
+  
+  console.log('Using pre-cleaned content from edge function');
+  return cleanTextForDisplay(cleanedContent);
+}

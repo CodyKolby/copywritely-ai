@@ -2,9 +2,9 @@
 import { supabase } from '@/integrations/supabase/client';
 import { NarrativeBlueprint } from './narrative-blueprint-service';
 import { EmailStyle } from '../../EmailStyleDialog';
-import { cleanTextForDisplay } from './ui-cleaner-service';
+import { cleanTextForDisplay, applyEdgeFunctionCleaning } from './ui-cleaner-service';
 
-export type EmailStructure = 'PAS' | 'AIDA' | 'BAB' | 'STORY';
+export type EmailStructure = 'PAS' | 'AIDA' | 'BAB' | 'STORY' | 'CJN';
 
 export interface EmailContentResponse {
   emailContent: string;
@@ -14,7 +14,7 @@ export interface EmailContentResponse {
 
 // Select a random email structure
 export const selectRandomEmailStructure = (): EmailStructure => {
-  const structures: EmailStructure[] = ['PAS', 'AIDA', 'BAB', 'STORY'];
+  const structures: EmailStructure[] = ['PAS', 'AIDA', 'BAB', 'STORY', 'CJN'];
   return structures[Math.floor(Math.random() * structures.length)];
 };
 
@@ -170,14 +170,18 @@ RequestID: ${requestId}
     }
 
     // Extract email content from response
-    const emailContent = data.emailContent || "";
+    // Now we check for both emailContent (cleaned) and rawEmailContent (original)
+    const rawEmailContent = data.rawEmailContent || data.emailContent || "";
+    const cleanedContent = data.emailContent || "";
     const structureUsed = data.structureUsed || structure;
     
-    console.log(`🔵 EMAIL CONTENT SERVICE: Generated content length [${requestId}]: ${emailContent.length} chars`);
+    // Apply the best available content (prefer pre-cleaned from edge function if available)
+    const finalEmailContent = applyEdgeFunctionCleaning(rawEmailContent, cleanedContent);
     
-    // Return cleaned email content
+    console.log(`🔵 EMAIL CONTENT SERVICE: Generated content length [${requestId}]: ${finalEmailContent.length} chars`);
+    
     return {
-      emailContent: cleanTextForDisplay(emailContent),
+      emailContent: finalEmailContent,
       structureUsed,
       debugInfo: {
         ...data,
@@ -234,6 +238,13 @@ Problem-Agitacja-Rozwiązanie:
 1. Problem — zidentyfikuj główny problem/ból odbiorcy
 2. Agitacja — pogłęb problem, pokaż jego konsekwencje
 3. Rozwiązanie — przedstaw swoją ofertę jako rozwiązanie`;
+
+    case 'CJN':
+      return `
+Cecha-Zaleta-Nagroda:
+1. Cecha — przedstaw główne cechy produktu/usługi
+2. Zaleta — wyjaśnij, jakie zalety wynikają z tych cech
+3. Nagroda — pokaż konkretne korzyści i rezultaty`;
 
     case 'AIDA':
       return `
