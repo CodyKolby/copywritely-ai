@@ -143,19 +143,29 @@ serve(async (req) => {
         
         const isActive = subscription.status === "active" || subscription.status === "trialing";
         
-        // Calculate expiry date
+        // Calculate expiry date - prioritizing the most accurate sources from Stripe
         let expiryDate = null;
         
-        if (subscription.status === 'canceled' && !subscription.cancel_at_period_end) {
+        if (subscription.trial_end && subscription.status === 'trialing') {
+          // Trial end date takes precedence if in trial
+          expiryDate = new Date(subscription.trial_end * 1000).toISOString();
+          console.log(`[CHECK-SUB] Using trial_end for expiry date: ${expiryDate}`);
+        } else if (subscription.cancel_at) {
+          // If subscription is set to cancel at a specific time
+          expiryDate = new Date(subscription.cancel_at * 1000).toISOString();
+          console.log(`[CHECK-SUB] Using cancel_at for expiry date: ${expiryDate}`);
+        } else if (subscription.status === 'canceled' && !subscription.cancel_at_period_end) {
           // For immediate cancellations, set to now
           expiryDate = new Date().toISOString();
           console.log(`[CHECK-SUB] Immediate cancellation detected, setting expiry to current time: ${expiryDate}`);
         } else if (subscription.current_period_end) {
           // For other cases, use period end
           expiryDate = new Date(subscription.current_period_end * 1000).toISOString();
+          console.log(`[CHECK-SUB] Using current_period_end for expiry date: ${expiryDate}`);
         } else if (!isActive) {
           // For canceled/inactive subscriptions without a period end, use current date
           expiryDate = new Date().toISOString();
+          console.log(`[CHECK-SUB] Inactive subscription without period end, using current time: ${expiryDate}`);
         }
         
         // Update the user's profile if needed

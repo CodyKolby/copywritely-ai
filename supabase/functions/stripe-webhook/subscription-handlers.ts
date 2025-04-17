@@ -1,3 +1,4 @@
+
 import { DatabaseOperations } from './types.ts';
 import Stripe from 'https://esm.sh/stripe@12.1.1';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7';
@@ -55,6 +56,7 @@ export async function handleSubscriptionEvent(
     return;
   }
 
+  // Handle all other subscription events by ensuring database reflects current Stripe state
   // Find profile by subscription ID
   const { data: profile } = await findProfileBySubscriptionId(subscription.id, db);
   
@@ -69,13 +71,25 @@ export async function handleSubscriptionEvent(
   // Determine premium status based on subscription status
   const isActive = subscription.status === 'active' || subscription.status === 'trialing';
   
-  let expiryDate = subscription.current_period_end ? 
-    new Date(subscription.current_period_end * 1000).toISOString() : null;
+  let expiryDate = null;
   
-  // If cancelled and not at period end, set expiry to now
-  if (subscription.status === 'canceled' && !subscription.cancel_at_period_end) {
+  // Get the most accurate end date - check all possible sources in order of priority
+  if (subscription.trial_end && subscription.status === 'trialing') {
+    // Trial end date takes precedence if in trial
+    expiryDate = new Date(subscription.trial_end * 1000).toISOString();
+    console.log(`Using trial_end for expiry date: ${expiryDate}`);
+  } else if (subscription.cancel_at) {
+    // If subscription is set to cancel at a specific time in the future
+    expiryDate = new Date(subscription.cancel_at * 1000).toISOString();
+    console.log(`Using cancel_at for expiry date: ${expiryDate}`);
+  } else if (subscription.status === 'canceled' && !subscription.cancel_at_period_end) {
+    // Immediate cancellation
     expiryDate = new Date().toISOString();
     console.log(`Immediate cancellation detected, setting expiry to current time: ${expiryDate}`);
+  } else if (subscription.current_period_end) {
+    // Use current period end as default
+    expiryDate = new Date(subscription.current_period_end * 1000).toISOString();
+    console.log(`Using current_period_end for expiry date: ${expiryDate}`);
   }
   
   console.log(`Updating profile for subscription ${subscription.id}, status=${subscription.status}, isActive=${isActive}, expiryDate=${expiryDate}`);
@@ -177,9 +191,21 @@ async function calculateExpiryDate(
         apiVersion: '2023-10-16'
       });
       const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-      if (subscription.current_period_end) {
+      
+      // Check for trial end first if it's a trial
+      if (subscription.trial_end && subscription.status === 'trialing') {
+        expiryDate = new Date(subscription.trial_end * 1000).toISOString();
+        console.log(`Retrieved trial end date: ${expiryDate}`);
+      }
+      // Check for scheduled cancellation
+      else if (subscription.cancel_at) {
+        expiryDate = new Date(subscription.cancel_at * 1000).toISOString();
+        console.log(`Retrieved scheduled cancellation date: ${expiryDate}`);
+      }
+      // Default to current period end
+      else if (subscription.current_period_end) {
         expiryDate = new Date(subscription.current_period_end * 1000).toISOString();
-        console.log(`Retrieved expiry date from subscription: ${expiryDate}`);
+        console.log(`Retrieved current period end date: ${expiryDate}`);
       }
     } catch (error) {
       console.error('Error getting subscription details:', error);
@@ -254,11 +280,24 @@ async function handleSubscriptionWithoutProfile(
         console.log(`Found user_id ${logs[0].user_id} in payment logs for customer ${customerId}`);
         const userId = logs[0].user_id;
         
+        // Determine the most accurate expiry date
+        let finalExpiryDate = expiryDate;
+        if (subscription.trial_end && subscription.status === 'trialing') {
+          finalExpiryDate = new Date(subscription.trial_end * 1000).toISOString();
+          console.log(`Using trial_end for expiry date: ${finalExpiryDate}`);
+        } else if (subscription.cancel_at) {
+          finalExpiryDate = new Date(subscription.cancel_at * 1000).toISOString();
+          console.log(`Using cancel_at for expiry date: ${finalExpiryDate}`);
+        } else if (subscription.status === 'canceled' && !subscription.cancel_at_period_end) {
+          finalExpiryDate = new Date().toISOString();
+          console.log(`Using current time for canceled subscription: ${finalExpiryDate}`);
+        }
+        
         await db.updateProfile(userId, {
           is_premium: subscription.status === 'active' || subscription.status === 'trialing',
           subscription_id: subscription.id,
           subscription_status: subscription.status,
-          subscription_expiry: expiryDate || undefined,
+          subscription_expiry: finalExpiryDate || undefined,
           updated_at: new Date().toISOString()
         });
         
@@ -276,11 +315,25 @@ async function handleSubscriptionWithoutProfile(
           
         if (userByEmail) {
           console.log(`Found profile by email ${subscription.metadata.email}`);
+          
+          // Determine the most accurate expiry date
+          let finalExpiryDate = expiryDate;
+          if (subscription.trial_end && subscription.status === 'trialing') {
+            finalExpiryDate = new Date(subscription.trial_end * 1000).toISOString();
+            console.log(`Using trial_end for expiry date: ${finalExpiryDate}`);
+          } else if (subscription.cancel_at) {
+            finalExpiryDate = new Date(subscription.cancel_at * 1000).toISOString();
+            console.log(`Using cancel_at for expiry date: ${finalExpiryDate}`);
+          } else if (subscription.status === 'canceled' && !subscription.cancel_at_period_end) {
+            finalExpiryDate = new Date().toISOString();
+            console.log(`Using current time for canceled subscription: ${finalExpiryDate}`);
+          }
+          
           await db.updateProfile(userByEmail.id, {
             is_premium: subscription.status === 'active' || subscription.status === 'trialing',
             subscription_id: subscription.id,
             subscription_status: subscription.status,
-            subscription_expiry: expiryDate || undefined,
+            subscription_expiry: finalExpiryDate || undefined,
             updated_at: new Date().toISOString()
           });
           return;
