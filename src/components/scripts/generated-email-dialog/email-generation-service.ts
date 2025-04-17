@@ -6,7 +6,7 @@ import {
 
 import { 
   generateSubjectLines,
-  SubjectLinesResponse,
+  type SubjectLinesResponse,
   DEFAULT_SUBJECT_LINE_PROMPT 
 } from './services/subject-line-service';
 
