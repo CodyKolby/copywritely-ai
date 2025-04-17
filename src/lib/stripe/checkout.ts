@@ -71,11 +71,7 @@ export const createCheckoutSession = async (priceId: string) => {
       // If edge function fails, try with Netlify function as fallback
       console.error('[CHECKOUT] Edge function failed, trying Netlify fallback:', edgeFunctionError);
       
-      // Use the current protocol and hostname for the Netlify function URL
-      const currentUrl = window.location.href;
-      console.log('[CHECKOUT] Current URL:', currentUrl);
-      
-      // Try Netlify fallback
+      // Construct the Netlify function URL using the current origin
       const netlifyUrl = `${window.location.origin}/.netlify/functions/stripe-checkout`;
       
       console.log('[CHECKOUT] Calling Netlify function at:', netlifyUrl);
@@ -94,10 +90,14 @@ export const createCheckoutSession = async (priceId: string) => {
         }),
       });
       
+      // Log detailed response info for debugging
+      console.log('[CHECKOUT] Netlify function response status:', response.status);
+      console.log('[CHECKOUT] Netlify function response status text:', response.statusText);
+      
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('[CHECKOUT] Netlify function error:', errorText);
-        throw new Error(`Błąd podczas tworzenia sesji w fallback: ${response.status} ${errorText}`);
+        console.error('[CHECKOUT] Netlify function error response:', errorText);
+        throw new Error(`Błąd podczas tworzenia sesji w fallback: ${response.status}`);
       }
       
       const netlifyData = await response.json();

@@ -78,20 +78,24 @@ serve(async (req) => {
       ],
       success_url: successUrl,
       cancel_url: cancelUrl,
-      subscription_data: {
-        trial_period_days: trialDays,
-        trial_settings: {
-          end_behavior: {
-            missing_payment_method: 'cancel'
-          }
-        }
-      },
       payment_method_collection: 'always', // Always require payment method
       allow_promotion_codes: true,
       payment_method_types: ['card'],
       billing_address_collection: 'auto',
       locale: 'pl'
     };
+
+    // Add trial period only if greater than 0 to avoid Stripe errors
+    if (trialDays > 0) {
+      sessionParams.subscription_data = {
+        trial_period_days: trialDays,
+        trial_settings: {
+          end_behavior: {
+            missing_payment_method: 'cancel'
+          }
+        }
+      };
+    }
 
     // Add customer email if provided
     if (customerEmail) {
@@ -127,4 +131,3 @@ serve(async (req) => {
     )
   }
 })
-

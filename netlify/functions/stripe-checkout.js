@@ -108,14 +108,6 @@ exports.handler = async (event, context) => {
       ],
       allow_promotion_codes: true,
       billing_address_collection: 'auto',
-      subscription_data: {
-        trial_period_days: 3,
-        trial_settings: {
-          end_behavior: {
-            missing_payment_method: 'cancel'
-          }
-        }
-      },
       payment_method_collection: 'always', // Change to always require payment method
       locale: 'pl'
     };
@@ -123,6 +115,24 @@ exports.handler = async (event, context) => {
     // Add customer email if provided
     if (customerEmail) {
       sessionParams.customer_email = customerEmail;
+      
+      // For Netlify function, let's also check trial eligibility
+      // Since we don't have access to Supabase directly, we'll use the timestamp 
+      // parameter to make a decision based on whether it's a retry
+      const isRetry = timestamp && (Date.now() - new Date(timestamp).getTime() > 10000);
+      
+      // Only add trial for non-retries to mimic the behavior in the edge function
+      // We assume retries are likely due to previous subscription issues
+      if (!isRetry) {
+        sessionParams.subscription_data = {
+          trial_period_days: 3,
+          trial_settings: {
+            end_behavior: {
+              missing_payment_method: 'cancel'
+            }
+          }
+        };
+      }
     }
     
     console.log('Netlify function: Creating session with params:', JSON.stringify(sessionParams, null, 2));
