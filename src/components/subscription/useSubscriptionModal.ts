@@ -16,7 +16,6 @@ export const useSubscriptionModal = (open: boolean) => {
   const documentVisibleRef = useRef(true);
   const lastSuccessDataRef = useRef<SubscriptionDetails | null>(null);
 
-  // Clear timeout on unmount
   useEffect(() => {
     return () => {
       if (timeoutRef.current) {
@@ -26,12 +25,10 @@ export const useSubscriptionModal = (open: boolean) => {
     };
   }, []);
 
-  // Track document visibility
   useEffect(() => {
     const handleVisibilityChange = () => {
       documentVisibleRef.current = document.visibilityState === 'visible';
       
-      // When tab becomes visible again, try a refresh if we previously had an error
       if (documentVisibleRef.current && timeoutErrored && open) {
         console.log('[SubscriptionModal] Tab became visible again, refreshing data');
         setTimeoutErrored(false);
@@ -45,7 +42,6 @@ export const useSubscriptionModal = (open: boolean) => {
     };
   }, [timeoutErrored, open]);
 
-  // Format date helper function
   const formatDate = (dateString: string) => {
     try {
       const options: Intl.DateTimeFormatOptions = { 
@@ -59,7 +55,6 @@ export const useSubscriptionModal = (open: boolean) => {
     }
   };
 
-  // Helper function to check if subscription is expired
   const isSubscriptionExpired = (expiryDateStr: string | null): boolean => {
     if (!expiryDateStr) return false;
     try {
@@ -71,7 +66,6 @@ export const useSubscriptionModal = (open: boolean) => {
     }
   };
 
-  // Set timeout to prevent infinite loading
   useEffect(() => {
     if (timeoutRef.current) {
       window.clearTimeout(timeoutRef.current);
@@ -81,19 +75,16 @@ export const useSubscriptionModal = (open: boolean) => {
     if (open) {
       console.log('[SubscriptionModal] Modal opened, starting timeout check');
       
-      // Only set a new timeout if we don't have successful data yet or we're retrying
       if (!lastSuccessDataRef.current || retryCount > 0) {
-        setTimeoutErrored(false); // Reset timeout error when opening
-        
+        setTimeoutErrored(false);
         timeoutRef.current = window.setTimeout(() => {
-          // Only set timeout error if the document is visible and we don't have fallback data
           if (documentVisibleRef.current && !lastSuccessDataRef.current) {
             setTimeoutErrored(true);
             console.log('[SubscriptionModal] Subscription data fetch timeout reached');
           } else {
             console.log('[SubscriptionModal] Timeout reached but using cached data or tab not visible');
           }
-        }, 10000); // 10 second timeout
+        }, 10000);
       }
     }
     
@@ -105,7 +96,6 @@ export const useSubscriptionModal = (open: boolean) => {
     };
   }, [open, retryCount]);
 
-  // Force session refresh when modal opens
   useEffect(() => {
     if (open && user?.id) {
       console.log('[SubscriptionModal] Modal opened, refreshing session');
@@ -115,7 +105,6 @@ export const useSubscriptionModal = (open: boolean) => {
     }
   }, [open, user?.id, refreshSession]);
 
-  // Direct DB check for premium status
   const checkPremiumDirectly = useCallback(async (userId: string) => {
     if (!userId) return null;
     
@@ -140,36 +129,32 @@ export const useSubscriptionModal = (open: boolean) => {
     }
   }, []);
 
-  // Helper function to calculate trial expiry date (3 days from trial start)
   const getTrialExpiryDate = (trialStartDate: string | null) => {
     if (!trialStartDate) {
       const now = new Date();
-      now.setDate(now.getDate() + 3); // Default 3-day trial
+      now.setDate(now.getDate() + 3);
       return now.toISOString();
     }
     
     const startDate = new Date(trialStartDate);
-    startDate.setDate(startDate.getDate() + 3); // 3-day trial
+    startDate.setDate(startDate.getDate() + 3);
     return startDate.toISOString();
   };
   
-  // Helper function to get default expiry date (30 days from now)
   const getDefaultExpiryDate = () => {
     const expiryDate = new Date();
     expiryDate.setDate(expiryDate.getDate() + 30);
     return expiryDate.toISOString();
   };
   
-  // Helper function to calculate days until renewal
   const calculateDaysUntilRenewal = (dateString: string) => {
     try {
       return Math.ceil((new Date(dateString).getTime() - Date.now()) / (1000 * 3600 * 24));
     } catch (e) {
-      return 30; // Default to 30 days if calculation fails
+      return 30;
     }
   };
   
-  // Get fallback subscription data
   const getFallbackSubscriptionData = (isTrial: boolean = false): SubscriptionDetails => {
     const expiryDate = isTrial ? getTrialExpiryDate(null) : getDefaultExpiryDate();
     const daysUntil = calculateDaysUntilRenewal(expiryDate);
@@ -188,7 +173,6 @@ export const useSubscriptionModal = (open: boolean) => {
     };
   };
 
-  // Fetch subscription data
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['subscriptionDetails', user?.id, manualRefetch, open, retryCount],
     queryFn: async () => {
@@ -197,18 +181,15 @@ export const useSubscriptionModal = (open: boolean) => {
       try {
         console.log('[SubscriptionModal] Starting subscription data fetch for user:', user.id);
         
-        // If we hit the timeout error, use fallback data or cached data immediately
         if (timeoutErrored && retryCount >= maxRetries) {
           console.log('[SubscriptionModal] Timeout reached after max retries, using fallback or cached data');
           
-          // If we have previously successful data, use that instead of generating new fallback data
           if (lastSuccessDataRef.current) {
             console.log('[SubscriptionModal] Using cached successful data');
             return lastSuccessDataRef.current;
           }
           
           if (isPremium) {
-            // Check if the user is in trial mode
             const profileData = await checkPremiumDirectly(user.id);
             const isTrial = profileData && (
               profileData.trial_started_at !== null || 
@@ -222,19 +203,16 @@ export const useSubscriptionModal = (open: boolean) => {
           throw new Error('Przekroczono czas oczekiwania na dane subskrypcji');
         }
 
-        // First check DB directly to verify subscription status
         const profileData = await checkPremiumDirectly(user.id);
         
         if (profileData && profileData.is_premium === true) {
           console.log('[SubscriptionModal] Creating fallback data from profile');
           
-          // Check if the user is in trial mode
           const isTrial = profileData && (
             profileData.trial_started_at !== null || 
             profileData.subscription_status === 'trialing'
           );
             
-          // Get expiry date based on subscription type
           let expiryDate;
           if (isTrial) {
             expiryDate = profileData.subscription_expiry || 
@@ -258,10 +236,8 @@ export const useSubscriptionModal = (open: boolean) => {
             isTrial: !!isTrial
           } as SubscriptionDetails;
           
-          // Store successful data for fallback
           lastSuccessDataRef.current = subscriptionData;
           
-          // Check if the subscription has expired based on the date
           if (subscriptionData && subscriptionData.currentPeriodEnd) {
             const expired = isSubscriptionExpired(subscriptionData.currentPeriodEnd);
             if (expired && subscriptionData.status !== 'canceled') {
@@ -274,21 +250,17 @@ export const useSubscriptionModal = (open: boolean) => {
           return subscriptionData;
         }
         
-        // Set a quick timeout for edge function call
         const subscriptionPromise = getSubscriptionDetails(user.id);
         const timeoutPromise = new Promise<null>((_, reject) => {
           setTimeout(() => {
             if (documentVisibleRef.current) {
               reject(new Error('Przekroczono czas oczekiwania na dane subskrypcji'));
             } else {
-              // If tab is not visible, resolve with null instead of rejecting
-              console.log('[SubscriptionModal] Tab not visible during timeout, not showing error');
               reject(new Error('Tab not visible'));
             }
-          }, 8000); // Increased timeout for the edge function (was 5000)
+          }, 8000);
         });
         
-        // Race between subscription data fetch and timeout
         const subscriptionData = await Promise.race([
           subscriptionPromise,
           timeoutPromise
@@ -297,17 +269,13 @@ export const useSubscriptionModal = (open: boolean) => {
         if (!subscriptionData) {
           console.log('[SubscriptionModal] No subscription data returned from API');
           
-          // If timeout occurred but user has premium, use cached or fallback data
           if (isPremium) {
             console.log('[SubscriptionModal] User has premium, checking for cached data or creating fallback');
             
-            // If we have previously successful data, use that
             if (lastSuccessDataRef.current) {
-              console.log('[SubscriptionModal] Using cached successful data');
               return lastSuccessDataRef.current;
             }
             
-            // Check if the user is in trial mode
             const profileData = await checkPremiumDirectly(user.id);
             const isTrial = profileData && (
               profileData.trial_started_at !== null || 
@@ -320,7 +288,6 @@ export const useSubscriptionModal = (open: boolean) => {
           throw new Error('Nie udało się pobrać danych subskrypcji');
         }
         
-        // Verify that we have all required fields
         if (typeof subscriptionData.isTrial !== 'boolean') {
           subscriptionData.isTrial = subscriptionData.status === 'trialing';
         }
@@ -329,53 +296,43 @@ export const useSubscriptionModal = (open: boolean) => {
           subscriptionData.trialEnd = subscriptionData.currentPeriodEnd;
         }
         
-        // Make sure portal URL is available
         if (!subscriptionData.portalUrl && subscriptionData.subscriptionId) {
           subscriptionData.portalUrl = '/customer-portal';
         }
         
-        // Double-check expiry date logic - if negative days, subscription has expired
         if (subscriptionData.daysUntilRenewal <= 0 && subscriptionData.status !== 'trialing') {
           console.log('[SubscriptionModal] Subscription appears expired based on days calculation');
           
-          // Verify with DB - if DB says premium is active, trust that over the days calculation
           if (profileData && profileData.is_premium === true) {
             console.log('[SubscriptionModal] DB says premium is active despite days calculation');
             
-            // Fix the days calculation
             const correctedDays = calculateDaysUntilRenewal(subscriptionData.currentPeriodEnd);
             subscriptionData.daysUntilRenewal = Math.max(1, correctedDays);
           } else {
-            // Force refresh of auth status since subscription has expired
             await refreshSession();
             throw new Error('Twoja subskrypcja wygasła');
           }
         }
         
-        // If the user is in trial mode, set daysUntilRenewal to 3 days or less
         if (subscriptionData.isTrial && subscriptionData.daysUntilRenewal > 3) {
           console.log('[SubscriptionModal] Correcting trial days calculation to max 3 days');
           subscriptionData.daysUntilRenewal = Math.min(3, subscriptionData.daysUntilRenewal);
           
-          // Also update the currentPeriodEnd to match 3 days from now
           const trialEnd = new Date();
           trialEnd.setDate(trialEnd.getDate() + subscriptionData.daysUntilRenewal);
           subscriptionData.currentPeriodEnd = trialEnd.toISOString();
           subscriptionData.trialEnd = trialEnd.toISOString();
         }
         
-        // Store successful data for fallback
         lastSuccessDataRef.current = subscriptionData;
         
         return subscriptionData;
       } catch (err) {
         console.error('[SubscriptionModal] Error in subscription fetch:', err);
         
-        // If this is because tab is not visible, don't show error
         if (err instanceof Error && err.message === 'Tab not visible') {
           console.log('[SubscriptionModal] Error due to tab not being visible, returning last data');
           
-          // Use cached data or fallback
           if (lastSuccessDataRef.current) {
             return lastSuccessDataRef.current;
           }
@@ -386,89 +343,65 @@ export const useSubscriptionModal = (open: boolean) => {
         if (isPremium) {
           console.log('[SubscriptionModal] Creating fallback subscription for premium user');
           
-          // If we have previously successful data, use that
           if (lastSuccessDataRef.current) {
-            console.log('[SubscriptionModal] Using cached successful data');
             return lastSuccessDataRef.current;
           }
           
-          // Create a fallback subscription object for users with premium status
-          // but no subscription details (e.g. trial users)
-          
-          // Check if we can get profile details
-          try {
-            const profile = await checkPremiumDirectly(user.id);
+          const profile = await checkPremiumDirectly(user.id);
               
-            if (profile && profile.is_premium === true) {
-              // Check if user is in trial mode
-              const isTrial = profile && (
-                profile.trial_started_at !== null || 
-                profile.subscription_status === 'trialing'
-              );
+          if (profile && profile.is_premium === true) {
+            const isTrial = profile && (
+              profile.trial_started_at !== null || 
+              profile.subscription_status === 'trialing'
+            );
                            
-              // Verify expiry date
-              let currentExpiryDate;
-              if (isTrial) {
-                currentExpiryDate = profile.subscription_expiry || 
+            let currentExpiryDate;
+            if (isTrial) {
+              currentExpiryDate = profile.subscription_expiry || 
                                     getTrialExpiryDate(profile.trial_started_at || null);
-              } else {
-                currentExpiryDate = profile.subscription_expiry || getDefaultExpiryDate();
-              }
-              
-              // Calculate days until expiry
-              const daysUntil = isTrial ? 
-                Math.min(3, calculateDaysUntilRenewal(currentExpiryDate)) : 
-                calculateDaysUntilRenewal(currentExpiryDate);
-              
-              console.log('[SubscriptionModal] Created fallback subscription from profile data');
-              
-              const fallbackData = {
-                hasSubscription: true,
-                subscriptionId: profile.subscription_id || 'manual_premium',
-                status: profile.subscription_status || (isTrial ? 'trialing' : 'active'),
-                currentPeriodEnd: currentExpiryDate,
-                daysUntilRenewal: Math.max(0, daysUntil),
-                cancelAtPeriodEnd: false,
-                portalUrl: profile.subscription_id ? '/customer-portal' : null,
-                plan: isTrial ? 'Pro' : 'Pro',
-                trialEnd: isTrial ? currentExpiryDate : null,
-                isTrial: !!isTrial
-              } as SubscriptionDetails;
-              
-              // Store successful data for fallback
-              lastSuccessDataRef.current = fallbackData;
-              
-              return fallbackData;
+            } else {
+              currentExpiryDate = profile.subscription_expiry || getDefaultExpiryDate();
             }
-          } catch (profileErr) {
-            console.error('[SubscriptionModal] Error fetching profile details:', profileErr);
+              
+            const daysUntil = isTrial ? 
+              Math.min(3, calculateDaysUntilRenewal(currentExpiryDate)) : 
+              calculateDaysUntilRenewal(currentExpiryDate);
+              
+            console.log('[SubscriptionModal] Created fallback subscription from profile data');
+              
+            const fallbackData = {
+              hasSubscription: true,
+              subscriptionId: profile.subscription_id || 'manual_premium',
+              status: profile.subscription_status || (isTrial ? 'trialing' : 'active'),
+              currentPeriodEnd: currentExpiryDate,
+              daysUntilRenewal: Math.max(0, daysUntil),
+              cancelAtPeriodEnd: false,
+              portalUrl: profile.subscription_id ? '/customer-portal' : null,
+              plan: isTrial ? 'Pro' : 'Pro',
+              trialEnd: isTrial ? currentExpiryDate : null,
+              isTrial: !!isTrial
+            } as SubscriptionDetails;
+              
+            lastSuccessDataRef.current = fallbackData;
+              
+            return fallbackData;
           }
-          
-          // If we can't determine if the user is in trial mode, use a regular premium fallback
-          const fallbackData = getFallbackSubscriptionData(false);
-          
-          // Store fallback data for future use
-          lastSuccessDataRef.current = fallbackData;
-          
-          return fallbackData;
         }
         
         throw err;
       }
     },
     enabled: !!user?.id && open,
-    retry: false, // Disable auto retry, we handle our own retries
-    staleTime: 60000, // Cache data for 1 minute
-    gcTime: 300000, // Keep cache for 5 minutes even when unused
+    retry: false,
+    staleTime: 60000,
+    gcTime: 300000
   });
 
-  // Refresh data when modal is opened
   useEffect(() => {
     if (open) {
       console.log('[SubscriptionModal] Modal opened, triggering data refresh');
       setTimeoutErrored(false);
       
-      // Only refetch if we don't have cached data
       if (!lastSuccessDataRef.current) {
         setTimeout(() => {
           setManualRefetch(prev => !prev);
@@ -477,7 +410,6 @@ export const useSubscriptionModal = (open: boolean) => {
     }
   }, [open]);
 
-  // Handle subscription renewal
   const renewSubscription = () => {
     try {
       const priceId = data?.plan?.includes('roczn') ? PRICE_IDS.PRO_ANNUAL : PRICE_IDS.PRO_MONTHLY;
@@ -489,16 +421,13 @@ export const useSubscriptionModal = (open: boolean) => {
     }
   };
 
-  // Handle opening Stripe portal
   const handleOpenPortal = () => {
     try {
       if (data?.portalUrl) {
         console.log('[SubscriptionModal] Opening portal URL:', data.portalUrl);
         
-        // If we're using a relative URL, it means we need to generate a new portal URL
         if (data.portalUrl === '/customer-portal') {
           console.log('[SubscriptionModal] Creating new portal URL');
-          // Create a portal session via edge function
           if (!user?.id) {
             toast.error('Musisz być zalogowany, aby zarządzać subskrypcją.');
             return;
@@ -506,7 +435,6 @@ export const useSubscriptionModal = (open: boolean) => {
           
           toast.loading('Przygotowywanie portalu zarządzania subskrypcją...');
           
-          // Call the edge function to get a customer portal URL
           supabase.functions.invoke('subscription-portal', {
             body: { userId: user.id }
           })
@@ -548,12 +476,10 @@ export const useSubscriptionModal = (open: boolean) => {
     }
   };
 
-  // Manual retry functionality
   const handleRetry = useCallback(() => {
     if (retryCount >= maxRetries) {
       console.log('[SubscriptionModal] Max retries reached, using fallback data');
       if (isPremium) {
-        // Just close modal and use fallback data
         return;
       }
     }
@@ -564,7 +490,6 @@ export const useSubscriptionModal = (open: boolean) => {
     refetch();
   }, [refetch, retryCount, isPremium, maxRetries]);
 
-  // Check if we have premium but no data
   const isPremiumButNoData = isPremium && (!data || !data.hasSubscription);
 
   return {
