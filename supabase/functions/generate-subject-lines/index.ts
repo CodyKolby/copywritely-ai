@@ -165,13 +165,13 @@ Twoje tytuły powinny:
 - Zastosuj mechanizm emocji i kontrastów, np. używając słów jak „NIE”, „nie rób tego”, „zanim”, „dlaczego” lub „czy”.
 - Tytuły muszą być natychmiastowe w odbiorze, a jednocześnie wywoływać poczucie, że coś ważnego jest w środku, co można stracić.
 
-**Styl maila**: ${emailStyle}
+**Styl maila**: {{emailStyle}}
 
-**Punkty emocjonalne**: ${narrativeBlueprint.punktyemocjonalne || 'Brak danych'}
+**Punkty emocjonalne**: {{punktyemocjonalne}}
 
-**Oś narracyjna**: ${narrativeBlueprint.osnarracyjna || 'Brak danych'}
+**Oś narracyjna**: {{osnarracyjna}}
 
-**Dane z ankiety klienta**: ${audienceDataString || 'Brak danych grupy docelowej'}
+**Dane z ankiety klienta**: {{surveyData}}
 
 **Przykłady tytułów do inspiracji**:
 
