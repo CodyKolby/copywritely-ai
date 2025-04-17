@@ -122,6 +122,8 @@ serve(async (req) => {
       console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: API call attempt ${attempts}/${maxAttempts}`);
       
       try {
+        console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: Final prompt content:\n${prompt}`);
+
         // Call OpenAI API with a single user prompt that includes the instruction
         response = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
