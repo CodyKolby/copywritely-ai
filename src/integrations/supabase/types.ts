@@ -206,6 +206,7 @@ export type Database = {
           processed_at: string | null
           session_data: Json
           session_id: string
+          timestamp: string | null
         }
         Insert: {
           created_at?: string
@@ -214,6 +215,7 @@ export type Database = {
           processed_at?: string | null
           session_data: Json
           session_id: string
+          timestamp?: string | null
         }
         Update: {
           created_at?: string
@@ -222,6 +224,7 @@ export type Database = {
           processed_at?: string | null
           session_data?: Json
           session_id?: string
+          timestamp?: string | null
         }
         Relationships: []
       }
