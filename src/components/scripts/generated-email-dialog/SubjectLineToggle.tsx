@@ -36,16 +36,6 @@ const SubjectLineToggle = ({
               Alternatywne tytuły emaila (A/B Test)
             </h3>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={onToggle}
-            className="text-xs border-amber-300 hover:bg-amber-100 text-amber-700"
-          >
-            <ArrowLeftRight className="w-3 h-3 mr-1" />
-            Zamień
-          </Button>
-        </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className={`p-3 rounded-md border ${!isShowingAlternative ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
