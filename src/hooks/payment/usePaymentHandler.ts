@@ -18,12 +18,11 @@ export function usePaymentHandler() {
   const { debugInfo, collectDebugInfo } = useDebugInfo();
   const { timeoutRef, clearPaymentFlags } = usePaymentFlags();
   const { isCanceled, cleanupUrlParams } = useUrlParams();
-  const { isLoading, setIsLoading, handleSubscribe } = usePaymentProcess(
-    user,
-    timeoutRef,
-    collectDebugInfo,
-    clearPaymentFlags
-  );
+  const { 
+    isLoading, 
+    setIsLoading, 
+    handleSubscribe 
+  } = usePaymentProcess();
   
   // Handle canceled payments and initialization
   useEffect(() => {

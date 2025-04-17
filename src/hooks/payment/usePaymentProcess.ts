@@ -1,33 +1,26 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuth } from '@/contexts/auth/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { updateLocalStoragePremium } from '@/lib/stripe/localStorage-utils';
+import { BillingCycle } from '@/components/pricing/pricing-utils';
+import { User } from '@supabase/supabase-js';
 
 export interface PaymentProcessResult {
-  success: boolean;
-  error: string | null;
   isProcessing: boolean;
+  error: string | null;
+  success: boolean;
   verifyPayment: (sessionId: string) => Promise<boolean>;
 }
 
-export function usePaymentProcess(): PaymentProcessResult {
-  const [isProcessing, setIsProcessing] = useState(false);
+export function usePaymentProcess() {
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
   const { user, refreshSession, isPremium } = useAuth();
-
-  // Clear any stale payment flags
-  useEffect(() => {
-    // Only clear if we're not on the success page
-    if (!window.location.pathname.includes('/success')) {
-      sessionStorage.removeItem('redirectingToStripe');
-      sessionStorage.removeItem('stripeCheckoutInProgress');
-    }
-  }, []);
 
   // Process payment verification
   const verifyPayment = async (sessionId: string): Promise<boolean> => {
@@ -43,7 +36,7 @@ export function usePaymentProcess(): PaymentProcessResult {
       return true;
     }
 
-    setIsProcessing(true);
+    setIsLoading(true);
     setError(null);
 
     try {
@@ -93,9 +86,69 @@ export function usePaymentProcess(): PaymentProcessResult {
       setError(err instanceof Error ? err.message : 'Wystąpił błąd podczas weryfikacji płatności');
       return false;
     } finally {
-      setIsProcessing(false);
+      setIsLoading(false);
     }
   };
 
-  return { isProcessing, error, success, verifyPayment };
+  // Handle subscription creation
+  const handleSubscribe = async (billingCycle: BillingCycle) => {
+    if (isLoading) return;
+    
+    // Check if user is authenticated
+    if (!user) {
+      toast.error('Musisz być zalogowany, aby kontynuować');
+      return;
+    }
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      console.log(`Creating ${billingCycle} subscription for user:`, user.email);
+      sessionStorage.setItem('redirectingToStripe', 'true');
+      
+      // Create a checkout session
+      const { data, error: checkoutError } = await supabase.functions.invoke('stripe-checkout', {
+        body: { 
+          priceId: 'price_1REoq0P9eOGurTfE6HuKkge0', // Using the fixed priceId provided
+          mode: 'subscription',
+          trialPeriodDays: 3 // Adding 3-day trial
+        }
+      });
+      
+      if (checkoutError) {
+        throw new Error(`Checkout error: ${checkoutError.message}`);
+      }
+      
+      if (!data?.url) {
+        throw new Error('Nie otrzymano URL do płatności');
+      }
+      
+      // Store the checkout time
+      sessionStorage.setItem('stripeCheckoutStarted', Date.now().toString());
+      
+      // Redirect to Stripe Checkout
+      console.log('Redirecting to Stripe Checkout URL:', data.url);
+      window.location.href = data.url;
+      
+    } catch (err) {
+      console.error('Error in subscription process:', err);
+      setError(err instanceof Error ? err.message : 'Wystąpił błąd podczas tworzenia subskrypcji');
+      sessionStorage.removeItem('redirectingToStripe');
+      setIsLoading(false);
+      
+      toast.error('Nie udało się utworzyć sesji płatności', { 
+        description: 'Spróbuj ponownie za chwilę lub skontaktuj się z obsługą.'
+      });
+    }
+  };
+
+  return {
+    isLoading,
+    setIsLoading,
+    error,
+    success,
+    verifyPayment,
+    handleSubscribe
+  };
 }
