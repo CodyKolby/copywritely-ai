@@ -82,7 +82,8 @@ serve(async (req) => {
           supabase,
           userId,
           false,
-          'expired'
+          'expired',
+          new Date().toISOString()
         );
         
         return new Response(
@@ -90,7 +91,7 @@ serve(async (req) => {
             isPremium: false,
             message: "Subscription has expired",
             subscriptionStatus: 'expired',
-            subscriptionExpiry: profile.subscription_expiry
+            subscriptionExpiry: new Date().toISOString()
           }),
           {
             status: 200,
@@ -130,8 +131,8 @@ serve(async (req) => {
         }
         
         // Update the user's profile if needed
-        if (isActive !== profile.is_premium || profile.subscription_status !== subscription.status) {
-          console.log(`[CHECK-SUB] Updating profile: isPremium=${isActive}, status=${subscription.status}`);
+        if (isActive !== profile.is_premium || profile.subscription_status !== subscription.status || profile.subscription_expiry !== expiryDate) {
+          console.log(`[CHECK-SUB] Updating profile: isPremium=${isActive}, status=${subscription.status}, expiry=${expiryDate}`);
           
           await updatePremiumStatus(
             supabase, 

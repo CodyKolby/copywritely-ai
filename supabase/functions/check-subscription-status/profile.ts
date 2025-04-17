@@ -4,16 +4,23 @@ export const updatePremiumStatus = async (
   supabase: any, 
   userId: string, 
   isPremium: boolean, 
-  status: string = 'active'
+  status: string = 'active',
+  expiryDate?: string
 ): Promise<boolean> => {
   try {
+    const updateData: Record<string, any> = { 
+      is_premium: isPremium,
+      subscription_status: status,
+      updated_at: new Date().toISOString()
+    };
+    
+    if (expiryDate) {
+      updateData.subscription_expiry = expiryDate;
+    }
+    
     const { error } = await supabase
       .from('profiles')
-      .update({ 
-        is_premium: isPremium,
-        subscription_status: status,
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('id', userId);
       
     if (error) {
@@ -21,7 +28,7 @@ export const updatePremiumStatus = async (
       return false;
     }
     
-    console.log(`Successfully updated profile to ${isPremium ? 'premium' : 'non-premium'}`);
+    console.log(`Successfully updated profile to ${isPremium ? 'premium' : 'non-premium'}${expiryDate ? ` with expiry date ${expiryDate}` : ''}`);
     return true;
   } catch (error) {
     console.error(`Exception updating profile to ${isPremium ? 'premium' : 'non-premium'}:`, error);

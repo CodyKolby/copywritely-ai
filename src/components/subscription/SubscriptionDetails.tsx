@@ -27,13 +27,14 @@ const SubscriptionDetails: React.FC<SubscriptionDetailsProps> = ({ data, formatD
   const isTrial = data.isTrial === true || data.status === 'trialing';
   const isExpiring = data.cancelAtPeriodEnd;
   const isPaused = data.status === 'paused';
-  const isActive = !isExpired && (data.status === 'active' || isTrial);
+  const isCanceled = data.status === 'canceled';
+  const isActive = !isExpired && !isCanceled && (data.status === 'active' || isTrial);
   
   let badgeLabel = 'Aktywna';
   let badgeColor = 'bg-green-500';
   
-  if (isExpired) {
-    badgeLabel = 'Wygasła';
+  if (isExpired || isCanceled) {
+    badgeLabel = isCanceled ? 'Anulowana' : 'Wygasła';
     badgeColor = 'bg-red-500';
   } else if (isTrial) {
     badgeLabel = 'Okres próbny';
@@ -60,7 +61,7 @@ const SubscriptionDetails: React.FC<SubscriptionDetailsProps> = ({ data, formatD
         </Badge>
       </div>
       
-      {!isExpired && (
+      {!isExpired && !isCanceled && (
         <>
           <div className="flex items-center text-sm text-gray-600 gap-2">
             <CalendarClock className="h-4 w-4" />
@@ -78,10 +79,10 @@ const SubscriptionDetails: React.FC<SubscriptionDetailsProps> = ({ data, formatD
         </>
       )}
       
-      {isExpired && (
+      {(isExpired || isCanceled) && (
         <div className="flex items-center text-sm text-gray-600 gap-2">
           <Clock className="h-4 w-4" />
-          <span>Twoja subskrypcja wygasła {formatDate(data.currentPeriodEnd)}</span>
+          <span>Twoja subskrypcja {isCanceled ? 'została anulowana' : 'wygasła'} {formatDate(data.currentPeriodEnd)}</span>
         </div>
       )}
     </div>
