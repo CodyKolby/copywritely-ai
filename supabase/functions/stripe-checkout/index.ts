@@ -41,6 +41,32 @@ serve(async (req) => {
       apiVersion: '2023-10-16',
     });
 
+    // Check if user had a previous subscription
+    let trialDays = 3; // default trial period
+    
+    if (customerEmail) {
+      try {
+        const { data: profile, error: profileError } = await supabaseAdmin
+          .from('profiles')
+          .select('subscription_id')
+          .eq('email', customerEmail)
+          .maybeSingle();
+          
+        if (profileError) {
+          console.error('Error checking profile:', profileError);
+          // Continue with default trial period if there's an error
+        } else if (profile?.subscription_id) {
+          console.log('User had previous subscription, disabling trial period');
+          trialDays = 0;
+        }
+      } catch (err) {
+        console.error('Error querying profile:', err);
+        // Continue with default trial period if there's an error
+      }
+    }
+
+    console.log(`Setting trial period to ${trialDays} days`);
+    
     // Create checkout session with configurations requiring payment method
     const sessionParams = {
       mode: 'subscription',
@@ -53,7 +79,7 @@ serve(async (req) => {
       success_url: successUrl,
       cancel_url: cancelUrl,
       subscription_data: {
-        trial_period_days: 3,
+        trial_period_days: trialDays,
         trial_settings: {
           end_behavior: {
             missing_payment_method: 'cancel'
@@ -101,3 +127,4 @@ serve(async (req) => {
     )
   }
 })
+
