@@ -140,6 +140,7 @@ punktyemocjonalne: [tutaj punkty emocjonalne]
 specyfikamaila: [tutaj pomysły na styl maila]
 osnarracyjna: [tutaj oś narracyjną]`;
 
+    console.log(`Wyniki z prompta dla Narrative-blueprint : ${userPrompt}`);
     console.log(`[${requestId}] NARRATIVE-BLUEPRINT: User prompt length: ${userPrompt.length} chars`);
     console.log(`[${requestId}] NARRATIVE-BLUEPRINT: User prompt preview: ${userPrompt.substring(0, 300)}...`);
     
