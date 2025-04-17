@@ -72,6 +72,7 @@ serve(async (req) => {
     }
 
     const { prompt, debugMode, requestId: clientRequestId } = data;
+    const completePrompt = prompt; // bo prompt z frontu to już kompletna instrukcja
     console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: Client request ID: ${clientRequestId || 'Not provided'}`);
     
     if (!prompt) {
@@ -122,7 +123,7 @@ serve(async (req) => {
       console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: API call attempt ${attempts}/${maxAttempts}`);
       
       try {
-        console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: Final prompt content:\n${prompt}`);
+        console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: Final prompt content:\n${completePrompt}`);
 
         // Call OpenAI API with a single user prompt that includes the instruction
         response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -140,7 +141,7 @@ serve(async (req) => {
             messages: [
               {
                 role: 'user',
-                content: prompt
+                content: completePrompt
               }
             ],
             temperature: 0.7,
