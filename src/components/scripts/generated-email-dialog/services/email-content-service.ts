@@ -58,44 +58,15 @@ export const generateEmailContent = async (
   const structurePrompt = getStructurePrompt(structure);
   
   const prompt = `
-# Cel
-Twoim zadaniem jest wygenerowanie treści emaila marketingowego w języku polskim w oparciu o dostarczony blueprint narracyjny.
-
-# Informacje o grupie docelowej (surveyData)
-${audienceDataString || 'Brak danych grupy docelowej'}
-
-# Styl maila: ${emailStyle}
-
-# Cel reklamowy: ${advertisingGoal || 'Nie określono'}
-
-# Blueprint narracyjny
-## Punkty emocjonalne
-${narrativeBlueprint.punktyemocjonalne || 'Brak danych'}
-
-## Specyfika maila
-${narrativeBlueprint.specyfikamaila || 'Brak danych'}
-
-## Oś narracyjna
-${narrativeBlueprint.osnarracyjna || 'Brak danych'}
-
-# Tytuły emaila
+Informacje o grupie docelowej: ${audienceDataString || 'Brak danych grupy docelowej'}
+Styl maila: ${emailStyle}
+Cel reklamowy: ${advertisingGoal || 'Nie określono'}
+Punkty emocjonalne: ${narrativeBlueprint.punktyemocjonalne || 'Brak danych'}
+Specyfika maila: ${narrativeBlueprint.specyfikamaila || 'Brak danych'}
+Oś narracyjna: ${narrativeBlueprint.osnarracyjna || 'Brak danych'}
+Tytuły emaila
 Tytuł 1: ${subjectLine1 || 'Nie określono'}
 Tytuł 2: ${subjectLine2 || 'Nie określono'}
-
-# Struktura emaila: ${structure}
-${structurePrompt}
-
-# Wytyczne
-- Maksymalnie 600-800 słów
-- Używaj języka dopasowanego do grupy docelowej
-- Twórz żywy, angażujący tekst
-- Pamiętaj o call to action (CTA)
-- Format: zwykły tekst, bez HTML
-- Używaj akapitów dla większej czytelności
-- Treść powinna być spójna z podanymi tytułami
-
-Timestamp do unikania cachowania: ${timestamp}
-RequestID: ${requestId}
 `;
 
   console.log(`🔵 EMAIL CONTENT SERVICE: Full prompt for email content [${requestId}]:`, prompt);
