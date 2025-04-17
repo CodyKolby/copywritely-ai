@@ -341,7 +341,7 @@ serve(async (req) => {
               { role: 'user', content: completePrompt + "\n\n" + prompt }
             ],
             temperature: 0.7,
-            max_tokens: 5500,
+            max_tokens: 7500,
           }),
         });
         
