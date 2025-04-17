@@ -1,6 +1,5 @@
 
 import { useLocation } from 'react-router-dom';
-import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { LogIn } from 'lucide-react';
 import { useAuth } from '@/contexts/auth/AuthContext';
@@ -9,11 +8,21 @@ import { NavLink } from './navbar/NavLink';
 import { MobileMenu } from './navbar/MobileMenu';
 import { UserMenu } from './navbar/UserMenu';
 import { useNavbar } from './navbar/useNavbar';
+import { trackEvent } from '@/lib/posthog';
+import { toast } from 'sonner';
 
 const Navbar = () => {
   const location = useLocation();
-  const { user, signOut, isPremium, profile } = useAuth();
+  const { user, signOut, isPremium, profile, signInWithGoogle } = useAuth();
   const { scrolled, localPremium, subscriptionModalOpen, setSubscriptionModalOpen, navItems } = useNavbar();
+
+  const handleLogin = async () => {
+    trackEvent('login_clicked');
+    toast.loading('Łączenie z Google...', {
+      duration: 3000,
+    });
+    await signInWithGoogle();
+  };
 
   return (
     <header
@@ -49,12 +58,14 @@ const Navbar = () => {
               signOut={signOut}
             />
           ) : (
-            <Link to="/login">
-              <Button variant="default" className="bg-copywrite-teal hover:bg-copywrite-teal-dark flex items-center gap-2 text-white">
-                <LogIn size={18} />
-                <span className="hidden sm:inline">Zaloguj</span>
-              </Button>
-            </Link>
+            <Button 
+              variant="default" 
+              className="bg-copywrite-teal hover:bg-copywrite-teal-dark flex items-center gap-2 text-white"
+              onClick={handleLogin}
+            >
+              <LogIn size={18} />
+              <span className="hidden sm:inline">Zaloguj</span>
+            </Button>
           )}
           
           <MobileMenu navItems={navItems} currentPath={location.pathname} />
