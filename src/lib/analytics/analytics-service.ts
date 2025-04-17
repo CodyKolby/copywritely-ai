@@ -57,10 +57,12 @@ class AnalyticsService {
   };
 
   public trackTrialStarted = () => {
+    console.log('Tracking trial started event');
     posthog.capture(AnalyticsEvents.TRIAL_STARTED);
   };
 
   public trackTrialConverted = () => {
+    console.log('Tracking trial converted event');
     posthog.capture(AnalyticsEvents.TRIAL_CONVERTED);
   };
 }

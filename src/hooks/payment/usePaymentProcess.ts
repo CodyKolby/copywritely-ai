@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useAuth } from '@/contexts/auth/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -82,11 +83,13 @@ export function usePaymentProcess() {
         navigate('/projekty');
       }, 2000);
       
+      // Track subscription events based on subscription status
       if (data.success) {
         if (data.status === 'trialing') {
+          console.log('Tracking trial started event from verify-payment');
           analyticsService.trackTrialStarted();
-        }
-        if (data.status === 'active' && data.previousStatus === 'trialing') {
+        } else if (data.status === 'active' && data.previousStatus === 'trialing') {
+          console.log('Tracking trial converted event from verify-payment');
           analyticsService.trackTrialConverted();
         }
       }

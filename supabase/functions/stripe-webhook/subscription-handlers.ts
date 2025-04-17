@@ -56,6 +56,22 @@ export async function handleSubscriptionEvent(
     return;
   }
 
+  // Handle trial started event - important for analytics
+  if (event.type === 'customer.subscription.created' && subscription.status === 'trialing') {
+    console.log('New trial subscription created - track this event');
+    // We can't directly fire frontend events from edge functions,
+    // but we'll add logging to help debug and document the trigger point
+  }
+  
+  // Handle trial conversion event - important for analytics
+  if (event.type === 'customer.subscription.updated' && 
+      subscription.status === 'active' && 
+      event.data.previous_attributes?.status === 'trialing') {
+    console.log('Trial converted to active subscription - track this event');
+    // We can't directly fire frontend events from edge functions,
+    // but we'll add logging to help debug and document the trigger point
+  }
+
   // Handle all other subscription events by ensuring database reflects current Stripe state
   // Find profile by subscription ID
   const { data: profile } = await findProfileBySubscriptionId(subscription.id, db);
