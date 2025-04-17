@@ -66,14 +66,6 @@ const Pricing = () => {
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             Nowoczesna platforma do tworzenia skryptów, które realnie zwiększają sprzedaż i rozwijają Twoją markę.
           </p>
-          
-          {/* Debug button */}
-          <button 
-            onClick={showDebugDialog}
-            className="mt-2 text-xs text-gray-400 hover:text-gray-600"
-          >
-            Debug
-          </button>
         </motion.div>
 
         {/* Billing toggle */}
