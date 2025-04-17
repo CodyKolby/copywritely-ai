@@ -40,6 +40,17 @@ export const generateEmailContent = async (
     structure
   });
 
+  // Convert the entire target audience object to a readable string for the prompt
+  const audienceDataString = Object.entries(targetAudience || {})
+    .filter(([key, value]) => value !== null && value !== undefined && key !== 'id' && key !== 'user_id' && key !== 'created_at' && key !== 'updated_at')
+    .map(([key, value]) => {
+      const formattedKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      return `${formattedKey}: ${value}`;
+    })
+    .join('\n');
+  
+  console.log('🔵 EMAIL CONTENT SERVICE: Audience data string:', audienceDataString);
+
   const structurePrompt = getStructurePrompt(structure);
   
   const prompt = `
@@ -47,11 +58,7 @@ export const generateEmailContent = async (
 Twoim zadaniem jest wygenerowanie treści emaila marketingowego w języku polskim w oparciu o dostarczony blueprint narracyjny.
 
 # Informacje o grupie docelowej
-${targetAudience.name || 'Brak nazwy grupy docelowej'}
-${targetAudience.gender ? `Płeć: ${targetAudience.gender}` : ''}
-${targetAudience.age_range ? `Wiek: ${targetAudience.age_range}` : ''}
-${targetAudience.main_offer ? `Główna oferta: ${targetAudience.main_offer}` : ''}
-${targetAudience.biography ? `Biografia: ${targetAudience.biography}` : ''}
+${audienceDataString || 'Brak danych grupy docelowej'}
 
 # Styl maila: ${emailStyle}
 

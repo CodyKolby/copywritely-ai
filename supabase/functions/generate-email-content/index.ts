@@ -35,6 +35,21 @@ serve(async (req) => {
     
     // Parse request data
     const requestText = await req.text();
+    
+    // Test connection request
+    if (requestText.includes('"test":"connection"')) {
+      console.log(`[${timestamp}][REQ:${requestId}] Handling test connection request`);
+      return new Response(
+        JSON.stringify({
+          status: "success",
+          message: "Connection test successful",
+          timestamp,
+          requestId
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     let requestData;
     
     try {
@@ -213,5 +228,9 @@ Specjalizujesz się w tworzeniu emaili o strukturze ${structureType === 'PAS'
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
+  } finally {
+    const endTime = new Date().toISOString();
+    const duration = new Date(endTime).getTime() - new Date(timestamp).getTime();
+    console.log(`=== GENERATE EMAIL CONTENT END [${requestId}] (Duration: ${duration}ms) ===`);
   }
 });

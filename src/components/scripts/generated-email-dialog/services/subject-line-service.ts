@@ -40,16 +40,22 @@ export const generateSubjectLines = async (
     emailStyle
   });
   
+  // Convert the entire target audience object to a readable string for the prompt
+  const audienceDataString = Object.entries(targetAudience || {})
+    .filter(([key, value]) => value !== null && value !== undefined && key !== 'id' && key !== 'user_id' && key !== 'created_at' && key !== 'updated_at')
+    .map(([key, value]) => {
+      const formattedKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      return `${formattedKey}: ${value}`;
+    })
+    .join('\n');
+  
   // Build a prompt for the subject line generation based on the narrative blueprint and audience data
   const prompt = `
 # Cel
 Twoim zadaniem jest stworzenie dwóch atrakcyjnych i skutecznych linii tytułowych dla maila marketingowego.
 
 # Informacje o grupie docelowej
-${targetAudience.name || 'Brak nazwy grupy docelowej'}
-${targetAudience.gender ? `Płeć: ${targetAudience.gender}` : ''}
-${targetAudience.age_range ? `Wiek: ${targetAudience.age_range}` : ''}
-${targetAudience.main_offer ? `Główna oferta: ${targetAudience.main_offer}` : ''}
+${audienceDataString || 'Brak danych grupy docelowej'}
 
 # Styl maila: ${emailStyle}
 
@@ -89,16 +95,21 @@ RequestID: ${requestId}
     console.log(`🔵 SUBJECT LINE SERVICE: Invoking generate-subject-lines edge function [${requestId}]`);
     
     // First, check if we can reach the edge function
-    const testResponse = await supabase.functions.invoke('generate-subject-lines', {
-      body: {
-        prompt: "Test connection",
-        debugMode: true,
-        timestamp,
-        requestId
-      }
-    });
-    
-    console.log(`🔵 SUBJECT LINE SERVICE: Test response received [${requestId}]`, testResponse);
+    try {
+      const testResponse = await supabase.functions.invoke('generate-subject-lines', {
+        body: {
+          prompt: "Test connection",
+          debugMode: true,
+          timestamp,
+          requestId
+        }
+      });
+      
+      console.log(`🔵 SUBJECT LINE SERVICE: Test response received [${requestId}]`, testResponse);
+    } catch (testErr) {
+      console.warn(`🟠 SUBJECT LINE SERVICE: Test connection failed [${requestId}]:`, testErr);
+      // Continue anyway, the actual request might work
+    }
     
     // Now make the actual call
     const { data, error } = await supabase.functions.invoke('generate-subject-lines', {

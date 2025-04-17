@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { EmailStyle } from '../../EmailStyleDialog';
+import { toast } from 'sonner';
 
 export interface NarrativeBlueprint {
   punktyemocjonalne: string;
@@ -44,7 +45,13 @@ export async function generateNarrativeBlueprint(
     }
     
     console.log(`🔵 NARRATIVE BLUEPRINT SERVICE: Invoking narrative-blueprint edge function [${requestId}]`);
-    console.log(`🔵 NARRATIVE BLUEPRINT SERVICE: Target audience data [${requestId}]:`, targetAudienceData);
+    
+    // Convert the target audience data to a more readable format for debugging
+    const audienceDataLog = { ...targetAudienceData };
+    if (audienceDataLog.biography && audienceDataLog.biography.length > 100) {
+      audienceDataLog.biography = audienceDataLog.biography.substring(0, 100) + '...';
+    }
+    console.log(`🔵 NARRATIVE BLUEPRINT SERVICE: Target audience data [${requestId}]:`, audienceDataLog);
     
     // Make the actual call with retry logic
     let attempts = 0;
@@ -127,6 +134,9 @@ export async function generateNarrativeBlueprint(
     
   } catch (err: any) {
     console.error(`🔴 NARRATIVE BLUEPRINT SERVICE: Failed to generate blueprint [${requestId}]:`, err);
+    
+    // Show a toast notification with the error
+    toast.error(`Błąd generowania blueprint: ${err.message}`);
     
     // Return a fallback blueprint with error information
     const fallbackBlueprint = {
