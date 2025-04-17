@@ -1,22 +1,23 @@
 
 import { loadStripe } from '@stripe/stripe-js';
 
-// Directly use the correct publishable key without relying on environment variables
-const STRIPE_PUBLISHABLE_KEY = 'pk_test_51QfM9GAGO17NLUWtTEUDQB0czM3OCU3MFcZatLoi8LH5fil4we3YiXhg9c77yDELN12nlpyd185k0w8c1HX3dsEz0022Os2Bn5';
+// Use the Stripe publishable key from environment variables
+const STRIPE_PUBLISHABLE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '';
 
-// Initialize Stripe with the hardcoded key
+// Initialize Stripe with the key from environment variables
 let stripePromise: Promise<any> | null = null;
 
 export const getStripe = () => {
   if (!stripePromise) {
-    console.log('Initializing Stripe with hardcoded key');
+    console.log('Initializing Stripe with environment key');
     stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY);
   }
   return stripePromise;
 };
 
-// Use test mode price IDs that work with test mode
+// Updated price IDs to use more generic naming
 export const PRICE_IDS = {
-  PRO_MONTHLY: 'price_1R5A8aAGO17NLUWtxzthF8lo', // Aktualizacja ID cenowego na poprawny
-  PRO_ANNUAL: 'price_1R5A8aAGO17NLUWtxzthF8lo', // Ten sam ID dla planu rocznego (dla testów)
+  PRO_MONTHLY: 'price_monthly', // Replace with your actual monthly price ID
+  PRO_ANNUAL: 'price_annual'    // Replace with your actual annual price ID
 };
+
