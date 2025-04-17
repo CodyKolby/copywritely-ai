@@ -96,42 +96,26 @@ export const generateSubjectLines = async (
   
   // Add the request specific details to the prompt
   const prompt = `
-# Cel
-Twoim zadaniem jest stworzenie dwóch atrakcyjnych i skutecznych linii tytułowych dla maila marketingowego.
+Informacje o grupie docelowej: ${audienceDataString || 'Brak danych grupy docelowej'}
+Styl maila: ${emailStyle}
+Cel reklamowy: ${advertisingGoal || 'Nie określono'}
+Punkty emocjonalne: ${narrativeBlueprint.punktyemocjonalne || 'Brak danych'}
+Specyfika maila: ${narrativeBlueprint.specyfikamaila || 'Brak danych'}
+Oś narracyjna: ${narrativeBlueprint.osnarracyjna || 'Brak danych'}
 
-# Informacje o grupie docelowej
-${audienceDataString || 'Brak danych grupy docelowej'}
+Stwórz dwa różne tytuły, które będą pasować do tej samej treści maila, ale różnić się stylistycznie i tonalnie. Możesz wykorzystać różne formy – pytanie, stwierdzenie, kontrowersję, metaforę lub intrygujący skrót myślowy – pod warunkiem, że oba tytuły prowadzą do tej samej historii i skutecznie przyciągają uwagę.
 
-# Styl maila: ${emailStyle}
+Oba tytuły muszą być:
+- spójne z emocjami odbiorcy i stylem komunikacji,
+- dostosowane do celu reklamowego,
+- krótkie (do 70 znaków),
+- zrozumiałe od razu,
+- bez ogólników i pustych fraz.
+- napisane jako czysty tekst — bez cudzysłowów, numeracji czy znaków specjalnych.
 
-# Cel reklamowy: ${advertisingGoal || 'Nie określono'}
-
-# Blueprint narracyjny
-## Punkty emocjonalne
-${narrativeBlueprint.punktyemocjonalne || 'Brak danych'}
-
-## Specyfika maila
-${narrativeBlueprint.specyfikamaila || 'Brak danych'}
-
-## Oś narracyjna
-${narrativeBlueprint.osnarracyjna || 'Brak danych'}
-
-# Wytyczne
-- Stwórz dwie unikalne i różniące się treścią linie tytułowe dla emaila
-- Pierwsza powinna być bardziej bezpośrednia i zorientowana na wartość
-- Druga powinna budzić ciekawość i wprowadzać element zaskoczenia
-- Obie powinny być przekonujące i dopasowane do grupy docelowej
-- Tytuły muszą się od siebie znacząco różnić pod względem treści, podejścia i stylu
-- Nie powtarzaj tych samych słów kluczowych w obu tytułach
-- Maksymalnie 70 znaków na tytuł
-
-# Format odpowiedzi
-Subject 1: [Pierwszy tytuł]
-Subject 2: [Drugi tytuł]
-
-Unikaj wprowadzenia, podsumowań, wyjaśnień - tylko tytuły w podanym formacie.
-Timestamp do unikania cachowania: ${timestamp}
-RequestID: ${requestId}
+**Format odpowiedzi:**
+Subject 1: [pierwszy tytuł — tylko sam tekst]
+Subject 2: [drugi tytuł — tylko sam tekst]
 `;
 
   console.log(`🔵 SUBJECT LINE SERVICE: Full prompt for subject lines [${requestId}]`);
