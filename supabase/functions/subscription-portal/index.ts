@@ -98,21 +98,45 @@ serve(async (req) => {
     
     console.log('Creating portal session with return URL:', returnUrl);
     
-    // Create portal session
-    const session = await stripe.billingPortal.sessions.create({
-      customer: customerId,
-      return_url: returnUrl,
-    });
-    
-    console.log('Portal session created with URL:', session.url);
+    try {
+      // Create portal session with fallback for missing configuration
+      const session = await stripe.billingPortal.sessions.create({
+        customer: customerId,
+        return_url: returnUrl,
+      });
+      
+      console.log('Portal session created with URL:', session.url);
 
-    return new Response(
-      JSON.stringify({ url: session.url }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
+      return new Response(
+        JSON.stringify({ url: session.url }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
+    } catch (portalError) {
+      console.error('Error creating portal session:', portalError);
+      
+      // Handle specific Stripe portal configuration error
+      if (portalError.message && portalError.message.includes('configuration')) {
+        // Provide alternate access - redirect to stripe dashboard for the customer
+        const stripeCustomerDashboardUrl = `https://dashboard.stripe.com/test/customers/${customerId}`;
+        
+        return new Response(
+          JSON.stringify({ 
+            url: stripeCustomerDashboardUrl,
+            isAlternate: true,
+            message: 'Using alternate customer management URL due to missing portal configuration'
+          }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200,
+          }
+        );
       }
-    )
+      
+      throw portalError;
+    }
   } catch (error) {
     console.error('Error creating portal session:', error);
     

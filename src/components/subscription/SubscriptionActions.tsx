@@ -22,6 +22,12 @@ const SubscriptionActions: React.FC<SubscriptionActionsProps> = ({
 }) => {
   const handleManageSubscription = () => {
     trackEvent('subscription_portal_clicked');
+    
+    // Let the user know we're processing their request
+    toast.loading('Łączenie z portalem zarządzania Stripe...', {
+      duration: 2000,
+    });
+    
     onOpenPortal();
   };
 

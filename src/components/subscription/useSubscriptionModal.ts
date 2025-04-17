@@ -449,7 +449,14 @@ export const useSubscriptionModal = (open: boolean) => {
               }
               
               const portalUrl = response.data?.url;
+              const isAlternate = response.data?.isAlternate;
+              
               if (portalUrl) {
+                if (isAlternate) {
+                  toast.info('Przekierowanie do panelu Stripe', {
+                    description: 'Portal klienta nie jest skonfigurowany. Otwieramy panel Stripe.'
+                  });
+                }
                 window.open(portalUrl, '_blank');
               } else {
                 toast.error('Nie udało się utworzyć sesji portalu klienta');
