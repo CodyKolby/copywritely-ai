@@ -72,7 +72,9 @@ serve(async (req) => {
     }
 
     const { prompt, debugMode, requestId: clientRequestId } = data;
-    const completePrompt = prompt; // bo prompt z frontu to już kompletna instrukcja
+    const { DEFAULT_SUBJECT_LINE_PROMPT } = await import("./prompt-template.ts"); // za chwilę Ci pokażę jak
+    const completePrompt = `${DEFAULT_SUBJECT_LINE_PROMPT}\n\n${prompt}`;
+
     console.log(`[${timestamp}][${requestId}] SUBJECT-LINES: Client request ID: ${clientRequestId || 'Not provided'}`);
     
     if (!prompt) {
