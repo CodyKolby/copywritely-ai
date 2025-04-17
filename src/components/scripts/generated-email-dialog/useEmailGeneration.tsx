@@ -232,18 +232,8 @@ export const useEmailGeneration = ({
   };
 
   const toggleSubjectLine = () => {
-    console.log('EMAIL GENERATION: Toggling subject lines');
-    
-    setIsShowingAlternative(!isShowingAlternative);
-    
-    const temp = generatedSubject;
-    setGeneratedSubject(alternativeSubject);
-    setAlternativeSubject(temp);
-    
-    console.log('EMAIL GENERATION: Subject lines after toggle:', {
-      current: alternativeSubject, 
-      alternative: temp
-    });
+    console.log('EMAIL GENERATION: Toggle subject lines disabled');
+    return;
   };
 
   const handleRetry = () => {

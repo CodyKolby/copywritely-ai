@@ -1,7 +1,6 @@
 
 import React, { useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { BadgePlus, ArrowLeftRight } from 'lucide-react';
+import { BadgePlus } from 'lucide-react';
 
 interface SubjectLineToggleProps {
   currentSubject: string;
@@ -29,13 +28,12 @@ const SubjectLineToggle = ({
   return (
     <div className="mb-4 p-4 rounded-lg border border-amber-200 bg-amber-50">
       <div className="flex flex-col space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <BadgePlus className="w-4 h-4 mr-2 text-amber-700" />
-            <h3 className="text-sm font-medium text-amber-800">
-              Alternatywne tytuły emaila (A/B Test)
-            </h3>
-          </div>
+        <div className="flex items-center">
+          <BadgePlus className="w-4 h-4 mr-2 text-amber-700" />
+          <h3 className="text-sm font-medium text-amber-800">
+            Alternatywne tytuły emaila (A/B Test)
+          </h3>
+        </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className={`p-3 rounded-md border ${!isShowingAlternative ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
