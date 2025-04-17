@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { NarrativeBlueprint } from './narrative-blueprint-service';
 import { EmailStyle } from '../../EmailStyleDialog';
@@ -23,7 +24,9 @@ export const generateEmailContent = async (
   targetAudience: any,
   structure: EmailStructure = 'PAS',
   advertisingGoal: string,
-  emailStyle: EmailStyle
+  emailStyle: EmailStyle,
+  subjectLine1?: string,
+  subjectLine2?: string
 ): Promise<EmailContentResponse> => {
   // Generate a unique request ID and timestamp for tracking
   const requestId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15);
@@ -36,7 +39,9 @@ export const generateEmailContent = async (
     targetAudienceId: targetAudience?.id || 'N/A',
     advertisingGoal,
     emailStyle,
-    structure
+    structure,
+    hasSubjectLine1: !!subjectLine1,
+    hasSubjectLine2: !!subjectLine2
   });
 
   // Convert the entire target audience object to a readable string for the prompt
@@ -73,6 +78,10 @@ ${narrativeBlueprint.specyfikamaila || 'Brak danych'}
 ## Oś narracyjna
 ${narrativeBlueprint.osnarracyjna || 'Brak danych'}
 
+# Tytuły emaila
+Tytuł 1: ${subjectLine1 || 'Nie określono'}
+Tytuł 2: ${subjectLine2 || 'Nie określono'}
+
 # Struktura emaila: ${structure}
 ${structurePrompt}
 
@@ -83,6 +92,7 @@ ${structurePrompt}
 - Pamiętaj o call to action (CTA)
 - Format: zwykły tekst, bez HTML
 - Używaj akapitów dla większej czytelności
+- Treść powinna być spójna z podanymi tytułami
 
 Timestamp do unikania cachowania: ${timestamp}
 RequestID: ${requestId}
@@ -91,7 +101,7 @@ RequestID: ${requestId}
   console.log(`🔵 EMAIL CONTENT SERVICE: Full prompt for email content [${requestId}]:`, prompt);
 
   try {
-    console.log(`���� EMAIL CONTENT SERVICE: Invoking generate-email-content edge function [${requestId}]`);
+    console.log(`🔵 EMAIL CONTENT SERVICE: Invoking generate-email-content edge function [${requestId}]`);
 
     // First, let's try a test connection
     try {
@@ -121,7 +131,9 @@ RequestID: ${requestId}
             prompt,
             structureType: structure,
             timestamp,
-            requestId
+            requestId,
+            subjectLine1,
+            subjectLine2
           },
           headers: {
             'Cache-Control': 'no-cache, no-store',

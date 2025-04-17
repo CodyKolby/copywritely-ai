@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
@@ -159,6 +158,8 @@ export const useEmailGeneration = ({
       // Step 3: Generate subject lines
       console.log(`🔵 EMAIL GENERATION [${flowId}]: Generating subject lines...`);
       let subjectLinesResponse;
+      let subject1 = "Domyślny tytuł emaila";
+      let subject2 = "Alternatywny tytuł emaila";
       
       try {
         subjectLinesResponse = await generateSubjectLines(
@@ -179,13 +180,13 @@ export const useEmailGeneration = ({
         });
         
         // Set two distinctly different subject lines
-        setGeneratedSubject(subjectLinesResponse.subject1);
-        setAlternativeSubject(subjectLinesResponse.subject2);
+        subject1 = subjectLinesResponse.subject1;
+        subject2 = subjectLinesResponse.subject2;
+        setGeneratedSubject(subject1);
+        setAlternativeSubject(subject2);
       } catch (subjectError: any) {
         console.error(`🔴 EMAIL GENERATION [${flowId}]: Subject line generation failed:`, subjectError);
         // Don't throw here, continue with default subjects
-        setGeneratedSubject("Domyślny tytuł emaila");
-        setAlternativeSubject("Alternatywny tytuł emaila");
       }
       
       // Step 4: Select email structure and generate content
@@ -199,7 +200,9 @@ export const useEmailGeneration = ({
           targetAudienceData, 
           selectedStructure, 
           advertisingGoal, 
-          emailStyle
+          emailStyle,
+          subject1,  // Pass the first subject
+          subject2   // Pass the second subject
         );
         
         console.log(`🔵 EMAIL GENERATION [${flowId}]: Email content generated using structure: ${emailContentResponse.structureUsed}`);

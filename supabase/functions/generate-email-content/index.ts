@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -26,8 +27,10 @@ Wykorzystaj poniższe zmienne w swojej pracy:
 - Dane z ankiety klienta: {{surveyData}}
 - Styl maila z wyboru klienta: {{emailStyle}}
 - Cel reklamy: {{advertisingGoal}}
+- Tytuł 1: {{subjectLine1}}
+- Tytuł 2: {{subjectLine2}}
 
-Nie używaj zbyt wielu emotikonów, wykrzykników czy wielkich liter. Twoja siła leży w precyzyjnym dobraniu słów, które poruszają odbiorcę.`;
+Stwórz treść, która będzie spójna i odpowiadała wybranym tytułom. Nie używaj zbyt wielu emotikonów, wykrzykników czy wielkich liter. Twoja siła leży w precyzyjnym dobraniu słów, które poruszają odbiorcę.`;
 
 const CJN_AGENT_PROMPT = `Jesteś profesjonalnym polskim copywriterem, który specjalizuje się w tworzeniu treści marketingowych w strukturze Cecha-Zaleta-Nagroda (CJN). Twój styl jest przyjazny, angażujący i zorientowany na korzyści. Komunikujesz się w sposób przejrzysty i przekonujący.
 
@@ -44,8 +47,10 @@ Wykorzystaj poniższe zmienne w swojej pracy:
 - Dane z ankiety klienta: {{surveyData}}
 - Styl maila z wyboru klienta: {{emailStyle}}
 - Cel reklamy: {{advertisingGoal}}
+- Tytuł 1: {{subjectLine1}}
+- Tytuł 2: {{subjectLine2}}
 
-Buduj narrację opartą na wartości i korzyściach. Unikaj agresywnego tonu, skup się na pozytywnych emocjach i spełnieniu potrzeb odbiorcy.`;
+Stwórz treść, która będzie spójna i odpowiadała wybranym tytułom. Buduj narrację opartą na wartości i korzyściach. Unikaj agresywnego tonu, skup się na pozytywnych emocjach i spełnieniu potrzeb odbiorcy.`;
 
 // UI Cleaner prompt
 const UI_CLEANER_PROMPT = `Jesteś zaawansowanym copywriterem odpowiedzialnym za edytowanie gotowych maili marketingowych w języku polskim. Twoim zadaniem nie jest zmiana treści, ale poprawa jej formy i czytelności.
@@ -126,12 +131,16 @@ serve(async (req) => {
       prompt, 
       structureType, 
       timestamp: clientTimestamp, 
-      requestId: clientRequestId 
+      requestId: clientRequestId,
+      subjectLine1,
+      subjectLine2
     } = requestData;
     
     console.log(`[${requestId}] GENERATE-EMAIL-CONTENT: Client request ID: ${clientRequestId || 'Not provided'}`);
     console.log(`[${requestId}] GENERATE-EMAIL-CONTENT: Client timestamp: ${clientTimestamp || 'Not provided'}`);
     console.log(`[${requestId}] GENERATE-EMAIL-CONTENT: Structure type: ${structureType || 'Not specified'}`);
+    console.log(`[${requestId}] GENERATE-EMAIL-CONTENT: Subject Line 1: ${subjectLine1 || 'Not provided'}`);
+    console.log(`[${requestId}] GENERATE-EMAIL-CONTENT: Subject Line 2: ${subjectLine2 || 'Not provided'}`);
     
     if (!prompt) {
       console.error(`[${requestId}] GENERATE-EMAIL-CONTENT: Missing prompt`);
@@ -165,6 +174,19 @@ serve(async (req) => {
     
     console.log(`[${requestId}] GENERATE-EMAIL-CONTENT: Using ${agentType} agent`);
     console.log(`[${requestId}] GENERATE-EMAIL-CONTENT: System prompt: ${systemPrompt.substring(0, 100)}...`);
+
+    // Replace subject line placeholders in system prompt if provided
+    if (subjectLine1) {
+      systemPrompt = systemPrompt.replace('{{subjectLine1}}', subjectLine1);
+    } else {
+      systemPrompt = systemPrompt.replace('{{subjectLine1}}', 'Nie określono');
+    }
+    
+    if (subjectLine2) {
+      systemPrompt = systemPrompt.replace('{{subjectLine2}}', subjectLine2);
+    } else {
+      systemPrompt = systemPrompt.replace('{{subjectLine2}}', 'Nie określono');
+    }
 
     // Check if we have an OpenAI API key
     if (!OPENAI_API_KEY) {
