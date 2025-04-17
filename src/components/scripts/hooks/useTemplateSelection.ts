@@ -111,9 +111,9 @@ export function useTemplateSelection(validatePremium?: () => Promise<boolean>) {
           console.log('User does not have premium, redirecting to pricing');
           setIsValidatingPremium(false);
           toast.error('Ta funkcja wymaga konta Premium', {
-            description: 'Przejdź do strony cennika, aby wykupić subskrypcję.',
+            description: 'Przejdź do strony z planami, aby wykupić subskrypcję.',
             action: {
-              label: 'Cennik',
+              label: 'Plany',
               onClick: () => navigate('/pricing')
             }
           });
