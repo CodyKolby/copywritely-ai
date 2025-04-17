@@ -43,10 +43,6 @@ const EmailDisplay = ({
         onSubjectChange={onSubjectChange}
         onEmailContentChange={onEmailContentChange}
       />
-      
-      <div className="text-xs text-muted-foreground mt-2">
-        <p>Możesz edytować powyższą treść przed zapisaniem.</p>
-      </div>
     </div>
   );
 };
