@@ -126,6 +126,8 @@ Subject 1: [pierwszy tytuł — tylko sam tekst]
 Subject 2: [drugi tytuł — tylko sam tekst]
 `;
 
+  const completePrompt = `${DEFAULT_SUBJECT_LINE_PROMPT}\n\n${prompt}`;
+  
   console.log(`🔵 SUBJECT LINE SERVICE: Full prompt for subject lines [${requestId}]`);
 
   try {
@@ -156,7 +158,7 @@ Subject 2: [drugi tytuł — tylko sam tekst]
       try {
         const response = await supabase.functions.invoke('generate-subject-lines', {
           body: {
-            prompt,
+            prompt: completePrompt,
             timestamp,
             requestId,
             narrativeBlueprint: {
