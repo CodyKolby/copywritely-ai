@@ -107,40 +107,38 @@ serve(async (req) => {
     console.log(`[${requestId}] NARRATIVE-BLUEPRINT: System prompt: ${systemPrompt.substring(0, 100)}...`);
     
     // User prompt for the blueprint generator
-    const userPrompt = `Masz dostęp do danych o grupie docelowej, ich problemach i pragnieniach, stylu maila oraz celu kampanii.
+    const userPrompt = `Jesteś profesjonalnym strategiem marketingowym, który specjalizuje się w tworzeniu fundamentów narracyjnych dla pojedynczych maili marketingowych. Twoim zadaniem jest wygenerowanie kluczowych punktów emocjonalnych i kreatywnych inspiracji, na podstawie których inne AI stworzą resztę maila. Nie tworzysz treści — tworzysz strukturę emocjonalną i logiczną.
+
+Masz dostęp do danych o grupie docelowej, ich problemach i pragnieniach, stylu maila oraz celu kampanii.
 
 Dane wejściowe, które otrzymujesz:
 ${surveyDataString}
-Styl maila: ${emailStyle || 'Nie określono'}
-Cel kampanii: ${advertisingGoal || 'Nie określono'}
 
 Na podstawie tych informacji wygeneruj trzy zestawy danych:
 
 1. Punkty emocjonalne — zaproponuj 2–3 kluczowe emocjonalne punkty zaczepienia, które mają poruszyć odbiorcę. Dobierz je do stylu maila:
-- Bezpośrednia sprzedaż — nacisk na presję, brak działania, pilność, obietnicę zmiany (np. „Ile jeszcze dni z rzędu będziesz budzić się zmęczona?").
-- Edukacyjny — podkreśl błędne przekonania, ukryte przyczyny, nowe spojrzenia (np. „Twoje zmęczenie to nie brak silnej woli — to nierównowaga hormonalna").
-- Opowieść — zacznij od typowego momentu z życia klientki, wywołaj utożsamienie, emocję i przełom (np. „Znowu płakałam w przebieralni… aż coś we mnie pękło").
-- Budowanie relacji — podkreśl wspólnotę, zrozumienie, brak presji, otwartość na rozmowę (np. „Nie musisz być idealna — jesteśmy tu, żeby Cię wspierać").
+- Bezpośrednia sprzedaż — nacisk na presję, brak działania, pilność, obietnicę zmiany (np. „Ile jeszcze dni z rzędu będziesz budzić się zmęczona?”).
+- Edukacyjny — podkreśl błędne przekonania, ukryte przyczyny, nowe spojrzenia (np. „Twoje zmęczenie to nie brak silnej woli — to nierównowaga hormonalna”).
+- Opowieść — zacznij od typowego momentu z życia klientki, wywołaj utożsamienie, emocję i przełom (np. „Znowu płakałam w przebieralni… aż coś we mnie pękło”).
+- Budowanie relacji — podkreśl wspólnotę, zrozumienie, brak presji, otwartość na rozmowę (np. „Nie musisz być idealna — jesteśmy tu, żeby Cię wspierać”).
 
 Każdy punkt emocjonalny opisz jednym zdaniem głównym + jednym zdaniem uzasadniającym jego wartość.
 
-2. Pomysły na styl maila — zaproponuj 3 interesujące, intrygujące i możliwie clickbaitowe pomysły na styl maila. Mogą być to potencjalne tytuły lub osie treści. Inspiruj się formatami typu:
+1. Pomysły na styl maila — zaproponuj 3 interesujące, intrygujące i możliwie clickbaitowe pomysły na styl maila. Mogą być to potencjalne tytuły lub osie treści. Inspiruj się formatami typu:
 - "Dlaczego Twój plan treningowy jest skazany na porażkę" (podważa obecne podejście klienta)
 - "List od trenera: Co bym zrobiła, gdybym zaczynała od zera" (osobista perspektywa eksperta)
 - "3 rzeczy, które robisz źle, choć starasz się jak możesz" (liczbowe i kontrastowe podejście)
 
 Unikaj powtarzalnych konstrukcji, miksuj perspektywy, styl i format.
 
-3. Oś narracyjna — wygeneruj jedno silne zdanie, które może być myślą przewodnią całego maila. To nie jest tytuł, to wewnętrzna mantra kampanii, np. „Nie jesteś sama", „Zacznij od siebie", „Nie musisz być idealna, by czuć się dobrze".
+1. Oś narracyjna — wygeneruj jedno silne zdanie, które może być myślą przewodnią całego maila. To nie jest tytuł, to wewnętrzna mantra kampanii, np. „Nie jesteś sama”, „Zacznij od siebie”, „Nie musisz być idealna, by czuć się dobrze”.
 
 Zachowuj maksymalną zwięzłość. Nie powtarzaj informacji z danych wejściowych. Nie tworzysz copy — tworzysz emocjonalny blueprint, który zasili Subject Line Generator AI oraz Main Copywriter AI.
 
 Wynik powinien mieć format:
 punktyemocjonalne: [tutaj punkty emocjonalne]
 specyfikamaila: [tutaj pomysły na styl maila]
-osnarracyjna: [tutaj oś narracyjną]
-
-WAŻNE: Zwróć pełną zawartość każdej sekcji, nie ucinaj żadnych zdań. Każda sekcja może zawierać do 500 znaków.`;
+osnarracyjna: [tutaj oś narracyjną]`;
 
     console.log(`[${requestId}] NARRATIVE-BLUEPRINT: User prompt length: ${userPrompt.length} chars`);
     console.log(`[${requestId}] NARRATIVE-BLUEPRINT: User prompt preview: ${userPrompt.substring(0, 300)}...`);
