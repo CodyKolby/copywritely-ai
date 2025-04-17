@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
@@ -163,10 +162,10 @@ export const useEmailGeneration = ({
       let subject2 = "Alternatywny tytuł emaila";
       
       try {
-        // Fixed: Removed the fourth parameter (advertisingGoal) to match the function signature
         subjectLinesResponse = await generateSubjectLines(
           blueprint, 
           targetAudienceData, 
+          advertisingGoal, 
           emailStyle
         );
         

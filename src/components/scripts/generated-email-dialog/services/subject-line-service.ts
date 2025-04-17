@@ -1,20 +1,7 @@
-
 import { getSupabaseAnonKey, getSupabaseURL } from '@/utils/helpers';
 import { templateReplacer } from '@/utils/template-replacer';
 
-/**
- * Response type for subject line generation
- */
-export interface SubjectLinesResponse {
-  subject1: string;
-  subject2: string;
-  debugInfo?: any;
-}
-
-/**
- * Default prompt for subject line generation
- */
-export const DEFAULT_SUBJECT_LINE_PROMPT = `
+const BASE_PROMPT = `
 You are an expert email subject line writer. You will be given data from a survey, and narrative data about the survey results.
 You will also be given an email style to adhere to.
 
@@ -30,16 +17,7 @@ Here is the email style:
 {{emailStyle}}
 `;
 
-const BASE_PROMPT = DEFAULT_SUBJECT_LINE_PROMPT;
-
-/**
- * Generates subject lines based on provided data
- */
-export const generateSubjectLines = async (
-  surveyData: any, 
-  narrativeData: any, 
-  emailStyle: string
-): Promise<SubjectLinesResponse> => {
+const generateSubjectLines = async (surveyData: any, narrativeData: any, emailStyle: string): Promise<string[]> => {
   if (!surveyData || !narrativeData) {
     throw new Error('Survey data and narrative data are required.');
   }
@@ -89,38 +67,23 @@ export const generateSubjectLines = async (
     }
 
     const data = await response.json();
-    
-    // Transform the array response into the expected object structure
-    if (Array.isArray(data) && data.length >= 2) {
-      return {
-        subject1: data[0],
-        subject2: data[1],
-        debugInfo: { rawResponse: data }
-      };
+
+    if (!Array.isArray(data)) {
+      console.error('Unexpected response data:', data);
+      throw new Error('Unexpected response data: Subject lines must be an array.');
     }
-    
-    console.error('Unexpected response format:', data);
-    return {
-      subject1: "Default Subject Line",
-      subject2: "Alternative Subject Line",
-      debugInfo: { error: "Invalid response format", rawResponse: data }
-    };
-    
+
+    return data;
   } catch (error) {
     console.error('Error generating subject lines:', error);
     throw error;
   }
 };
 
-export const getSubjectLine = async (
-  surveyData: any, 
-  narrativeData: any, 
-  emailStyle: string
-): Promise<string[]> => {
+export const getSubjectLine = async (surveyData: any, narrativeData: any, emailStyle: string): Promise<string[]> => {
   try {
     const subjectLines = await generateSubjectLines(surveyData, narrativeData, emailStyle);
-    // Return as array for backward compatibility
-    return [subjectLines.subject1, subjectLines.subject2];
+    return subjectLines;
   } catch (error: any) {
     console.error('Error in getSubjectLine:', error);
     throw new Error(`Failed to get subject lines: ${error.message}`);
