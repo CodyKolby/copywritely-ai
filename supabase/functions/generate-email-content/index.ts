@@ -322,7 +322,8 @@ serve(async (req) => {
       console.log(`[${requestId}] GENERATE-EMAIL-CONTENT: API call attempt ${attempts}/${maxAttempts}`);
 
       console.log(`[${requestId}] GENERATE-EMAIL-CONTENT: FINAL PROMPT SENT TO OPENAI:\n`);
-      console.log(completePrompt + "\n\n" + prompt);
+      console.log(completePrompt);
+      console.log(prompt);
       
       try {
         apiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -338,7 +339,8 @@ serve(async (req) => {
           body: JSON.stringify({
             model: 'gpt-4o-mini',
             messages: [
-              { role: 'user', content: completePrompt + "\n\n" + prompt }
+              { role: 'system', content: completePrompt },
+              { role: 'user', content: prompt }
             ],
             temperature: 0.7,
             max_tokens: 7500,
