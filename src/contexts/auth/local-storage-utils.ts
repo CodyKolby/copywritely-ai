@@ -1,85 +1,55 @@
 
-// Check if this file exists and create it if needed. 
-// If it exists, we'll modify the clearPremiumFromLocalStorage function.
-
-export const updateLocalStoragePremium = (isPremium: boolean): void => {
-  try {
-    console.log(`[LOCAL-STORAGE] Setting premium status to ${isPremium}`);
-    localStorage.setItem('premium_status', isPremium ? 'true' : 'false');
-    localStorage.setItem('premium_timestamp', Date.now().toString());
-  } catch (e) {
-    console.error('[LOCAL-STORAGE] Error updating premium in localStorage:', e);
+/**
+ * Update premium status in localStorage
+ */
+export const updateAllPremiumStorages = (isPremium: boolean) => {
+  if (isPremium) {
+    const timestamp = new Date().getTime();
+    localStorage.setItem('premium_status', 'true');
+    localStorage.setItem('premium_timestamp', timestamp.toString());
+    sessionStorage.setItem('premium_status', 'true');
+    console.log('[PREMIUM] Updated all storages with premium status');
+  } else {
+    clearPremiumFromLocalStorage();
   }
 };
 
-export const updateAllPremiumStorages = (isPremium: boolean): void => {
-  try {
-    console.log(`[LOCAL-STORAGE] Updating all premium storages to ${isPremium}`);
-    
-    // Update localStorage
-    updateLocalStoragePremium(isPremium);
-    
-    // Update sessionStorage
-    sessionStorage.setItem('premium_status', isPremium ? 'true' : 'false');
-    sessionStorage.setItem('premium_timestamp', Date.now().toString());
-    
-  } catch (e) {
-    console.error('[LOCAL-STORAGE] Error updating all premium storages:', e);
-  }
+/**
+ * Clear premium flags from localStorage
+ */
+export const clearPremiumFromLocalStorage = () => {
+  localStorage.removeItem('premium_status');
+  localStorage.removeItem('premium_timestamp');
+  sessionStorage.removeItem('premium_status');
+  console.log('[PREMIUM] Cleared premium status from all storages');
 };
 
-export const validateLocalStoragePremium = (): boolean => {
-  try {
-    const premiumStatus = localStorage.getItem('premium_status');
-    const timestamp = localStorage.getItem('premium_timestamp');
-    
-    if (premiumStatus !== 'true') return false;
-    
-    if (timestamp) {
-      const storageTime = parseInt(timestamp, 10);
-      const now = Date.now();
-      const hoursDiff = (now - storageTime) / (1000 * 60 * 60);
-      
-      // Valid for 12 hours only
-      if (hoursDiff > 12) {
-        console.log('[LOCAL-STORAGE] Premium status expired in localStorage');
-        clearPremiumFromLocalStorage();
-        return false;
-      }
-    }
-    
-    return premiumStatus === 'true';
-  } catch (e) {
-    console.error('[LOCAL-STORAGE] Error validating premium in localStorage:', e);
-    return false;
-  }
-};
-
+/**
+ * Check if premium status is stored in any storage
+ */
 export const checkAllPremiumStorages = (): boolean => {
-  try {
-    // Check localStorage first
-    const localPremium = validateLocalStoragePremium();
-    if (localPremium) return true;
+  // First check localStorage with timestamp validation
+  const lsPremiumStatus = localStorage.getItem('premium_status');
+  const lsTimestamp = localStorage.getItem('premium_timestamp');
+  
+  if (lsPremiumStatus === 'true' && lsTimestamp) {
+    const premiumTime = parseInt(lsTimestamp, 10);
+    const now = new Date().getTime();
+    const hoursDiff = (now - premiumTime) / (1000 * 60 * 60);
     
-    // Then check sessionStorage
-    const sessionPremium = sessionStorage.getItem('premium_status');
-    if (sessionPremium === 'true') return true;
-    
-    return false;
-  } catch (e) {
-    console.error('[LOCAL-STORAGE] Error checking all premium storages:', e);
-    return false;
+    // If premium status is less than 24 hours old, consider it valid
+    if (hoursDiff < 24) {
+      console.log('[PREMIUM] Valid premium status found in localStorage');
+      return true;
+    }
   }
-};
-
-export const clearPremiumFromLocalStorage = (): void => {
-  try {
-    console.log('[LOCAL-STORAGE] Premium status cleared from storage');
-    localStorage.removeItem('premium_status');
-    localStorage.removeItem('premium_timestamp');
-    sessionStorage.removeItem('premium_status');
-    sessionStorage.removeItem('premium_timestamp');
-  } catch (e) {
-    console.error('[LOCAL-STORAGE] Error clearing premium from storages:', e);
+  
+  // Then check sessionStorage as backup
+  const ssPremiumStatus = sessionStorage.getItem('premium_status');
+  if (ssPremiumStatus === 'true') {
+    console.log('[PREMIUM] Premium status found in sessionStorage');
+    return true;
   }
+  
+  return false;
 };

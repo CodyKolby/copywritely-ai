@@ -1,38 +1,29 @@
 
-import { CheckCircle, ArrowRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useNavigate } from 'react-router-dom';
+import React from 'react';
+import { CheckCircle } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { Link } from 'react-router-dom';
 
 interface SuccessStateProps {
-  redirectTimer?: number;
+  redirectTimer: number;
 }
 
-export const SuccessState = ({ redirectTimer }: SuccessStateProps) => {
-  const navigate = useNavigate();
-  
+export const SuccessState: React.FC<SuccessStateProps> = ({ redirectTimer }) => {
   return (
-    <div className="text-center">
-      <div className="w-16 h-16 mx-auto mb-4 text-green-500">
-        <CheckCircle className="w-full h-full" />
+    <div className="flex flex-col items-center">
+      <div className="mb-6 text-green-500">
+        <CheckCircle size={80} />
       </div>
-      <h2 className="text-2xl font-bold text-gray-800 mb-4">Płatność zakończona sukcesem!</h2>
-      <p className="text-gray-600 mb-6">
-        Dziękujemy za wykupienie subskrypcji. Twoje konto zostało zaktualizowane do wersji Premium.
-        Możesz teraz korzystać z wszystkich funkcji naszej aplikacji.
+      <h2 className="text-2xl font-bold mb-4">Płatność zakończona pomyślnie!</h2>
+      <p className="text-gray-600 mb-4 text-center">
+        Twoje konto zostało zaktualizowane do wersji Premium.
+        {redirectTimer > 0 && <span> Nastąpi przekierowanie...</span>}
       </p>
-      <Button 
-        onClick={() => navigate('/projekty')}
-        className="bg-copywrite-teal hover:bg-copywrite-teal-dark flex items-center gap-2"
-      >
-        Przejdź do projektów
-        <ArrowRight className="w-4 h-4" />
-      </Button>
-      
-      {redirectTimer !== undefined && redirectTimer > 0 && (
-        <p className="text-sm text-gray-500 mt-4">
-          Za {2 - redirectTimer} {(2 - redirectTimer) === 1 ? 'sekundę' : 'sekundy'} zostaniesz przekierowany do projektów...
-        </p>
-      )}
+      <div className="flex gap-4 mt-4">
+        <Button asChild>
+          <Link to="/projekty">Przejdź do projektów</Link>
+        </Button>
+      </div>
     </div>
   );
 };

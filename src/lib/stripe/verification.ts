@@ -1,84 +1,93 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { updateLocalStoragePremium } from './localStorage-utils';
 
-// Weryfikacja klucza Stripe poprzez wywołanie funkcji Edge
-export const verifyStripeKey = async (): Promise<{ success: boolean; message: string; data?: any }> => {
+/**
+ * Verify a Stripe key by checking the Stripe API connection
+ */
+export const verifyStripeKey = async () => {
   try {
     const { data, error } = await supabase.functions.invoke('verify-stripe-key');
     
     if (error) {
-      console.error('Błąd podczas weryfikacji klucza Stripe:', error);
-      return { success: false, message: `Błąd: ${error.message || 'Nieznany błąd'}` };
+      console.error('Error verifying Stripe key:', error);
+      throw error;
     }
     
-    return { 
-      success: data.success, 
-      message: data.message || 'Klucz zweryfikowany pomyślnie', 
-      data 
-    };
+    return data;
   } catch (error) {
-    console.error('Wyjątek podczas weryfikacji klucza Stripe:', error);
-    return { 
-      success: false, 
-      message: error instanceof Error ? error.message : 'Nieznany błąd podczas weryfikacji' 
-    };
+    console.error('Exception verifying Stripe key:', error);
+    throw error;
   }
 };
 
-// Wymuszenie aktualizacji statusu premium dla użytkownika na podstawie sesji płatności
-export const forceUpdatePremiumStatus = async (userId: string, sessionId: string | null = null): Promise<boolean> => {
+/**
+ * Check premium status for a user
+ */
+export const checkPremiumStatus = async (userId: string, showToast = false): Promise<boolean> => {
   try {
-    if (!userId) {
-      console.error('Brak userId przy próbie aktualizacji statusu premium');
+    console.log(`Checking premium status for user: ${userId}`);
+    
+    const { data, error } = await supabase.functions.invoke('check-subscription-status', {
+      body: { userId }
+    });
+    
+    if (error) {
+      console.error('Error checking premium status:', error);
       return false;
     }
     
-    console.log(`Aktualizowanie statusu premium dla użytkownika: ${userId}`);
+    console.log('Premium status response:', data);
     
-    // Ustaw datę wygaśnięcia na 30 dni od teraz
-    const expiryDate = new Date();
-    expiryDate.setDate(expiryDate.getDate() + 30);
-    
-    const { error } = await supabase
-      .from('profiles')
-      .update({ 
-        is_premium: true,
-        subscription_status: 'active',
-        subscription_expiry: expiryDate.toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', userId);
+    if (data?.isPremium === true) {
+      // Update localStorage
+      updateLocalStoragePremium(true);
       
-    if (error) {
-      console.error('Błąd podczas aktualizacji profilu:', error);
-      return false;
-    } 
+      if (showToast) {
+        toast.success('Twoje konto ma status Premium!');
+      }
+      return true;
+    }
     
-    console.log('Status premium zaktualizowany pomyślnie');
+    return false;
+  } catch (error) {
+    console.error('Exception checking premium status:', error);
+    return false;
+  }
+};
+
+/**
+ * Force update premium status for a user
+ */
+export const forceUpdatePremiumStatus = async (userId: string, sessionId?: string): Promise<boolean> => {
+  try {
+    console.log(`Force updating premium status for user: ${userId}`);
     
-    // Jeśli podano ID sesji, dodaj wpis do logów płatności
+    // Try verifying payment session if we have a sessionId
     if (sessionId) {
       try {
-        const { error: logError } = await supabase
-          .from('payment_logs')
-          .insert({
-            user_id: userId,
-            session_id: sessionId,
-            timestamp: new Date().toISOString()
-          });
-          
-        if (logError) {
-          console.error('Błąd podczas dodawania logu płatności:', logError);
-          // Niepowodzenie logu nie wpływa na status operacji
+        const { data, error } = await supabase.functions.invoke('verify-payment-session', {
+          body: {
+            userId,
+            sessionId
+          }
+        });
+        
+        if (!error && data?.success) {
+          console.log('Payment session verified successfully:', data);
+          updateLocalStoragePremium(true);
+          return true;
         }
-      } catch (logException) {
-        console.error('Wyjątek podczas zapisywania logu:', logException);
+      } catch (e) {
+        console.error('Error verifying payment session:', e);
       }
     }
     
-    return true;
+    // Fall back to direct subscription check
+    return await checkPremiumStatus(userId, false);
   } catch (error) {
-    console.error('Błąd podczas aktualizacji statusu premium:', error);
+    console.error('Exception in force update premium status:', error);
     return false;
   }
 };

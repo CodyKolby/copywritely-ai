@@ -1,28 +1,12 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { 
-  corsHeaders, 
-  getSupabaseClient, 
-  verifyUser, 
-  isSubscriptionExpired,
-  verifyStripeSubscription
-} from "./utils.ts";
-import {
-  checkPaymentLogs,
-  createBasicProfile,
-  updateProfileFromPaymentLogs
-} from "./payment-logs.ts";
-import {
-  updatePremiumStatus,
-  getProfile
-} from "./profile.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.5.0";
+import { corsHeaders } from "../shared/cors.ts";
 
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { 
-      status: 204,
-      headers: corsHeaders 
-    });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
@@ -37,158 +21,77 @@ serve(async (req) => {
 
     console.log(`Checking subscription status for user: ${userId}`);
 
-    // Get Stripe secret key
-    const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
-    
-    // Create Supabase client
-    const supabase = getSupabaseClient();
+    // Create Supabase client with Service Role Key for admin operations
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') || '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
+    );
 
     // First check if user exists in auth system
-    const userExists = await verifyUser(supabase, userId);
-    if (!userExists) {
-      console.warn('User not verified in auth system. Will continue anyway as they might exist in profiles table');
+    const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
+    if (userError || !userData?.user) {
+      console.warn('Error verifying user:', userError?.message || 'User not found');
     }
 
-    // Check subscription status in profiles table
-    const profile = await getProfile(supabase, userId);
+    // Check if the user has a profile
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('is_premium, subscription_expiry, subscription_status, subscription_id')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (profileError) {
+      console.error('Error retrieving profile:', profileError.message);
+    }
 
     if (!profile) {
-      console.log('Profile not found, user has no premium status');
-      
-      // Try to create a basic profile since it doesn't exist
-      await createBasicProfile(supabase, userId);
-      
-      // Also check payment logs before returning - this deals with "ghost premium" issue
-      const hasPaymentLogs = await checkPaymentLogs(supabase, userId);
-      
-      if (hasPaymentLogs) {
-        console.log('Found payment logs but no profile, creating premium profile');
-        
-        // User has payment but no profile or premium status
-        const updated = await updateProfileFromPaymentLogs(supabase, userId);
-        
-        if (updated) {
+      console.log('No profile found, user has no premium status');
+      return new Response(
+        JSON.stringify({ isPremium: false }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('Profile found:', profile);
+
+    // Check if subscription is explicitly marked as premium
+    if (profile.is_premium) {
+      // Check if there's an expiry date
+      if (profile.subscription_expiry) {
+        const expiryDate = new Date(profile.subscription_expiry);
+        const now = new Date();
+
+        if (expiryDate < now) {
+          console.log('Subscription has expired on:', profile.subscription_expiry);
+          
+          // Update database to reflect expired status
+          await supabase
+            .from('profiles')
+            .update({
+              is_premium: false,
+              subscription_status: 'expired',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', userId);
+            
           return new Response(
-            JSON.stringify({ isPremium: true }),
+            JSON.stringify({ isPremium: false }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
       }
       
+      console.log('User has valid premium status');
       return new Response(
-        JSON.stringify({ isPremium: false }),
+        JSON.stringify({ isPremium: true }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Profile data:', profile);
-
-    // Check if this is a trial period
-    let isTrial = false;
-    if (profile.trial_started_at && profile.subscription_expiry) {
-      const trialStartDate = new Date(profile.trial_started_at);
-      const now = new Date();
-      const trialDays = Math.floor((now.getTime() - trialStartDate.getTime()) / (1000 * 60 * 60 * 24));
-      
-      // Consider it a trial if within 3 days of start and no subscription_id
-      if (trialDays <= 3 && (!profile.subscription_id || profile.subscription_id === '')) {
-        console.log('User is in trial period:', trialDays, 'days');
-        isTrial = true;
-      }
-    }
-
-    // Check if subscription has been cancelled/deactivated
-    if (profile.subscription_status === 'canceled' && !isTrial) {
-      console.log('Subscription has been canceled');
-      
-      // Update database to reflect canceled status
-      await updatePremiumStatus(supabase, userId, false, 'canceled');
-      
-      return new Response(
-        JSON.stringify({ isPremium: false }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Check expiry date first - this is critical
-    if (profile.subscription_expiry) {
-      if (isSubscriptionExpired(profile.subscription_expiry) && !isTrial) {
-        console.log('Subscription has expired on:', profile.subscription_expiry);
-        
-        // Update database to reflect expired status
-        await updatePremiumStatus(supabase, userId, false, 'inactive');
-        
-        return new Response(
-          JSON.stringify({ isPremium: false }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      } else if (isTrial) {
-        console.log('User has active trial until:', profile.subscription_expiry);
-        return new Response(
-          JSON.stringify({ isPremium: true, isTrial: true }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-    }
-
-    // Default status after expiry check
-    let isPremium = profile.is_premium || false;
-    
-    // If we have a subscription ID, validate with Stripe directly
-    if (profile.subscription_id && stripeSecretKey) {
-      const { isActive, expiryDate } = await verifyStripeSubscription(
-        profile.subscription_id, 
-        stripeSecretKey
-      );
-      
-      // Update based on Stripe's data - the source of truth
-      if (isActive) {
-        isPremium = true;
-        
-        // Update DB if needed
-        if (!profile.is_premium || profile.subscription_status !== 'active') {
-          console.log('Updating profile based on active Stripe subscription');
-          
-          const updateData: Record<string, any> = { 
-            is_premium: true,
-            subscription_status: 'active'
-          };
-          
-          if (expiryDate) {
-            updateData.subscription_expiry = expiryDate;
-          }
-          
-          await supabase
-            .from('profiles')
-            .update(updateData)
-            .eq('id', userId);
-        }
-      } else if (profile.is_premium) {
-        // Subscription is not active in Stripe, but marked as premium in DB
-        console.log('Updating profile to non-premium based on inactive Stripe subscription');
-        isPremium = false;
-        
-        await updatePremiumStatus(supabase, userId, false, 'inactive');
-      }
-    }
-    
-    // One final check - if premium is false but payment logs exist, override
-    if (!isPremium && profile.subscription_status !== 'canceled') {
-      const hasPaymentLogs = await checkPaymentLogs(supabase, userId);
-      
-      if (hasPaymentLogs) {
-        console.log('Found payment logs - overriding subscription status to active');
-        
-        // User has payment but premium status is false
-        await updatePremiumStatus(supabase, userId, true);
-        isPremium = true;
-      }
-    }
-
-    console.log(`Final premium status for user ${userId}: ${isPremium}`);
-
+    // User does not have premium status
+    console.log('User does not have premium status');
     return new Response(
-      JSON.stringify({ isPremium: profile.is_premium || false }),
+      JSON.stringify({ isPremium: false }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
