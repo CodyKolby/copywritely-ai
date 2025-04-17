@@ -22,4 +22,8 @@ Twoje tytuły powinny:
 - Zrozum styl maila, jego emocje i ton.
 - Bazuj na emocjach odbiorcy, pokazuj, co może stracić lub zyskać.
 - Używaj słów jak „NIE”, „zanim”, „dlaczego”, „czy” – jeśli pasują do treści.
+
+**Format odpowiedzi:**
+Subject 1: [pierwszy tytuł — tylko sam tekst]  
+Subject 2: [drugi tytuł — tylko sam tekst]
 `;
