@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { NarrativeBlueprint } from './narrative-blueprint-service';
 import { EmailStyle } from '../../EmailStyleDialog';
@@ -57,7 +56,7 @@ export const generateEmailContent = async (
 # Cel
 Twoim zadaniem jest wygenerowanie treści emaila marketingowego w języku polskim w oparciu o dostarczony blueprint narracyjny.
 
-# Informacje o grupie docelowej
+# Informacje o grupie docelowej (surveyData)
 ${audienceDataString || 'Brak danych grupy docelowej'}
 
 # Styl maila: ${emailStyle}
@@ -92,7 +91,7 @@ RequestID: ${requestId}
   console.log(`🔵 EMAIL CONTENT SERVICE: Full prompt for email content [${requestId}]:`, prompt);
 
   try {
-    console.log(`🔵 EMAIL CONTENT SERVICE: Invoking generate-email-content edge function [${requestId}]`);
+    console.log(`���� EMAIL CONTENT SERVICE: Invoking generate-email-content edge function [${requestId}]`);
 
     // First, let's try a test connection
     try {

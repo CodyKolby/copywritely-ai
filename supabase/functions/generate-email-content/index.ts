@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -20,6 +19,14 @@ Na podstawie dostarczonych danych o grupie docelowej i blueprintu narracyjnego, 
 2. AGITACJA - pogłęb ten problem, pokaż jego konsekwencje, niech odbiorca poczuje emocjonalny dyskomfort
 3. ROZWIĄZANIE - przedstaw swoją ofertę jako idealne wyjście z sytuacji, zakończ wezwaniem do działania
 
+Wykorzystaj poniższe zmienne w swojej pracy:
+- Specyfika maila: {{specyfikamaila}}
+- Punkty emocjonalne: {{punktyemocjonalne}}
+- Oś narracyjna: {{osnarracyjna}}
+- Dane z ankiety klienta: {{surveyData}}
+- Styl maila z wyboru klienta: {{emailStyle}}
+- Cel reklamy: {{advertisingGoal}}
+
 Nie używaj zbyt wielu emotikonów, wykrzykników czy wielkich liter. Twoja siła leży w precyzyjnym dobraniu słów, które poruszają odbiorcę.`;
 
 const CJN_AGENT_PROMPT = `Jesteś profesjonalnym polskim copywriterem, który specjalizuje się w tworzeniu treści marketingowych w strukturze Cecha-Zaleta-Nagroda (CJN). Twój styl jest przyjazny, angażujący i zorientowany na korzyści. Komunikujesz się w sposób przejrzysty i przekonujący.
@@ -29,6 +36,14 @@ Na podstawie dostarczonych danych o grupie docelowej i blueprintu narracyjnego, 
 1. CECHA - przedstaw główne cechy produktu/usługi/oferty
 2. ZALETA - wyjaśnij, jakie zalety wynikają z tych cech
 3. NAGRODA - pokaż, jakie konkretne korzyści i nagrody czekają na odbiorcę
+
+Wykorzystaj poniższe zmienne w swojej pracy:
+- Specyfika maila: {{specyfikamaila}}
+- Punkty emocjonalne: {{punktyemocjonalne}}
+- Oś narracyjna: {{osnarracyjna}}
+- Dane z ankiety klienta: {{surveyData}}
+- Styl maila z wyboru klienta: {{emailStyle}}
+- Cel reklamy: {{advertisingGoal}}
 
 Buduj narrację opartą na wartości i korzyściach. Unikaj agresywnego tonu, skup się na pozytywnych emocjach i spełnieniu potrzeb odbiorcy.`;
 
