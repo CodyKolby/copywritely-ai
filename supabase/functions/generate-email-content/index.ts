@@ -159,14 +159,14 @@ Cel maila:
 
 Dokładnie przeanalizuj, jaki efekt końcowy chce osiągnąć użytkownik. Cała treść maila – od HOOK-a po CTA – ma prowadzić do tego konkretnego działania, ale w sposób pośredni, subtelny i narracyjny. Nie wolno odchodzić od tego celu ani rozmywać go innymi wątkami. CTA musi być logicznym i emocjonalnym domknięciem całej historii prowadzącej do zamierzonej akcji.
 
-Specyfika maila: {{specyfikamaila}}
-Punkty emocjonalne: {{punktyemocjonalne}}
-Oś narracyjna: {{osnarracyjna}}
-Styl maila z wyboru klienta: {{emailStyle}}
-Cel reklamy: {{advertisingGoal}}
-Tytuł 1: {{subjectLine1}}
-Tytuł 2: {{subjectLine2}}
-Dane z ankiety klienta: {{surveyData}}
+Specyfika maila: ${specyfikamaila}
+Punkty emocjonalne: ${punktyemocjonalne}
+Oś narracyjna: ${osnarracyjna}
+Styl maila z wyboru klienta: ${emailStyle}
+Cel reklamy: ${advertisingGoal}
+Tytuł 1: ${subjectLine1}
+Tytuł 2: ${subjectLine2}
+Dane z ankiety klienta: ${surveyData}
 
 OUTPUT KOŃCOWY (WAŻNE):
 
