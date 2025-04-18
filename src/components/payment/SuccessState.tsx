@@ -25,6 +25,8 @@ export const SuccessState: React.FC<SuccessStateProps> = ({ redirectTimer }) => 
   const getMessage = () => {
     if (profile?.subscription_status === 'scheduled_cancel') {
       return 'Twoje konto jest aktywne, ale zostanie zamknięte na koniec okresu rozliczeniowego.';
+    } else if (profile?.subscription_status === 'cancelled') {
+      return 'Twoja subskrypcja została anulowana.';
     }
     return 'Twoje konto zostało zaktualizowane do wersji Premium.';
   };

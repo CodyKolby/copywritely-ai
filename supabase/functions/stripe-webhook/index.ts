@@ -57,6 +57,9 @@ serve(async (req) => {
 
     const db = createDatabaseOperations();
     
+    // Log the raw event data for debugging
+    console.log(`EVENT DATA: ${JSON.stringify(event.data.object, null, 2)}`);
+    
     switch (event.type) {
       case 'checkout.session.completed': {
         await handleCheckoutSessionCompleted(event.data.object, db);

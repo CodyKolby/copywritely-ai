@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { SubscriptionDetails as SubscriptionDetailsType } from '@/lib/stripe/subscription';
-import { CalendarClock, Clock } from 'lucide-react';
+import { CalendarClock, Clock, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface SubscriptionDetailsProps {
@@ -25,9 +25,9 @@ const SubscriptionDetails: React.FC<SubscriptionDetailsProps> = ({ data, formatD
 
   // Determine subscription type and badge style
   const isTrial = data.isTrial === true || data.status === 'trialing';
-  const isExpiring = data.cancelAtPeriodEnd;
+  const isExpiring = data.cancelAtPeriodEnd || data.status === 'scheduled_cancel';
   const isPaused = data.status === 'paused';
-  const isCanceled = data.status === 'canceled';
+  const isCanceled = data.status === 'canceled' || data.status === 'cancelled';
   const isActive = !isExpired && !isCanceled && (data.status === 'active' || isTrial);
   
   let badgeLabel = 'Aktywna';
@@ -60,6 +60,15 @@ const SubscriptionDetails: React.FC<SubscriptionDetailsProps> = ({ data, formatD
           {badgeLabel}
         </Badge>
       </div>
+      
+      {isExpiring && !isExpired && !isCanceled && (
+        <div className="flex items-center text-sm text-amber-600 gap-2 bg-amber-50 p-2 rounded-md">
+          <AlertCircle className="h-4 w-4" />
+          <span>
+            Subskrypcja została anulowana i wygaśnie {formatDate(data.currentPeriodEnd)}
+          </span>
+        </div>
+      )}
       
       {!isExpired && !isCanceled && (
         <>
