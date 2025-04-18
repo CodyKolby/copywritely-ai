@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { stripe, constructWebhookEvent } from "./stripe.ts";
 import { createDatabaseOperations } from "./database.ts";
@@ -140,25 +141,43 @@ async function handleInvoiceEvent(event: any, stripe: any, db: any) {
     }
     
     const userId = profile.id;
-    const isPremium = subscription.status === 'active' || subscription.status === 'trialing';
+    
+    // Handle subscriptions with scheduled cancellations differently
+    let subscriptionStatus = subscription.status;
+    let isPremium = subscription.status === 'active' || subscription.status === 'trialing';
+    
+    // If subscription is scheduled to be canceled at the end of billing period
+    if (subscription.cancel_at_period_end) {
+      subscriptionStatus = 'scheduled_cancel';
+      console.log(`Invoice event: Setting status to 'scheduled_cancel' due to cancel_at_period_end=true`);
+    }
+    
+    // If subscription is immediately canceled, set premium to false
+    if (subscription.status === 'canceled' && !subscription.cancel_at_period_end) {
+      isPremium = false;
+    }
     
     // Handle expiry date based on subscription status
     let expiryDate = null;
     
-    if (subscription.status === 'canceled' && !subscription.cancel_at_period_end) {
+    if (subscription.cancel_at_period_end && subscription.current_period_end) {
+      // For scheduled cancellations, use period end
+      expiryDate = new Date(subscription.current_period_end * 1000).toISOString();
+      console.log(`Invoice event: Using current_period_end for scheduled cancellation: ${expiryDate}`);
+    } else if (subscription.status === 'canceled' && !subscription.cancel_at_period_end) {
       // For immediate cancellations, use current time
       expiryDate = new Date().toISOString();
-      console.log(`Immediate cancellation detected in invoice event, setting expiry to current time: ${expiryDate}`);
+      console.log(`Invoice event: Immediate cancellation detected, setting expiry to current time: ${expiryDate}`);
     } else if (subscription.current_period_end) {
       // Otherwise use the period end date
       expiryDate = new Date(subscription.current_period_end * 1000).toISOString();
     }
       
-    console.log(`Updating profile ${userId} based on invoice event. isPremium=${isPremium}, status=${subscription.status}, expiryDate=${expiryDate}`);
+    console.log(`Updating profile ${userId} based on invoice event. isPremium=${isPremium}, status=${subscriptionStatus}, expiryDate=${expiryDate}`);
     
     await db.updateProfile(userId, {
       is_premium: isPremium,
-      subscription_status: subscription.status,
+      subscription_status: subscriptionStatus,
       subscription_expiry: expiryDate,
       updated_at: new Date().toISOString()
     });

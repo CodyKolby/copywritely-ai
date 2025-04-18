@@ -6,7 +6,6 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { updateLocalStoragePremium } from '@/lib/stripe/localStorage-utils';
 import { BillingCycle } from '@/components/pricing/pricing-utils';
-import { User } from '@supabase/supabase-js';
 import { updateProfilePremiumStatus } from '@/lib/stripe/profile-updates';
 import { analyticsService } from '@/lib/analytics/analytics-service';
 
