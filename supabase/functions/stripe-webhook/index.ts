@@ -57,8 +57,24 @@ serve(async (req) => {
 
     const db = createDatabaseOperations();
     
-    // Log the raw event data for debugging
+    // Enhanced debugging: Log the complete event data
+    console.log(`EVENT TYPE: ${event.type}`);
+    console.log(`EVENT DETAIL: ${JSON.stringify({
+      id: event.id,
+      api_version: event.api_version,
+      created: event.created,
+      livemode: event.livemode
+    })}`);
     console.log(`EVENT DATA: ${JSON.stringify(event.data.object, null, 2)}`);
+    
+    // Special check for cancel_at_period_end handling
+    if (event.type === 'customer.subscription.updated' && 
+        event.data.object.cancel_at_period_end === true) {
+      console.log(`🔎 CANCELLATION DETECTION: Found subscription with cancel_at_period_end=true`);
+      console.log(`Subscription ID: ${event.data.object.id}`);
+      console.log(`Current status: ${event.data.object.status}`);
+      console.log(`Current period end: ${new Date(event.data.object.current_period_end * 1000).toISOString()}`);
+    }
     
     switch (event.type) {
       case 'checkout.session.completed': {
@@ -134,6 +150,13 @@ async function handleInvoiceEvent(event: any, stripe: any, db: any) {
     
     // Get the subscription to update the user profile
     const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    console.log(`Subscription details for invoice event:`, {
+      id: subscription.id,
+      status: subscription.status,
+      cancel_at_period_end: subscription.cancel_at_period_end,
+      current_period_end: subscription.current_period_end ? 
+        new Date(subscription.current_period_end * 1000).toISOString() : null
+    });
     
     // Find the profile by subscription ID
     const { data: profile } = await db.findProfileBySubscriptionId(subscriptionId);

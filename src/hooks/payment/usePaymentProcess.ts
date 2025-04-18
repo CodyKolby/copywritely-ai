@@ -61,12 +61,15 @@ export function usePaymentProcess() {
       }
 
       console.log('Payment verified successfully:', data);
+      
+      // Set the correct subscription status based on cancellation state
+      const subscriptionStatus = data.cancelAtPeriodEnd ? 'scheduled_cancel' : (data.status || 'active');
 
       await updateProfilePremiumStatus(
         user.id, 
         true, 
         data.subscriptionId, 
-        data.status || 'active',
+        subscriptionStatus,
         data.expiryDate
       );
 

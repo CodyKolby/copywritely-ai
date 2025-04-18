@@ -19,6 +19,9 @@ export const SuccessState: React.FC<SuccessStateProps> = ({ redirectTimer }) => 
       console.log('Tracking trial started event from SuccessState');
       analyticsService.trackTrialStarted();
     }
+    
+    // Log the profile data for debugging
+    console.log('Profile data in SuccessState:', profile);
   }, [profile]);
   
   // Determine message based on subscription status

@@ -1,3 +1,4 @@
+
 import { DatabaseOperations } from './types.ts';
 import Stripe from 'https://esm.sh/stripe@12.1.1';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7';
@@ -65,9 +66,10 @@ export async function handleSubscriptionEvent(
     return;
   }
 
-  // Special handling for cancel_at_period_end = true (scheduled cancellation)
+  // IMPORTANT: Special handling for cancel_at_period_end = true (scheduled cancellation)
+  // This is crucial for handling when a user cancels their subscription via the Customer Portal
   if (subscription.cancel_at_period_end === true) {
-    console.log('Detected scheduled cancellation (cancel_at_period_end=true)');
+    console.log('🔴 Detected scheduled cancellation (cancel_at_period_end=true)');
     
     // Get expiry date from current_period_end
     const expiryDate = subscription.current_period_end 
