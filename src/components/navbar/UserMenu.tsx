@@ -1,4 +1,3 @@
-
 import { User } from '@supabase/supabase-js';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -81,20 +80,23 @@ export const UserMenu = ({ user, profile, isPremium, localPremium, signOut }: Us
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem asChild className="gap-2">
+          <DropdownMenuItem asChild className="gap-2 hover:cursor-pointer">
             <Link to="/projekty" onClick={() => trackEvent('menu_projects_clicked')}>
               <FolderOpen size={16} /> 
               <span>Projekty</span>
             </Link>
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleOpenSubscriptionModal} className="gap-2">
+          <DropdownMenuItem 
+            onClick={handleOpenSubscriptionModal} 
+            className="gap-2 hover:cursor-pointer"
+          >
             <CreditCard size={16} /> 
             <span>Subskrypcja</span>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem 
             onClick={handleSignOut} 
-            className="gap-2 text-red-500"
+            className="gap-2 text-red-500 hover:cursor-pointer"
           >
             <LogOut size={16} /> 
             <span>Wyloguj</span>
