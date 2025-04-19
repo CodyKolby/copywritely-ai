@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -89,9 +90,20 @@ const AdvertisingGoalDialog = ({ onSubmit, onBack, onCancel, isProcessing }: Adv
               <FormItem>
                 <FormLabel className="flex items-center gap-2">
                   Jaki jest kolejny krok, który klient musi wykonać?
-                  <div className="cursor-help text-gray-500 hover:text-gray-700" title="Opisz konkretne działanie, które klient powinien podjąć po zobaczeniu reklamy">
-                    <HelpCircle size={16} />
-                  </div>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="cursor-help text-gray-500 hover:text-gray-700">
+                          <HelpCircle size={16} />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" align="center" className="max-w-xs text-sm p-3 bg-white border border-gray-200 shadow-lg">
+                        Wytłumacz bardzo dokładnie i jednoznacznie, co klient powinien zrobić tu i teraz, krok po kroku. 
+                        Użyj prostego języka i nie zostawiaj miejsca na domysły. 
+                        Im więcej detali, tym lepiej – to podnosi skuteczność wezwania do działania.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </FormLabel>
                 <FormControl>
                   <Textarea
