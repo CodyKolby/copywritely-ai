@@ -10,13 +10,16 @@ interface EmptyProjectsStateProps {
 
 const EmptyProjectsState: React.FC<EmptyProjectsStateProps> = ({ isAuthenticated }) => {
   return (
-    <div className="text-center p-10 border rounded-lg bg-white">
-      <p className="text-gray-500 mb-6">Nie masz jeszcze żadnych projektów.</p>
+    <div className="text-center p-10 border rounded-lg bg-white space-y-4">
+      <p className="text-gray-500 text-lg">Nie masz jeszcze żadnych projektów.</p>
       {!isAuthenticated ? (
         <p className="text-sm text-gray-400">Zaloguj się, aby zobaczyć swoje projekty.</p>
       ) : (
-        <Button asChild>
-          <Link to="/script-generator" className="gap-2">
+        <Button 
+          asChild 
+          className="bg-copywrite-teal hover:bg-copywrite-teal-dark text-white transition-colors"
+        >
+          <Link to="/script-generator" className="flex items-center gap-2">
             <FilePlus className="h-4 w-4" />
             <span>Stwórz projekt</span>
           </Link>
@@ -27,3 +30,4 @@ const EmptyProjectsState: React.FC<EmptyProjectsStateProps> = ({ isAuthenticated
 };
 
 export default EmptyProjectsState;
+
